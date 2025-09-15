@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    console.log("[v0] Loading favorites for user:", user.id)
+
     const { data, error } = await supabase
       .from("user_favorites")
       .select("*")
@@ -19,11 +21,14 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false })
 
     if (error) {
+      console.log("[v0] Favorites query error:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    console.log("[v0] Favorites loaded, count:", data?.length || 0)
     return NextResponse.json({ favorites: data })
   } catch (error) {
+    console.log("[v0] Favorites API error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
@@ -41,6 +46,8 @@ export async function POST(request: NextRequest) {
 
     const { contentId, contentType, contentTitle, metadata } = await request.json()
 
+    console.log("[v0] Adding favorite for user:", user.id, "content:", contentId, contentType)
+
     const { data, error } = await supabase.from("user_favorites").insert({
       user_id: user.id,
       content_id: contentId,
@@ -50,11 +57,14 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
+      console.log("[v0] Favorites save error:", error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    console.log("[v0] Favorite added successfully")
     return NextResponse.json({ success: true, data })
   } catch (error) {
+    console.log("[v0] Favorites POST error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
