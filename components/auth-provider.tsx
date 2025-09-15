@@ -3,7 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 import { updateAdultContentPreference } from "@/lib/tmdb"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return
 
     let isMounted = true
+    const supabase = createClient()
 
     const initAuth = async () => {
       try {
@@ -111,28 +112,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [mounted])
 
   const loadUserProfile = async (supabaseUser: SupabaseUser, ignoreConfirmation = false) => {
+    const supabase = createClient()
+
     try {
       console.log("👤 Loading profile for user:", supabaseUser.email)
       console.log("📧 Email confirmed:", !!supabaseUser.email_confirmed_at)
       console.log("🔓 Ignoring confirmation:", ignoreConfirmation)
-
-      // Si l'email n'est pas confirmé et qu'on ne l'ignore pas, essayer de le forcer
-      if (!supabaseUser.email_confirmed_at && !ignoreConfirmation) {
-        console.log("⚠️ Email not confirmed, attempting to force confirm...")
-
-        try {
-          // Essayer de forcer la confirmation via notre fonction
-          const { data, error } = await supabase.rpc("force_confirm_specific_user", {
-            user_email: supabaseUser.email,
-          })
-
-          if (!error) {
-            console.log("✅ User confirmation forced successfully")
-          }
-        } catch (confirmError) {
-          console.warn("⚠️ Could not force confirm user:", confirmError)
-        }
-      }
 
       // Attendre un peu pour que les triggers s'exécutent
       await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -203,6 +188,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const createUserProfileSecurely = async (supabaseUser: SupabaseUser) => {
+    const supabase = createClient()
+
     try {
       const username = supabaseUser.user_metadata?.username || supabaseUser.email?.split("@")[0] || "User"
 
@@ -276,6 +263,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const refreshUser = async () => {
+    const supabase = createClient()
+
     try {
       console.log("🔄 Refreshing user data...")
       const {
@@ -298,6 +287,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
+    const supabase = createClient()
+
     try {
       setLoading(true)
       console.log("🔐 Attempting sign in for:", email)
@@ -309,38 +300,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error("❌ Sign in error:", error)
-
-        // Si l'erreur est liée à la confirmation d'email, essayer de forcer
-        if (error.message.includes("Email not confirmed") || error.message.includes("not confirmed")) {
-          console.log("⚠️ Email not confirmed error, attempting to force confirm and retry...")
-
-          try {
-            // Forcer la confirmation
-            await supabase.rpc("force_confirm_specific_user", {
-              user_email: email.trim(),
-            })
-
-            // Réessayer la connexion
-            const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-              email: email.trim(),
-              password,
-            })
-
-            if (retryError) {
-              throw retryError
-            }
-
-            console.log("✅ Sign in successful after force confirm")
-            toast({
-              title: "Connexion réussie",
-              description: "Bienvenue sur WaveWatch!",
-            })
-            return
-          } catch (forceError) {
-            console.error("❌ Could not force confirm and retry:", forceError)
-          }
-        }
-
         throw error
       }
 
@@ -364,6 +323,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (username: string, email: string, password: string) => {
+    const supabase = createClient()
+
     try {
       setLoading(true)
       console.log("📝 Attempting sign up for:", email, "username:", username)
@@ -384,6 +345,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: email.trim(),
         password,
         options: {
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
           data: {
             username: username.trim(),
           },
@@ -442,6 +404,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
+    const supabase = createClient()
+
     try {
       console.log("👋 Signing out...")
       const { error } = await supabase.auth.signOut()

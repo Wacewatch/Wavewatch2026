@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/components/auth-provider"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 
 export interface UserStatus {
   isWatched: boolean
@@ -31,6 +31,8 @@ export function useUserStatus(contentId: number, contentType: "movie" | "tv" | "
 
   const loadUserStatus = async () => {
     if (!user?.id) return
+
+    const supabase = createClient()
 
     try {
       // Check watch history
@@ -74,6 +76,8 @@ export function useUserStatus(contentId: number, contentType: "movie" | "tv" | "
   const toggleWatched = async (contentTitle: string) => {
     if (!user?.id) return
 
+    const supabase = createClient()
+
     try {
       if (status.isWatched) {
         // Remove from watch history
@@ -107,6 +111,8 @@ export function useUserStatus(contentId: number, contentType: "movie" | "tv" | "
   const toggleFavorite = async (contentTitle: string) => {
     if (!user?.id) return
 
+    const supabase = createClient()
+
     try {
       if (status.isFavorite) {
         // Remove from favorites
@@ -135,6 +141,8 @@ export function useUserStatus(contentId: number, contentType: "movie" | "tv" | "
 
   const toggleWatchlist = async () => {
     if (!user?.id) return
+
+    const supabase = createClient()
 
     try {
       if (status.isInWatchlist) {
