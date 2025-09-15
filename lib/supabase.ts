@@ -16,9 +16,25 @@ export const supabase = createClient(
       persistSession: true,
       detectSessionInUrl: true,
       flowType: "pkce",
+      storage: typeof window !== "undefined" ? window.localStorage : undefined,
+    },
+    global: {
+      headers: {
+        "X-Client-Info": "wavewatch-app",
+      },
     },
   },
 )
+
+export function createServerClient() {
+  return createClient(supabaseUrl || "https://placeholder.supabase.co", supabaseAnonKey || "placeholder-key", {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false,
+    },
+  })
+}
 
 // Fonction pour forcer la confirmation d'un utilisateur
 export async function forceConfirmUser(email: string) {

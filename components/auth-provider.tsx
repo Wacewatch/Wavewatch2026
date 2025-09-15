@@ -3,7 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { createClient } from "@/lib/supabase/client"
+import { supabase } from "@/lib/supabase"
 import { updateAdultContentPreference } from "@/lib/tmdb"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -42,13 +42,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return
 
     let isMounted = true
-    const supabase = createClient()
 
     const initAuth = async () => {
       try {
         console.log("🔄 Initializing auth...")
 
-        // Vérifier la session actuelle
         const {
           data: { session },
           error,
@@ -60,7 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log("✅ Found existing session for:", session.user.email)
           console.log("📧 Email confirmed:", !!session.user.email_confirmed_at)
 
-          // IGNORER le statut de confirmation et charger le profil quand même
           await loadUserProfile(session.user, true)
         } else {
           console.log("ℹ️ No existing session found")
@@ -76,7 +73,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth()
 
-    // Écouter les changements d'authentification
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -88,12 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("✅ User signed in:", session.user.email)
         console.log("📧 Email confirmed:", !!session.user.email_confirmed_at)
 
-        // IGNORER le statut de confirmation et charger le profil
         await loadUserProfile(session.user, true)
       } else if (event === "SIGNED_OUT") {
         console.log("👋 User signed out")
         setUser(null)
-        // Clear adult content preference on sign out
         updateAdultContentPreference(false)
       } else if (event === "TOKEN_REFRESHED" && session?.user) {
         console.log("🔄 Token refreshed for:", session.user.email)
@@ -112,17 +106,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [mounted])
 
   const loadUserProfile = async (supabaseUser: SupabaseUser, ignoreConfirmation = false) => {
-    const supabase = createClient()
-
     try {
       console.log("👤 Loading profile for user:", supabaseUser.email)
       console.log("📧 Email confirmed:", !!supabaseUser.email_confirmed_at)
       console.log("🔓 Ignoring confirmation:", ignoreConfirmation)
 
-      // Attendre un peu pour que les triggers s'exécutent
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Essayer de charger le profil utilisateur depuis user_profiles
       const { data: profile, error } = await supabase
         .from("user_profiles")
         .select("*")
@@ -155,7 +145,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       setUser(userData)
 
-      // Update adult content preference in localStorage
       updateAdultContentPreference(userData.showAdultContent || false)
 
       console.log("👤 User set:", {
@@ -167,7 +156,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("❌ Error loading user profile:", error)
 
-      // Fallback: créer un utilisateur basique
       const username = supabaseUser.user_metadata?.username || supabaseUser.email?.split("@")[0] || "User"
       const isAdmin = username.toLowerCase() === "wwadmin"
 
@@ -182,20 +170,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         showAdultContent: false,
       })
 
-      // Update adult content preference
       updateAdultContentPreference(false)
     }
   }
 
   const createUserProfileSecurely = async (supabaseUser: SupabaseUser) => {
-    const supabase = createClient()
-
     try {
       const username = supabaseUser.user_metadata?.username || supabaseUser.email?.split("@")[0] || "User"
 
       console.log("📝 Creating profile securely for:", username)
 
-      // Essayer d'utiliser la fonction SQL sécurisée si elle existe
       try {
         const { data, error } = await supabase.rpc("create_user_profile_secure", {
           user_id_param: supabaseUser.id,
@@ -209,7 +193,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         console.log("✅ Profile created securely via SQL function:", data)
 
-        // Créer l'objet utilisateur à partir des données retournées
         const userData: User = {
           id: data.id,
           username: data.username,
@@ -227,7 +210,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.warn("⚠️ SQL function not available, using fallback:", sqlError)
       }
 
-      // Fallback: créer un utilisateur en mémoire seulement
       const isAdmin = username.toLowerCase() === "wwadmin"
 
       setUser({
@@ -245,7 +227,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("❌ Error in createUserProfileSecurely:", error)
 
-      // Fallback final
       const username = supabaseUser.user_metadata?.username || supabaseUser.email?.split("@")[0] || "User"
       const isAdmin = username.toLowerCase() === "wwadmin"
 
@@ -263,8 +244,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const refreshUser = async () => {
-    const supabase = createClient()
-
     try {
       console.log("🔄 Refreshing user data...")
       const {
@@ -287,8 +266,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    const supabase = createClient()
-
     try {
       setLoading(true)
       console.log("🔐 Attempting sign in for:", email)
@@ -323,13 +300,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signUp = async (username: string, email: string, password: string) => {
-    const supabase = createClient()
-
     try {
       setLoading(true)
       console.log("📝 Attempting sign up for:", email, "username:", username)
 
-      // Validation des données
       if (!username || username.length < 2) {
         throw new Error("Le nom d'utilisateur doit contenir au moins 2 caractères")
       }
@@ -340,7 +314,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Le mot de passe doit contenir au moins 6 caractères")
       }
 
-      // Créer le compte Supabase
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
@@ -364,7 +337,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         confirmed: !!data.user?.email_confirmed_at,
       })
 
-      // Avec notre configuration, l'utilisateur devrait être confirmé automatiquement
       if (data.user) {
         if (data.session) {
           console.log("✅ User signed up and logged in immediately")
@@ -375,10 +347,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           console.log("📧 User created, attempting immediate sign in...")
 
-          // Attendre un peu pour que les triggers s'exécutent
           await new Promise((resolve) => setTimeout(resolve, 2000))
 
-          // Essayer de se connecter immédiatement
           try {
             await signIn(email, password)
           } catch (signInError) {
@@ -404,8 +374,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    const supabase = createClient()
-
     try {
       console.log("👋 Signing out...")
       const { error } = await supabase.auth.signOut()
@@ -421,7 +389,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
     } catch (error: any) {
       console.error("❌ Signout error:", error)
-      // Forcer la déconnexion même en cas d'erreur
       setUser(null)
       updateAdultContentPreference(false)
       toast({
@@ -431,7 +398,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Listen for profile updates
   useEffect(() => {
     const handleProfileUpdate = () => {
       if (user?.id) {
