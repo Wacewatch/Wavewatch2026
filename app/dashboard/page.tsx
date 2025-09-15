@@ -20,6 +20,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   MessageSquare,
+  Film,
 } from "lucide-react"
 import { WatchTracker, type WatchStats } from "@/lib/watch-tracking"
 import { VIPSystem, type VIPLevel } from "@/lib/vip-system"
@@ -172,13 +173,34 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button asChild variant="outline" size="sm" className="border-gray-600 text-white hover:bg-gray-800">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+            >
               <Link href="/profile">
                 <Crown className="h-4 w-4 mr-2" />
                 Profil
               </Link>
             </Button>
-            <Button asChild variant="outline" size="sm" className="border-gray-600 text-white hover:bg-gray-800">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+            >
+              <Link href="/playlists">
+                <Film className="h-4 w-4 mr-2" />
+                Mes Playlists
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+            >
               <Link href="/requests">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Demandes
@@ -506,7 +528,11 @@ export default function DashboardPage() {
                     </div>
                     {WatchTracker.getWatchedItems().length > 12 && (
                       <div className="text-center mt-6">
-                        <Button asChild variant="outline" className="border-gray-600 text-white hover:bg-gray-700">
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="border-gray-600 text-white hover:bg-gray-700 bg-transparent"
+                        >
                           <Link href="/dashboard/history">
                             Tout voir ({WatchTracker.getWatchedItems().length})
                             <ArrowRight className="w-4 h-4 ml-2" />
@@ -582,7 +608,11 @@ export default function DashboardPage() {
                     </div>
                     {WatchTracker.getWishlistItems().length > 12 && (
                       <div className="text-center mt-6">
-                        <Button asChild variant="outline" className="border-gray-600 text-white hover:bg-gray-700">
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="border-gray-600 text-white hover:bg-gray-700 bg-transparent"
+                        >
                           <Link href="/dashboard/wishlist">
                             Tout voir ({WatchTracker.getWishlistItems().length})
                             <ArrowRight className="w-4 h-4 ml-2" />
@@ -692,7 +722,11 @@ export default function DashboardPage() {
                     </div>
                     {WatchTracker.getFavoriteItems().length > 12 && (
                       <div className="text-center mt-6">
-                        <Button asChild variant="outline" className="border-gray-600 text-white hover:bg-gray-700">
+                        <Button
+                          asChild
+                          variant="outline"
+                          className="border-gray-600 text-white hover:bg-gray-700 bg-transparent"
+                        >
                           <Link href="/dashboard/favorites">
                             Tout voir ({WatchTracker.getFavoriteItems().length})
                             <ArrowRight className="w-4 h-4 ml-2" />

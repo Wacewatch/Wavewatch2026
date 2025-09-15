@@ -147,7 +147,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       updateAdultContentPreference(userData.showAdultContent || false)
 
-      console.log("👤 User set:", {
+      console.log("[v0] User set in auth provider:", {
+        id: userData.id,
         username: userData.username,
         isAdmin: userData.isAdmin,
         isVip: userData.isVip,

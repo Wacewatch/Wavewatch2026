@@ -52,40 +52,52 @@ export function usePlaylists() {
     if (!user?.id) return
 
     try {
+      console.log("[v0] Loading playlists for user:", user.id)
+
       const { data, error } = await supabase
         .from("playlists")
         .select(`
           *,
-          playlist_items(count),
-          user_profiles!playlists_user_id_fkey(username)
+          playlist_items(count)
         `)
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false })
 
       if (error) {
-        console.error("Error loading playlists:", error)
+        console.error("[v0] Error loading playlists:", error)
         return
       }
+
+      console.log("[v0] Playlists loaded successfully:", data?.length || 0)
 
       const playlistsWithCounts =
         data?.map((playlist) => ({
           ...playlist,
           items_count: playlist.playlist_items?.[0]?.count || 0,
-          username: playlist.user_profiles?.username,
         })) || []
 
       setPlaylists(playlistsWithCounts)
     } catch (error) {
-      console.error("Error loading playlists:", error)
+      console.error("[v0] Error loading playlists:", error)
     } finally {
       setLoading(false)
     }
   }
 
   const createPlaylist = async (title: string, description?: string, isPublic = false, themeColor = "#3B82F6") => {
-    if (!user?.id) return null
+    if (!user?.id) {
+      console.error("[v0] Cannot create playlist: user not authenticated")
+      toast({
+        title: "Erreur",
+        description: "Vous devez être connecté pour créer une playlist",
+        variant: "destructive",
+      })
+      return null
+    }
 
     try {
+      console.log("[v0] Creating playlist:", { title, description, isPublic, themeColor, userId: user.id })
+
       const { data, error } = await supabase
         .from("playlists")
         .insert({
@@ -99,7 +111,7 @@ export function usePlaylists() {
         .single()
 
       if (error) {
-        console.error("Error creating playlist:", error)
+        console.error("[v0] Error creating playlist:", error)
         toast({
           title: "Erreur",
           description: "Impossible de créer la playlist",
@@ -108,10 +120,11 @@ export function usePlaylists() {
         return null
       }
 
+      console.log("[v0] Playlist created successfully:", data)
+
       const newPlaylist = {
         ...data,
         items_count: 0,
-        username: user.username,
       }
 
       setPlaylists((prev) => [newPlaylist, ...prev])
@@ -123,7 +136,7 @@ export function usePlaylists() {
 
       return newPlaylist
     } catch (error) {
-      console.error("Error creating playlist:", error)
+      console.error("[v0] Error creating playlist:", error)
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la création",

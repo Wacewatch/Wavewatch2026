@@ -40,14 +40,7 @@ export function AddToListSelector({ content, contentType, className = "" }: AddT
 
   const handleAddToPlaylist = async (playlistId: string) => {
     try {
-      await addToPlaylist(playlistId, {
-        contentId: content.id,
-        contentType,
-        title: content.title || content.name || "",
-        posterPath: content.poster_path,
-        voteAverage: content.vote_average,
-        releaseDate: content.release_date || content.first_air_date,
-      })
+      await addToPlaylist(playlistId, content.id, contentType, content.title || content.name || "", content.poster_path)
 
       toast({
         title: "Ajouté à la playlist",

@@ -35,7 +35,8 @@ export function usePublicPlaylists() {
 
   const loadPublicPlaylists = async () => {
     try {
-      // Get public playlists with user info and counts
+      console.log("[v0] Loading public playlists...")
+
       const { data: playlistsData, error: playlistsError } = await supabase
         .from("playlists")
         .select(`
@@ -45,8 +46,7 @@ export function usePublicPlaylists() {
           description,
           theme_color,
           created_at,
-          updated_at,
-          user_profiles!playlists_user_id_fkey(username)
+          updated_at
         `)
         .eq("is_public", true)
         .order("updated_at", { ascending: false })
@@ -60,6 +60,18 @@ export function usePublicPlaylists() {
         setPlaylists([])
         return
       }
+
+      const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
+      const { data: userProfilesData } = await supabase
+        .from("user_profiles")
+        .select("user_id, username")
+        .in("user_id", userIds)
+
+      // Create a map for quick username lookup
+      const usernameMap = new Map()
+      userProfilesData?.forEach((profile) => {
+        usernameMap.set(profile.user_id, profile.username)
+      })
 
       // Get items count for each playlist
       const playlistIds = playlistsData.map((p) => p.id)
@@ -107,7 +119,7 @@ export function usePublicPlaylists() {
 
         return {
           ...playlist,
-          username: playlist.user_profiles?.username || "Utilisateur",
+          username: usernameMap.get(playlist.user_id) || "Utilisateur",
           items_count: itemsCount,
           likes_count: likesCount,
           dislikes_count: dislikesCount,
@@ -117,6 +129,7 @@ export function usePublicPlaylists() {
         }
       })
 
+      console.log("[v0] Public playlists loaded successfully:", processedPlaylists.length)
       setPlaylists(processedPlaylists)
     } catch (error) {
       console.error("Error loading public playlists:", error)

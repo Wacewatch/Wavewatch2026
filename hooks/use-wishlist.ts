@@ -21,10 +21,10 @@ export function useWishlist(item: any) {
 
     try {
       const { data, error } = await supabase
-        .from("favorites")
+        .from("user_wishlist")
         .select("id")
         .eq("user_id", user.id)
-        .eq("content_id", item.id.toString())
+        .eq("content_id", item.id)
         .eq("content_type", item.title ? "movie" : "tv")
         .single()
 
@@ -57,10 +57,10 @@ export function useWishlist(item: any) {
       if (isInWishlist) {
         // Remove from wishlist
         const { error } = await supabase
-          .from("favorites")
+          .from("user_wishlist")
           .delete()
           .eq("user_id", user.id)
-          .eq("content_id", content.id.toString())
+          .eq("content_id", content.id)
           .eq("content_type", contentType)
 
         if (error) throw error
@@ -72,14 +72,16 @@ export function useWishlist(item: any) {
         })
       } else {
         // Add to wishlist
-        const { error } = await supabase.from("favorites").insert({
+        const { error } = await supabase.from("user_wishlist").insert({
           user_id: user.id,
-          content_id: content.id.toString(),
+          content_id: content.id,
           content_type: contentType,
-          title: content.title || content.name,
-          poster_path: content.poster_path,
-          vote_average: content.vote_average,
-          release_date: content.release_date || content.first_air_date,
+          content_title: content.title || content.name,
+          metadata: {
+            poster_path: content.poster_path,
+            vote_average: content.vote_average,
+            release_date: content.release_date || content.first_air_date,
+          },
         })
 
         if (error) throw error

@@ -62,7 +62,11 @@ export function PlaylistManager() {
   const handleCreatePlaylist = async () => {
     if (!formData.title.trim()) return
 
+    console.log("[v0] Submitting playlist creation form:", formData)
+
     const success = await createPlaylist(formData.title, formData.description, formData.isPublic, formData.themeColor)
+
+    console.log("[v0] Playlist creation result:", success ? "success" : "failed")
 
     if (success) {
       setShowCreateDialog(false)
@@ -117,6 +121,8 @@ export function PlaylistManager() {
       </div>
     )
   }
+
+  console.log("[v0] Rendering PlaylistManager with playlists:", playlists.length)
 
   return (
     <div className="space-y-6">
