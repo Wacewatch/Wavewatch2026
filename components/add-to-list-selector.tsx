@@ -1,0 +1,152 @@
+"use client"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Plus, Heart, List, Check } from "lucide-react"
+import { useAuth } from "@/components/auth-provider"
+import { useWishlist } from "@/hooks/use-wishlist"
+import { usePlaylists } from "@/hooks/use-playlists"
+import { toast } from "@/hooks/use-toast"
+
+interface AddToListSelectorProps {
+  content: {
+    id: number
+    title?: string
+    name?: string
+    poster_path?: string
+    vote_average?: number
+    release_date?: string
+    first_air_date?: string
+  }
+  contentType: "movie" | "tv"
+  className?: string
+}
+
+export function AddToListSelector({ content, contentType, className = "" }: AddToListSelectorProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const { user } = useAuth()
+  const { isInWishlist, toggleWishlist, isLoading: wishlistLoading } = useWishlist(content)
+  const { playlists, addToPlaylist, isLoading: playlistsLoading } = usePlaylists()
+
+  if (!user) return null
+
+  const handleAddToWishlist = async () => {
+    await toggleWishlist(content)
+    setIsOpen(false)
+  }
+
+  const handleAddToPlaylist = async (playlistId: string) => {
+    try {
+      await addToPlaylist(playlistId, {
+        contentId: content.id,
+        contentType,
+        title: content.title || content.name || "",
+        posterPath: content.poster_path,
+        voteAverage: content.vote_average,
+        releaseDate: content.release_date || content.first_air_date,
+      })
+
+      toast({
+        title: "Ajouté à la playlist",
+        description: `${content.title || content.name} a été ajouté à votre playlist.`,
+      })
+      setIsOpen(false)
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter à la playlist.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          className={`border-blue-600 text-white hover:bg-blue-800 bg-blue-900/50 ${className}`}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Ajouter à une liste
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-white">Ajouter à une liste</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Wishlist Option */}
+          <div
+            className="flex items-center justify-between p-3 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer transition-colors"
+            onClick={handleAddToWishlist}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-full bg-red-600/20">
+                <Heart className="w-4 h-4 text-red-400" />
+              </div>
+              <div>
+                <p className="font-medium text-white">Wishlist</p>
+                <p className="text-sm text-gray-400">Liste de favoris</p>
+              </div>
+            </div>
+            {isInWishlist && <Check className="w-5 h-5 text-green-400" />}
+          </div>
+
+          {/* Playlists */}
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-gray-300">Mes Playlists</h4>
+            <ScrollArea className="max-h-48">
+              <div className="space-y-2">
+                {playlists.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-gray-400 text-sm">Aucune playlist créée</p>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-blue-400 hover:text-blue-300 p-0 h-auto"
+                      onClick={() => {
+                        setIsOpen(false)
+                        window.location.href = "/playlists"
+                      }}
+                    >
+                      Créer ma première playlist
+                    </Button>
+                  </div>
+                ) : (
+                  playlists.map((playlist) => (
+                    <div
+                      key={playlist.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-gray-700 hover:bg-gray-800 cursor-pointer transition-colors"
+                      onClick={() => handleAddToPlaylist(playlist.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-full" style={{ backgroundColor: `${playlist.theme_color}20` }}>
+                          <List className="w-4 h-4" style={{ color: playlist.theme_color }} />
+                        </div>
+                        <div>
+                          <p className="font-medium text-white">{playlist.title}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm text-gray-400">{playlist.items_count || 0} éléments</p>
+                            <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
+                              {playlist.is_public ? "Public" : "Privé"}
+                            </Badge>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}

@@ -9,15 +9,14 @@ import { Card, CardContent } from "@/components/ui/card"
 import { IframeModal } from "@/components/iframe-modal"
 import { BugReportDialog } from "@/components/bug-report-dialog"
 import { TrailerModal } from "@/components/trailer-modal"
+import { AddToListSelector } from "@/components/add-to-list-selector"
 import {
   Star,
   Calendar,
-  Heart,
   Check,
   Play,
   Download,
   AlertTriangle,
-  Plus,
   Youtube,
   ThumbsUp,
   ThumbsDown,
@@ -527,21 +526,17 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
 
               {/* Secondary Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className={`border-pink-600 text-pink-400 hover:bg-pink-900/20 px-4 md:px-6 py-3 ${
-                    isInWishlist ? "bg-pink-900/20" : ""
-                  }`}
-                  onClick={handleAddToWishlist}
-                >
-                  {isInWishlist ? (
-                    <Heart className="w-4 h-4 md:w-5 md:h-5 mr-2 fill-pink-500 text-pink-500" />
-                  ) : (
-                    <Plus className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                  )}
-                  {isInWishlist ? "Dans la wishlist" : "Ajouter à la wishlist"}
-                </Button>
+                <AddToListSelector
+                  content={{
+                    id: show.id,
+                    name: show.name,
+                    poster_path: show.poster_path,
+                    vote_average: show.vote_average,
+                    first_air_date: show.first_air_date,
+                  }}
+                  contentType="tv"
+                  className="w-full sm:w-auto"
+                />
                 <Button
                   size="lg"
                   variant="outline"

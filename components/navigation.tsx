@@ -146,6 +146,16 @@ export function Navigation() {
                       Profil
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/playlists" className="text-white hover:text-blue-300">
+                      Mes Playlists
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/discover" className="text-white hover:text-blue-300">
+                      Découvrir des Playlists
+                    </Link>
+                  </DropdownMenuItem>
                   {!user.isVip && (
                     <DropdownMenuItem disabled className="text-gray-500 cursor-not-allowed">
                       <Crown className="w-4 h-4 mr-2" />
@@ -272,6 +282,24 @@ export function Navigation() {
                   >
                     <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
                       Profil
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="justify-start text-white hover:text-blue-300 hover:bg-blue-900"
+                  >
+                    <Link href="/playlists" onClick={() => setIsMenuOpen(false)}>
+                      Mes Playlists
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="justify-start text-white hover:text-blue-300 hover:bg-blue-900"
+                  >
+                    <Link href="/discover" onClick={() => setIsMenuOpen(false)}>
+                      Découvrir des Playlists
                     </Link>
                   </Button>
                   {!user.isVip && (

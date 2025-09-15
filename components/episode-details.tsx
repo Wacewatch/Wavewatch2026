@@ -9,13 +9,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { IframeModal } from "@/components/iframe-modal"
 import { BugReportDialog } from "@/components/bug-report-dialog"
 import { TrailerModal } from "@/components/trailer-modal"
+import { AddToListSelector } from "@/components/add-to-list-selector"
 import {
   Play,
   Download,
   Star,
   Clock,
   Calendar,
-  Heart,
   Check,
   ArrowLeft,
   AlertTriangle,
@@ -159,33 +159,6 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
       title: newRating ? "Épisode disliké" : "Dislike retiré",
       description: newRating ? `Vous avez disliké ${episodeName}` : `Dislike retiré de ${episodeName}`,
     })
-  }
-
-  const handleAddToWishlist = async () => {
-    if (!user) {
-      toast({
-        title: "Connexion requise",
-        description: "Vous devez être connecté pour ajouter à votre wishlist.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    try {
-      const episodeId = `${showId}-${seasonNumber}-${episodeNumber}`
-      const newState = WatchTracker.toggleWishlist("episode", episodeId, episodeName, stillPath)
-      setIsInWishlist(newState)
-      toast({
-        title: newState ? "Ajouté à la wishlist" : "Retiré de la wishlist",
-        description: `${episodeName} a été ${newState ? "ajouté à" : "retiré de"} votre wishlist.`,
-      })
-    } catch (error) {
-      toast({
-        title: "Erreur",
-        description: "Une erreur est survenue.",
-        variant: "destructive",
-      })
-    }
   }
 
   const handleAddToFavorites = async () => {
@@ -449,17 +422,17 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
                   <Youtube className="w-5 h-5 mr-2" />
                   Bande-annonce
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className={`border-pink-600 text-pink-400 hover:bg-pink-900/20 px-6 py-3 ${
-                    isInWishlist ? "bg-pink-900/20" : ""
-                  }`}
-                  onClick={handleAddToWishlist}
-                >
-                  <Heart className={`w-5 h-5 mr-2 ${isInWishlist ? "fill-pink-500 text-pink-500" : ""}`} />
-                  {isInWishlist ? "Dans la wishlist" : "Wishlist"}
-                </Button>
+                <AddToListSelector
+                  content={{
+                    id: showId,
+                    name: episodeName,
+                    poster_path: stillPath,
+                    vote_average: voteAverage,
+                    first_air_date: airDate,
+                  }}
+                  contentType="tv"
+                  className="px-6 py-3"
+                />
                 <Button
                   size="lg"
                   variant="outline"
