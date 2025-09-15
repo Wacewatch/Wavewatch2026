@@ -379,7 +379,10 @@ export default function ProfilePage() {
   }
 
   const handleAdultContentToggle = (enabled: boolean) => {
-    updatePreferences({ showAdultContent: enabled })
+    updatePreferences({
+      showAdultContent: enabled,
+      hideAdultContent: !enabled,
+    })
 
     toast({
       title: enabled ? "Contenu adulte activé" : "Contenu adulte désactivé",
@@ -390,13 +393,16 @@ export default function ProfilePage() {
   }
 
   const handleHideWatchedToggle = (enabled: boolean) => {
-    updatePreferences({ showWatchedContent: !enabled })
+    updatePreferences({
+      showWatchedContent: !enabled,
+      autoMarkWatched: enabled,
+    })
 
     toast({
-      title: enabled ? "Contenu vu masqué" : "Contenu vu affiché",
+      title: enabled ? "Marquage automatique activé" : "Marquage automatique désactivé",
       description: enabled
-        ? "Les éléments marqués comme vus seront masqués des résultats"
-        : "Les éléments marqués comme vus seront affichés dans les résultats",
+        ? "Les éléments visionnés seront automatiquement marqués comme vus"
+        : "Le marquage automatique des éléments vus est désactivé",
     })
   }
 
@@ -688,21 +694,21 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Hide watched content option */}
+                {/* Auto mark watched content option */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <Label htmlFor="hide-watched" className="text-sm font-medium text-gray-300">
-                      Masquer le contenu vu
+                    <Label htmlFor="auto-mark-watched" className="text-sm font-medium text-gray-300">
+                      Marquage automatique
                     </Label>
                     <p className="text-xs text-gray-400">
-                      Masquer les films, séries et animés marqués comme vus dans les résultats
+                      Marquer automatiquement comme vu le contenu que vous regardez
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <input
-                      id="hide-watched"
+                      id="auto-mark-watched"
                       type="checkbox"
-                      checked={!preferences.showWatchedContent}
+                      checked={preferences.autoMarkWatched}
                       onChange={(e) => handleHideWatchedToggle(e.target.checked)}
                       disabled={preferencesLoading}
                       className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"

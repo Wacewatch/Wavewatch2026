@@ -7,6 +7,9 @@ import { useAuth } from "@/components/auth-provider"
 interface UserPreferences {
   showAdultContent: boolean
   showWatchedContent: boolean
+  hideAdultContent: boolean
+  autoMarkWatched: boolean
+  themePreference: string
 }
 
 export function useUserPreferences() {
@@ -14,6 +17,9 @@ export function useUserPreferences() {
   const [preferences, setPreferences] = useState<UserPreferences>({
     showAdultContent: false, // Par défaut, masquer le contenu adulte
     showWatchedContent: true,
+    hideAdultContent: true, // Added new preference fields
+    autoMarkWatched: false,
+    themePreference: "system",
   })
   const [loading, setLoading] = useState(true)
 
@@ -24,6 +30,9 @@ export function useUserPreferences() {
       setPreferences({
         showAdultContent: false,
         showWatchedContent: true,
+        hideAdultContent: true,
+        autoMarkWatched: false,
+        themePreference: "system",
       })
       setLoading(false)
     }
@@ -56,7 +65,11 @@ export function useUserPreferences() {
     if (!user?.id) return
 
     try {
-      const { data, error } = await supabase.from("user_preferences").select("*").eq("user_id", user.id).single()
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("hide_adult_content, auto_mark_watched, theme_preference")
+        .eq("id", user.id)
+        .single()
 
       if (error && error.code !== "PGRST116") {
         console.error("Error loading preferences:", error)
@@ -65,13 +78,19 @@ export function useUserPreferences() {
 
       if (data) {
         setPreferences({
-          showAdultContent: data.show_adult_content || false, // Par défaut false
-          showWatchedContent: data.show_watched_content !== false, // Default to true
+          showAdultContent: !data.hide_adult_content, // Inverse logic
+          showWatchedContent: true, // Keep existing logic
+          hideAdultContent: data.hide_adult_content || true,
+          autoMarkWatched: data.auto_mark_watched || false,
+          themePreference: data.theme_preference || "system",
         })
       } else {
         setPreferences({
           showAdultContent: false,
           showWatchedContent: true,
+          hideAdultContent: true,
+          autoMarkWatched: false,
+          themePreference: "system",
         })
       }
     } catch (error) {
@@ -88,16 +107,26 @@ export function useUserPreferences() {
     setPreferences(updatedPreferences)
 
     try {
-      const { error } = await supabase.from("user_preferences").upsert({
-        user_id: user.id,
-        show_adult_content: updatedPreferences.showAdultContent,
-        show_watched_content: updatedPreferences.showWatchedContent,
-      })
+      const { error } = await supabase
+        .from("user_profiles")
+        .update({
+          hide_adult_content: updatedPreferences.hideAdultContent,
+          auto_mark_watched: updatedPreferences.autoMarkWatched,
+          theme_preference: updatedPreferences.themePreference,
+        })
+        .eq("id", user.id)
 
       if (error) {
         console.error("Error updating preferences:", error)
         // Revert on error
         setPreferences(preferences)
+      } else {
+        console.log("[v0] Preferences updated successfully:", updatedPreferences)
+        window.dispatchEvent(
+          new CustomEvent("preferences-updated", {
+            detail: updatedPreferences,
+          }),
+        )
       }
     } catch (error) {
       console.error("Error updating preferences:", error)
