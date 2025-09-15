@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase"
 import { IframeModal } from "@/components/iframe-modal"
+import { useRetrogamingSources } from "@/hooks/use-retrogaming-sources"
 
 interface RetrogamingSource {
   id: number
@@ -17,73 +17,12 @@ interface RetrogamingSource {
 }
 
 export default function RetrogamingPage() {
-  const [gamingSources, setGamingSources] = useState<RetrogamingSource[]>([])
+  const { sources: gamingSources, isLoading, error } = useRetrogamingSources()
   const [selectedSource, setSelectedSource] = useState<RetrogamingSource | null>(null)
   const [favorites, setFavorites] = useState<number[]>([])
   const [userRatings, setUserRatings] = useState<Record<number, "like" | "dislike" | null>>({})
-  const [loading, setLoading] = useState(true)
   const { toast } = useToast()
   const [showIframe, setShowIframe] = useState(false)
-
-  useEffect(() => {
-    loadGamingSources()
-  }, [])
-
-  const loadGamingSources = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase.from("retrogaming_sources").select("*").eq("is_active", true).order("name")
-
-      if (error) {
-        console.error("Error loading retrogaming sources:", error)
-        // Fallback vers les données statiques si la base de données échoue
-        loadFallbackSources()
-        return
-      }
-
-      setGamingSources(data || [])
-    } catch (error) {
-      console.error("Error loading retrogaming sources:", error)
-      loadFallbackSources()
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadFallbackSources = () => {
-    // Données de fallback si la base de données n'est pas disponible
-    const fallbackSources = [
-      {
-        id: 1,
-        name: "GameOnline",
-        description: "Collection de jeux rétro classiques",
-        url: "https://gam.onl/",
-        color: "bg-blue-600",
-        category: "Arcade",
-        is_active: true,
-      },
-      {
-        id: 2,
-        name: "RetroGames Online",
-        description: "Jeux vintage des années 80-90",
-        url: "https://www.retrogames.onl/",
-        color: "bg-green-600",
-        category: "Console",
-        is_active: true,
-      },
-      {
-        id: 3,
-        name: "WebRcade",
-        description: "Émulateur web moderne",
-        url: "https://play.webrcade.com/",
-        color: "bg-purple-600",
-        category: "Émulateur",
-        is_active: true,
-      },
-    ]
-
-    setGamingSources(fallbackSources)
-  }
 
   // Simuler les votes totaux basés sur l'ID
   const getTotalVotes = (id: number, type: "like" | "dislike") => {
@@ -153,7 +92,7 @@ export default function RetrogamingPage() {
     })
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">

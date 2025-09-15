@@ -1,12 +1,12 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tv, ChevronLeft, ChevronRight } from "lucide-react"
 import { IframeModal } from "@/components/iframe-modal"
-import { supabase } from "@/lib/supabase"
+import { useTVChannels } from "@/hooks/use-tv-channels"
 
 interface TVChannel {
   id: number
@@ -23,94 +23,13 @@ interface TVChannel {
 }
 
 export function TrendingTVChannels() {
-  const [channels, setChannels] = useState<TVChannel[]>([])
+  const { channels, isLoading, error } = useTVChannels()
   const [selectedChannel, setSelectedChannel] = useState<TVChannel | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
 
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    loadTVChannels()
-  }, [])
-
-  const loadTVChannels = async () => {
-    try {
-      setLoading(true)
-
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        console.warn("Supabase not configured, using fallback data")
-        loadFallbackChannels()
-        return
-      }
-
-      const { data, error } = await supabase
-        .from("tv_channels")
-        .select("*")
-        .eq("is_active", true)
-        .order("name")
-        .limit(25)
-
-      if (error) {
-        console.error("Error loading TV channels:", error)
-        loadFallbackChannels()
-        return
-      }
-
-      setChannels(data || [])
-    } catch (error) {
-      console.error("Error loading TV channels:", error)
-      loadFallbackChannels()
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadFallbackChannels = () => {
-    // Fallback data if database is not available
-    const fallbackChannels = [
-      {
-        id: 1,
-        name: "Master TV",
-        category: "Premium",
-        country: "France",
-        language: "Français",
-        logo_url: "https://i.imgur.com/8QZqZqZ.png",
-        stream_url: "https://embed.wavewatch.xyz/embed/BgYgx",
-        description: "Chaîne premium Master TV",
-        quality: "HD",
-        is_active: true,
-      },
-      {
-        id: 2,
-        name: "TF1",
-        category: "Généraliste",
-        country: "France",
-        language: "Français",
-        logo_url: "https://logos-world.net/wp-content/uploads/2020/06/TF1-Logo.png",
-        stream_url: "https://embed.wavewatch.xyz/embed/Z4no6",
-        description: "Première chaîne de télévision française",
-        quality: "HD",
-        is_active: true,
-      },
-      {
-        id: 3,
-        name: "Canal+",
-        category: "Premium",
-        country: "France",
-        language: "Français",
-        logo_url: "https://logos-world.net/wp-content/uploads/2020/06/Canal-Plus-Logo.png",
-        stream_url: "https://embed.wavewatch.xyz/embed/Y6mnp",
-        description: "Canal+ - Chaîne premium généraliste",
-        quality: "4K",
-        is_active: true,
-      },
-    ]
-
-    setChannels(fallbackChannels)
-  }
 
   const handleChannelClick = (channel: TVChannel) => {
     setSelectedChannel(channel)
@@ -140,7 +59,7 @@ export function TrendingTVChannels() {
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <section className="space-y-6">
         <div className="flex items-center gap-3">
@@ -153,6 +72,8 @@ export function TrendingTVChannels() {
       </section>
     )
   }
+
+  const trendingChannels = channels.slice(0, 25)
 
   return (
     <>
@@ -195,7 +116,7 @@ export function TrendingTVChannels() {
             }}
             onScroll={updateScrollButtons}
           >
-            {channels.map((channel) => (
+            {trendingChannels.map((channel) => (
               <div
                 key={channel.id}
                 className="flex-none w-[150px] md:w-[180px] cursor-pointer"

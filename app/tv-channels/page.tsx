@@ -12,7 +12,7 @@ import { Play, Search, Heart, ThumbsUp, ThumbsDown } from "lucide-react"
 import { IframeModal } from "@/components/iframe-modal"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase"
+import { useTVChannels } from "@/hooks/use-tv-channels"
 
 interface TVChannel {
   id: number
@@ -29,7 +29,7 @@ interface TVChannel {
 }
 
 export default function TVChannelsPage() {
-  const [channels, setChannels] = useState<TVChannel[]>([])
+  const { channels, isLoading, error } = useTVChannels()
   const [filteredChannels, setFilteredChannels] = useState<TVChannel[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
@@ -37,7 +37,6 @@ export default function TVChannelsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [favorites, setFavorites] = useState<number[]>([])
   const [userRatings, setUserRatings] = useState<Record<number, "like" | "dislike" | null>>({})
-  const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
   // Simuler les votes totaux basés sur l'ID
@@ -46,84 +45,6 @@ export default function TVChannelsPage() {
     const seed = id * (type === "like" ? 13 : 17)
     const result = Math.floor((seed % 800) + 100)
     return isNaN(result) ? 0 : result
-  }
-
-  useEffect(() => {
-    loadTVChannels()
-  }, [])
-
-  const loadTVChannels = async () => {
-    try {
-      setLoading(true)
-
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        console.warn("Supabase not configured, using fallback data")
-        loadFallbackChannels()
-        return
-      }
-
-      const { data, error } = await supabase.from("tv_channels").select("*").eq("is_active", true).order("name")
-
-      if (error) {
-        console.error("Error loading TV channels:", error)
-        // Fallback vers les données statiques si la base de données échoue
-        loadFallbackChannels()
-        return
-      }
-
-      setChannels(data || [])
-      setFilteredChannels(data || [])
-    } catch (error) {
-      console.error("Error loading TV channels:", error)
-      loadFallbackChannels()
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadFallbackChannels = () => {
-    // Données de fallback si la base de données n'est pas disponible
-    const fallbackChannels = [
-      {
-        id: 1,
-        name: "Master TV",
-        category: "Premium",
-        country: "France",
-        language: "Français",
-        logo_url: "https://i.imgur.com/8QZqZqZ.png",
-        stream_url: "https://embed.wavewatch.xyz/embed/BgYgx",
-        description: "Chaîne premium Master TV",
-        quality: "HD",
-        is_active: true,
-      },
-      {
-        id: 2,
-        name: "TF1",
-        category: "Généraliste",
-        country: "France",
-        language: "Français",
-        logo_url: "https://logos-world.net/wp-content/uploads/2020/06/TF1-Logo.png",
-        stream_url: "https://embed.wavewatch.xyz/embed/Z4no6",
-        description: "Première chaîne de télévision française",
-        quality: "HD",
-        is_active: true,
-      },
-      {
-        id: 3,
-        name: "Canal+",
-        category: "Premium",
-        country: "France",
-        language: "Français",
-        logo_url: "https://logos-world.net/wp-content/uploads/2020/06/Canal-Plus-Logo.png",
-        stream_url: "https://embed.wavewatch.xyz/embed/Y6mnp",
-        description: "Canal+ - Chaîne premium généraliste",
-        quality: "4K",
-        is_active: true,
-      },
-    ]
-
-    setChannels(fallbackChannels)
-    setFilteredChannels(fallbackChannels)
   }
 
   const categories = ["all", ...Array.from(new Set(channels.map((channel) => channel.category).filter(Boolean)))]
@@ -217,7 +138,7 @@ export default function TVChannelsPage() {
     }
   }
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
