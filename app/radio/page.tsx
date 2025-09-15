@@ -1,0 +1,461 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Play, Search, Heart, Radio, ThumbsUp, ThumbsDown } from "lucide-react"
+import { WatchTracker } from "@/lib/watch-tracking"
+import { useToast } from "@/hooks/use-toast"
+import { supabase } from "@/lib/supabase"
+
+interface RadioStation {
+  id: number
+  name: string
+  genre: string
+  country: string
+  frequency?: string
+  logo_url: string
+  stream_url: string
+  description?: string
+  website?: string
+  is_active?: boolean
+}
+
+export default function RadioPage() {
+  const [stations, setStations] = useState<RadioStation[]>([])
+  const [filteredStations, setFilteredStations] = useState<RadioStation[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [currentStation, setCurrentStation] = useState<RadioStation | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
+  const [favorites, setFavorites] = useState<number[]>([])
+  const [userRatings, setUserRatings] = useState<Record<number, "like" | "dislike" | null>>({})
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
+
+  // Simuler les votes totaux basés sur l'ID
+  const getTotalVotes = (id: number, type: "like" | "dislike") => {
+    if (!id || typeof id !== "number" || isNaN(id)) return 0
+    const seed = id * (type === "like" ? 19 : 23)
+    const result = Math.floor((seed % 600) + 80)
+    return isNaN(result) ? 0 : result
+  }
+
+  useEffect(() => {
+    loadRadioStations()
+  }, [])
+
+  const loadRadioStations = async () => {
+    try {
+      setLoading(true)
+
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.warn("Supabase not configured, using fallback data")
+        loadFallbackStations()
+        return
+      }
+
+      const { data, error } = await supabase.from("radio_stations").select("*").eq("is_active", true).order("name")
+
+      if (error) {
+        console.error("Error loading radio stations:", error)
+        // Fallback vers les données statiques si la base de données échoue
+        loadFallbackStations()
+        return
+      }
+
+      setStations(data || [])
+      setFilteredStations(data || [])
+    } catch (error) {
+      console.error("Error loading radio stations:", error)
+      loadFallbackStations()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadFallbackStations = () => {
+    // Données de fallback si la base de données n'est pas disponible
+    const fallbackStations = [
+      {
+        id: 1,
+        name: "NRJ",
+        genre: "Pop",
+        country: "France",
+        frequency: "100.3 FM",
+        logo_url: "https://upload.wikimedia.org/wikipedia/commons/f/ff/NRJ_2015_logo.png",
+        stream_url: "https://cdn.nrjaudio.fm/audio1/fr/30001/mp3_128.mp3",
+        description: "Hit Music Only",
+        website: "https://www.nrj.fr",
+        is_active: true,
+      },
+      {
+        id: 2,
+        name: "RTL",
+        genre: "Talk/News",
+        country: "France",
+        frequency: "104.3 FM",
+        logo_url: "https://upload.wikimedia.org/wikipedia/commons/8/8a/RTL_logo_2015.svg",
+        stream_url: "https://streaming.radio.rtl.fr/rtl-1-44-128",
+        description: "La première radio de France",
+        website: "https://www.rtl.fr",
+        is_active: true,
+      },
+      {
+        id: 3,
+        name: "France Inter",
+        genre: "Talk/News",
+        country: "France",
+        frequency: "87.8 FM",
+        logo_url: "https://upload.wikimedia.org/wikipedia/commons/f/f8/France_Inter_logo_2021.svg",
+        stream_url: "https://direct.franceinter.fr/live/franceinter-midfi.mp3",
+        description: "Radio du service public français",
+        website: "https://www.franceinter.fr",
+        is_active: true,
+      },
+    ]
+
+    setStations(fallbackStations)
+    setFilteredStations(fallbackStations)
+  }
+
+  const categories = ["all", ...Array.from(new Set(stations.map((station) => station.genre).filter(Boolean)))]
+
+  useEffect(() => {
+    // Charger les favoris et ratings
+    const favoriteItems = WatchTracker.getFavoriteItems()
+    const radioFavorites = favoriteItems.filter((item) => item.type === "radio").map((item) => item.tmdbId)
+    setFavorites(radioFavorites)
+
+    // Charger les ratings
+    const ratings: Record<number, "like" | "dislike" | null> = {}
+    stations.forEach((station) => {
+      ratings[station.id] = WatchTracker.getRating("radio", station.id)
+    })
+    setUserRatings(ratings)
+  }, [stations])
+
+  useEffect(() => {
+    let filtered = stations
+
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (station) =>
+          (station.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (station.description || "").toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    }
+
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((station) => station.genre && station.genre === selectedCategory)
+    }
+
+    setFilteredStations(filtered)
+  }, [searchQuery, selectedCategory, stations])
+
+  useEffect(() => {
+    return () => {
+      if (audio) {
+        audio.pause()
+        audio.src = ""
+      }
+    }
+  }, [audio])
+
+  const handlePlay = (station: RadioStation) => {
+    if (!station.stream_url || station.stream_url.trim() === "") {
+      toast({
+        title: "Erreur",
+        description: "URL de stream non disponible pour cette station",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (audio) {
+      audio.pause()
+    }
+
+    if (currentStation?.id === station.id && isPlaying) {
+      setIsPlaying(false)
+      setCurrentStation(null)
+      return
+    }
+
+    const newAudio = new Audio(station.stream_url)
+    newAudio.crossOrigin = "anonymous"
+
+    newAudio.addEventListener("loadstart", () => {
+      console.log("Chargement de la radio...")
+    })
+
+    newAudio.addEventListener("canplay", () => {
+      newAudio
+        .play()
+        .then(() => {
+          setIsPlaying(true)
+          setCurrentStation(station)
+        })
+        .catch((error) => {
+          console.error("Erreur de lecture:", error)
+          alert("Impossible de lire cette station radio. Veuillez réessayer.")
+        })
+    })
+
+    newAudio.addEventListener("error", (e) => {
+      console.error("Erreur audio:", e)
+      alert("Erreur lors du chargement de la station radio.")
+    })
+
+    setAudio(newAudio)
+  }
+
+  const toggleFavorite = (station: RadioStation) => {
+    const isCurrentlyFavorite = WatchTracker.isFavorite("radio", station.id)
+    WatchTracker.toggleFavorite("radio", station.id, station.name, {
+      logoUrl: station.logo_url,
+    })
+
+    // Mettre à jour l'état local
+    if (isCurrentlyFavorite) {
+      setFavorites((prev) => prev.filter((id) => id !== station.id))
+    } else {
+      setFavorites((prev) => [...prev, station.id])
+    }
+  }
+
+  const handleLike = (station: RadioStation) => {
+    const newRating = WatchTracker.toggleLike("radio", station.id, station.name, {
+      logoUrl: station.logo_url,
+    })
+    setUserRatings((prev) => ({ ...prev, [station.id]: newRating }))
+    toast({
+      title: newRating ? "Station likée !" : "Like retiré",
+      description: newRating ? `Vous avez liké ${station.name}` : `Like retiré de ${station.name}`,
+    })
+  }
+
+  const handleDislike = (station: RadioStation) => {
+    const newRating = WatchTracker.toggleDislike("radio", station.id, station.name, {
+      logoUrl: station.logo_url,
+    })
+    setUserRatings((prev) => ({ ...prev, [station.id]: newRating }))
+    toast({
+      title: newRating ? "Station dislikée" : "Dislike retiré",
+      description: newRating ? `Vous avez disliké ${station.name}` : `Dislike retiré de ${station.name}`,
+    })
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <p>Chargement des stations radio...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl font-bold">Radio FM en Direct</h1>
+        <p className="text-xl text-muted-foreground">Écoutez vos stations de radio préférées en streaming</p>
+      </div>
+
+      {/* Station en cours */}
+      {currentStation && isPlaying && (
+        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+          <CardContent className="flex items-center justify-between p-4">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-md">
+                <img
+                  src={currentStation.logo_url || "/placeholder.svg"}
+                  alt={currentStation.name}
+                  className="w-full h-full object-contain p-1"
+                />
+              </div>
+              <div>
+                <h3 className="font-semibold text-blue-900">{currentStation.name}</h3>
+                <p className="text-sm text-blue-700">En cours de lecture...</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="flex space-x-1">
+                <div className="w-1 h-4 bg-blue-500 animate-pulse"></div>
+                <div className="w-1 h-6 bg-blue-500 animate-pulse" style={{ animationDelay: "0.1s" }}></div>
+                <div className="w-1 h-3 bg-blue-500 animate-pulse" style={{ animationDelay: "0.2s" }}></div>
+                <div className="w-1 h-5 bg-blue-500 animate-pulse" style={{ animationDelay: "0.3s" }}></div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePlay(currentStation)}
+                className="border-blue-300 text-blue-700 hover:bg-blue-100"
+              >
+                Arrêter
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Filtres */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Input
+            placeholder="Rechercher une station..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Genre" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tous les genres</SelectItem>
+            {categories.slice(1).map((category) => (
+              <SelectItem key={category} value={category}>
+                {category}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Grille des stations */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filteredStations.map((station) => {
+          const isFavorite = favorites.includes(station.id)
+          const isCurrentlyPlaying = currentStation?.id === station.id && isPlaying
+          const userRating = userRatings[station.id]
+          const totalLikes = getTotalVotes(station.id, "like")
+          const totalDislikes = getTotalVotes(station.id, "dislike")
+
+          return (
+            <Card
+              key={station.id}
+              className={`group hover:shadow-lg transition-all duration-300 ${isCurrentlyPlaying ? "ring-2 ring-blue-500 bg-blue-50" : ""}`}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+                      <img
+                        src={station.logo_url || "/placeholder.svg?height=48&width=48"}
+                        alt={station.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement
+                          target.src = "/radio-station-logo.jpg"
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">{station.name}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {station.genre}
+                        </Badge>
+                        {station.frequency && (
+                          <Badge variant="outline" className="text-xs">
+                            {station.frequency}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleFavorite(station)}
+                    className={`${isFavorite ? "text-red-500 hover:text-red-600" : "text-gray-400 hover:text-red-500"}`}
+                  >
+                    <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <CardDescription className="line-clamp-2">{station.description || "Station de radio"}</CardDescription>
+
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <span>{station.country || "Non spécifié"}</span>
+                  {isCurrentlyPlaying && (
+                    <div className="flex items-center text-blue-600">
+                      <Radio className="w-4 h-4 mr-1" />
+                      <span className="text-xs font-medium">En cours</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Votes compacts */}
+                <div className="flex items-center justify-center gap-2 bg-gray-800/50 rounded-lg px-3 py-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`p-1 h-auto ${
+                      userRating === "like"
+                        ? "text-green-500 hover:text-green-400"
+                        : "text-gray-400 hover:text-green-500"
+                    }`}
+                    onClick={() => handleLike(station)}
+                  >
+                    <ThumbsUp className={`w-4 h-4 ${userRating === "like" ? "fill-current" : ""}`} />
+                  </Button>
+                  <span className="text-green-500 text-sm font-medium">
+                    {Math.max(0, totalLikes + (userRating === "like" ? 1 : 0)) || 0}
+                  </span>
+                  <div className="w-px h-4 bg-gray-600 mx-1" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`p-1 h-auto ${
+                      userRating === "dislike" ? "text-red-500 hover:text-red-400" : "text-gray-400 hover:text-red-500"
+                    }`}
+                    onClick={() => handleDislike(station)}
+                  >
+                    <ThumbsDown className={`w-4 h-4 ${userRating === "dislike" ? "fill-current" : ""}`} />
+                  </Button>
+                  <span className="text-red-500 text-sm font-medium">
+                    {Math.max(0, totalDislikes + (userRating === "dislike" ? 1 : 0)) || 0}
+                  </span>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handlePlay(station)}
+                    className={`flex-1 ${isCurrentlyPlaying ? "bg-red-600 hover:bg-red-700" : ""}`}
+                    size="sm"
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    {isCurrentlyPlaying ? "Arrêter" : "Écouter"}
+                  </Button>
+                  {station.website && station.website.trim() !== "" && (
+                    <Button asChild variant="outline" size="sm">
+                      <a href={station.website} target="_blank" rel="noopener noreferrer">
+                        Site
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+
+      {filteredStations.length === 0 && (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Aucune station trouvée pour votre recherche.</p>
+        </div>
+      )}
+    </div>
+  )
+}
