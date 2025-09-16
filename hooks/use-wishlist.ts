@@ -5,17 +5,58 @@ import { useAuth } from "@/components/auth-provider"
 import { createClient } from "@/lib/supabase"
 import { toast } from "@/hooks/use-toast"
 
-export function useWishlist(item: any) {
+interface WishlistItem {
+  id: string
+  user_id: string
+  tmdb_id: number
+  content_type: string
+  content_title: string
+  poster_path?: string
+  created_at: string
+}
+
+export function useWishlist(item?: any) {
   const [isInWishlist, setIsInWishlist] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([])
+  const [loading, setLoading] = useState(true)
   const { user } = useAuth()
   const supabase = createClient()
 
   useEffect(() => {
-    if (user && item) {
-      checkWishlistStatus()
+    if (user) {
+      loadWishlistItems()
+      if (item) {
+        checkWishlistStatus()
+      }
+    } else {
+      setWishlistItems([])
+      setLoading(false)
     }
   }, [user, item])
+
+  const loadWishlistItems = async () => {
+    if (!user) return
+
+    try {
+      const { data, error } = await supabase
+        .from("user_wishlist")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("Error loading wishlist items:", error)
+        return
+      }
+
+      setWishlistItems(data || [])
+    } catch (error) {
+      console.error("Error loading wishlist items:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const checkWishlistStatus = async () => {
     if (!user || !item) return
@@ -25,7 +66,7 @@ export function useWishlist(item: any) {
         .from("user_wishlist")
         .select("id")
         .eq("user_id", user.id)
-        .eq("content_id", item.id)
+        .eq("tmdb_id", item.id)
         .eq("content_type", item.title ? "movie" : "tv")
         .single()
 
@@ -61,12 +102,13 @@ export function useWishlist(item: any) {
           .from("user_wishlist")
           .delete()
           .eq("user_id", user.id)
-          .eq("content_id", content.id)
+          .eq("tmdb_id", content.id)
           .eq("content_type", contentType)
 
         if (error) throw error
 
         setIsInWishlist(false)
+        await loadWishlistItems()
         toast({
           title: "Retiré des favoris",
           description: `${content.title || content.name} a été retiré de vos favoris.`,
@@ -75,19 +117,16 @@ export function useWishlist(item: any) {
         // Add to wishlist
         const { error } = await supabase.from("user_wishlist").insert({
           user_id: user.id,
-          content_id: content.id,
+          tmdb_id: content.id,
           content_type: contentType,
           content_title: content.title || content.name,
-          metadata: {
-            poster_path: content.poster_path,
-            vote_average: content.vote_average,
-            release_date: content.release_date || content.first_air_date,
-          },
+          poster_path: content.poster_path,
         })
 
         if (error) throw error
 
         setIsInWishlist(true)
+        await loadWishlistItems()
         toast({
           title: "Ajouté aux favoris",
           description: `${content.title || content.name} a été ajouté à vos favoris.`,
@@ -105,9 +144,41 @@ export function useWishlist(item: any) {
     }
   }
 
+  const removeFromWishlist = async (tmdbId: number, contentType: string) => {
+    if (!user) return
+
+    try {
+      const { error } = await supabase
+        .from("user_wishlist")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("tmdb_id", tmdbId)
+        .eq("content_type", contentType)
+
+      if (error) throw error
+
+      await loadWishlistItems()
+      toast({
+        title: "Retiré des favoris",
+        description: "L'élément a été retiré de vos favoris.",
+      })
+    } catch (error) {
+      console.error("Error removing from wishlist:", error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression.",
+        variant: "destructive",
+      })
+    }
+  }
+
   return {
     isInWishlist,
     isLoading,
     toggleWishlist,
+    wishlistItems,
+    loading,
+    removeFromWishlist,
+    refreshWishlist: loadWishlistItems,
   }
 }

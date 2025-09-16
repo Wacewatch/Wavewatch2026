@@ -39,32 +39,66 @@ export function CalendarWidget() {
         setLoading(true)
         setError(null)
 
+        console.log("[v0] Fetching upcoming content for calendar...")
+
+        const fetchWithRetry = async (fetchFn: Function, page: number, retries = 2): Promise<any> => {
+          for (let i = 0; i <= retries; i++) {
+            try {
+              const result = await fetchFn(page)
+              return result
+            } catch (error) {
+              console.warn(`[v0] Retry ${i + 1} failed for page ${page}:`, error)
+              if (i === retries) throw error
+              await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)))
+            }
+          }
+        }
+
         // Récupérer plus de pages pour avoir plus de contenu
-        const [moviesResponse1, moviesResponse2, moviesResponse3] = await Promise.all([
-          getUpcomingMovies(1),
-          getUpcomingMovies(2),
-          getUpcomingMovies(3),
+        const moviePromises = []
+        const tvPromises = []
+
+        for (let page = 1; page <= 5; page++) {
+          moviePromises.push(fetchWithRetry(getUpcomingMovies, page))
+          tvPromises.push(fetchWithRetry(getUpcomingTVShows, page))
+        }
+
+        const [movieResponses, tvResponses] = await Promise.allSettled([
+          Promise.allSettled(moviePromises),
+          Promise.allSettled(tvPromises),
         ])
 
-        const [tvResponse1, tvResponse2, tvResponse3] = await Promise.all([
-          getUpcomingTVShows(1),
-          getUpcomingTVShows(2),
-          getUpcomingTVShows(3),
-        ])
+        // Extract successful responses
+        const allMovies: any[] = []
+        const allTVShows: any[] = []
 
-        // Combiner toutes les pages de films
-        const allMovies = [...moviesResponse1.results, ...moviesResponse2.results, ...moviesResponse3.results]
+        if (movieResponses.status === "fulfilled") {
+          movieResponses.value.forEach((result) => {
+            if (result.status === "fulfilled" && result.value?.results) {
+              allMovies.push(...result.value.results)
+            }
+          })
+        }
 
-        // Combiner toutes les pages de séries
-        const allTVShows = [...tvResponse1.results, ...tvResponse2.results, ...tvResponse3.results]
+        if (tvResponses.status === "fulfilled") {
+          tvResponses.value.forEach((result) => {
+            if (result.status === "fulfilled" && result.value?.results) {
+              allTVShows.push(...result.value.results)
+            }
+          })
+        }
+
+        console.log("[v0] Fetched movies:", allMovies.length, "TV shows:", allTVShows.length)
+
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
 
         const movieEvents: CalendarEvent[] = allMovies
           .filter((movie: any) => {
+            if (!movie.release_date) return false
             const releaseDate = new Date(movie.release_date)
-            const today = new Date()
-            return releaseDate >= today
+            return releaseDate >= today && movie.title && movie.id
           })
-          .slice(0, 20) // Augmenter à 20 films
           .map((movie: any) => ({
             id: movie.id,
             title: movie.title,
@@ -77,11 +111,10 @@ export function CalendarWidget() {
 
         const tvEvents: CalendarEvent[] = allTVShows
           .filter((show: any) => {
+            if (!show.first_air_date) return false
             const airDate = new Date(show.first_air_date)
-            const today = new Date()
-            return airDate >= today
+            return airDate >= today && show.name && show.id
           })
-          .slice(0, 20) // Augmenter à 20 séries
           .map((show: any) => ({
             id: show.id,
             title: show.name,
@@ -92,14 +125,22 @@ export function CalendarWidget() {
             overview: show.overview,
           }))
 
-        // Combiner et trier par date
         const allEvents = [...movieEvents, ...tvEvents]
-          .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-          .slice(0, 15) // Afficher 15 événements au lieu de 5
+          // Remove duplicates based on id and type
+          .filter((event, index, self) => index === self.findIndex((e) => e.id === event.id && e.type === event.type))
+          // Sort by date, then by rating
+          .sort((a, b) => {
+            const dateA = new Date(a.date).getTime()
+            const dateB = new Date(b.date).getTime()
+            if (dateA !== dateB) return dateA - dateB
+            return (b.vote_average || 0) - (a.vote_average || 0)
+          })
+          .slice(0, 20) // Show more events
 
+        console.log("[v0] Final calendar events:", allEvents.length)
         setEvents(allEvents)
       } catch (err) {
-        console.error("Erreur lors du chargement des données:", err)
+        console.error("[v0] Error loading calendar data:", err)
         setError("Impossible de charger les prochaines sorties")
       } finally {
         setLoading(false)
@@ -112,12 +153,20 @@ export function CalendarWidget() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     const today = new Date()
-    const diffTime = date.getTime() - today.getTime()
+    today.setHours(0, 0, 0, 0)
+    const eventDate = new Date(date)
+    eventDate.setHours(0, 0, 0, 0)
+
+    const diffTime = eventDate.getTime() - today.getTime()
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
     if (diffDays === 0) return "Aujourd'hui"
     if (diffDays === 1) return "Demain"
     if (diffDays < 7) return `Dans ${diffDays} jours`
+    if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7)
+      return weeks === 1 ? "Dans 1 semaine" : `Dans ${weeks} semaines`
+    }
 
     return date.toLocaleDateString("fr-FR", {
       day: "numeric",
@@ -299,7 +348,11 @@ export function CalendarWidget() {
 
           {/* Bouton pour voir plus */}
           <div className="pt-4 border-t border-blue-700">
-            <Button asChild variant="outline" className="w-full border-blue-600 text-white hover:bg-blue-800">
+            <Button
+              asChild
+              variant="outline"
+              className="w-full border-blue-600 text-white hover:bg-blue-800 bg-transparent"
+            >
               <Link href="/calendar">
                 <Calendar className="w-4 h-4 mr-2" />
                 Voir le calendrier complet

@@ -29,6 +29,17 @@ export function RandomContent() {
   })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [contentCache, setContentCache] = useState<{
+    movies: any[]
+    tvShows: any[]
+    anime: any[]
+    lastFetch: number
+  }>({
+    movies: [],
+    tvShows: [],
+    anime: [],
+    lastFetch: 0,
+  })
   const router = useRouter()
 
   const contentTypes = [
@@ -70,41 +81,93 @@ export function RandomContent() {
     { id: "excellent", label: "Excellent", icon: Star },
   ]
 
+  const fetchContentData = async (forceRefresh = false) => {
+    const now = Date.now()
+    const cacheExpiry = 5 * 60 * 1000 // 5 minutes
+
+    if (!forceRefresh && contentCache.lastFetch && now - contentCache.lastFetch < cacheExpiry) {
+      return contentCache
+    }
+
+    try {
+      console.log("[v0] Fetching fresh content data...")
+      const [moviesData, tvShowsData, animeData] = await Promise.all([
+        getTrendingMovies(),
+        getTrendingTVShows(),
+        getTrendingAnime(),
+      ])
+
+      const newCache = {
+        movies: moviesData?.results || [],
+        tvShows: tvShowsData?.results || [],
+        anime: animeData?.results || [],
+        lastFetch: now,
+      }
+
+      setContentCache(newCache)
+      console.log("[v0] Content cache updated:", {
+        movies: newCache.movies.length,
+        tvShows: newCache.tvShows.length,
+        anime: newCache.anime.length,
+      })
+
+      return newCache
+    } catch (error) {
+      console.error("[v0] Error fetching content data:", error)
+      return contentCache
+    }
+  }
+
+  const getRandomContent = (contentArray: any[]) => {
+    if (!contentArray || contentArray.length === 0) return null
+
+    // Use crypto.getRandomValues for better randomness if available
+    let randomIndex
+    if (typeof window !== "undefined" && window.crypto && window.crypto.getRandomValues) {
+      const array = new Uint32Array(1)
+      window.crypto.getRandomValues(array)
+      randomIndex = array[0] % contentArray.length
+    } else {
+      // Fallback to Math.random with additional entropy
+      const entropy = Date.now() + Math.random() * 1000000
+      randomIndex = Math.floor(((entropy % 1000) / 1000) * contentArray.length)
+    }
+
+    return contentArray[randomIndex]
+  }
+
   const handleSurpriseMe = async () => {
     setIsLoading(true)
     setError("")
     try {
-      const randomType = Math.random()
-      let content
-      let contentData
+      console.log("[v0] Getting surprise content...")
+      const cache = await fetchContentData(true) // Force refresh for surprise
 
-      if (randomType < 0.33) {
-        contentData = await getTrendingMovies()
-        if (contentData && contentData.results && contentData.results.length > 0) {
-          content = contentData.results[Math.floor(Math.random() * contentData.results.length)]
-          if (content && content.id) {
-            router.push(`/movies/${content.id}`)
-            return
-          }
+      // Combine all content types for true randomness
+      const allContent = [
+        ...cache.movies.map((item) => ({ ...item, type: "movie" })),
+        ...cache.tvShows.map((item) => ({ ...item, type: "tv" })),
+        ...cache.anime.map((item) => ({ ...item, type: "anime" })),
+      ]
+
+      if (allContent.length === 0) {
+        setError("Aucun contenu disponible pour le moment.")
+        return
+      }
+
+      const content = getRandomContent(allContent)
+
+      if (content && content.id) {
+        console.log("[v0] Selected random content:", content.title || content.name, "Type:", content.type)
+
+        if (content.type === "movie") {
+          router.push(`/movies/${content.id}`)
+        } else if (content.type === "anime") {
+          router.push(`/anime/${content.id}`)
+        } else {
+          router.push(`/tv-shows/${content.id}`)
         }
-      } else if (randomType < 0.66) {
-        contentData = await getTrendingTVShows()
-        if (contentData && contentData.results && contentData.results.length > 0) {
-          content = contentData.results[Math.floor(Math.random() * contentData.results.length)]
-          if (content && content.id) {
-            router.push(`/tv-shows/${content.id}`)
-            return
-          }
-        }
-      } else {
-        contentData = await getTrendingAnime()
-        if (contentData && contentData.results && contentData.results.length > 0) {
-          content = contentData.results[Math.floor(Math.random() * contentData.results.length)]
-          if (content && content.id) {
-            router.push(`/anime/${content.id}`)
-            return
-          }
-        }
+        return
       }
 
       setError("Aucun contenu disponible pour le moment.")
@@ -120,36 +183,36 @@ export function RandomContent() {
     setIsLoading(true)
     setError("")
     try {
-      let content
-      let contentData
+      console.log("[v0] Getting recommendation for type:", preferences.type)
+      const cache = await fetchContentData()
+      let contentArray: any[] = []
 
       if (preferences.type === "movie") {
-        contentData = await getTrendingMovies()
-        if (contentData && contentData.results && contentData.results.length > 0) {
-          content = contentData.results[Math.floor(Math.random() * contentData.results.length)]
-          if (content && content.id) {
-            router.push(`/movies/${content.id}`)
-            return
-          }
-        }
+        contentArray = cache.movies
       } else if (preferences.type === "tv") {
-        contentData = await getTrendingTVShows()
-        if (contentData && contentData.results && contentData.results.length > 0) {
-          content = contentData.results[Math.floor(Math.random() * contentData.results.length)]
-          if (content && content.id) {
-            router.push(`/tv-shows/${content.id}`)
-            return
-          }
-        }
+        contentArray = cache.tvShows
       } else if (preferences.type === "anime") {
-        contentData = await getTrendingAnime()
-        if (contentData && contentData.results && contentData.results.length > 0) {
-          content = contentData.results[Math.floor(Math.random() * contentData.results.length)]
-          if (content && content.id) {
-            router.push(`/anime/${content.id}`)
-            return
-          }
+        contentArray = cache.anime
+      }
+
+      if (contentArray.length === 0) {
+        setError("Aucun contenu disponible pour le moment.")
+        return
+      }
+
+      const content = getRandomContent(contentArray)
+
+      if (content && content.id) {
+        console.log("[v0] Selected recommendation:", content.title || content.name)
+
+        if (preferences.type === "movie") {
+          router.push(`/movies/${content.id}`)
+        } else if (preferences.type === "anime") {
+          router.push(`/anime/${content.id}`)
+        } else {
+          router.push(`/tv-shows/${content.id}`)
         }
+        return
       }
 
       setError("Aucun contenu disponible pour le moment.")
@@ -261,7 +324,7 @@ export function RandomContent() {
                     key={genre}
                     variant="outline"
                     size="sm"
-                    className="text-xs h-8 hover:bg-blue-500/20"
+                    className="text-xs h-8 hover:bg-blue-500/20 bg-transparent"
                     onClick={() => {
                       setPreferences({ ...preferences, genre })
                       setStep(2)
@@ -312,7 +375,7 @@ export function RandomContent() {
                     <Button
                       key={duration.id}
                       variant="outline"
-                      className="h-12 flex items-center gap-2 hover:bg-green-500/20"
+                      className="h-12 flex items-center gap-2 hover:bg-green-500/20 bg-transparent"
                       onClick={() => {
                         setPreferences({ ...preferences, duration: duration.id })
                         setStep(3)
@@ -370,7 +433,7 @@ export function RandomContent() {
                     <Button
                       key={rating.id}
                       variant="outline"
-                      className="h-12 flex items-center gap-2 hover:bg-yellow-500/20"
+                      className="h-12 flex items-center gap-2 hover:bg-yellow-500/20 bg-transparent"
                       onClick={() => {
                         setPreferences({ ...preferences, rating: rating.id })
                         handleGetRecommendation()

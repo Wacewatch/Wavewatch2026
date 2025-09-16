@@ -327,6 +327,31 @@ export function usePlaylists() {
     }
   }
 
+  const getPlaylistItems = async (playlistId: string) => {
+    if (!user?.id) return []
+
+    try {
+      console.log("[v0] Loading playlist items for playlist:", playlistId)
+
+      const { data, error } = await supabase
+        .from("playlist_items")
+        .select("*")
+        .eq("playlist_id", playlistId)
+        .order("position", { ascending: true })
+
+      if (error) {
+        console.error("[v0] Error loading playlist items:", error)
+        return []
+      }
+
+      console.log("[v0] Playlist items loaded successfully:", data?.length || 0)
+      return data || []
+    } catch (error) {
+      console.error("[v0] Error loading playlist items:", error)
+      return []
+    }
+  }
+
   return {
     playlists,
     loading,
@@ -335,6 +360,7 @@ export function usePlaylists() {
     deletePlaylist,
     addToPlaylist,
     removeFromPlaylist,
+    getPlaylistItems,
     refreshPlaylists: loadUserPlaylists,
   }
 }
