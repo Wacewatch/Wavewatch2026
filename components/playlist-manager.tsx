@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Plus, Edit, Trash2, Lock, Globe, Calendar, Film } from "lucide-react"
 import { usePlaylists } from "@/hooks/use-playlists"
+import Link from "next/link"
 
 const THEME_COLORS = [
   { name: "Bleu", value: "#3B82F6" },
@@ -242,174 +243,179 @@ export function PlaylistManager() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {playlists.map((playlist) => (
-            <Card key={playlist.id} className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <CardTitle className="text-white text-lg line-clamp-1" title={playlist.title}>
-                      {playlist.title}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-1">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: playlist.theme_color }} />
-                      {playlist.is_public ? (
-                        <Badge variant="secondary" className="text-xs">
-                          <Globe className="w-3 h-3 mr-1" />
-                          Public
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-xs border-gray-600">
-                          <Lock className="w-3 h-3 mr-1" />
-                          Privé
-                        </Badge>
-                      )}
+            <Link key={playlist.id} href={`/playlists/${playlist.id}`}>
+              <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer group">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <CardTitle
+                        className="text-white text-lg line-clamp-1 group-hover:text-blue-400 transition-colors"
+                        title={playlist.title}
+                      >
+                        {playlist.title}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: playlist.theme_color }} />
+                        {playlist.is_public ? (
+                          <Badge variant="secondary" className="text-xs">
+                            <Globe className="w-3 h-3 mr-1" />
+                            Public
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs border-gray-600">
+                            <Lock className="w-3 h-3 mr-1" />
+                            Privé
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-1">
-                    <Dialog
-                      open={editingPlaylist === playlist.id}
-                      onOpenChange={(open) => {
-                        if (!open) setEditingPlaylist(null)
-                      }}
-                    >
-                      <DialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => startEdit(playlist)}
-                          className="text-gray-400 hover:text-white"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="bg-gray-800 border-gray-700 text-white">
-                        <DialogHeader>
-                          <DialogTitle>Modifier la playlist</DialogTitle>
-                          <DialogDescription className="text-gray-400">
-                            Modifiez les paramètres de votre playlist
-                          </DialogDescription>
-                        </DialogHeader>
+                    <div className="flex items-center gap-1" onClick={(e) => e.preventDefault()}>
+                      <Dialog
+                        open={editingPlaylist === playlist.id}
+                        onOpenChange={(open) => {
+                          if (!open) setEditingPlaylist(null)
+                        }}
+                      >
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEdit(playlist)}
+                            className="text-gray-400 hover:text-white"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-gray-800 border-gray-700 text-white">
+                          <DialogHeader>
+                            <DialogTitle>Modifier la playlist</DialogTitle>
+                            <DialogDescription className="text-gray-400">
+                              Modifiez les paramètres de votre playlist
+                            </DialogDescription>
+                          </DialogHeader>
 
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-title">Titre de la playlist</Label>
-                            <Input
-                              id="edit-title"
-                              value={formData.title}
-                              onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                              className="bg-gray-700 border-gray-600"
-                            />
-                          </div>
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-title">Titre de la playlist</Label>
+                              <Input
+                                id="edit-title"
+                                value={formData.title}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
+                                className="bg-gray-700 border-gray-600"
+                              />
+                            </div>
 
-                          <div className="space-y-2">
-                            <Label htmlFor="edit-description">Description</Label>
-                            <Textarea
-                              id="edit-description"
-                              value={formData.description}
-                              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                              className="bg-gray-700 border-gray-600"
-                              rows={3}
-                            />
-                          </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="edit-description">Description</Label>
+                              <Textarea
+                                id="edit-description"
+                                value={formData.description}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+                                className="bg-gray-700 border-gray-600"
+                                rows={3}
+                              />
+                            </div>
 
-                          <div className="space-y-2">
-                            <Label>Couleur du thème</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {THEME_COLORS.map((color) => (
-                                <button
-                                  key={color.value}
-                                  onClick={() => setFormData((prev) => ({ ...prev, themeColor: color.value }))}
-                                  className={`w-8 h-8 rounded-full border-2 ${
-                                    formData.themeColor === color.value ? "border-white" : "border-gray-600"
-                                  }`}
-                                  style={{ backgroundColor: color.value }}
-                                  title={color.name}
-                                />
-                              ))}
+                            <div className="space-y-2">
+                              <Label>Couleur du thème</Label>
+                              <div className="flex flex-wrap gap-2">
+                                {THEME_COLORS.map((color) => (
+                                  <button
+                                    key={color.value}
+                                    onClick={() => setFormData((prev) => ({ ...prev, themeColor: color.value }))}
+                                    className={`w-8 h-8 rounded-full border-2 ${
+                                      formData.themeColor === color.value ? "border-white" : "border-gray-600"
+                                    }`}
+                                    style={{ backgroundColor: color.value }}
+                                    title={color.name}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                              <input
+                                id="edit-isPublic"
+                                type="checkbox"
+                                checked={formData.isPublic}
+                                onChange={(e) => setFormData((prev) => ({ ...prev, isPublic: e.target.checked }))}
+                                className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
+                              />
+                              <Label htmlFor="edit-isPublic" className="flex items-center gap-2">
+                                {formData.isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                                Playlist publique
+                              </Label>
                             </div>
                           </div>
 
-                          <div className="flex items-center space-x-2">
-                            <input
-                              id="edit-isPublic"
-                              type="checkbox"
-                              checked={formData.isPublic}
-                              onChange={(e) => setFormData((prev) => ({ ...prev, isPublic: e.target.checked }))}
-                              className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500"
-                            />
-                            <Label htmlFor="edit-isPublic" className="flex items-center gap-2">
-                              {formData.isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                              Playlist publique
-                            </Label>
-                          </div>
-                        </div>
+                          <DialogFooter>
+                            <Button
+                              variant="outline"
+                              onClick={() => setEditingPlaylist(null)}
+                              className="border-gray-600 text-gray-300"
+                            >
+                              Annuler
+                            </Button>
+                            <Button
+                              onClick={() => handleEditPlaylist(playlist.id)}
+                              disabled={!formData.title.trim()}
+                              className="bg-blue-600 hover:bg-blue-700"
+                            >
+                              Sauvegarder
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
 
-                        <DialogFooter>
-                          <Button
-                            variant="outline"
-                            onClick={() => setEditingPlaylist(null)}
-                            className="border-gray-600 text-gray-300"
-                          >
-                            Annuler
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="text-gray-400 hover:text-red-400">
+                            <Trash2 className="w-4 h-4" />
                           </Button>
-                          <Button
-                            onClick={() => handleEditPlaylist(playlist.id)}
-                            disabled={!formData.title.trim()}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            Sauvegarder
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="text-gray-400 hover:text-red-400">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent className="bg-gray-800 border-gray-700">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="text-white">Supprimer la playlist</AlertDialogTitle>
-                          <AlertDialogDescription className="text-gray-300">
-                            Êtes-vous sûr de vouloir supprimer la playlist "{playlist.title}" ? Cette action est
-                            irréversible et supprimera tous les éléments de la playlist.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel className="bg-gray-700 text-white hover:bg-gray-600">
-                            Annuler
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeletePlaylist(playlist.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white"
-                          >
-                            Supprimer
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent className="bg-gray-800 border-gray-700">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle className="text-white">Supprimer la playlist</AlertDialogTitle>
+                            <AlertDialogDescription className="text-gray-300">
+                              Êtes-vous sûr de vouloir supprimer la playlist "{playlist.title}" ? Cette action est
+                              irréversible et supprimera tous les éléments de la playlist.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel className="bg-gray-700 text-white hover:bg-gray-600">
+                              Annuler
+                            </AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeletePlaylist(playlist.id)}
+                              className="bg-red-600 hover:bg-red-700 text-white"
+                            >
+                              Supprimer
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
+                </CardHeader>
 
-              <CardContent className="pt-0">
-                {playlist.description && (
-                  <p className="text-gray-400 text-sm mb-3 line-clamp-2">{playlist.description}</p>
-                )}
+                <CardContent className="pt-0">
+                  {playlist.description && (
+                    <p className="text-gray-400 text-sm mb-3 line-clamp-2">{playlist.description}</p>
+                  )}
 
-                <div className="flex items-center justify-between text-sm text-gray-400">
-                  <div className="flex items-center gap-4">
-                    <span>{playlist.items_count || 0} éléments</span>
+                  <div className="flex items-center justify-between text-sm text-gray-400">
+                    <div className="flex items-center gap-4">
+                      <span>{playlist.items_count || 0} éléments</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3" />
+                      <span>{new Date(playlist.updated_at).toLocaleDateString()}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    <span>{new Date(playlist.updated_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

@@ -2,30 +2,30 @@
 
 import { useEffect, useState } from "react"
 import { useAuth } from "@/components/auth-provider"
+import { useWishlist } from "@/hooks/use-wishlist"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Heart } from "lucide-react"
-import { WatchTracker } from "@/lib/watch-tracking"
+import { ArrowLeft, Heart, Trash2 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 
 export default function WishlistPage() {
   const { user } = useAuth()
-  const [wishlistItems, setWishlistItems] = useState<any[]>([])
+  const { wishlistItems, loading, removeFromWishlist } = useWishlist()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    setWishlistItems(WatchTracker.getWishlistItems())
-
-    const handleUpdate = () => {
-      setWishlistItems(WatchTracker.getWishlistItems())
-    }
-
-    window.addEventListener("watchlist-updated", handleUpdate)
-    return () => window.removeEventListener("watchlist-updated", handleUpdate)
   }, [])
+
+  const handleRemoveFromWishlist = async (tmdbId: number, contentType: string) => {
+    try {
+      await removeFromWishlist(tmdbId, contentType)
+    } catch (error) {
+      console.error("Error removing from wishlist:", error)
+    }
+  }
 
   if (!mounted) {
     return (
@@ -42,6 +42,18 @@ export default function WishlistPage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4 text-white">Accès refusé</h1>
             <p className="text-gray-300">Vous devez être connecté pour accéder à cette page.</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <p className="text-gray-300">Chargement de votre wishlist...</p>
           </div>
         </div>
       </div>
@@ -89,23 +101,17 @@ export default function WishlistPage() {
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                 {wishlistItems.map((item) => {
-                  let imageUrl = "/placeholder.svg?height=300&width=200"
-
-                  if (item.posterPath) {
-                    if (item.posterPath.startsWith("http")) {
-                      imageUrl = item.posterPath
-                    } else {
-                      imageUrl = `https://image.tmdb.org/t/p/w300${item.posterPath}`
-                    }
-                  }
+                  const imageUrl = item.poster_path
+                    ? `https://image.tmdb.org/t/p/w300${item.poster_path}`
+                    : "/placeholder.svg?height=300&width=200"
 
                   return (
-                    <Link key={item.id} href={`/${item.type === "movie" ? "movies" : "tv-shows"}/${item.tmdbId}`}>
-                      <div className="space-y-2 group cursor-pointer">
-                        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
+                    <div key={`${item.tmdb_id}-${item.content_type}`} className="space-y-2 group">
+                      <Link href={`/${item.content_type === "movie" ? "movies" : "tv-shows"}/${item.tmdb_id}`}>
+                        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700 cursor-pointer">
                           <Image
                             src={imageUrl || "/placeholder.svg"}
-                            alt={item.title}
+                            alt={item.content_title}
                             fill
                             className="object-cover group-hover:scale-105 transition-transform"
                             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 12.5vw"
@@ -120,17 +126,29 @@ export default function WishlistPage() {
                             </Badge>
                           </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white">
-                            {item.title}
+                      </Link>
+                      <div>
+                        <Link href={`/${item.content_type === "movie" ? "movies" : "tv-shows"}/${item.tmdb_id}`}>
+                          <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white cursor-pointer">
+                            {item.content_title}
                           </p>
-                          <p className="text-xs text-gray-400">{new Date(item.addedAt).toLocaleDateString()}</p>
-                          <Badge variant="outline" className="text-xs mt-1 border-gray-600 text-gray-400">
-                            {item.type === "movie" ? "Film" : "Série"}
+                        </Link>
+                        <p className="text-xs text-gray-400">{new Date(item.created_at).toLocaleDateString()}</p>
+                        <div className="flex items-center justify-between mt-1">
+                          <Badge variant="outline" className="text-xs border-gray-600 text-gray-400">
+                            {item.content_type === "movie" ? "Film" : "Série"}
                           </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveFromWishlist(item.tmdb_id, item.content_type)}
+                            className="h-6 w-6 p-0 text-gray-400 hover:text-red-400 hover:bg-red-900/20"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   )
                 })}
               </div>
