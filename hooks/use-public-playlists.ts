@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 
@@ -28,6 +28,7 @@ export function usePublicPlaylists() {
   const [playlists, setPlaylists] = useState<PublicPlaylist[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const supabase = createClient()
 
   useEffect(() => {
     loadPublicPlaylists()

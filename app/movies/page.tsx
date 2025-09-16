@@ -91,6 +91,7 @@ export default function MoviesPage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setCurrentPage(1)
+    // The search will be triggered by the useEffect when searchQuery changes
   }
 
   const handleGenreChange = (value: string) => {

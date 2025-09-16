@@ -1,5 +1,5 @@
 import useSWR from "swr"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
 
 interface RetrogamingSource {
   id: number
@@ -43,6 +43,7 @@ const fallbackSources: RetrogamingSource[] = [
 
 const fetcher = async (): Promise<RetrogamingSource[]> => {
   try {
+    const supabase = createClient()
     const { data, error } = await supabase.from("retrogaming_sources").select("*").eq("is_active", true).order("name")
 
     if (error) {

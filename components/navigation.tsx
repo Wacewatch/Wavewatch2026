@@ -138,7 +138,7 @@ export function Navigation() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-blue-900 border-blue-700">
                   <div className="px-3 py-2 border-b border-blue-700">
-                    <p className="text-sm font-medium text-white">{user.username}</p>
+                    <p className="text-sm font-medium text-white">{user.username || "Utilisateur"}</p>
                     <p className="text-xs text-blue-300">{user.isVip ? "Membre VIP" : "Membre Standard"}</p>
                   </div>
                   <DropdownMenuItem asChild>
@@ -257,7 +257,7 @@ export function Navigation() {
                       {user.isVip && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-400" />}
                     </div>
                     <div>
-                      <p className="font-medium text-white">{user.username}</p>
+                      <p className="font-medium text-white">{user.username || "Utilisateur"}</p>
                       <p className="text-xs text-blue-300">{user.isVip ? "Membre VIP" : "Membre Standard"}</p>
                     </div>
                   </div>

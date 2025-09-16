@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
 import { useAuth } from "@/components/auth-provider"
 
 interface UserPreferences {
@@ -22,6 +22,7 @@ export function useUserPreferences() {
     themePreference: "system",
   })
   const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
     if (user?.id) {

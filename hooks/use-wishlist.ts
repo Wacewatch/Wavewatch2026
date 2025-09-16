@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/components/auth-provider"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
 import { toast } from "@/hooks/use-toast"
 
 export function useWishlist(item: any) {
   const [isInWishlist, setIsInWishlist] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const { user } = useAuth()
+  const supabase = createClient()
 
   useEffect(() => {
     if (user && item) {

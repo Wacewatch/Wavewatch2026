@@ -7,7 +7,7 @@ import { TVShowCard } from "@/components/tv-show-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { searchAnime } from "@/lib/tmdb"
+import { searchMulti } from "@/lib/tmdb"
 import { Search, RefreshCw } from "lucide-react"
 
 export default function AnimePage() {
@@ -26,7 +26,9 @@ export default function AnimePage() {
         let data
 
         if (searchQuery) {
-          data = await searchAnime(searchQuery, currentPage)
+          data = await searchMulti(searchQuery, currentPage)
+          // Filter only anime from search results (TV shows with animation genre)
+          data.results = data.results.filter((item: any) => item.media_type === "tv" && item.genre_ids?.includes(16))
         } else {
           // Utiliser la nouvelle API qui utilise le cache
           const response = await fetch(`/api/content/anime?page=${currentPage}&cache=true`)
@@ -72,6 +74,7 @@ export default function AnimePage() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setCurrentPage(1)
+    // The search will be triggered by the useEffect when searchQuery changes
   }
 
   const handleSortChange = (value: string) => {
@@ -177,7 +180,7 @@ export default function AnimePage() {
         <>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {anime.map((show) => (
-              <TVShowCard key={show.id} show={show} />
+              <TVShowCard key={show.id} show={show} isAnime />
             ))}
           </div>
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useAuth } from "@/components/auth-provider"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
 
 export interface UserStatus {
   isWatched: boolean
@@ -19,6 +19,7 @@ export function useUserStatus(contentId: number, contentType: "movie" | "tv" | "
     isInWatchlist: false,
   })
   const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
     if (!user?.id || !contentId) {

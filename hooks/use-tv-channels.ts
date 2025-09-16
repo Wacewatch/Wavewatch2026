@@ -1,5 +1,5 @@
 import useSWR from "swr"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
 
 interface TVChannel {
   id: number
@@ -61,6 +61,7 @@ const fetcher = async (): Promise<TVChannel[]> => {
       return fallbackChannels
     }
 
+    const supabase = createClient()
     const { data, error } = await supabase.from("tv_channels").select("*").eq("is_active", true).order("name")
 
     if (error) {

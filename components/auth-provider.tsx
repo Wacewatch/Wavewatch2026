@@ -3,7 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase"
 import { updateAdultContentPreference } from "@/lib/tmdb"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -33,6 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [mounted, setMounted] = useState(false)
   const { toast } = useToast()
+  const supabase = createClient()
 
   useEffect(() => {
     setMounted(true)

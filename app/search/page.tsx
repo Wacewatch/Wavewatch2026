@@ -36,6 +36,7 @@ export default function SearchPage() {
       setResults(data.results || [])
     } catch (error) {
       console.error("Error searching:", error)
+      setResults([])
     } finally {
       setLoading(false)
     }
