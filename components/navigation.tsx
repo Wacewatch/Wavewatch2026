@@ -41,7 +41,7 @@ export function Navigation() {
           <Link href="/" className="flex items-center space-x-3 group">
             <div className="relative w-24 h-6 sm:w-32 sm:h-8 md:w-48 md:h-12 lg:w-64 lg:h-16 transition-transform group-hover:scale-105">
               <Image
-                src="/images/logo.png"
+                src="/images/wavewatch-logo.png"
                 alt="WaveWatch - Plateforme de Streaming Premium"
                 fill
                 className="object-contain drop-shadow-lg logo-glow"
@@ -98,7 +98,7 @@ export function Navigation() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/discover" className="text-white hover:text-blue-300">
+                  <Link href="/discover/playlists" className="text-white hover:text-blue-300">
                     Découvrir des Playlists
                   </Link>
                 </DropdownMenuItem>
@@ -203,7 +203,7 @@ export function Navigation() {
               <Link href="/" className="flex items-center space-x-3" onClick={() => setIsMenuOpen(false)}>
                 <div className="relative w-40 h-10">
                   <Image
-                    src="/images/logo.png"
+                    src="/images/wavewatch-logo.png"
                     alt="WaveWatch - Plateforme de Streaming Premium"
                     fill
                     className="object-contain logo-glow"
@@ -380,7 +380,7 @@ export function Navigation() {
                     variant="ghost"
                     className="w-full justify-start text-white hover:text-blue-300 hover:bg-blue-900"
                   >
-                    <Link href="/discover" onClick={() => setIsMenuOpen(false)}>
+                    <Link href="/discover/playlists" onClick={() => setIsMenuOpen(false)}>
                       Découvrir des Playlists
                     </Link>
                   </Button>

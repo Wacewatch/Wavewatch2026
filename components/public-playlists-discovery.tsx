@@ -4,7 +4,6 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Search, ThumbsUp, ThumbsDown, Heart, Calendar, Film, Globe, TrendingUp, Clock } from "lucide-react"
 import { usePublicPlaylists } from "@/hooks/use-public-playlists"
@@ -127,14 +126,6 @@ export function PublicPlaylistsDiscovery() {
                           className="w-4 h-4 rounded-full shadow-md"
                           style={{ backgroundColor: playlist.theme_color }}
                         />
-                        <Badge
-                          variant="secondary"
-                          className="text-xs"
-                          style={{ backgroundColor: playlist.theme_color, color: "white" }}
-                        >
-                          <Globe className="w-3 h-3 mr-1" />
-                          Public
-                        </Badge>
                       </div>
                     </div>
                   </div>
