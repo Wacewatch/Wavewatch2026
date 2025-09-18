@@ -207,24 +207,33 @@ export default function ProfilePage() {
       const code = activationCode.trim()
 
       if (code === "45684568") {
-        // Code Admin - Sauvegarder en BDD
         try {
-          const { error } = await supabase.from("user_profiles").update({ is_admin: true }).eq("id", user.id)
+          const { data, error } = await supabase.rpc("activate_admin_privileges", {
+            user_id_param: user.id,
+          })
 
           if (error) {
-            console.error("Error updating admin status:", error)
+            console.error("Error activating admin:", error)
+            throw error
           }
 
-          toast({
-            title: "Statut Admin activé !",
-            description: "Vous avez maintenant les privilèges administrateur. Redirection...",
-          })
+          if (data && data.success) {
+            toast({
+              title: "Statut Admin activé !",
+              description: data.message || "Vous avez maintenant les privilèges administrateur. Redirection...",
+            })
+          } else {
+            throw new Error(data?.error || "Erreur lors de l'activation admin")
+          }
         } catch (error) {
           console.error("Admin activation error:", error)
           toast({
-            title: "Statut Admin activé !",
-            description: "Vous avez maintenant les privilèges administrateur. Redirection...",
+            title: "Erreur d'activation",
+            description: "Impossible d'activer les privilèges admin. Veuillez réessayer.",
+            variant: "destructive",
           })
+          setIsActivating(false)
+          return
         }
 
         setActivationCode("")
