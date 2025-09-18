@@ -131,9 +131,12 @@ export function useWishlist(item?: any) {
       } else {
         const { error } = await supabase.from("user_wishlist").insert({
           user_id: user.id,
-          content_id: content.id, // This maps to content_id in the database
+          content_id: content.id,
           content_type: contentType,
           content_title: content.title || content.name,
+          tmdb_id: content.id, // Add tmdb_id
+          media_type: contentType, // Add media_type
+          poster_path: content.poster_path, // Add poster_path directly
           metadata: {
             poster_path: content.poster_path,
             tmdb_id: content.id,

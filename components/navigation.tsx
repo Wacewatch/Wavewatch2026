@@ -73,6 +73,13 @@ export function Navigation() {
               Animés
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 transition-all group-hover:w-full"></span>
             </Link>
+            <Link
+              href="/dashboard/wishlist"
+              className="text-white hover:text-blue-300 transition-all duration-300 font-medium relative group"
+            >
+              Wishlist
+              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 transition-all group-hover:w-full"></span>
+            </Link>
 
             {/* Media Dropdown */}
             <DropdownMenu>
@@ -340,6 +347,15 @@ export function Navigation() {
                   >
                     <Link href="/anime" onClick={() => setIsMenuOpen(false)}>
                       Animés
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start text-white hover:text-blue-300 hover:bg-blue-900"
+                  >
+                    <Link href="/dashboard/wishlist" onClick={() => setIsMenuOpen(false)}>
+                      Wishlist
                     </Link>
                   </Button>
                 </div>
