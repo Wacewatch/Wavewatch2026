@@ -98,7 +98,7 @@ export function Navigation() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/discover/playlists" className="text-white hover:text-blue-300">
+                  <Link href="/discover" className="text-white hover:text-blue-300">
                     Découvrir des Playlists
                   </Link>
                 </DropdownMenuItem>
@@ -380,7 +380,7 @@ export function Navigation() {
                     variant="ghost"
                     className="w-full justify-start text-white hover:text-blue-300 hover:bg-blue-900"
                   >
-                    <Link href="/discover/playlists" onClick={() => setIsMenuOpen(false)}>
+                    <Link href="/discover" onClick={() => setIsMenuOpen(false)}>
                       Découvrir des Playlists
                     </Link>
                   </Button>

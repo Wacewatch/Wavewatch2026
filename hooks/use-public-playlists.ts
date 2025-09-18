@@ -63,25 +63,31 @@ export function usePublicPlaylists() {
       }
 
       const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
-      const { data: userProfilesData } = await supabase.from("user_profiles").select("id, username").in("id", userIds)
+      const { data: userProfilesData } = await supabase
+        .from("user_profiles")
+        .select("user_id, username")
+        .in("user_id", userIds)
 
       // Create a map for quick username lookup
       const usernameMap = new Map()
       userProfilesData?.forEach((profile) => {
-        usernameMap.set(profile.id, profile.username)
+        usernameMap.set(profile.user_id, profile.username)
       })
 
+      // Get items count for each playlist
       const playlistIds = playlistsData.map((p) => p.id)
       const { data: itemsCounts } = await supabase
         .from("playlist_items")
         .select("playlist_id")
         .in("playlist_id", playlistIds)
 
+      // Get likes/dislikes counts
       const { data: likesData } = await supabase
         .from("playlist_likes")
         .select("playlist_id, is_like")
         .in("playlist_id", playlistIds)
 
+      // Get user's likes/dislikes and favorites if logged in
       let userLikes: any[] = []
       let userFavorites: any[] = []
 
@@ -102,6 +108,7 @@ export function usePublicPlaylists() {
         userFavorites = userFavoritesData || []
       }
 
+      // Process data
       const processedPlaylists = playlistsData.map((playlist) => {
         const itemsCount = itemsCounts?.filter((item) => item.playlist_id === playlist.id).length || 0
         const playlistLikes = likesData?.filter((like) => like.playlist_id === playlist.id) || []
@@ -146,6 +153,7 @@ export function usePublicPlaylists() {
       const currentPlaylist = playlists.find((p) => p.id === playlistId)
       if (!currentPlaylist) return
 
+      // Check if user already has a like/dislike
       const { data: existingLike } = await supabase
         .from("playlist_likes")
         .select("id, is_like")
@@ -155,8 +163,10 @@ export function usePublicPlaylists() {
 
       if (existingLike) {
         if (existingLike.is_like === isLike) {
+          // Remove the like/dislike
           await supabase.from("playlist_likes").delete().eq("id", existingLike.id)
 
+          // Update local state
           setPlaylists((prev) =>
             prev.map((playlist) => {
               if (playlist.id === playlistId) {
@@ -172,8 +182,10 @@ export function usePublicPlaylists() {
             }),
           )
         } else {
+          // Update existing like/dislike
           await supabase.from("playlist_likes").update({ is_like: isLike }).eq("id", existingLike.id)
 
+          // Update local state
           setPlaylists((prev) =>
             prev.map((playlist) => {
               if (playlist.id === playlistId) {
@@ -190,12 +202,14 @@ export function usePublicPlaylists() {
           )
         }
       } else {
+        // Create new like/dislike
         await supabase.from("playlist_likes").insert({
           playlist_id: playlistId,
           user_id: user.id,
           is_like: isLike,
         })
 
+        // Update local state
         setPlaylists((prev) =>
           prev.map((playlist) => {
             if (playlist.id === playlistId) {
@@ -241,6 +255,7 @@ export function usePublicPlaylists() {
       if (!currentPlaylist) return
 
       if (currentPlaylist.is_favorited) {
+        // Remove from favorites
         await supabase.from("playlist_favorites").delete().eq("playlist_id", playlistId).eq("user_id", user.id)
 
         setPlaylists((prev) =>
@@ -252,6 +267,7 @@ export function usePublicPlaylists() {
           description: "La playlist a été retirée de vos favoris",
         })
       } else {
+        // Add to favorites
         await supabase.from("playlist_favorites").insert({
           playlist_id: playlistId,
           user_id: user.id,
