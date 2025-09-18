@@ -66,11 +66,9 @@ export default function DashboardPage() {
   })
   const [interestingFacts, setInterestingFacts] = useState<string[]>([])
   const [mounted, setMounted] = useState(false)
-  const [wishlistCount, setWishlistCount] = useState(0)
   const [favoritesCount, setFavoritesCount] = useState(0)
   const [userVIPLevel, setUserVIPLevel] = useState<VIPLevel>("free")
   const [watchedItems, setWatchedItems] = useState<any[]>([])
-  const [wishlistItems, setWishlistItems] = useState<any[]>([])
   const [favoriteItems, setFavoriteItems] = useState<any[]>([])
   const [monthlyGoal, setMonthlyGoal] = useState(() => {
     if (typeof window !== "undefined") {
@@ -83,10 +81,8 @@ export default function DashboardPage() {
     const userStats = WatchTracker.getStats()
     setStats(userStats)
     setInterestingFacts(WatchTracker.getInterestingFacts(userStats))
-    setWishlistCount(WatchTracker.getWishlistItems().length)
     setFavoritesCount(WatchTracker.getFavoriteItems().length)
     setWatchedItems(WatchTracker.getWatchedItems().slice(0, 12))
-    setWishlistItems(WatchTracker.getWishlistItems().slice(0, 12))
     setFavoriteItems(WatchTracker.getFavoriteItems().slice(0, 12))
 
     if (user) {
@@ -110,14 +106,12 @@ export default function DashboardPage() {
       refreshStats()
     }
 
-    window.addEventListener("watchlist-updated", handleUpdate)
     window.addEventListener("vip-updated", handleUpdate)
     window.addEventListener("storage", handleUpdate)
 
     const interval = setInterval(refreshStats, 2000)
 
     return () => {
-      window.removeEventListener("watchlist-updated", handleUpdate)
       window.removeEventListener("vip-updated", handleUpdate)
       window.removeEventListener("storage", handleUpdate)
       clearInterval(interval)
@@ -151,7 +145,6 @@ export default function DashboardPage() {
   // Calculs de statistiques supplémentaires
   const totalHours = Math.floor(stats.totalWatchTime / 60)
   const totalDays = Math.floor(totalHours / 24)
-  const completionRate = Math.round(((stats.moviesWatched + stats.showsWatched) / wishlistCount) * 100) || 0
   const currentMonth = new Date().getMonth()
   const monthlyProgress = Math.min((stats.moviesWatched + stats.showsWatched) % monthlyGoal, monthlyGoal)
 
@@ -441,12 +434,9 @@ export default function DashboardPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="history" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-gray-800 border-gray-700">
+          <TabsList className="grid w-full grid-cols-2 bg-gray-800 border-gray-700">
             <TabsTrigger value="history" className="data-[state=active]:bg-gray-700 text-gray-300">
               Historique
-            </TabsTrigger>
-            <TabsTrigger value="wishlist" className="data-[state=active]:bg-gray-700 text-gray-300">
-              Wishlist ({wishlistCount})
             </TabsTrigger>
             <TabsTrigger value="favorites" className="data-[state=active]:bg-gray-700 text-gray-300">
               Favoris ({favoritesCount})
@@ -535,86 +525,6 @@ export default function DashboardPage() {
                         >
                           <Link href="/dashboard/history">
                             Tout voir ({WatchTracker.getWatchedItems().length})
-                            <ArrowRight className="w-4 h-4 ml-2" />
-                          </Link>
-                        </Button>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="wishlist" className="space-y-6">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white">Ma Wishlist</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Films et séries que vous voulez regarder plus tard
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {wishlistItems.length === 0 ? (
-                  <p className="text-center text-gray-400 py-8">
-                    Votre wishlist est vide. Ajoutez des films et séries depuis leurs pages de détails.
-                  </p>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      {wishlistItems.map((item) => {
-                        // Correction de la logique d'affichage des images
-                        let imageUrl = "/placeholder.svg?height=300&width=200"
-
-                        if (item.posterPath) {
-                          if (item.posterPath.startsWith("http")) {
-                            imageUrl = item.posterPath
-                          } else {
-                            imageUrl = `https://image.tmdb.org/t/p/w300${item.posterPath}`
-                          }
-                        }
-
-                        return (
-                          <Link key={item.id} href={`/${item.type === "movie" ? "movies" : "tv-shows"}/${item.tmdbId}`}>
-                            <div className="space-y-2 group cursor-pointer">
-                              <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
-                                <Image
-                                  src={imageUrl || "/placeholder.svg"}
-                                  alt={item.title}
-                                  fill
-                                  className="object-cover group-hover:scale-105 transition-transform"
-                                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement
-                                    target.src = "/placeholder.svg?height=300&width=200"
-                                  }}
-                                />
-                                <div className="absolute top-2 right-2">
-                                  <Badge variant="secondary" className="bg-red-600 text-white text-xs">
-                                    <Heart className="w-3 h-3" />
-                                  </Badge>
-                                </div>
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white">
-                                  {item.title}
-                                </p>
-                                <p className="text-xs text-gray-400">{new Date(item.addedAt).toLocaleDateString()}</p>
-                              </div>
-                            </div>
-                          </Link>
-                        )
-                      })}
-                    </div>
-                    {WatchTracker.getWishlistItems().length > 12 && (
-                      <div className="text-center mt-6">
-                        <Button
-                          asChild
-                          variant="outline"
-                          className="border-gray-600 text-white hover:bg-gray-700 bg-transparent"
-                        >
-                          <Link href="/dashboard/wishlist">
-                            Tout voir ({WatchTracker.getWishlistItems().length})
                             <ArrowRight className="w-4 h-4 ml-2" />
                           </Link>
                         </Button>
