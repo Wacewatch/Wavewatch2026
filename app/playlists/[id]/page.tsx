@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Globe, Lock, Calendar, Film, Trash2 } from "lucide-react"
 import { usePlaylists } from "@/hooks/use-playlists"
+import { createClient } from "@/lib/supabase"
 import Image from "next/image"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -20,45 +21,82 @@ export default function PlaylistContentPage() {
   const [playlist, setPlaylist] = useState<any>(null)
   const [playlistItems, setPlaylistItems] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
+  const supabase = createClient()
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
   useEffect(() => {
-    if (mounted && id && playlists.length > 0) {
-      const foundPlaylist = playlists.find((p) => p.id === id)
-      if (foundPlaylist) {
-        setPlaylist(foundPlaylist)
-        loadPlaylistItems(id as string)
-      } else {
-        // Playlist not found, redirect to playlists page
-        router.push("/playlists")
-      }
+    if (mounted && id) {
+      loadPlaylistData(id as string)
     }
-  }, [mounted, id, playlists, router])
+  }, [mounted, id, user?.id])
 
-  const loadPlaylistItems = async (playlistId: string) => {
+  const loadPlaylistData = async (playlistId: string) => {
     try {
-      const items = await getPlaylistItems(playlistId)
-      setPlaylistItems(items)
-    } catch (error) {
-      console.error("Error loading playlist items:", error)
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger le contenu de la playlist.",
-        variant: "destructive",
+      const { data: playlistData, error: playlistError } = await supabase
+        .from("playlists")
+        .select(`
+          *,
+          user_profiles!inner(username)
+        `)
+        .eq("id", playlistId)
+        .single()
+
+      if (playlistError || !playlistData) {
+        console.error("Playlist not found:", playlistError)
+        router.push("/playlists")
+        return
+      }
+
+      const canAccess = playlistData.is_public || (user?.id && playlistData.user_id === user.id)
+
+      if (!canAccess) {
+        toast({
+          title: "Accès refusé",
+          description: "Cette playlist est privée.",
+          variant: "destructive",
+        })
+        router.push("/playlists")
+        return
+      }
+
+      setPlaylist({
+        ...playlistData,
+        username: playlistData.user_profiles?.username || "Utilisateur",
       })
+      setIsOwner(user?.id === playlistData.user_id)
+
+      // Load playlist items
+      const { data: itemsData, error: itemsError } = await supabase
+        .from("playlist_items")
+        .select("*")
+        .eq("playlist_id", playlistId)
+        .order("position", { ascending: true })
+
+      if (!itemsError && itemsData) {
+        const processedItems = itemsData.map((item) => ({
+          ...item,
+          content_type: item.media_type,
+          content_id: item.tmdb_id,
+        }))
+        setPlaylistItems(processedItems)
+      }
+    } catch (error) {
+      console.error("Error loading playlist:", error)
+      router.push("/playlists")
     }
   }
 
   const handleRemoveItem = async (itemId: string) => {
-    if (!playlist) return
+    if (!playlist || !isOwner) return
 
     try {
       await removeFromPlaylist(playlist.id, itemId)
       // Reload playlist items
-      await loadPlaylistItems(playlist.id)
+      await loadPlaylistData(playlist.id)
       toast({
         title: "Élément supprimé",
         description: "L'élément a été retiré de la playlist.",
@@ -80,20 +118,7 @@ export default function PlaylistContentPage() {
     )
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white">
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4 text-white">Accès refusé</h1>
-            <p className="text-gray-300">Vous devez être connecté pour accéder à cette page.</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (loading || !playlist) {
+  if (!playlist) {
     return (
       <div className="min-h-screen bg-gray-900 text-white">
         <div className="container mx-auto px-4 py-8">
@@ -118,9 +143,9 @@ export default function PlaylistContentPage() {
             className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
             style={{ borderColor: playlist.theme_color, color: playlist.theme_color }}
           >
-            <Link href="/playlists">
+            <Link href={isOwner ? "/playlists" : "/discover/playlists"}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour aux playlists
+              {isOwner ? "Retour aux playlists" : "Retour aux playlists publiques"}
             </Link>
           </Button>
         </div>
@@ -174,6 +199,7 @@ export default function PlaylistContentPage() {
                     {new Date(playlist.updated_at).toLocaleDateString()}
                   </Badge>
                 </div>
+                {!isOwner && <p className="text-gray-300 text-sm mt-2">Créée par {playlist.username}</p>}
               </div>
             </div>
             {playlist.description && (
@@ -196,7 +222,11 @@ export default function PlaylistContentPage() {
               <div className="text-center py-12">
                 <Film className="h-16 w-16 text-gray-600 mx-auto mb-4" />
                 <p className="text-gray-400 text-lg mb-2">Cette playlist est vide</p>
-                <p className="text-gray-500 text-sm">Ajoutez des films et séries depuis leurs pages de détails.</p>
+                <p className="text-gray-500 text-sm">
+                  {isOwner
+                    ? "Ajoutez des films et séries depuis leurs pages de détails."
+                    : "Cette playlist ne contient aucun élément pour le moment."}
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
@@ -235,20 +265,22 @@ export default function PlaylistContentPage() {
                               target.src = "/placeholder.svg?height=300&width=200"
                             }}
                           />
-                          <div className="absolute top-2 right-2">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                handleRemoveItem(item.id)
-                              }}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
+                          {isOwner && (
+                            <div className="absolute top-2 right-2">
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleRemoveItem(item.id)
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          )}
                           <div className="absolute bottom-2 left-2">
                             <Badge
                               variant="secondary"
