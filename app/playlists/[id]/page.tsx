@@ -47,7 +47,7 @@ export default function PlaylistContentPage() {
 
       if (playlistError || !playlistData) {
         console.error("Playlist not found:", playlistError)
-        router.push("/playlists")
+        router.push("/discover/playlists")
         return
       }
 
@@ -59,7 +59,7 @@ export default function PlaylistContentPage() {
           description: "Cette playlist est privée.",
           variant: "destructive",
         })
-        router.push("/playlists")
+        router.push("/discover/playlists")
         return
       }
 
@@ -86,7 +86,7 @@ export default function PlaylistContentPage() {
       }
     } catch (error) {
       console.error("Error loading playlist:", error)
-      router.push("/playlists")
+      router.push("/discover/playlists")
     }
   }
 
@@ -143,9 +143,9 @@ export default function PlaylistContentPage() {
             className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
             style={{ borderColor: playlist.theme_color, color: playlist.theme_color }}
           >
-            <Link href={isOwner ? "/playlists" : "/discover/playlists"}>
+            <Link href="/discover/playlists">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              {isOwner ? "Retour aux playlists" : "Retour aux playlists publiques"}
+              Retour aux playlists publiques
             </Link>
           </Button>
         </div>
