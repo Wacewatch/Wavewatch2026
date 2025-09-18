@@ -345,7 +345,14 @@ export function usePlaylists() {
       }
 
       console.log("[v0] Playlist items loaded successfully:", data?.length || 0)
-      return data || []
+
+      return (
+        data?.map((item) => ({
+          ...item,
+          content_type: item.media_type,
+          content_id: item.tmdb_id,
+        })) || []
+      )
     } catch (error) {
       console.error("[v0] Error loading playlist items:", error)
       return []

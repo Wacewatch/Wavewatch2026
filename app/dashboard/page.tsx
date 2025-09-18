@@ -491,7 +491,7 @@ export default function DashboardPage() {
                           } else if (item.type === "episode" && item.showId) {
                             return `/tv-shows/${item.showId}`
                           }
-                          return `/movies/${item.tmdbId}`
+                          return `/movies/${item.tmdbId || item.id}`
                         }
 
                         return (
@@ -671,7 +671,7 @@ export default function DashboardPage() {
                             case "actor":
                               return `/actors/${item.tmdbId}`
                             default:
-                              return `/movies/${item.tmdbId}`
+                              return `/movies/${item.tmdbId || item.id}`
                           }
                         }
 
@@ -691,8 +691,8 @@ export default function DashboardPage() {
                                   }}
                                 />
                                 <div className="absolute top-2 right-2">
-                                  <Badge variant="secondary" className="bg-yellow-600 text-white text-xs">
-                                    <Star className="w-3 h-3" />
+                                  <Badge variant="secondary" className="bg-red-600 text-white text-xs">
+                                    <Heart className="w-3 h-3" />
                                   </Badge>
                                 </div>
                                 <div className="absolute bottom-2 left-2">

@@ -189,12 +189,12 @@ export default function PlaylistContentPage() {
                   }
 
                   const getItemUrl = () => {
-                    if (item.content_type === "movie") {
-                      return `/movies/${item.content_id}`
-                    } else if (item.content_type === "tv") {
-                      return `/tv-shows/${item.content_id}`
+                    if (item.media_type === "movie" || item.content_type === "movie") {
+                      return `/movies/${item.tmdb_id || item.content_id}`
+                    } else if (item.media_type === "tv" || item.content_type === "tv") {
+                      return `/tv-shows/${item.tmdb_id || item.content_id}`
                     }
-                    return `/movies/${item.content_id}`
+                    return `/movies/${item.tmdb_id || item.content_id}`
                   }
 
                   return (
@@ -232,7 +232,7 @@ export default function PlaylistContentPage() {
                               className="text-xs"
                               style={{ backgroundColor: `${playlist.theme_color}20`, color: playlist.theme_color }}
                             >
-                              {item.content_type === "movie" ? "Film" : "Série"}
+                              {item.media_type === "movie" || item.content_type === "movie" ? "Film" : "Série"}
                             </Badge>
                           </div>
                         </div>
