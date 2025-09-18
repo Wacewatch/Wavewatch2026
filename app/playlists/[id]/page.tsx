@@ -38,10 +38,7 @@ export default function PlaylistContentPage() {
     try {
       const { data: playlistData, error: playlistError } = await supabase
         .from("playlists")
-        .select(`
-          *,
-          user_profiles!inner(username)
-        `)
+        .select("*")
         .eq("id", playlistId)
         .single()
 
@@ -50,6 +47,27 @@ export default function PlaylistContentPage() {
         router.push("/discover/playlists")
         return
       }
+
+      let username = "Utilisateur"
+      if (playlistData.user_id) {
+        const { data: userProfile } = await supabase
+          .from("user_profiles")
+          .select("username")
+          .eq("id", playlistData.user_id)
+          .single()
+
+        if (userProfile?.username) {
+          username = userProfile.username
+        }
+      }
+
+      const { data: likesData } = await supabase.from("playlist_likes").select("is_like").eq("playlist_id", playlistId)
+
+      const { data: itemsCountData } = await supabase.from("playlist_items").select("id").eq("playlist_id", playlistId)
+
+      const likesCount = likesData?.filter((like) => like.is_like).length || 0
+      const dislikesCount = likesData?.filter((like) => !like.is_like).length || 0
+      const itemsCount = itemsCountData?.length || 0
 
       const canAccess = playlistData.is_public || (user?.id && playlistData.user_id === user.id)
 
@@ -63,13 +81,17 @@ export default function PlaylistContentPage() {
         return
       }
 
-      setPlaylist({
+      const enhancedPlaylist = {
         ...playlistData,
-        username: playlistData.user_profiles?.username || "Utilisateur",
-      })
+        username: username,
+        likes_count: likesCount,
+        dislikes_count: dislikesCount,
+        items_count: itemsCount,
+      }
+
+      setPlaylist(enhancedPlaylist)
       setIsOwner(user?.id === playlistData.user_id)
 
-      // Load playlist items
       const { data: itemsData, error: itemsError } = await supabase
         .from("playlist_items")
         .select("*")
@@ -95,7 +117,6 @@ export default function PlaylistContentPage() {
 
     try {
       await removeFromPlaylist(playlist.id, itemId)
-      // Reload playlist items
       await loadPlaylistData(playlist.id)
       toast({
         title: "Élément supprimé",
@@ -188,7 +209,7 @@ export default function PlaylistContentPage() {
                     style={{ borderColor: playlist.theme_color, color: playlist.theme_color }}
                   >
                     <Film className="w-3 h-3 mr-1" />
-                    {playlistItems.length} éléments
+                    {playlist.items_count} éléments
                   </Badge>
                   <Badge
                     variant="outline"
@@ -199,8 +220,47 @@ export default function PlaylistContentPage() {
                     {new Date(playlist.updated_at).toLocaleDateString()}
                   </Badge>
                 </div>
-                {!isOwner && <p className="text-gray-300 text-sm mt-2">Créée par {playlist.username}</p>}
+                <p className="text-gray-300 text-sm mt-2">Créée par {playlist.username}</p>
               </div>
+              {playlist.is_public && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-4 bg-transparent"
+                  style={{ borderColor: playlist.theme_color, color: playlist.theme_color }}
+                  onClick={async () => {
+                    const shareUrl = `${window.location.origin}/playlists/${playlist.id}`
+
+                    if (navigator.share) {
+                      try {
+                        await navigator.share({
+                          title: playlist.title,
+                          text: playlist.description || `Découvrez la playlist "${playlist.title}" sur WaveWatch`,
+                          url: shareUrl,
+                        })
+                      } catch (error) {
+                        // User cancelled sharing
+                      }
+                    } else {
+                      try {
+                        await navigator.clipboard.writeText(shareUrl)
+                        toast({
+                          title: "Lien copié",
+                          description: "Le lien de la playlist a été copié dans le presse-papiers",
+                        })
+                      } catch (error) {
+                        toast({
+                          title: "Erreur",
+                          description: "Impossible de copier le lien",
+                          variant: "destructive",
+                        })
+                      }
+                    }
+                  }}
+                >
+                  Partager
+                </Button>
+              )}
             </div>
             {playlist.description && (
               <CardDescription className="text-gray-300 mt-3">{playlist.description}</CardDescription>

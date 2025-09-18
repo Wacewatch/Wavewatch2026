@@ -240,8 +240,23 @@ export function usePublicPlaylists() {
       const currentPlaylist = playlists.find((p) => p.id === playlistId)
       if (!currentPlaylist) return
 
+      const { WatchTracker } = await import("@/lib/watch-tracking")
+
+      const playlistData = {
+        id: playlistId,
+        title: currentPlaylist.title,
+        type: "playlist" as const,
+        posterPath: "/placeholder.svg?key=ywpkd",
+        addedAt: new Date(),
+        tmdbId: 0, // Not applicable for playlists
+      }
+
       if (currentPlaylist.is_favorited) {
+        // Remove from database favorites
         await supabase.from("playlist_favorites").delete().eq("playlist_id", playlistId).eq("user_id", user.id)
+
+        // Remove from WatchTracker favorites
+        WatchTracker.removeFromFavorites(playlistId, "playlist")
 
         setPlaylists((prev) =>
           prev.map((playlist) => (playlist.id === playlistId ? { ...playlist, is_favorited: false } : playlist)),
@@ -252,10 +267,14 @@ export function usePublicPlaylists() {
           description: "La playlist a été retirée de vos favoris",
         })
       } else {
+        // Add to database favorites
         await supabase.from("playlist_favorites").insert({
           playlist_id: playlistId,
           user_id: user.id,
         })
+
+        // Add to WatchTracker favorites
+        WatchTracker.addToFavorites(playlistData)
 
         setPlaylists((prev) =>
           prev.map((playlist) => (playlist.id === playlistId ? { ...playlist, is_favorited: true } : playlist)),
