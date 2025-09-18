@@ -50,7 +50,17 @@ export function useWishlist(item?: any) {
         return
       }
 
-      setWishlistItems(data || [])
+      const transformedData = (data || []).map((item) => ({
+        id: item.id,
+        user_id: item.user_id,
+        tmdb_id: item.content_id,
+        content_type: item.content_type,
+        content_title: item.content_title,
+        poster_path: item.metadata?.poster_path,
+        created_at: item.created_at,
+      }))
+
+      setWishlistItems(transformedData)
     } catch (error) {
       console.error("Error loading wishlist items:", error)
     } finally {
@@ -66,7 +76,7 @@ export function useWishlist(item?: any) {
         .from("user_wishlist")
         .select("id")
         .eq("user_id", user.id)
-        .eq("tmdb_id", item.id)
+        .eq("content_id", item.id)
         .eq("content_type", item.title ? "movie" : "tv")
         .single()
 
@@ -102,7 +112,7 @@ export function useWishlist(item?: any) {
           .from("user_wishlist")
           .delete()
           .eq("user_id", user.id)
-          .eq("tmdb_id", content.id)
+          .eq("content_id", content.id)
           .eq("content_type", contentType)
 
         if (error) throw error
@@ -114,13 +124,17 @@ export function useWishlist(item?: any) {
           description: `${content.title || content.name} a été retiré de vos favoris.`,
         })
       } else {
-        // Add to wishlist
         const { error } = await supabase.from("user_wishlist").insert({
           user_id: user.id,
-          tmdb_id: content.id,
+          content_id: content.id,
           content_type: contentType,
           content_title: content.title || content.name,
-          poster_path: content.poster_path,
+          metadata: {
+            poster_path: content.poster_path,
+            tmdb_id: content.id,
+            release_date: content.release_date || content.first_air_date,
+            overview: content.overview,
+          },
         })
 
         if (error) throw error
@@ -152,7 +166,7 @@ export function useWishlist(item?: any) {
         .from("user_wishlist")
         .delete()
         .eq("user_id", user.id)
-        .eq("tmdb_id", tmdbId)
+        .eq("content_id", tmdbId)
         .eq("content_type", contentType)
 
       if (error) throw error

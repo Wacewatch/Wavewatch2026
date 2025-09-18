@@ -39,7 +39,6 @@ import {
   Play,
   ThumbsUp,
   ThumbsDown,
-  Bookmark,
   Calendar,
   Flag as Flask,
   TrendingUp,
@@ -281,6 +280,171 @@ export default function AdminPage() {
     }
   }
 
+  const loadRecentActivities = async () => {
+    setActivityLoading(true)
+    try {
+      console.log("🔄 Chargement des activités récentes...")
+
+      const activities = []
+
+      // Get all user login history
+      const { data: loginHistory, error: loginError } = await supabase
+        .from("user_login_history")
+        .select(`
+          *,
+          user_profiles!inner(username, email)
+        `)
+        .order("login_at", { ascending: false })
+        .limit(20)
+
+      if (loginError) {
+        console.error("❌ Erreur login history:", loginError)
+      } else {
+        loginHistory?.forEach((login) => {
+          activities.push({
+            id: `login_${login.id}`,
+            type: "login",
+            user: login.user_profiles?.username || login.user_profiles?.email || "Utilisateur inconnu",
+            description: `Connexion depuis ${login.ip_address || "IP inconnue"}`,
+            details: login.user_agent ? `${login.user_agent.substring(0, 50)}...` : null,
+            timestamp: new Date(login.login_at),
+            icon: LogIn,
+            color: "text-blue-600",
+            bgColor: "bg-blue-100",
+          })
+        })
+      }
+
+      // Get all user registrations (from user_profiles creation)
+      const { data: newUsers, error: usersError } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10)
+
+      if (usersError) {
+        console.error("❌ Erreur new users:", usersError)
+      } else {
+        newUsers?.forEach((user) => {
+          activities.push({
+            id: `user_${user.id}`,
+            type: "new_user",
+            user: user.username || user.email || "Utilisateur inconnu",
+            description: "Nouvel utilisateur inscrit",
+            details: user.is_vip ? "Compte VIP" : user.is_admin ? "Compte Admin" : "Compte standard",
+            timestamp: new Date(user.created_at),
+            icon: UserPlus,
+            color: "text-green-600",
+            bgColor: "bg-green-100",
+          })
+        })
+      }
+
+      // Get all watch history
+      const { data: watchHistory, error: watchError } = await supabase
+        .from("user_watch_history")
+        .select(`
+          *,
+          user_profiles!inner(username, email)
+        `)
+        .order("last_watched_at", { ascending: false })
+        .limit(15)
+
+      if (watchError) {
+        console.error("❌ Erreur watch history:", watchError)
+      } else {
+        watchHistory?.forEach((watch) => {
+          activities.push({
+            id: `watch_${watch.id}`,
+            type: "watched",
+            user: watch.user_profiles?.username || watch.user_profiles?.email || "Utilisateur inconnu",
+            description: `A regardé "${watch.content_title}"`,
+            details: `${watch.content_type === "movie" ? "Film" : "Série"} - ${Math.round(watch.progress || 0)}% terminé`,
+            timestamp: new Date(watch.last_watched_at),
+            contentType: watch.content_type,
+            icon: Play,
+            color: "text-purple-600",
+            bgColor: "bg-purple-100",
+          })
+        })
+      }
+
+      // Get all ratings
+      const { data: ratings, error: ratingsError } = await supabase
+        .from("user_ratings")
+        .select(`
+          *,
+          user_profiles!inner(username, email)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(15)
+
+      if (ratingsError) {
+        console.error("❌ Erreur ratings:", ratingsError)
+      } else {
+        ratings?.forEach((rating) => {
+          activities.push({
+            id: `rating_${rating.id}`,
+            type: "rating",
+            user: rating.user_profiles?.username || rating.user_profiles?.email || "Utilisateur inconnu",
+            description: `A ${rating.rating === "like" ? "liké" : "disliké"} un contenu`,
+            details: `${rating.content_type === "movie" ? "Film" : "Série"}`,
+            timestamp: new Date(rating.created_at),
+            contentType: rating.content_type,
+            rating: rating.rating,
+            icon: rating.rating === "like" ? ThumbsUp : ThumbsDown,
+            color: rating.rating === "like" ? "text-green-600" : "text-red-600",
+            bgColor: rating.rating === "like" ? "bg-green-100" : "bg-red-100",
+          })
+        })
+      }
+
+      // Get wishlist additions
+      const { data: wishlistItems, error: wishlistError } = await supabase
+        .from("user_wishlist")
+        .select(`
+          *,
+          user_profiles!inner(username, email)
+        `)
+        .order("created_at", { ascending: false })
+        .limit(10)
+
+      if (wishlistError) {
+        console.error("❌ Erreur wishlist:", wishlistError)
+      } else {
+        wishlistItems?.forEach((item) => {
+          activities.push({
+            id: `wishlist_${item.id}`,
+            type: "wishlist",
+            user: item.user_profiles?.username || item.user_profiles?.email || "Utilisateur inconnu",
+            description: `A ajouté "${item.content_title}" à sa wishlist`,
+            details: `${item.content_type === "movie" ? "Film" : "Série"}`,
+            timestamp: new Date(item.created_at),
+            contentType: item.content_type,
+            icon: Heart,
+            color: "text-pink-600",
+            bgColor: "bg-pink-100",
+          })
+        })
+      }
+
+      // Sort all activities by timestamp
+      activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+
+      console.log(`✅ ${activities.length} activités chargées`)
+      setRecentActivities(activities.slice(0, 50)) // Limit to 50 most recent
+    } catch (error) {
+      console.error("❌ Erreur lors du chargement des activités:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les activités récentes",
+        variant: "destructive",
+      })
+    } finally {
+      setActivityLoading(false)
+    }
+  }
+
   const loadRealUsers = async () => {
     try {
       console.log("🔄 Chargement des utilisateurs...")
@@ -444,170 +608,6 @@ export default function AdminPage() {
       setStats(newStats)
     } catch (error) {
       console.error("❌ Erreur lors du calcul des statistiques:", error)
-    }
-  }
-
-  const loadRecentActivities = async () => {
-    setActivityLoading(true)
-    try {
-      console.log("🔄 Chargement des activités récentes...")
-      const activities = []
-
-      // Récupérer les activités récentes de différentes tables
-      const [watchedData, wishlistData, favoritesData, ratingsData, usersData, loginData] = await Promise.allSettled([
-        supabase
-          .from("user_watch_history")
-          .select("*, user_profiles(username)")
-          .order("last_watched_at", { ascending: false })
-          .limit(15),
-        supabase
-          .from("user_wishlist")
-          .select("*, user_profiles(username)")
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase
-          .from("user_favorites")
-          .select("*, user_profiles(username)")
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase
-          .from("user_ratings")
-          .select("*, user_profiles(username)")
-          .order("created_at", { ascending: false })
-          .limit(10),
-        supabase.from("user_profiles").select("*").order("created_at", { ascending: false }).limit(5),
-        supabase
-          .from("user_login_history")
-          .select("*, user_profiles(username)")
-          .order("login_at", { ascending: false })
-          .limit(20),
-      ])
-
-      // Traiter les données de visionnage
-      if (watchedData.status === "fulfilled" && watchedData.value.data) {
-        watchedData.value.data.forEach((item) => {
-          activities.push({
-            id: `watched_${item.id}`,
-            type: "watched",
-            user: item.user_profiles?.username || "Utilisateur",
-            content: item.content_title,
-            contentType: item.content_type,
-            timestamp: new Date(item.last_watched_at),
-            icon: Play,
-            color: "text-blue-600",
-            bgColor: "bg-blue-50",
-            description: `a regardé "${item.content_title}"`,
-            details: `Durée: ${Math.round((item.watch_duration || 0) / 60)}min • Progression: ${Math.round(item.progress || 0)}%`,
-          })
-        })
-      }
-
-      if (loginData.status === "fulfilled" && loginData.value.data) {
-        loginData.value.data.forEach((item) => {
-          activities.push({
-            id: `login_${item.id}`,
-            type: "login",
-            user: item.user_profiles?.username || "Utilisateur",
-            content: "Connexion",
-            timestamp: new Date(item.login_at),
-            icon: LogIn,
-            color: "text-green-600",
-            bgColor: "bg-green-50",
-            description: "s'est connecté(e)",
-            details: `IP: ${item.ip_address || "N/A"}`,
-          })
-        })
-      }
-
-      // Traiter les données de wishlist
-      if (wishlistData.status === "fulfilled" && wishlistData.value.data) {
-        wishlistData.value.data.forEach((item) => {
-          activities.push({
-            id: `wishlist_${item.id}`,
-            type: "wishlist",
-            user: item.user_profiles?.username || "Utilisateur",
-            content: item.content_title,
-            contentType: item.content_type,
-            timestamp: new Date(item.created_at),
-            icon: Bookmark,
-            color: "text-purple-600",
-            bgColor: "bg-purple-50",
-            description: `a ajouté "${item.content_title}" à sa wishlist`,
-            details: `Type: ${item.content_type === "movie" ? "Film" : "Série"}`,
-          })
-        })
-      }
-
-      // Traiter les données de favoris
-      if (favoritesData.status === "fulfilled" && favoritesData.value.data) {
-        favoritesData.value.data.forEach((item) => {
-          activities.push({
-            id: `favorite_${item.id}`,
-            type: "favorite",
-            user: item.user_profiles?.username || "Utilisateur",
-            content: item.content_title,
-            contentType: item.content_type,
-            timestamp: new Date(item.created_at),
-            icon: Heart,
-            color: "text-red-600",
-            bgColor: "bg-red-50",
-            description: `a ajouté "${item.content_title}" à ses favoris`,
-            details: `Catégorie: ${item.content_type}`,
-          })
-        })
-      }
-
-      // Traiter les données de ratings
-      if (ratingsData.status === "fulfilled" && ratingsData.value.data) {
-        ratingsData.value.data.forEach((item) => {
-          activities.push({
-            id: `rating_${item.id}`,
-            type: "rating",
-            user: item.user_profiles?.username || "Utilisateur",
-            content: item.content_title,
-            contentType: item.content_type,
-            rating: item.rating,
-            timestamp: new Date(item.created_at),
-            icon: item.rating === "like" ? ThumbsUp : ThumbsDown,
-            color: item.rating === "like" ? "text-green-600" : "text-red-600",
-            bgColor: item.rating === "like" ? "bg-green-50" : "bg-red-50",
-            description: `a ${item.rating === "like" ? "liké" : "disliké"} "${item.content_title}"`,
-            details: `Note: ${item.rating} • ${item.content_type}`,
-          })
-        })
-      }
-
-      // Traiter les nouveaux utilisateurs
-      if (usersData.status === "fulfilled" && usersData.value.data) {
-        usersData.value.data.forEach((user) => {
-          activities.push({
-            id: `user_${user.id}`,
-            type: "new_user",
-            user: user.username,
-            content: "Nouveau compte créé",
-            timestamp: new Date(user.created_at),
-            icon: UserPlus,
-            color: "text-green-600",
-            bgColor: "bg-green-50",
-            description: "a créé un nouveau compte",
-            details: `Email: ${user.email}${user.is_vip ? " • VIP" : ""}${user.is_vip_plus ? " • VIP+" : ""}`,
-          })
-        })
-      }
-
-      // Trier toutes les activités par timestamp et supprimer les doublons
-      const uniqueActivities = activities.filter(
-        (activity, index, self) => index === self.findIndex((a) => a.id === activity.id),
-      )
-
-      uniqueActivities.sort((a, b) => b.timestamp - a.timestamp)
-
-      console.log(`✅ ${uniqueActivities.length} activités chargées`)
-      setRecentActivities(uniqueActivities.slice(0, 30))
-    } catch (error) {
-      console.error("❌ Erreur lors du chargement des activités récentes:", error)
-    } finally {
-      setActivityLoading(false)
     }
   }
 
