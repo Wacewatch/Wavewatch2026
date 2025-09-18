@@ -104,19 +104,34 @@ export function PublicPlaylistsDiscovery() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedPlaylists.map((playlist) => (
             <Link key={playlist.id} href={`/playlists/${playlist.id}`}>
-              <Card className="bg-gray-800 border-gray-700 hover:border-gray-600 transition-colors cursor-pointer">
+              <Card
+                className="border-gray-700 hover:border-opacity-80 transition-all duration-300 cursor-pointer transform hover:scale-105"
+                style={{
+                  backgroundColor: `${playlist.theme_color}15`,
+                  borderColor: playlist.theme_color,
+                  boxShadow: `0 4px 20px ${playlist.theme_color}20`,
+                }}
+              >
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle
-                        className="text-white text-lg line-clamp-1 hover:text-blue-400 transition-colors"
+                        className="text-white text-lg line-clamp-1 hover:text-opacity-80 transition-colors"
                         title={playlist.title}
+                        style={{ color: playlist.theme_color }}
                       >
                         {playlist.title}
                       </CardTitle>
                       <div className="flex items-center gap-2 mt-1">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: playlist.theme_color }} />
-                        <Badge variant="secondary" className="text-xs">
+                        <div
+                          className="w-4 h-4 rounded-full shadow-md"
+                          style={{ backgroundColor: playlist.theme_color }}
+                        />
+                        <Badge
+                          variant="secondary"
+                          className="text-xs"
+                          style={{ backgroundColor: playlist.theme_color, color: "white" }}
+                        >
                           <Globe className="w-3 h-3 mr-1" />
                           Public
                         </Badge>
@@ -127,32 +142,38 @@ export function PublicPlaylistsDiscovery() {
                   {/* Creator info */}
                   <div className="flex items-center gap-2 mt-2">
                     <Avatar className="w-6 h-6">
-                      <AvatarFallback className="text-xs bg-gray-700">
+                      <AvatarFallback
+                        className="text-xs"
+                        style={{ backgroundColor: `${playlist.theme_color}30`, color: playlist.theme_color }}
+                      >
                         {playlist.username.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm text-gray-400">par {playlist.username}</span>
+                    <span className="text-sm text-gray-300">par {playlist.username}</span>
                   </div>
                 </CardHeader>
 
                 <CardContent className="pt-0 space-y-3">
-                  {playlist.description && <p className="text-gray-400 text-sm line-clamp-2">{playlist.description}</p>}
+                  {playlist.description && <p className="text-gray-300 text-sm line-clamp-2">{playlist.description}</p>}
 
-                  <div className="flex items-center justify-between text-sm text-gray-400">
+                  <div className="flex items-center justify-between text-sm text-gray-300">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
-                        <Film className="w-3 h-3" />
+                        <Film className="w-3 h-3" style={{ color: playlist.theme_color }} />
                         <span>{playlist.items_count} éléments</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
+                      <Calendar className="w-3 h-3" style={{ color: playlist.theme_color }} />
                       <span>{new Date(playlist.updated_at).toLocaleDateString()}</span>
                     </div>
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-700">
+                  <div
+                    className="flex items-center justify-between pt-2"
+                    style={{ borderTopColor: playlist.theme_color, borderTopWidth: "1px", borderTopStyle: "solid" }}
+                  >
                     <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
                       <Button
                         variant="ghost"

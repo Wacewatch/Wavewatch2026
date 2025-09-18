@@ -107,7 +107,7 @@ export default function PlaylistContentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen text-white" style={{ backgroundColor: `${playlist.theme_color}10` }}>
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -116,6 +116,7 @@ export default function PlaylistContentPage() {
             variant="outline"
             size="sm"
             className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+            style={{ borderColor: playlist.theme_color, color: playlist.theme_color }}
           >
             <Link href="/playlists">
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -125,31 +126,50 @@ export default function PlaylistContentPage() {
         </div>
 
         {/* Playlist Info */}
-        <Card className="bg-gray-800 border-gray-700">
+        <Card
+          className="border-gray-700"
+          style={{ backgroundColor: `${playlist.theme_color}20`, borderColor: playlist.theme_color }}
+        >
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <CardTitle className="text-white text-2xl flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: playlist.theme_color }} />
+                  <div className="w-6 h-6 rounded-full shadow-lg" style={{ backgroundColor: playlist.theme_color }} />
                   {playlist.title}
                 </CardTitle>
                 <div className="flex items-center gap-2 mt-2">
                   {playlist.is_public ? (
-                    <Badge variant="secondary" className="text-sm">
+                    <Badge
+                      variant="secondary"
+                      className="text-sm"
+                      style={{ backgroundColor: playlist.theme_color, color: "white" }}
+                    >
                       <Globe className="w-3 h-3 mr-1" />
                       Public
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-sm border-gray-600">
+                    <Badge
+                      variant="outline"
+                      className="text-sm"
+                      style={{ borderColor: playlist.theme_color, color: playlist.theme_color }}
+                    >
                       <Lock className="w-3 h-3 mr-1" />
                       Privé
                     </Badge>
                   )}
-                  <Badge variant="outline" className="text-sm border-gray-600">
+                  <Badge
+                    variant="outline"
+                    className="text-sm"
+                    style={{ borderColor: playlist.theme_color, color: playlist.theme_color }}
+                  >
                     <Film className="w-3 h-3 mr-1" />
                     {playlistItems.length} éléments
                   </Badge>
-                  <Badge variant="outline" className="text-sm border-gray-600">
+                  <Badge
+                    variant="outline"
+                    className="text-sm"
+                    style={{ borderColor: playlist.theme_color, color: playlist.theme_color }}
+                  >
                     <Calendar className="w-3 h-3 mr-1" />
                     {new Date(playlist.updated_at).toLocaleDateString()}
                   </Badge>
@@ -157,13 +177,16 @@ export default function PlaylistContentPage() {
               </div>
             </div>
             {playlist.description && (
-              <CardDescription className="text-gray-400 mt-3">{playlist.description}</CardDescription>
+              <CardDescription className="text-gray-300 mt-3">{playlist.description}</CardDescription>
             )}
           </CardHeader>
         </Card>
 
         {/* Playlist Content */}
-        <Card className="bg-gray-800 border-gray-700">
+        <Card
+          className="border-gray-700"
+          style={{ backgroundColor: `${playlist.theme_color}15`, borderColor: playlist.theme_color }}
+        >
           <CardHeader>
             <CardTitle className="text-white">Contenu de la playlist</CardTitle>
             <CardDescription className="text-gray-400">Films et séries dans cette playlist</CardDescription>

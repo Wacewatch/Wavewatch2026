@@ -56,11 +56,16 @@ export function useWishlist(item?: any) {
         tmdb_id: item.content_id,
         content_type: item.content_type,
         content_title: item.content_title,
-        poster_path: item.metadata?.poster_path,
+        poster_path: item.metadata?.poster_path || item.poster_path,
         created_at: item.created_at,
+        title: item.content_title, // Add title for compatibility
+        type: item.content_type === "movie" ? "movie" : "tv", // Add type for compatibility
+        addedAt: item.created_at, // Add addedAt for compatibility
       }))
 
       setWishlistItems(transformedData)
+
+      window.dispatchEvent(new CustomEvent("wishlist-updated"))
     } catch (error) {
       console.error("Error loading wishlist items:", error)
     } finally {
@@ -129,6 +134,9 @@ export function useWishlist(item?: any) {
           content_id: content.id,
           content_type: contentType,
           content_title: content.title || content.name,
+          tmdb_id: content.id, // Add tmdb_id
+          media_type: contentType, // Add media_type
+          poster_path: content.poster_path, // Add poster_path directly
           metadata: {
             poster_path: content.poster_path,
             tmdb_id: content.id,
