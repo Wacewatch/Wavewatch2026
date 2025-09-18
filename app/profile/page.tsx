@@ -94,7 +94,7 @@ export default function ProfilePage() {
     if (!user?.id) return
 
     try {
-      const { data, error } = await supabase.from("user_profiles").select("*").eq("user_id", user.id).single()
+      const { data, error } = await supabase.from("user_profiles_extended").select("*").eq("user_id", user.id).single()
 
       if (error && error.code !== "PGRST116") {
         console.error("Error loading profile:", error)
@@ -152,7 +152,7 @@ export default function ProfilePage() {
     if (!user?.id) return
 
     try {
-      const { error } = await supabase.from("user_profiles").upsert(
+      const { error } = await supabase.from("user_profiles_extended").upsert(
         {
           user_id: user.id,
           birth_date: profile.birthDate,
@@ -318,7 +318,7 @@ export default function ProfilePage() {
 
       // Supprimer aussi le statut admin
       try {
-        await supabase.from("user_profiles").update({ is_admin: false }).eq("id", user.id)
+        await supabase.from("user_profiles").update({ admin_status: false }).eq("id", user.id)
       } catch (error) {
         console.log("Supabase admin removal failed, continuing with local removal")
       }
@@ -363,7 +363,7 @@ export default function ProfilePage() {
 
       // Essayer de supprimer de Supabase si possible
       try {
-        await supabase.from("user_profiles").delete().eq("id", user.id)
+        await supabase.from("user_profiles").delete().eq("user_id", user.id)
         await supabase.from("user_profiles_extended").delete().eq("user_id", user.id)
         await supabase.from("bug_reports").delete().eq("user_id", user.id)
       } catch (error) {
