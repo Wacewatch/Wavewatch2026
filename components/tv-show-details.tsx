@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { CastList } from "@/components/cast-list"
 import { useRouter } from "next/navigation"
+import { useUserPreferences } from "@/hooks/use-user-preferences"
 
 interface TVShowDetailsProps {
   show: any
@@ -51,6 +52,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
   const router = useRouter()
   const [scrollPosition, setScrollPosition] = useState(0)
   const similarShowsRef = useRef<HTMLDivElement>(null)
+  const { preferences } = useUserPreferences()
 
   // Simuler les votes totaux basés sur l'ID
   const getTotalVotes = (id: number, type: "like" | "dislike") => {
@@ -124,8 +126,8 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
   }
 
   const handleWatch = async () => {
-    // Marquer seulement le premier épisode de la première saison comme vu
-    if (user && !isWatched) {
+    // Marquer seulement le premier épisode de la première saison comme vu si l'utilisateur a activé cette préférence
+    if (user && !isWatched && preferences.autoMarkWatched) {
       setIsMarkingWatched(true)
       try {
         // Trouver la première saison valide

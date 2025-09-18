@@ -24,7 +24,7 @@ export interface WishlistItem {
 
 export interface FavoriteItem {
   id: string
-  type: "movie" | "tv" | "tv-channel" | "radio" | "actor"
+  type: "movie" | "tv" | "tv-channel" | "radio" | "actor" | "playlist"
   tmdbId: number
   title: string
   addedAt: Date
@@ -35,8 +35,8 @@ export interface FavoriteItem {
 
 export interface RatingItem {
   id: string
-  type: "movie" | "tv" | "episode" | "tv-channel" | "radio" | "game"
-  tmdbId: number | string // string pour les jeux/chaînes custom
+  type: "movie" | "tv" | "episode" | "tv-channel" | "radio" | "game" | "playlist"
+  tmdbId: number | string // string pour les jeux/chaînes custom et playlists
   title: string
   rating: "like" | "dislike"
   ratedAt: Date
@@ -70,6 +70,8 @@ export interface WatchStats {
   dislikesRadio: number
   likesGames: number
   dislikesGames: number
+  likesPlaylists: number
+  dislikesPlaylists: number
   monthlyStats: { month: string; minutes: number }[]
   genreStats: { genre: string; count: number; minutes: number }[]
 }
@@ -108,7 +110,7 @@ export class WatchTracker {
   }
 
   static setRating(
-    type: "movie" | "tv" | "episode" | "tv-channel" | "radio" | "game",
+    type: "movie" | "tv" | "episode" | "tv-channel" | "radio" | "game" | "playlist",
     id: number | string,
     title: string,
     rating: "like" | "dislike",
@@ -153,7 +155,7 @@ export class WatchTracker {
   }
 
   static toggleLike(
-    type: "movie" | "tv" | "episode" | "tv-channel" | "radio" | "game",
+    type: "movie" | "tv" | "episode" | "tv-channel" | "radio" | "game" | "playlist",
     id: number | string,
     title: string,
     options?: {
@@ -177,7 +179,7 @@ export class WatchTracker {
   }
 
   static toggleDislike(
-    type: "movie" | "tv" | "episode" | "tv-channel" | "radio" | "game",
+    type: "movie" | "tv" | "episode" | "tv-channel" | "radio" | "game" | "playlist",
     id: number | string,
     title: string,
     options?: {
@@ -416,13 +418,36 @@ export class WatchTracker {
     }
   }
 
-  static isFavorite(type: "movie" | "tv" | "tv-channel" | "radio" | "actor", tmdbId: number): boolean {
+  static isFavorite(type: "movie" | "tv" | "tv-channel" | "radio" | "actor" | "playlist", tmdbId: number): boolean {
     const items = this.getFavoriteItems()
     return items.some((item) => item.type === type && item.tmdbId === tmdbId)
   }
 
+  static addToFavorites(item: FavoriteItem): void {
+    if (typeof window === "undefined") return
+
+    const items = this.getFavoriteItems()
+    const existingIndex = items.findIndex((existing) => existing.type === item.type && existing.tmdbId === item.tmdbId)
+
+    if (existingIndex === -1) {
+      items.push(item)
+      localStorage.setItem(this.STORAGE_KEY_FAVORITES, JSON.stringify(items))
+      window.dispatchEvent(new Event("watchlist-updated"))
+    }
+  }
+
+  static removeFromFavorites(id: string, type: string): void {
+    if (typeof window === "undefined") return
+
+    const items = this.getFavoriteItems()
+    const filteredItems = items.filter((item) => !(item.id === id && item.type === type))
+
+    localStorage.setItem(this.STORAGE_KEY_FAVORITES, JSON.stringify(filteredItems))
+    window.dispatchEvent(new Event("watchlist-updated"))
+  }
+
   static toggleFavorite(
-    type: "movie" | "tv" | "tv-channel" | "radio" | "actor",
+    type: "movie" | "tv" | "tv-channel" | "radio" | "actor" | "playlist",
     tmdbId: number,
     title: string,
     options?: {
@@ -488,6 +513,9 @@ export class WatchTracker {
     const likesGames = ratings.filter((r) => r.type === "game" && r.rating === "like").length
     const dislikesGames = ratings.filter((r) => r.type === "game" && r.rating === "dislike").length
 
+    const likesPlaylists = ratings.filter((r) => r.type === "playlist" && r.rating === "like").length
+    const dislikesPlaylists = ratings.filter((r) => r.type === "playlist" && r.rating === "dislike").length
+
     if (items.length === 0) {
       return {
         totalWatchTime: 0,
@@ -512,6 +540,8 @@ export class WatchTracker {
         dislikesRadio,
         likesGames,
         dislikesGames,
+        likesPlaylists,
+        dislikesPlaylists,
         monthlyStats: [],
         genreStats: [],
       }
@@ -585,6 +615,8 @@ export class WatchTracker {
       dislikesRadio,
       likesGames,
       dislikesGames,
+      likesPlaylists,
+      dislikesPlaylists,
       monthlyStats: [],
       genreStats: [],
     }
@@ -803,6 +835,21 @@ export class WatchTracker {
 
     if (stats.episodesWatched > 2000) {
       facts.push("Plus de 2000 épisodes ! Vous pourriez présenter un quiz TV ! 🎯")
+    }
+
+    // Playlist-specific interesting facts
+    if (stats.likesPlaylists > 5) {
+      facts.push(`${stats.likesPlaylists} playlists likées ! Vous appréciez les collections de la communauté !`)
+    }
+
+    if (stats.likesPlaylists > stats.dislikesPlaylists && stats.likesPlaylists > 0) {
+      facts.push(`Vous likez plus de playlists que vous n'en dislikez ! Vous êtes ouvert aux découvertes !`)
+    }
+
+    if (favorites.filter((f) => f.type === "playlist").length > 3) {
+      facts.push(
+        `${favorites.filter((f) => f.type === "playlist").length} playlists en favoris ! Vous aimez collectionner !`,
+      )
     }
 
     return facts.slice(0, 8) // Limiter à 8 faits pour ne pas surcharger

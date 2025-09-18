@@ -177,13 +177,13 @@ export default function PlaylistContentPage() {
           style={{ backgroundColor: `${playlist.theme_color}20`, borderColor: playlist.theme_color }}
         >
           <CardHeader>
-            <div className="flex items-start justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div className="flex-1">
                 <CardTitle className="text-white text-2xl flex items-center gap-3">
                   <div className="w-6 h-6 rounded-full shadow-lg" style={{ backgroundColor: playlist.theme_color }} />
                   {playlist.title}
                 </CardTitle>
-                <div className="flex items-center gap-2 mt-2">
+                <div className="flex items-center gap-2 mt-2 flex-wrap">
                   {playlist.is_public ? (
                     <Badge
                       variant="secondary"
@@ -223,43 +223,45 @@ export default function PlaylistContentPage() {
                 <p className="text-gray-300 text-sm mt-2">Créée par {playlist.username}</p>
               </div>
               {playlist.is_public && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="ml-4 bg-transparent"
-                  style={{ borderColor: playlist.theme_color, color: playlist.theme_color }}
-                  onClick={async () => {
-                    const shareUrl = `${window.location.origin}/playlists/${playlist.id}`
+                <div className="flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto bg-transparent"
+                    style={{ borderColor: playlist.theme_color, color: playlist.theme_color }}
+                    onClick={async () => {
+                      const shareUrl = `${window.location.origin}/playlists/${playlist.id}`
 
-                    if (navigator.share) {
-                      try {
-                        await navigator.share({
-                          title: playlist.title,
-                          text: playlist.description || `Découvrez la playlist "${playlist.title}" sur WaveWatch`,
-                          url: shareUrl,
-                        })
-                      } catch (error) {
-                        // User cancelled sharing
+                      if (navigator.share) {
+                        try {
+                          await navigator.share({
+                            title: playlist.title,
+                            text: playlist.description || `Découvrez la playlist "${playlist.title}" sur WaveWatch`,
+                            url: shareUrl,
+                          })
+                        } catch (error) {
+                          // User cancelled sharing
+                        }
+                      } else {
+                        try {
+                          await navigator.clipboard.writeText(shareUrl)
+                          toast({
+                            title: "Lien copié",
+                            description: "Le lien de la playlist a été copié dans le presse-papiers",
+                          })
+                        } catch (error) {
+                          toast({
+                            title: "Erreur",
+                            description: "Impossible de copier le lien",
+                            variant: "destructive",
+                          })
+                        }
                       }
-                    } else {
-                      try {
-                        await navigator.clipboard.writeText(shareUrl)
-                        toast({
-                          title: "Lien copié",
-                          description: "Le lien de la playlist a été copié dans le presse-papiers",
-                        })
-                      } catch (error) {
-                        toast({
-                          title: "Erreur",
-                          description: "Impossible de copier le lien",
-                          variant: "destructive",
-                        })
-                      }
-                    }
-                  }}
-                >
-                  Partager
-                </Button>
+                    }}
+                  >
+                    Partager
+                  </Button>
+                </div>
               )}
             </div>
             {playlist.description && (

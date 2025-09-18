@@ -26,6 +26,7 @@ import {
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
+import { useUserPreferences } from "@/hooks/use-user-preferences"
 
 interface EpisodeDetailsProps {
   episode: {
@@ -60,6 +61,7 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const { user } = useAuth()
   const { toast } = useToast()
+  const { preferences } = useUserPreferences()
 
   // Valeurs par défaut pour éviter les erreurs
   const episodeName = episode?.name || "Épisode sans titre"
@@ -96,8 +98,7 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
   const downloadUrl = `https://embed.wavewatch.xyz/download/series?tmdb=${showId}&sea=${seasonNumber}&epi=${episodeNumber}`
 
   const handleWatch = () => {
-    // Marquer automatiquement comme vu lors du clic sur "Regarder"
-    if (user && !isWatched) {
+    if (user && !isWatched && preferences.autoMarkWatched) {
       const episodeId = `${showId}-${seasonNumber}-${episodeNumber}`
       WatchTracker.markAsWatched("episode", episodeId, episodeName, runtime || 45, {
         showName: showData?.name,

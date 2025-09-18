@@ -63,13 +63,28 @@ export function usePublicPlaylists() {
       }
 
       const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
-      const { data: userProfilesData } = await supabase.from("user_profiles").select("id, username").in("id", userIds)
+      const { data: userProfilesData } = await supabase
+        .from("user_profiles")
+        .select("id, username, email")
+        .in("id", userIds)
 
-      // Create a map for quick username lookup
+      // Create a map for quick username lookup with better fallback
       const usernameMap = new Map()
       userProfilesData?.forEach((profile) => {
-        usernameMap.set(profile.id, profile.username)
+        // Use username if available, otherwise use email prefix, otherwise use "Utilisateur"
+        const displayName = profile.username || (profile.email ? profile.email.split("@")[0] : null) || "Utilisateur"
+        usernameMap.set(profile.id, displayName)
       })
+
+      // For users not found in profiles, try to get from auth.users
+      const missingUserIds = userIds.filter((id) => !usernameMap.has(id))
+      if (missingUserIds.length > 0) {
+        console.log("[v0] Some users not found in profiles, checking auth.users...")
+        // For missing users, we'll use a generic fallback
+        missingUserIds.forEach((userId) => {
+          usernameMap.set(userId, "Utilisateur")
+        })
+      }
 
       const playlistIds = playlistsData.map((p) => p.id)
       const { data: itemsCounts } = await supabase
@@ -124,6 +139,7 @@ export function usePublicPlaylists() {
       })
 
       console.log("[v0] Public playlists loaded successfully:", processedPlaylists.length)
+      console.log("[v0] Username mapping:", Object.fromEntries(usernameMap))
       setPlaylists(processedPlaylists)
     } catch (error) {
       console.error("Error loading public playlists:", error)

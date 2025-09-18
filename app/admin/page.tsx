@@ -293,7 +293,6 @@ export default function AdminPage() {
 
       console.log(`✅ ${data?.length || 0} utilisateurs chargés:`, data)
 
-      // Corriger les données utilisateur pour l'affichage
       const correctedUsers = (data || []).map((user) => ({
         ...user,
         // S'assurer que les booléens sont bien définis
@@ -303,6 +302,8 @@ export default function AdminPage() {
         is_beta: Boolean(user.is_beta),
         // Définir un statut par défaut si non défini
         status: user.status || "active",
+        // S'assurer que le nom d'utilisateur est défini
+        username: user.username || user.email?.split("@")[0] || "Utilisateur",
       }))
 
       setUsers(correctedUsers)
@@ -321,12 +322,11 @@ export default function AdminPage() {
 
       const activities = []
 
-      // Get all user login history
       const { data: loginHistory, error: loginError } = await supabase
         .from("user_login_history")
         .select(`
           *,
-          user_profiles!inner(username, email)
+          user_profiles!user_login_history_user_id_fkey(username, email)
         `)
         .order("login_at", { ascending: false })
         .limit(50)
@@ -349,7 +349,6 @@ export default function AdminPage() {
         })
       }
 
-      // Get all user registrations (from user_profiles creation)
       const { data: newUsers, error: usersError } = await supabase
         .from("user_profiles")
         .select("*")
@@ -374,12 +373,11 @@ export default function AdminPage() {
         })
       }
 
-      // Get all watch history
       const { data: watchHistory, error: watchError } = await supabase
         .from("user_watch_history")
         .select(`
           *,
-          user_profiles!inner(username, email)
+          user_profiles!user_watch_history_user_id_fkey(username, email)
         `)
         .order("last_watched_at", { ascending: false })
         .limit(30)
@@ -403,12 +401,11 @@ export default function AdminPage() {
         })
       }
 
-      // Get all ratings
       const { data: ratings, error: ratingsError } = await supabase
         .from("user_ratings")
         .select(`
           *,
-          user_profiles!inner(username, email)
+          user_profiles!user_ratings_user_id_fkey(username, email)
         `)
         .order("created_at", { ascending: false })
         .limit(30)
@@ -433,12 +430,11 @@ export default function AdminPage() {
         })
       }
 
-      // Get wishlist additions
       const { data: wishlistItems, error: wishlistError } = await supabase
         .from("user_wishlist")
         .select(`
           *,
-          user_profiles!inner(username, email)
+          user_profiles!user_wishlist_user_id_fkey(username, email)
         `)
         .order("created_at", { ascending: false })
         .limit(20)

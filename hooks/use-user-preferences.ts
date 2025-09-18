@@ -66,6 +66,8 @@ export function useUserPreferences() {
     if (!user?.id) return
 
     try {
+      console.log("[v0] Loading user preferences for user:", user.id)
+
       const { data, error } = await supabase
         .from("user_profiles")
         .select("hide_adult_content, auto_mark_watched, theme_preference")
@@ -77,22 +79,41 @@ export function useUserPreferences() {
         return
       }
 
+      console.log("[v0] Raw preferences data:", data)
+
       if (data) {
-        setPreferences({
-          showAdultContent: !data.hide_adult_content, // Inverse logic
+        const newPreferences = {
+          showAdultContent: !data.hide_adult_content, // Inverse logic: if hide_adult_content is false, show adult content
           showWatchedContent: true, // Keep existing logic
-          hideAdultContent: data.hide_adult_content || true,
+          hideAdultContent: data.hide_adult_content !== false, // Default to true if null/undefined
           autoMarkWatched: data.auto_mark_watched || false,
           themePreference: data.theme_preference || "system",
-        })
+        }
+
+        console.log("[v0] Processed preferences:", newPreferences)
+        setPreferences(newPreferences)
+
+        // Update TMDB library with adult content preference
+        if (typeof window !== "undefined") {
+          const { updateAdultContentPreference } = await import("@/lib/tmdb")
+          updateAdultContentPreference(newPreferences.showAdultContent)
+        }
       } else {
-        setPreferences({
+        console.log("[v0] No preferences found, using defaults")
+        const defaultPreferences = {
           showAdultContent: false,
           showWatchedContent: true,
           hideAdultContent: true,
           autoMarkWatched: false,
           themePreference: "system",
-        })
+        }
+        setPreferences(defaultPreferences)
+
+        // Update TMDB library with default preference
+        if (typeof window !== "undefined") {
+          const { updateAdultContentPreference } = await import("@/lib/tmdb")
+          updateAdultContentPreference(false)
+        }
       }
     } catch (error) {
       console.error("Error loading preferences:", error)
@@ -106,6 +127,8 @@ export function useUserPreferences() {
 
     const updatedPreferences = { ...preferences, ...newPreferences }
     setPreferences(updatedPreferences)
+
+    console.log("[v0] Updating preferences:", updatedPreferences)
 
     try {
       const { error } = await supabase
@@ -123,6 +146,13 @@ export function useUserPreferences() {
         setPreferences(preferences)
       } else {
         console.log("[v0] Preferences updated successfully:", updatedPreferences)
+
+        // Update TMDB library with new adult content preference
+        if (typeof window !== "undefined") {
+          const { updateAdultContentPreference } = await import("@/lib/tmdb")
+          updateAdultContentPreference(updatedPreferences.showAdultContent)
+        }
+
         window.dispatchEvent(
           new CustomEvent("preferences-updated", {
             detail: updatedPreferences,

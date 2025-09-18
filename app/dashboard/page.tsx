@@ -21,6 +21,7 @@ import {
   ThumbsDown,
   MessageSquare,
   Film,
+  List,
 } from "lucide-react"
 import { WatchTracker, type WatchStats } from "@/lib/watch-tracking"
 import { VIPSystem, type VIPLevel } from "@/lib/vip-system"
@@ -61,6 +62,8 @@ export default function DashboardPage() {
     dislikesRadio: 0,
     likesGames: 0,
     dislikesGames: 0,
+    likesPlaylists: 0,
+    dislikesPlaylists: 0,
     monthlyStats: [],
     genreStats: [],
   })
@@ -290,7 +293,7 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="text-center p-3 bg-blue-900/20 rounded-lg border border-blue-800">
                 <div className="text-xl font-bold text-blue-400">
                   {stats.likesTVChannels + stats.dislikesTVChannels}
@@ -305,11 +308,36 @@ export default function DashboardPage() {
                 <div className="text-xl font-bold text-orange-400">{stats.likesGames + stats.dislikesGames}</div>
                 <p className="text-xs text-orange-400">Jeux évalués</p>
               </div>
+              <div className="text-center p-3 bg-indigo-900/20 rounded-lg border border-indigo-800">
+                <div className="text-xl font-bold text-indigo-400">
+                  {stats.likesPlaylists + stats.dislikesPlaylists}
+                </div>
+                <p className="text-xs text-indigo-400">Playlists évaluées</p>
+              </div>
               <div className="text-center p-3 bg-gray-700 rounded-lg border border-gray-600">
                 <div className="text-xl font-bold text-gray-300">{stats.totalLikes + stats.totalDislikes}</div>
                 <p className="text-xs text-gray-400">Total évaluations</p>
               </div>
             </div>
+
+            {(stats.likesPlaylists > 0 || stats.dislikesPlaylists > 0) && (
+              <div className="mt-4 p-4 bg-indigo-900/10 rounded-lg border border-indigo-800">
+                <div className="flex items-center gap-2 mb-3">
+                  <List className="h-4 w-4 text-indigo-400" />
+                  <h4 className="text-sm font-medium text-indigo-400">Évaluations de Playlists</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center p-2 bg-green-900/20 rounded border border-green-800">
+                    <div className="text-lg font-bold text-green-400">{stats.likesPlaylists}</div>
+                    <p className="text-xs text-green-400">Playlists likées</p>
+                  </div>
+                  <div className="text-center p-2 bg-red-900/20 rounded border border-red-800">
+                    <div className="text-lg font-bold text-red-400">{stats.dislikesPlaylists}</div>
+                    <p className="text-xs text-red-400">Playlists dislikées</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

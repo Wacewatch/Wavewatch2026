@@ -28,6 +28,7 @@ import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { CastList } from "@/components/cast-list"
+import { useUserPreferences } from "@/hooks/use-user-preferences"
 
 interface MovieDetailsProps {
   movie: any
@@ -48,6 +49,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const { user } = useAuth()
   const { toast } = useToast()
+  const { preferences } = useUserPreferences()
 
   // Get director from credits
   const director = credits?.crew?.find((person: any) => person.job === "Director")
@@ -108,8 +110,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
   const downloadUrl = `https://embed.wavewatch.xyz/download/movie?tmdb=${movie.id}`
 
   const handleWatch = async () => {
-    // Marquer automatiquement comme vu lors du clic sur "Regarder"
-    if (user && !isWatched) {
+    if (user && !isWatched && preferences.autoMarkWatched) {
       try {
         WatchTracker.markAsWatched("movie", movie.id, movie.title, movie.runtime || 120, {
           genre: movie.genres[0]?.name,
