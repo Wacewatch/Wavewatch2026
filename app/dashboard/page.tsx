@@ -168,49 +168,49 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 sm:gap-2">
             <Button
               asChild
               variant="outline"
               size="sm"
-              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent flex-1 sm:flex-none min-w-[120px]"
             >
               <Link href="/profile">
                 <Crown className="h-4 w-4 mr-2" />
-                Profil
+                <span className="text-sm">Profil</span>
               </Link>
             </Button>
             <Button
               asChild
               variant="outline"
               size="sm"
-              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent flex-1 sm:flex-none min-w-[120px]"
             >
               <Link href="/playlists">
                 <Film className="h-4 w-4 mr-2" />
-                Mes Playlists
+                <span className="text-sm">Mes Playlists</span>
               </Link>
             </Button>
             <Button
               asChild
               variant="outline"
               size="sm"
-              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent flex-1 sm:flex-none min-w-[120px]"
             >
               <Link href="/dashboard/messages">
                 <MessageSquare className="h-4 w-4 mr-2" />
-                Messagerie
+                <span className="text-sm">Messagerie</span>
               </Link>
             </Button>
             <Button
               asChild
               variant="outline"
               size="sm"
-              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent flex-1 sm:flex-none min-w-[120px]"
             >
               <Link href="/requests">
                 <MessageSquare className="h-4 w-4 mr-2" />
-                Demandes
+                <span className="text-sm">Demandes</span>
               </Link>
             </Button>
           </div>
