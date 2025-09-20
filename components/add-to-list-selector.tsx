@@ -61,17 +61,17 @@ export function AddToListSelector({ content, contentType, className = "" }: AddT
           Ajouter à une playlist
         </Button>
       </DialogTrigger>
-      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-md">
+      <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-md max-h-[80vh]">
         <DialogHeader>
           <DialogTitle className="text-white">Ajouter à une playlist</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 flex-1 overflow-hidden">
           {/* Playlists */}
-          <div className="space-y-2">
+          <div className="space-y-2 flex-1 flex flex-col min-h-0">
             <h4 className="text-sm font-medium text-gray-300">Mes Playlists</h4>
-            <ScrollArea className="max-h-48">
-              <div className="space-y-2">
+            <ScrollArea className="flex-1 min-h-0 max-h-[400px]">
+              <div className="space-y-2 pr-4">
                 {playlists.length === 0 ? (
                   <div className="text-center py-4">
                     <p className="text-gray-400 text-sm">Aucune playlist créée</p>

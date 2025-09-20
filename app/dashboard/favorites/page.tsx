@@ -71,6 +71,8 @@ export default function FavoritesPage() {
         return "Radios"
       case "actor":
         return "Acteurs"
+      case "playlist":
+        return "Playlists"
       default:
         return "Autres"
     }
@@ -88,6 +90,8 @@ export default function FavoritesPage() {
         return "bg-green-600"
       case "actor":
         return "bg-orange-600"
+      case "playlist":
+        return "bg-pink-600"
       default:
         return "bg-gray-600"
     }
@@ -104,8 +108,7 @@ export default function FavoritesPage() {
             className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
           >
             <Link href="/dashboard">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour au dashboard
+              <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
           <div>
@@ -166,6 +169,8 @@ export default function FavoritesPage() {
                             return `/radio`
                           case "actor":
                             return `/actors/${item.tmdbId}`
+                          case "playlist":
+                            return `/playlists/${item.id}` // Use item.id instead of tmdbId for playlists
                           default:
                             return `/movies/${item.tmdbId}`
                         }

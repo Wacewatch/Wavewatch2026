@@ -1,12 +1,12 @@
 "use client"
 
 import { useAuth } from "@/components/auth-provider"
-import { PlaylistManager } from "@/components/playlist-manager"
+import { MessagingDashboard } from "@/components/messaging-dashboard"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 
-export default function PlaylistsPage() {
+export default function MessagesPage() {
   const { user } = useAuth()
 
   if (!user) {
@@ -15,7 +15,7 @@ export default function PlaylistsPage() {
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4 text-white">Accès refusé</h1>
-            <p className="text-gray-300">Vous devez être connecté pour accéder à vos playlists.</p>
+            <p className="text-gray-300">Vous devez être connecté pour accéder à la messagerie.</p>
             <Button asChild className="mt-4 bg-blue-600 hover:bg-blue-700">
               <Link href="/auth/login">Se connecter</Link>
             </Button>
@@ -27,17 +27,22 @@ export default function PlaylistsPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <Button variant="ghost" asChild className="text-gray-400 hover:text-white">
+        <div className="flex items-center gap-4">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+          >
             <Link href="/dashboard">
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
         </div>
 
-        <PlaylistManager />
+        <MessagingDashboard />
       </div>
     </div>
   )

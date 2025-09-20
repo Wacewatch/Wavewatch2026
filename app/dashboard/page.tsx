@@ -197,6 +197,17 @@ export default function DashboardPage() {
               size="sm"
               className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
             >
+              <Link href="/dashboard/messages">
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Messagerie
+              </Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+            >
               <Link href="/requests">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 Demandes
@@ -508,6 +519,8 @@ export default function DashboardPage() {
                             return `/tv-shows/${item.tmdbId}`
                           } else if (item.type === "episode" && item.showId) {
                             return `/tv-shows/${item.showId}`
+                          } else if (item.type === "playlist") {
+                            return `/playlists/${item.id}`
                           }
                           return `/movies/${item.tmdbId || item.id}`
                         }
@@ -608,6 +621,8 @@ export default function DashboardPage() {
                               return `/radio`
                             case "actor":
                               return `/actors/${item.tmdbId}`
+                            case "playlist":
+                              return `/playlists/${item.id}`
                             default:
                               return `/movies/${item.tmdbId || item.id}`
                           }
@@ -643,7 +658,11 @@ export default function DashboardPage() {
                                           ? "TV"
                                           : item.type === "radio"
                                             ? "Radio"
-                                            : "Acteur"}
+                                            : item.type === "actor"
+                                              ? "Acteur"
+                                              : item.type === "playlist"
+                                                ? "Playlist"
+                                                : "Autre"}
                                   </Badge>
                                 </div>
                               </div>

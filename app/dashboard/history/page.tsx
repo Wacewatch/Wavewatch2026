@@ -52,8 +52,7 @@ export default function HistoryPage() {
             className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
           >
             <Link href="/dashboard">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour au dashboard
+              <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
           <div>

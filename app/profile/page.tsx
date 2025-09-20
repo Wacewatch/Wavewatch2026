@@ -23,6 +23,7 @@ import {
   Save,
   X,
   Flag as Flask,
+  MessageSquare,
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { VIPSystem } from "@/lib/vip-system"
@@ -30,6 +31,7 @@ import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
+import { useMessaging } from "@/hooks/use-messaging"
 
 interface UserProfile {
   birthDate?: string
@@ -37,6 +39,7 @@ interface UserProfile {
   bio?: string
   profileImage?: string
   joinDate: string
+  allow_messages: boolean
 }
 
 interface BugReport {
@@ -55,22 +58,25 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false)
   const [profile, setProfile] = useState<UserProfile>({
     joinDate: new Date().toISOString().split("T")[0],
+    allow_messages: true,
   })
 
   const [activationCode, setActivationCode] = useState("")
   const [isActivating, setIsActivating] = useState(false)
   const { preferences, updatePreferences, loading: preferencesLoading } = useUserPreferences()
+  const { updateMessagePreferences } = useMessaging()
   const { toast } = useToast()
   const router = useRouter()
 
-  // Ajouter un état pour le toggle du module
   const [showActivationCode, setShowActivationCode] = useState(false)
+  const [allowMessages, setAllowMessages] = useState(true)
 
   useEffect(() => {
     setMounted(true)
     if (user?.id) {
       loadProfile()
       loadBugReports()
+      loadMessagePreferences()
     }
   }, [user?.id])
 
@@ -92,6 +98,7 @@ export default function ProfilePage() {
           bio: data.bio,
           profileImage: data.profile_image,
           joinDate: data.join_date || new Date().toISOString().split("T")[0],
+          allow_messages: data.allow_messages ?? true,
         })
       }
     } catch (error) {
@@ -111,7 +118,6 @@ export default function ProfilePage() {
 
       if (error) {
         console.error("Error loading bug reports:", error)
-        // Don't return early, just set empty array
         setBugReports([])
         return
       }
@@ -132,6 +138,25 @@ export default function ProfilePage() {
     }
   }
 
+  const loadMessagePreferences = async () => {
+    if (!user?.id) return
+
+    try {
+      const { data, error } = await supabase.from("user_profiles").select("allow_messages").eq("id", user.id).single()
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Error loading message preferences:", error)
+        return
+      }
+
+      if (data) {
+        setAllowMessages(data.allow_messages ?? true)
+      }
+    } catch (error) {
+      console.error("Error loading message preferences:", error)
+    }
+  }
+
   const handleSaveProfile = async () => {
     if (!user?.id) return
 
@@ -144,6 +169,7 @@ export default function ProfilePage() {
           bio: profile.bio,
           profile_image: profile.profileImage,
           join_date: profile.joinDate,
+          allow_messages: profile.allow_messages,
         },
         {
           onConflict: "user_id",
@@ -191,7 +217,6 @@ export default function ProfilePage() {
       const code = activationCode.trim()
 
       if (code === "45684568") {
-        // Code Admin - Sauvegarder en BDD
         try {
           const { error } = await supabase.from("user_profiles").update({ is_admin: true }).eq("id", user.id)
 
@@ -212,16 +237,13 @@ export default function ProfilePage() {
         }
 
         setActivationCode("")
-        // Rediriger vers la page d'accueil pour forcer le rechargement du contexte
         setTimeout(() => {
           router.push("/")
           window.location.reload()
         }, 1500)
       } else if (code === "wavebetawatch2025") {
-        // Code Bêta Testeur
         VIPSystem.upgradeUser(user.id, user.username, "beta")
 
-        // Déclencher un événement pour mettre à jour les autres composants
         window.dispatchEvent(new Event("vip-updated"))
 
         toast({
@@ -230,15 +252,12 @@ export default function ProfilePage() {
         })
         setActivationCode("")
 
-        // Rediriger vers la page d'accueil
         setTimeout(() => {
           router.push("/")
         }, 1500)
       } else if (code === "vip2025") {
-        // Code VIP
         VIPSystem.upgradeUser(user.id, user.username, "vip")
 
-        // Déclencher un événement pour mettre à jour les autres composants
         window.dispatchEvent(new Event("vip-updated"))
 
         toast({
@@ -247,15 +266,12 @@ export default function ProfilePage() {
         })
         setActivationCode("")
 
-        // Rediriger vers la page d'accueil
         setTimeout(() => {
           router.push("/")
         }, 1500)
       } else if (code === "vipplus2025") {
-        // Code VIP+
         VIPSystem.upgradeUser(user.id, user.username, "vip_plus")
 
-        // Déclencher un événement pour mettre à jour les autres composants
         window.dispatchEvent(new Event("vip-updated"))
 
         toast({
@@ -264,7 +280,6 @@ export default function ProfilePage() {
         })
         setActivationCode("")
 
-        // Rediriger vers la page d'accueil
         setTimeout(() => {
           router.push("/")
         }, 1500)
@@ -288,24 +303,20 @@ export default function ProfilePage() {
 
   const handleRemovePrivileges = async () => {
     try {
-      // Supprimer les privilèges VIP du localStorage
       VIPSystem.removeUserPrivileges(user.id)
 
-      // Supprimer aussi le statut admin
       try {
         await supabase.from("user_profiles").update({ is_admin: false }).eq("id", user.id)
       } catch (error) {
         console.log("Supabase admin removal failed, continuing with local removal")
       }
 
-      // Supprimer le statut admin du localStorage aussi
       if (typeof window !== "undefined") {
         const localSession = JSON.parse(localStorage.getItem("wavewatch_session") || "{}")
         localSession.isAdmin = false
         localStorage.setItem("wavewatch_session", JSON.stringify(localSession))
       }
 
-      // Déclencher un événement pour mettre à jour les autres composants
       window.dispatchEvent(new Event("vip-updated"))
 
       toast({
@@ -313,7 +324,6 @@ export default function ProfilePage() {
         description: "Vous êtes redevenu un utilisateur standard (admin supprimé aussi)",
       })
 
-      // Rediriger vers la page d'accueil
       setTimeout(() => {
         router.push("/")
         window.location.reload()
@@ -329,14 +339,12 @@ export default function ProfilePage() {
 
   const handleDeleteAccount = async () => {
     try {
-      // Supprimer les données locales
       if (typeof window !== "undefined") {
         localStorage.removeItem("wavewatch_session")
         localStorage.removeItem("wavewatch_users")
         VIPSystem.removeUserPrivileges(user.id)
       }
 
-      // Essayer de supprimer de Supabase si possible
       try {
         await supabase.from("user_profiles").delete().eq("id", user.id)
         await supabase.from("user_profiles_extended").delete().eq("user_id", user.id)
@@ -350,7 +358,6 @@ export default function ProfilePage() {
         description: "Votre compte a été supprimé avec succès",
       })
 
-      // Déconnecter et rediriger
       await signOut()
       router.push("/")
     } catch (error) {
@@ -378,7 +385,7 @@ export default function ProfilePage() {
 
   const handleHideWatchedToggle = (enabled: boolean) => {
     updatePreferences({
-      showWatchedContent: !enabled, // If hiding is enabled, don't show watched content
+      showWatchedContent: !enabled,
     })
 
     toast({
@@ -400,6 +407,13 @@ export default function ProfilePage() {
         ? "Le contenu sera automatiquement marqué comme vu quand vous cliquez sur 'Regarder'"
         : "Vous devrez marquer manuellement le contenu comme vu",
     })
+  }
+
+  const handleMessagePreferencesToggle = async (enabled: boolean) => {
+    const success = await updateMessagePreferences(enabled)
+    if (success) {
+      setAllowMessages(enabled)
+    }
   }
 
   if (!mounted) {
@@ -458,7 +472,6 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
           <div>
             <div className="flex items-center gap-4 mb-2">
@@ -510,7 +523,6 @@ export default function ProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Profil principal */}
           <div className="lg:col-span-2">
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
@@ -521,7 +533,6 @@ export default function ProfilePage() {
                 <CardDescription className="text-gray-400">Gérez vos informations de profil</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Avatar et infos de base */}
                 <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
                   <div className="relative">
                     <Avatar className="h-24 w-24">
@@ -550,7 +561,6 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Formulaire */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="username" className="text-gray-300">
@@ -626,9 +636,7 @@ export default function ProfilePage() {
             </Card>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Statut VIP */}
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
@@ -659,7 +667,6 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Adult content preferences */}
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
@@ -690,7 +697,6 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Hide watched content option */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <Label htmlFor="hide-watched" className="text-sm font-medium text-gray-300">
@@ -738,7 +744,103 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Bug Reports */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <MessageSquare className="h-5 w-5 text-blue-400" />
+                  Préférences de messagerie
+                </CardTitle>
+                <CardDescription className="text-gray-400">Gérez la réception de messages</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label htmlFor="allow-messages" className="text-sm font-medium text-gray-300">
+                      Recevoir des messages
+                    </Label>
+                    <p className="text-xs text-gray-400">
+                      Permettre aux autres utilisateurs de vous envoyer des messages privés
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      id="allow-messages"
+                      type="checkbox"
+                      checked={allowMessages}
+                      onChange={(e) => handleMessagePreferencesToggle(e.target.checked)}
+                      className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                  </div>
+                </div>
+
+                <div className="text-xs text-gray-500 bg-gray-700/50 p-3 rounded-lg">
+                  <strong>Note :</strong> Si vous désactivez cette option, les autres utilisateurs ne pourront plus vous
+                  envoyer de nouveaux messages. Vous pourrez toujours consulter vos messages existants et en envoyer.
+                </div>
+
+                <div className="pt-2">
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="w-full bg-transparent border-gray-600 text-gray-300 hover:bg-gray-700"
+                  >
+                    <Link href="/dashboard/messages">
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Gérer mes messages
+                    </Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Crown className="h-5 w-5 text-yellow-400" />
+                  Code d'activation
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Activez des fonctionnalités spéciales avec un code
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="activation-code" className="text-gray-300">
+                    Code d'activation
+                  </Label>
+                  <Input
+                    id="activation-code"
+                    type="password"
+                    placeholder="Entrez votre code"
+                    value={activationCode}
+                    onChange={(e) => setActivationCode(e.target.value)}
+                    className="bg-gray-700 border-gray-600 text-white"
+                  />
+                </div>
+                <Button
+                  onClick={handleActivationCode}
+                  disabled={isActivating || !activationCode.trim()}
+                  className="w-full bg-yellow-600 hover:bg-yellow-700"
+                >
+                  {isActivating ? "Activation..." : "Activer"}
+                </Button>
+                <div className="text-xs text-gray-500 bg-gray-700/50 p-3 rounded-lg">
+                  <strong>Codes disponibles :</strong> VIP, VIP+, Bêta Testeur, Admin
+                </div>
+                {(userVIPLevel !== "free" || user.isAdmin) && (
+                  <Button
+                    onClick={handleRemovePrivileges}
+                    variant="outline"
+                    size="sm"
+                    className="w-full border-red-600 text-red-400 hover:bg-red-900/20 bg-transparent"
+                  >
+                    Supprimer tous les privilèges
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
@@ -787,7 +889,6 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Actions dangereuses */}
             <Card className="bg-red-900/20 border-red-800">
               <CardHeader>
                 <CardTitle className="text-red-400">Zone dangereuse</CardTitle>

@@ -67,7 +67,7 @@ export function AddToPlaylistButton({ tmdbId, mediaType, title, posterPath, clas
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-2 max-h-60 overflow-y-auto">
+        <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
           {playlists.length === 0 ? (
             <div className="text-center py-8 text-gray-400">
               <p>Vous n'avez pas encore de playlist.</p>

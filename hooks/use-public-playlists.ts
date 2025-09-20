@@ -71,7 +71,6 @@ export function usePublicPlaylists() {
       // Create a map for quick username lookup with better fallback
       const usernameMap = new Map()
       userProfilesData?.forEach((profile) => {
-        // Use username if available, otherwise use email prefix, otherwise use "Utilisateur"
         const displayName = profile.username || (profile.email ? profile.email.split("@")[0] : null) || "Utilisateur"
         usernameMap.set(profile.id, displayName)
       })
@@ -80,9 +79,8 @@ export function usePublicPlaylists() {
       const missingUserIds = userIds.filter((id) => !usernameMap.has(id))
       if (missingUserIds.length > 0) {
         console.log("[v0] Some users not found in profiles, checking auth.users...")
-        // For missing users, we'll use a generic fallback
         missingUserIds.forEach((userId) => {
-          usernameMap.set(userId, "Utilisateur")
+          usernameMap.set(userId, "Utilisateur anonyme")
         })
       }
 
@@ -128,7 +126,7 @@ export function usePublicPlaylists() {
 
         return {
           ...playlist,
-          username: usernameMap.get(playlist.user_id) || "Utilisateur",
+          username: usernameMap.get(playlist.user_id) || "Utilisateur inconnu",
           items_count: itemsCount,
           likes_count: likesCount,
           dislikes_count: dislikesCount,
