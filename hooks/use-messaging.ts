@@ -48,21 +48,29 @@ export function useMessaging() {
     if (!user?.id) return
 
     try {
-      const { data, error } = await supabase
+      const { data: messagesData, error: messagesError } = await supabase
         .from("user_messages")
-        .select(`
-          *,
-          sender:user_profiles!sender_id(username)
-        `)
+        .select("*")
         .eq("recipient_id", user.id)
         .order("created_at", { ascending: false })
 
-      if (error) throw error
+      if (messagesError) throw messagesError
+
+      // Get sender usernames separately
+      const senderIds = [...new Set(messagesData?.map((msg) => msg.sender_id) || [])]
+      const { data: sendersData, error: sendersError } = await supabase
+        .from("user_profiles")
+        .select("id, username")
+        .in("id", senderIds)
+
+      if (sendersError) throw sendersError
+
+      const sendersMap = new Map(sendersData?.map((sender) => [sender.id, sender.username]) || [])
 
       const messagesWithUsernames =
-        data?.map((msg) => ({
+        messagesData?.map((msg) => ({
           ...msg,
-          sender_username: msg.sender?.username || "Utilisateur inconnu",
+          sender_username: sendersMap.get(msg.sender_id) || "Utilisateur inconnu",
         })) || []
 
       setMessages(messagesWithUsernames)
@@ -80,21 +88,29 @@ export function useMessaging() {
     if (!user?.id) return
 
     try {
-      const { data, error } = await supabase
+      const { data: messagesData, error: messagesError } = await supabase
         .from("user_messages")
-        .select(`
-          *,
-          recipient:user_profiles!recipient_id(username)
-        `)
+        .select("*")
         .eq("sender_id", user.id)
         .order("created_at", { ascending: false })
 
-      if (error) throw error
+      if (messagesError) throw messagesError
+
+      // Get recipient usernames separately
+      const recipientIds = [...new Set(messagesData?.map((msg) => msg.recipient_id) || [])]
+      const { data: recipientsData, error: recipientsError } = await supabase
+        .from("user_profiles")
+        .select("id, username")
+        .in("id", recipientIds)
+
+      if (recipientsError) throw recipientsError
+
+      const recipientsMap = new Map(recipientsData?.map((recipient) => [recipient.id, recipient.username]) || [])
 
       const messagesWithUsernames =
-        data?.map((msg) => ({
+        messagesData?.map((msg) => ({
           ...msg,
-          recipient_username: msg.recipient?.username || "Utilisateur inconnu",
+          recipient_username: recipientsMap.get(msg.recipient_id) || "Utilisateur inconnu",
         })) || []
 
       setSentMessages(messagesWithUsernames)
