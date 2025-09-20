@@ -11,20 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import {
   User,
   ArrowLeft,
-  Bug,
   Camera,
   Calendar,
   MapPin,
@@ -34,11 +22,7 @@ import {
   Mail,
   Save,
   X,
-  Key,
-  Check,
   Flag as Flask,
-  Trash2,
-  UserX,
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { VIPSystem } from "@/lib/vip-system"
@@ -394,15 +378,27 @@ export default function ProfilePage() {
 
   const handleHideWatchedToggle = (enabled: boolean) => {
     updatePreferences({
-      showWatchedContent: !enabled,
+      showWatchedContent: !enabled, // If hiding is enabled, don't show watched content
+    })
+
+    toast({
+      title: enabled ? "Masquage du contenu vu activé" : "Masquage du contenu vu désactivé",
+      description: enabled
+        ? "Les films et séries déjà vus seront masqués des listes de contenu"
+        : "Tous les contenus seront affichés, même ceux déjà vus",
+    })
+  }
+
+  const handleAutoMarkWatchedToggle = (enabled: boolean) => {
+    updatePreferences({
       autoMarkWatched: enabled,
     })
 
     toast({
       title: enabled ? "Marquage automatique activé" : "Marquage automatique désactivé",
       description: enabled
-        ? "Les éléments visionnés seront automatiquement marqués comme vus"
-        : "Le marquage automatique des éléments vus est désactivé",
+        ? "Le contenu sera automatiquement marqué comme vu quand vous cliquez sur 'Regarder'"
+        : "Vous devrez marquer manuellement le contenu comme vu",
     })
   }
 
@@ -694,14 +690,33 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                {/* Auto mark watched content option */}
+                {/* Hide watched content option */}
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label htmlFor="hide-watched" className="text-sm font-medium text-gray-300">
+                      Masquer le contenu vu
+                    </Label>
+                    <p className="text-xs text-gray-400">Cacher les films et séries déjà vus des listes de contenu</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      id="hide-watched"
+                      type="checkbox"
+                      checked={!preferences.showWatchedContent}
+                      onChange={(e) => handleHideWatchedToggle(e.target.checked)}
+                      disabled={preferencesLoading}
+                      className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <Label htmlFor="auto-mark-watched" className="text-sm font-medium text-gray-300">
                       Marquage automatique
                     </Label>
                     <p className="text-xs text-gray-400">
-                      Marquer automatiquement comme vu le contenu que vous regardez
+                      Marquer automatiquement le contenu comme vu quand vous cliquez sur "Regarder"
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -709,7 +724,7 @@ export default function ProfilePage() {
                       id="auto-mark-watched"
                       type="checkbox"
                       checked={preferences.autoMarkWatched}
-                      onChange={(e) => handleHideWatchedToggle(e.target.checked)}
+                      onChange={(e) => handleAutoMarkWatchedToggle(e.target.checked)}
                       disabled={preferencesLoading}
                       className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
                     />
@@ -723,258 +738,77 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Code d'activation */}
+            {/* Bug Reports */}
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Key className="h-5 w-5 text-blue-400" />
-                    Code d'activation
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowActivationCode(!showActivationCode)}
-                    className="text-gray-400 hover:text-white"
-                  >
-                    {showActivationCode ? <X className="w-4 h-4" /> : <Key className="w-4 h-4" />}
-                  </Button>
-                </div>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Flask className="h-5 w-5 text-green-400" />
+                  Mes rapports de bugs
+                </CardTitle>
+                <CardDescription className="text-gray-400">{bugReports.length} rapport(s) soumis</CardDescription>
               </CardHeader>
-              {showActivationCode && (
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Input
-                      id="activationCode"
-                      type="password"
-                      placeholder="Entrez votre code..."
-                      value={activationCode}
-                      onChange={(e) => setActivationCode(e.target.value)}
-                      className="bg-gray-700 border-gray-600 text-white"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          handleActivationCode()
-                        }
-                      }}
-                    />
-                  </div>
-                  <Button
-                    onClick={handleActivationCode}
-                    disabled={isActivating || !activationCode.trim()}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {isActivating ? (
-                      "Activation..."
-                    ) : (
-                      <>
-                        <Check className="w-4 h-4 mr-2" />
-                        Activer
-                      </>
+              <CardContent>
+                {bugReports.length === 0 ? (
+                  <p className="text-gray-400 text-sm">Aucun rapport de bug soumis</p>
+                ) : (
+                  <div className="space-y-3">
+                    {bugReports.slice(0, 3).map((report) => (
+                      <div key={report.id} className="bg-gray-700/50 p-3 rounded-lg">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className="text-sm font-medium text-white truncate">{report.title}</h4>
+                          <Badge
+                            variant={
+                              report.status === "resolved"
+                                ? "default"
+                                : report.status === "in_progress"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                            className="text-xs"
+                          >
+                            {report.status === "resolved"
+                              ? "Résolu"
+                              : report.status === "in_progress"
+                                ? "En cours"
+                                : "Ouvert"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-gray-400 line-clamp-2">{report.description}</p>
+                        <p className="text-xs text-gray-500 mt-1">{new Date(report.createdAt).toLocaleDateString()}</p>
+                      </div>
+                    ))}
+                    {bugReports.length > 3 && (
+                      <Button asChild variant="outline" size="sm" className="w-full bg-transparent">
+                        <Link href="/bug-reports">Voir tous les rapports</Link>
+                      </Button>
                     )}
-                  </Button>
-                </CardContent>
-              )}
+                  </div>
+                )}
+              </CardContent>
             </Card>
 
-            {/* Actions rapides */}
-            <Card className="bg-gray-800 border-gray-700">
+            {/* Actions dangereuses */}
+            <Card className="bg-red-900/20 border-red-800">
               <CardHeader>
-                <CardTitle className="text-white">Actions rapides</CardTitle>
+                <CardTitle className="text-red-400">Zone dangereuse</CardTitle>
+                <CardDescription className="text-red-300">Actions irréversibles sur votre compte</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Button
-                  asChild
-                  variant="outline"
-                  className="w-full border-gray-600 text-white hover:bg-gray-700 bg-transparent"
+                  onClick={handleDeleteAccount}
+                  variant="destructive"
+                  size="sm"
+                  className="w-full bg-red-600 hover:bg-red-700"
                 >
-                  <Link href="/dashboard">Tableau de bord</Link>
+                  Supprimer mon compte
                 </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="w-full border-gray-600 text-white hover:bg-gray-700 bg-transparent"
-                >
-                  <Link href="/requests">Mes demandes</Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="w-full border-gray-600 text-white hover:bg-gray-700 bg-transparent"
-                >
-                  <Link href="/subscription">Abonnements</Link>
-                </Button>
-                {user.isAdmin && (
-                  <Button
-                    asChild
-                    variant="outline"
-                    className="w-full border-red-600 text-red-300 hover:bg-red-900 bg-transparent"
-                  >
-                    <Link href="/admin">
-                      <Shield className="w-4 h-4 mr-2" />
-                      Administration
-                    </Link>
-                  </Button>
-                )}
+                <p className="text-xs text-red-300">
+                  Cette action supprimera définitivement votre compte et toutes vos données.
+                </p>
               </CardContent>
             </Card>
           </div>
         </div>
-
-        {/* Rapports de bugs */}
-        <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <Bug className="h-5 w-5" />
-              Mes rapports de bugs
-            </CardTitle>
-            <CardDescription className="text-gray-400">Historique de vos signalements et leur statut</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {bugReports.length === 0 ? (
-              <div className="text-center py-8">
-                <Bug className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400">Aucun rapport de bug envoyé pour le moment.</p>
-                <p className="text-sm text-gray-500 mt-2">
-                  Vous pouvez signaler des problèmes depuis les pages de contenu.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {bugReports.map((report) => (
-                  <div key={report.id} className="bg-gray-700 rounded-lg p-4 border border-gray-600">
-                    <div className="flex justify-between items-start mb-3">
-                      <h4 className="font-medium text-white line-clamp-1">{report.title}</h4>
-                      <Badge
-                        variant={
-                          report.status === "resolved"
-                            ? "default"
-                            : report.status === "in_progress"
-                              ? "secondary"
-                              : "outline"
-                        }
-                        className={
-                          report.status === "resolved"
-                            ? "bg-green-600 text-white"
-                            : report.status === "in_progress"
-                              ? "bg-yellow-600 text-white"
-                              : "border-gray-500 text-gray-400"
-                        }
-                      >
-                        {report.status === "resolved"
-                          ? "Résolu"
-                          : report.status === "in_progress"
-                            ? "En cours"
-                            : "En attente"}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-300 mb-3 line-clamp-2">{report.description}</p>
-                    <div className="flex justify-between items-center text-xs text-gray-400">
-                      <span>{report.contentTitle && `Contenu: ${report.contentTitle}`}</span>
-                      <span>{new Date(report.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Zone de danger */}
-        <Card className="bg-red-950/20 border-red-800">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-400">
-              <UserX className="h-5 w-5" />
-              Zone de danger
-            </CardTitle>
-            <CardDescription className="text-red-300">Actions irréversibles concernant votre compte</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Supprimer les privilèges */}
-            {userVIPLevel !== "free" && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full border-orange-600 text-orange-400 hover:bg-orange-900 bg-transparent"
-                  >
-                    <UserX className="w-4 h-4 mr-2" />
-                    Supprimer les privilèges
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="bg-gray-800 border-gray-700">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="text-white">Supprimer les privilèges</AlertDialogTitle>
-                    <AlertDialogDescription className="text-gray-300">
-                      Êtes-vous sûr de vouloir supprimer vos privilèges VIP/Beta/Admin ? Cette action est irréversible
-                      et vous redeviendrez un utilisateur standard. Vous perdrez :
-                      <br />
-                      <br />• Votre badge {userVIPLevel === "beta" ? "BETA" : "VIP"} {user.isAdmin && "et ADMIN"}
-                      <br />• Votre couleur de nom spéciale
-                      <br />• Tous les avantages associés
-                      {user.isAdmin && (
-                        <>
-                          <br />• Vos privilèges d'administration
-                        </>
-                      )}
-                      <br />
-                      <br />
-                      Vous devrez utiliser un nouveau code d'activation pour retrouver vos privilèges.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="bg-gray-700 text-white hover:bg-gray-600">Annuler</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleRemovePrivileges}
-                      className="bg-orange-600 hover:bg-orange-700 text-white"
-                    >
-                      Supprimer les privilèges
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-
-            {/* Supprimer le compte */}
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-full border-red-600 text-red-400 hover:bg-red-900 bg-transparent"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Supprimer le compte
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent className="bg-gray-800 border-gray-700">
-                <AlertDialogHeader>
-                  <AlertDialogTitle className="text-white">Supprimer définitivement le compte</AlertDialogTitle>
-                  <AlertDialogDescription className="text-gray-300">
-                    ⚠️ <strong>ATTENTION : Cette action est IRRÉVERSIBLE !</strong>
-                    <br />
-                    <br />
-                    En supprimant votre compte, vous perdrez définitivement :
-                    <br />
-                    <br />• Toutes vos données personnelles
-                    <br />• Votre historique de navigation
-                    <br />• Vos rapports de bugs
-                    <br />• Vos privilèges VIP/Beta
-                    <br />• Votre profil complet
-                    <br />
-                    <br />
-                    <strong>Cette action ne peut pas être annulée.</strong> Êtes-vous absolument certain de vouloir
-                    continuer ?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="bg-gray-700 text-white hover:bg-gray-600">Annuler</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteAccount} className="bg-red-600 hover:bg-red-700 text-white">
-                    Supprimer définitivement
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )
