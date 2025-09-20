@@ -52,7 +52,7 @@ export function useMessaging() {
         .from("user_messages")
         .select(`
           *,
-          sender:user_profiles!user_messages_sender_id_fkey(username)
+          sender:user_profiles!sender_id(username)
         `)
         .eq("recipient_id", user.id)
         .order("created_at", { ascending: false })
@@ -84,7 +84,7 @@ export function useMessaging() {
         .from("user_messages")
         .select(`
           *,
-          recipient:user_profiles!user_messages_recipient_id_fkey(username)
+          recipient:user_profiles!recipient_id(username)
         `)
         .eq("sender_id", user.id)
         .order("created_at", { ascending: false })
