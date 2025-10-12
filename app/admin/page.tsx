@@ -284,33 +284,37 @@ export default function AdminPage() {
     try {
       console.log("🔄 Chargement des utilisateurs...")
 
-      const { data, error } = await supabase.from("user_profiles").select("*").order("created_at", { ascending: false })
+      const { data: allUsers, error: usersError } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .order("created_at", { ascending: false })
 
-      if (error) {
-        console.error("❌ Erreur Supabase user profiles:", error)
-        throw error
+      if (usersError) {
+        console.error("❌ Erreur lors du chargement des utilisateurs:", usersError)
+        setUsers([]) // Ensure users state is empty if there's an error
+        throw usersError
+      } else {
+        console.log(`✅ ${allUsers?.length || 0} utilisateurs chargés depuis Supabase`)
+
+        const correctedUsers = (allUsers || []).map((user) => ({
+          ...user,
+          // S'assurer que les booléens sont bien définis
+          is_admin: Boolean(user.is_admin),
+          is_vip: Boolean(user.is_vip),
+          is_vip_plus: Boolean(user.is_vip_plus),
+          is_beta: Boolean(user.is_beta),
+          // Définir un statut par défaut si non défini
+          status: user.status || "active",
+          // S'assurer que le nom d'utilisateur est défini
+          username: user.username || user.email?.split("@")[0] || "Utilisateur",
+        }))
+
+        setUsers(correctedUsers)
+        return correctedUsers
       }
-
-      console.log(`✅ ${data?.length || 0} utilisateurs chargés:`, data)
-
-      const correctedUsers = (data || []).map((user) => ({
-        ...user,
-        // S'assurer que les booléens sont bien définis
-        is_admin: Boolean(user.is_admin),
-        is_vip: Boolean(user.is_vip),
-        is_vip_plus: Boolean(user.is_vip_plus),
-        is_beta: Boolean(user.is_beta),
-        // Définir un statut par défaut si non défini
-        status: user.status || "active",
-        // S'assurer que le nom d'utilisateur est défini
-        username: user.username || user.email?.split("@")[0] || "Utilisateur",
-      }))
-
-      setUsers(correctedUsers)
-      return correctedUsers
     } catch (error) {
       console.error("❌ Erreur lors du chargement des utilisateurs:", error)
-      setUsers([])
+      setUsers([]) // Ensure users state is empty on error
       throw error
     }
   }
@@ -495,9 +499,10 @@ export default function AdminPage() {
       const totalTVChannels = dbStats?.tv_channels || tvChannels.length
       const totalRadio = dbStats?.radio_stations || radioStations.length
       const totalRetrogaming = dbStats?.retrogaming_sources || retrogamingSources.length
-      const totalUsers = dbStats?.users || users.length
-      const vipUsers = users.filter((u) => u.is_vip || u.is_vip_plus).length
-      const activeUsers = users.filter((u) => u.status === "active").length
+
+      const totalUsers = users?.length || 0 // Use the already loaded users array for accurate count
+      const vipUsers = (users || []).filter((u) => u.is_vip || u.is_vip_plus).length
+      const activeUsers = (users || []).filter((u) => u.status === "active").length
 
       console.log("📊 Statistiques locales:", {
         totalTVChannels,

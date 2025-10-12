@@ -40,7 +40,6 @@ export function VIPLeaderboard() {
   const loadData = async () => {
     setLoading(true)
     try {
-      // Récupérer les vraies données depuis Supabase
       const { data: usersData, error: usersError } = await supabase
         .from("user_profiles")
         .select("id, username, is_vip, created_at")

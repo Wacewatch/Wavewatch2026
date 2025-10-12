@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useState } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,6 +29,7 @@ import { WatchTracker, type WatchStats } from "@/lib/watch-tracking"
 import { VIPSystem, type VIPLevel } from "@/lib/vip-system"
 import Image from "next/image"
 import Link from "next/link"
+import { IframeModal } from "@/components/iframe-modal"
 
 export default function DashboardPage() {
   const calculateRecentWatchTime = (days: number): number => {
@@ -73,6 +76,8 @@ export default function DashboardPage() {
   const [userVIPLevel, setUserVIPLevel] = useState<VIPLevel>("free")
   const [watchedItems, setWatchedItems] = useState<any[]>([])
   const [favoriteItems, setFavoriteItems] = useState<any[]>([])
+  const [selectedItem, setSelectedItem] = useState<any>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [monthlyGoal, setMonthlyGoal] = useState(() => {
     if (typeof window !== "undefined") {
       return Number.parseInt(localStorage.getItem("monthlyGoal") || "10")
@@ -99,6 +104,24 @@ export default function DashboardPage() {
   const updateMonthlyGoal = (newGoal: number) => {
     setMonthlyGoal(newGoal)
     localStorage.setItem("monthlyGoal", newGoal.toString())
+  }
+
+  const handlePlayItem = (item: any) => {
+    // Determine the URL based on item type
+    let playUrl = ""
+
+    if (item.type === "tv-channel" && item.streamUrl) {
+      playUrl = item.streamUrl
+    } else if (item.type === "radio" && item.streamUrl) {
+      playUrl = item.streamUrl
+    } else if (item.type === "game" && item.url) {
+      playUrl = item.url
+    }
+
+    if (playUrl) {
+      setSelectedItem({ ...item, url: playUrl })
+      setIsModalOpen(true)
+    }
   }
 
   useEffect(() => {
@@ -525,8 +548,18 @@ export default function DashboardPage() {
                           return `/movies/${item.tmdbId || item.id}`
                         }
 
+                        const isPlayableItem =
+                          item.type === "tv-channel" || item.type === "radio" || item.type === "game"
+
+                        const handleItemClick = (e: React.MouseEvent) => {
+                          if (isPlayableItem) {
+                            e.preventDefault()
+                            handlePlayItem(item)
+                          }
+                        }
+
                         return (
-                          <Link key={item.id} href={getItemUrl()}>
+                          <Link key={item.id} href={isPlayableItem ? "#" : getItemUrl()} onClick={handleItemClick}>
                             <div className="space-y-2 group cursor-pointer">
                               <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
                                 <Image
@@ -628,8 +661,18 @@ export default function DashboardPage() {
                           }
                         }
 
+                        const isPlayableItem =
+                          item.type === "tv-channel" || item.type === "radio" || item.type === "game"
+
+                        const handleItemClick = (e: React.MouseEvent) => {
+                          if (isPlayableItem) {
+                            e.preventDefault()
+                            handlePlayItem(item)
+                          }
+                        }
+
                         return (
-                          <Link key={item.id} href={getItemUrl()}>
+                          <Link key={item.id} href={isPlayableItem ? "#" : getItemUrl()} onClick={handleItemClick}>
                             <div className="space-y-2 group cursor-pointer">
                               <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
                                 <Image
@@ -698,6 +741,18 @@ export default function DashboardPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {selectedItem && (
+        <IframeModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false)
+            setSelectedItem(null)
+          }}
+          title={selectedItem.title}
+          src={selectedItem.url}
+        />
+      )}
     </div>
   )
 }
