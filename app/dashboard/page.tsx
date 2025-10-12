@@ -518,22 +518,41 @@ export default function DashboardPage() {
                   <>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                       {watchedItems.map((item) => {
-                        // Correction de la logique d'affichage des images
-                        let imageUrl = "/placeholder.svg?height=300&width=200"
+                        let imageUrl = ""
 
-                        if (item.posterPath) {
-                          // Si posterPath commence déjà par http, l'utiliser tel quel
+                        // Handle different item types with proper image URLs
+                        if (item.type === "tv-channel" || item.type === "radio") {
+                          // For TV channels and radio, use logoUrl if available
+                          imageUrl = item.logoUrl || ""
+                        } else if (item.type === "game") {
+                          // For games, use the game's image URL
+                          imageUrl = item.imageUrl || item.logoUrl || ""
+                        } else if (item.type === "playlist") {
+                          // For playlists, use the playlist's cover image
+                          imageUrl = item.coverImage || ""
+                        } else if (item.posterPath) {
+                          // For movies/TV shows, construct TMDB URL
                           if (item.posterPath.startsWith("http")) {
                             imageUrl = item.posterPath
                           } else {
-                            // Sinon, construire l'URL TMDB
                             imageUrl = `https://image.tmdb.org/t/p/w300${item.posterPath}`
                           }
                         } else if (item.profilePath) {
+                          // For actors
                           imageUrl = `https://image.tmdb.org/t/p/w300${item.profilePath}`
-                        } else if (item.logoUrl) {
-                          imageUrl = item.logoUrl
                         }
+
+                        // Fallback placeholder based on item type
+                        const fallbackImage =
+                          item.type === "tv-channel"
+                            ? "/placeholder.svg?height=300&width=200&text=TV"
+                            : item.type === "radio"
+                              ? "/placeholder.svg?height=300&width=200&text=Radio"
+                              : item.type === "game"
+                                ? "/placeholder.svg?height=300&width=200&text=Game"
+                                : item.type === "playlist"
+                                  ? "/placeholder.svg?height=300&width=200&text=Playlist"
+                                  : "/placeholder.svg?height=300&width=200&text=No+Image"
 
                         const getItemUrl = () => {
                           if (item.type === "movie") {
@@ -563,14 +582,14 @@ export default function DashboardPage() {
                             <div className="space-y-2 group cursor-pointer">
                               <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
                                 <Image
-                                  src={imageUrl || "/placeholder.svg"}
+                                  src={imageUrl || fallbackImage}
                                   alt={item.title}
                                   fill
                                   className="object-cover group-hover:scale-105 transition-transform"
                                   sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement
-                                    target.src = "/placeholder.svg?height=300&width=200"
+                                    target.src = fallbackImage
                                   }}
                                 />
                                 <div className="absolute top-2 right-2">
@@ -627,10 +646,16 @@ export default function DashboardPage() {
                   <>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                       {favoriteItems.map((item) => {
-                        // Correction de la logique d'affichage des images
-                        let imageUrl = "/placeholder.svg?height=300&width=200"
+                        let imageUrl = ""
 
-                        if (item.posterPath) {
+                        // Handle different item types with proper image URLs
+                        if (item.type === "tv-channel" || item.type === "radio") {
+                          imageUrl = item.logoUrl || ""
+                        } else if (item.type === "game") {
+                          imageUrl = item.imageUrl || item.logoUrl || ""
+                        } else if (item.type === "playlist") {
+                          imageUrl = item.coverImage || ""
+                        } else if (item.posterPath) {
                           if (item.posterPath.startsWith("http")) {
                             imageUrl = item.posterPath
                           } else {
@@ -638,9 +663,21 @@ export default function DashboardPage() {
                           }
                         } else if (item.profilePath) {
                           imageUrl = `https://image.tmdb.org/t/p/w300${item.profilePath}`
-                        } else if (item.logoUrl) {
-                          imageUrl = item.logoUrl
                         }
+
+                        // Fallback placeholder based on item type
+                        const fallbackImage =
+                          item.type === "tv-channel"
+                            ? "/placeholder.svg?height=300&width=200&text=TV"
+                            : item.type === "radio"
+                              ? "/placeholder.svg?height=300&width=200&text=Radio"
+                              : item.type === "game"
+                                ? "/placeholder.svg?height=300&width=200&text=Game"
+                                : item.type === "playlist"
+                                  ? "/placeholder.svg?height=300&width=200&text=Playlist"
+                                  : item.type === "actor"
+                                    ? "/placeholder.svg?height=300&width=200&text=Actor"
+                                    : "/placeholder.svg?height=300&width=200&text=No+Image"
 
                         const getItemUrl = () => {
                           switch (item.type) {
@@ -676,14 +713,14 @@ export default function DashboardPage() {
                             <div className="space-y-2 group cursor-pointer">
                               <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
                                 <Image
-                                  src={imageUrl || "/placeholder.svg"}
+                                  src={imageUrl || fallbackImage}
                                   alt={item.title}
                                   fill
                                   className="object-cover group-hover:scale-105 transition-transform"
                                   sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement
-                                    target.src = "/placeholder.svg?height=300&width=200"
+                                    target.src = fallbackImage
                                   }}
                                 />
                                 <div className="absolute top-2 right-2">

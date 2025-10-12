@@ -303,6 +303,33 @@ export function useMessaging() {
     }
   }
 
+  const deleteMessage = async (messageId: string) => {
+    if (!user?.id) return false
+
+    try {
+      const { error } = await supabase.from("user_messages").delete().eq("id", messageId).eq("recipient_id", user.id)
+
+      if (error) throw error
+
+      setMessages((prev) => prev.filter((msg) => msg.id !== messageId))
+      toast({
+        title: "Message supprimé",
+        description: "Le message a été supprimé avec succès",
+      })
+
+      await loadUnreadCount()
+      return true
+    } catch (error) {
+      console.error("Error deleting message:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le message",
+        variant: "destructive",
+      })
+      return false
+    }
+  }
+
   return {
     messages,
     sentMessages,
@@ -311,6 +338,7 @@ export function useMessaging() {
     loading,
     sendMessage,
     markAsRead,
+    deleteMessage, // Export deleteMessage function
     blockUser,
     unblockUser,
     searchUsers,

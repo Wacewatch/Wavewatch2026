@@ -110,21 +110,26 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
   const downloadUrl = `https://embed.wavewatch.xyz/download/movie?tmdb=${movie.id}`
 
   const handleWatch = async () => {
-    if (user && !isWatched && preferences.autoMarkWatched) {
+    if (user) {
       try {
+        console.log("[v0] Tracking watch for movie:", movie.title)
         WatchTracker.markAsWatched("movie", movie.id, movie.title, movie.runtime || 120, {
           genre: movie.genres[0]?.name,
           rating: Math.round(movie.vote_average),
           posterPath: movie.poster_path,
         })
 
-        setIsWatched(true)
+        // Only update the UI state if auto-mark is enabled
+        if (preferences.autoMarkWatched) {
+          setIsWatched(true)
+        }
+
         toast({
-          title: "Film marqué comme vu",
+          title: "Ajouté à l'historique",
           description: `${movie.title} a été ajouté à votre historique.`,
         })
       } catch (error) {
-        console.error("Error marking as watched:", error)
+        console.error("Error tracking watch:", error)
       }
     }
     setShowStreamingModal(true)
