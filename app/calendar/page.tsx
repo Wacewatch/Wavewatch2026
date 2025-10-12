@@ -212,7 +212,7 @@ export default function CalendarPage() {
   const today = new Date()
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-gray-900 text-white">
       <div className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="space-y-2">
@@ -224,7 +224,7 @@ export default function CalendarPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex items-center space-x-2 bg-gray-800/50 backdrop-blur-sm p-3 rounded-lg border border-gray-700">
+            <div className="flex items-center space-x-2 bg-gray-800/80 backdrop-blur-sm p-3 rounded-lg border border-gray-700 shadow-lg">
               <Switch id="favorites-only" checked={showOnlyFavorites} onCheckedChange={setShowOnlyFavorites} />
               <Label htmlFor="favorites-only" className="font-medium text-gray-300">
                 Favoris uniquement
@@ -245,7 +245,7 @@ export default function CalendarPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Calendrier */}
-          <Card className="lg:col-span-2 bg-gray-900/80 backdrop-blur-sm border-gray-800 shadow-2xl">
+          <Card className="lg:col-span-2 bg-gray-800/90 backdrop-blur-sm border-gray-700 shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-bold">
@@ -297,7 +297,9 @@ export default function CalendarPage() {
                     <div
                       key={day}
                       className={`p-1 h-20 border rounded-lg transition-colors ${
-                        isToday ? "bg-blue-900/30 border-blue-500" : "border-gray-800 hover:border-gray-700"
+                        isToday
+                          ? "bg-blue-900/30 border-blue-500"
+                          : "border-gray-700 hover:border-gray-600 bg-gray-800/50"
                       }`}
                     >
                       <div className={`text-sm font-medium mb-1 ${isToday ? "text-blue-400" : "text-gray-300"}`}>
@@ -337,7 +339,7 @@ export default function CalendarPage() {
           </Card>
 
           {/* Liste des événements à venir */}
-          <Card className="bg-gray-900/80 backdrop-blur-sm border-gray-800 shadow-2xl">
+          <Card className="bg-gray-800/90 backdrop-blur-sm border-gray-700 shadow-2xl">
             <CardHeader className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-t-lg">
               <CardTitle className="font-bold">Prochaines sorties</CardTitle>
             </CardHeader>
@@ -346,10 +348,10 @@ export default function CalendarPage() {
                 <div className="space-y-4">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <div key={i} className="flex items-center space-x-3">
-                      <div className="w-12 h-16 bg-gray-800 rounded animate-pulse"></div>
+                      <div className="w-12 h-16 bg-gray-700 rounded animate-pulse"></div>
                       <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-gray-800 rounded animate-pulse"></div>
-                        <div className="h-3 bg-gray-800 rounded animate-pulse w-2/3"></div>
+                        <div className="h-4 bg-gray-700 rounded animate-pulse"></div>
+                        <div className="h-3 bg-gray-700 rounded animate-pulse w-2/3"></div>
                       </div>
                     </div>
                   ))}
@@ -360,7 +362,7 @@ export default function CalendarPage() {
                     <button
                       key={`${event.type}-${event.id}`}
                       onClick={(e) => handleEventClick(event, e)}
-                      className="w-full flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors group text-left"
+                      className="w-full flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-700/50 transition-colors group text-left"
                     >
                       <div className="relative w-12 h-16 flex-shrink-0">
                         <Image
@@ -407,7 +409,7 @@ export default function CalendarPage() {
 
         {/* Modal de détails */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-2xl bg-gray-900 border-gray-800 text-white">
+          <DialogContent className="max-w-2xl bg-gray-800 border-gray-700 text-white">
             {selectedEvent && (
               <>
                 <DialogHeader>
@@ -440,7 +442,7 @@ export default function CalendarPage() {
                   </div>
                   <div className="md:col-span-2 space-y-4">
                     <div className="flex items-center gap-4">
-                      <Badge variant="outline" className="border-gray-700 text-gray-300">
+                      <Badge variant="outline" className="border-gray-600 text-gray-300">
                         {new Date(selectedEvent.date).toLocaleDateString("fr-FR", {
                           day: "numeric",
                           month: "long",
@@ -481,7 +483,7 @@ export default function CalendarPage() {
         </Dialog>
 
         {/* Légende */}
-        <Card className="bg-gray-900/80 backdrop-blur-sm border-gray-800 shadow-2xl">
+        <Card className="bg-gray-800/90 backdrop-blur-sm border-gray-700 shadow-2xl">
           <CardContent className="pt-6">
             <div className="flex flex-wrap gap-6 text-sm">
               <div className="flex items-center gap-2">
