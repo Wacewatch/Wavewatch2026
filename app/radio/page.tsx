@@ -173,210 +173,225 @@ export default function RadioPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <p>Chargement des stations radio...</p>
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <p className="text-gray-300">Chargement des stations radio...</p>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold">Radio FM en Direct</h1>
-        <p className="text-xl text-muted-foreground">Écoutez vos stations de radio préférées en streaming</p>
-      </div>
-
-      {/* Station en cours */}
-      {currentStation && isPlaying && (
-        <Card className="bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
-          <CardContent className="flex items-center justify-between p-4">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-md">
-                <img
-                  src={currentStation.logo_url || "/placeholder.svg"}
-                  alt={currentStation.name}
-                  className="w-full h-full object-contain p-1"
-                />
-              </div>
-              <div>
-                <h3 className="font-semibold text-blue-900">{currentStation.name}</h3>
-                <p className="text-sm text-blue-700">En cours de lecture...</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="flex space-x-1">
-                <div className="w-1 h-4 bg-blue-500 animate-pulse"></div>
-                <div className="w-1 h-6 bg-blue-500 animate-pulse" style={{ animationDelay: "0.1s" }}></div>
-                <div className="w-1 h-3 bg-blue-500 animate-pulse" style={{ animationDelay: "0.2s" }}></div>
-                <div className="w-1 h-5 bg-blue-500 animate-pulse" style={{ animationDelay: "0.3s" }}></div>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePlay(currentStation)}
-                className="border-blue-300 text-blue-700 hover:bg-blue-100"
-              >
-                Arrêter
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Filtres */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            placeholder="Rechercher une station..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold text-white">Radio FM en Direct</h1>
+          <p className="text-xl text-gray-400">Écoutez vos stations de radio préférées en streaming</p>
         </div>
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Genre" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tous les genres</SelectItem>
-            {categories.slice(1).map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
+
+        {/* Station en cours */}
+        {currentStation && isPlaying && (
+          <Card className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border-blue-700">
+            <CardContent className="flex items-center justify-between p-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-md">
+                  <img
+                    src={currentStation.logo_url || "/placeholder.svg"}
+                    alt={currentStation.name}
+                    className="w-full h-full object-contain p-1"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">{currentStation.name}</h3>
+                  <p className="text-sm text-blue-300">En cours de lecture...</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="flex space-x-1">
+                  <div className="w-1 h-4 bg-blue-500 animate-pulse"></div>
+                  <div className="w-1 h-6 bg-blue-500 animate-pulse" style={{ animationDelay: "0.1s" }}></div>
+                  <div className="w-1 h-3 bg-blue-500 animate-pulse" style={{ animationDelay: "0.2s" }}></div>
+                  <div className="w-1 h-5 bg-blue-500 animate-pulse" style={{ animationDelay: "0.3s" }}></div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePlay(currentStation)}
+                  className="border-blue-600 text-blue-300 hover:bg-blue-800"
+                >
+                  Arrêter
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Filtres */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Rechercher une station..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-400"
+            />
+          </div>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-full sm:w-48 bg-gray-800 border-gray-700 text-white">
+              <SelectValue placeholder="Genre" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="all" className="text-white">
+                Tous les genres
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+              {categories.slice(1).map((category) => (
+                <SelectItem key={category} value={category} className="text-white">
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      {/* Grille des stations */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredStations.map((station) => {
-          const isFavorite = favorites.includes(station.id)
-          const isCurrentlyPlaying = currentStation?.id === station.id && isPlaying
-          const userRating = userRatings[station.id]
-          const totalLikes = getTotalVotes(station.id, "like")
-          const totalDislikes = getTotalVotes(station.id, "dislike")
+        {/* Grille des stations */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredStations.map((station) => {
+            const isFavorite = favorites.includes(station.id)
+            const isCurrentlyPlaying = currentStation?.id === station.id && isPlaying
+            const userRating = userRatings[station.id]
+            const totalLikes = getTotalVotes(station.id, "like")
+            const totalDislikes = getTotalVotes(station.id, "dislike")
 
-          return (
-            <Card
-              key={station.id}
-              className={`group hover:shadow-lg transition-all duration-300 ${isCurrentlyPlaying ? "ring-2 ring-blue-500 bg-blue-50" : ""}`}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
-                      <img
-                        src={station.logo_url || "/placeholder.svg?height=48&width=48"}
-                        alt={station.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.src = "/radio-station-logo.jpg"
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{station.name}</CardTitle>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">
-                          {station.genre}
-                        </Badge>
-                        {station.frequency && (
-                          <Badge variant="outline" className="text-xs">
-                            {station.frequency}
+            return (
+              <Card
+                key={station.id}
+                className={`group hover:shadow-lg transition-all duration-300 bg-gray-800 border-gray-700 ${isCurrentlyPlaying ? "ring-2 ring-blue-500" : ""}`}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-700 flex items-center justify-center">
+                        <img
+                          src={station.logo_url || "/placeholder.svg?height=48&width=48"}
+                          alt={station.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.src = "/radio-station-logo.jpg"
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg text-white">{station.name}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs bg-gray-700 text-gray-300">
+                            {station.genre}
                           </Badge>
-                        )}
+                          {station.frequency && (
+                            <Badge variant="outline" className="text-xs bg-gray-700 text-gray-300 border-gray-600">
+                              {station.frequency}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleFavorite(station)}
-                    className={`${isFavorite ? "text-red-500 hover:text-red-600" : "text-gray-400 hover:text-red-500"}`}
-                  >
-                    <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <CardDescription className="line-clamp-2">{station.description || "Station de radio"}</CardDescription>
-
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>{station.country || "Non spécifié"}</span>
-                  {isCurrentlyPlaying && (
-                    <div className="flex items-center text-blue-600">
-                      <Radio className="w-4 h-4 mr-1" />
-                      <span className="text-xs font-medium">En cours</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Votes compacts */}
-                <div className="flex items-center justify-center gap-2 bg-gray-800/50 rounded-lg px-3 py-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`p-1 h-auto ${
-                      userRating === "like"
-                        ? "text-green-500 hover:text-green-400"
-                        : "text-gray-400 hover:text-green-500"
-                    }`}
-                    onClick={() => handleLike(station)}
-                  >
-                    <ThumbsUp className={`w-4 h-4 ${userRating === "like" ? "fill-current" : ""}`} />
-                  </Button>
-                  <span className="text-green-500 text-sm font-medium">
-                    {Math.max(0, totalLikes + (userRating === "like" ? 1 : 0)) || 0}
-                  </span>
-                  <div className="w-px h-4 bg-gray-600 mx-1" />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`p-1 h-auto ${
-                      userRating === "dislike" ? "text-red-500 hover:text-red-400" : "text-gray-400 hover:text-red-500"
-                    }`}
-                    onClick={() => handleDislike(station)}
-                  >
-                    <ThumbsDown className={`w-4 h-4 ${userRating === "dislike" ? "fill-current" : ""}`} />
-                  </Button>
-                  <span className="text-red-500 text-sm font-medium">
-                    {Math.max(0, totalDislikes + (userRating === "dislike" ? 1 : 0)) || 0}
-                  </span>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => handlePlay(station)}
-                    className={`flex-1 ${isCurrentlyPlaying ? "bg-red-600 hover:bg-red-700" : ""}`}
-                    size="sm"
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    {isCurrentlyPlaying ? "Arrêter" : "Écouter"}
-                  </Button>
-                  {station.website && station.website.trim() !== "" && (
-                    <Button asChild variant="outline" size="sm">
-                      <a href={station.website} target="_blank" rel="noopener noreferrer">
-                        Site
-                      </a>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleFavorite(station)}
+                      className={`${isFavorite ? "text-red-500 hover:text-red-600" : "text-gray-400 hover:text-red-500"}`}
+                    >
+                      <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
                     </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <CardDescription className="line-clamp-2 text-gray-400">
+                    {station.description || "Station de radio"}
+                  </CardDescription>
 
-      {filteredStations.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Aucune station trouvée pour votre recherche.</p>
+                  <div className="flex items-center justify-between text-sm text-gray-400">
+                    <span>{station.country || "Non spécifié"}</span>
+                    {isCurrentlyPlaying && (
+                      <div className="flex items-center text-blue-400">
+                        <Radio className="w-4 h-4 mr-1" />
+                        <span className="text-xs font-medium">En cours</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Votes compacts */}
+                  <div className="flex items-center justify-center gap-2 bg-gray-700/50 rounded-lg px-3 py-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`p-1 h-auto ${
+                        userRating === "like"
+                          ? "text-green-500 hover:text-green-400"
+                          : "text-gray-400 hover:text-green-500"
+                      }`}
+                      onClick={() => handleLike(station)}
+                    >
+                      <ThumbsUp className={`w-4 h-4 ${userRating === "like" ? "fill-current" : ""}`} />
+                    </Button>
+                    <span className="text-green-500 text-sm font-medium">
+                      {Math.max(0, totalLikes + (userRating === "like" ? 1 : 0)) || 0}
+                    </span>
+                    <div className="w-px h-4 bg-gray-600 mx-1" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`p-1 h-auto ${
+                        userRating === "dislike"
+                          ? "text-red-500 hover:text-red-400"
+                          : "text-gray-400 hover:text-red-500"
+                      }`}
+                      onClick={() => handleDislike(station)}
+                    >
+                      <ThumbsDown className={`w-4 h-4 ${userRating === "dislike" ? "fill-current" : ""}`} />
+                    </Button>
+                    <span className="text-red-500 text-sm font-medium">
+                      {Math.max(0, totalDislikes + (userRating === "dislike" ? 1 : 0)) || 0}
+                    </span>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handlePlay(station)}
+                      className={`flex-1 ${isCurrentlyPlaying ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"}`}
+                      size="sm"
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      {isCurrentlyPlaying ? "Arrêter" : "Écouter"}
+                    </Button>
+                    {station.website && station.website.trim() !== "" && (
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="border-gray-600 text-gray-300 hover:bg-gray-700 bg-transparent"
+                      >
+                        <a href={station.website} target="_blank" rel="noopener noreferrer">
+                          Site
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
         </div>
-      )}
+
+        {filteredStations.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-400">Aucune station trouvée pour votre recherche.</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

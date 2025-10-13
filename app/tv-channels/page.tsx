@@ -140,181 +140,196 @@ export default function TVChannelsPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <p>Chargement des chaînes TV...</p>
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <p className="text-gray-300">Chargement des chaînes TV...</p>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold">Chaînes TV en Direct</h1>
-        <p className="text-xl text-muted-foreground">Regardez vos chaînes préférées en streaming direct</p>
-      </div>
-
-      {/* Filtres */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            placeholder="Rechercher une chaîne..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <div className="text-center space-y-4">
+          <h1 className="text-4xl font-bold text-white">Chaînes TV en Direct</h1>
+          <p className="text-xl text-gray-400">Regardez vos chaînes préférées en streaming direct</p>
         </div>
-        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue placeholder="Catégorie" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes les catégories</SelectItem>
-            {categories.slice(1).map((category) => (
-              <SelectItem key={category} value={category}>
-                {category}
+
+        {/* Filtres */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Rechercher une chaîne..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-400"
+            />
+          </div>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-full sm:w-48 bg-gray-800 border-gray-700 text-white">
+              <SelectValue placeholder="Catégorie" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="all" className="text-white">
+                Toutes les catégories
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Grille des chaînes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredChannels.map((channel) => {
-          const isFavorite = favorites.includes(channel.id)
-          const userRating = userRatings[channel.id]
-          const totalLikes = getTotalVotes(channel.id, "like")
-          const totalDislikes = getTotalVotes(channel.id, "dislike")
-
-          return (
-            <Card key={channel.id} className="group hover:shadow-lg transition-all duration-300">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 rounded-lg overflow-hidden bg-white flex items-center justify-center border shadow-sm">
-                      <img
-                        src={channel.logo_url || "/placeholder.svg?height=48&width=48"}
-                        alt={channel.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.src = "/tv-channel-logo.jpg"
-                        }}
-                        loading="lazy"
-                      />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{channel.name}</CardTitle>
-                      <Badge
-                        variant="secondary"
-                        className={`text-xs ${
-                          channel.category === "Sport"
-                            ? "bg-green-100 text-green-800"
-                            : channel.category === "Premium"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : channel.category === "Généraliste"
-                                ? "bg-blue-100 text-blue-800"
-                                : channel.category === "Jeunesse"
-                                  ? "bg-pink-100 text-pink-800"
-                                  : channel.category === "Documentaire"
-                                    ? "bg-orange-100 text-orange-800"
-                                    : channel.category === "Gaming"
-                                      ? "bg-purple-100 text-purple-800"
-                                      : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
-                        {channel.category}
-                      </Badge>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleFavorite(channel)}
-                    className={`${isFavorite ? "text-red-500 hover:text-red-600" : "text-gray-400 hover:text-red-500"}`}
-                  >
-                    <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <CardDescription className="line-clamp-2">
-                  {channel.description || "Aucune description disponible"}
-                </CardDescription>
-
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>{channel.country || "Non spécifié"}</span>
-                  <div className="flex items-center gap-2">
-                    {channel.quality && (
-                      <Badge variant="outline" className="text-xs">
-                        {channel.quality}
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-200">
-                      LIVE
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Votes compacts */}
-                <div className="flex items-center justify-center gap-2 bg-gray-800/50 rounded-lg px-3 py-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`p-1 h-auto ${
-                      userRating === "like"
-                        ? "text-green-500 hover:text-green-400"
-                        : "text-gray-400 hover:text-green-500"
-                    }`}
-                    onClick={() => handleLike(channel)}
-                  >
-                    <ThumbsUp className={`w-4 h-4 ${userRating === "like" ? "fill-current" : ""}`} />
-                  </Button>
-                  <span className="text-green-500 text-sm font-medium">
-                    {Math.max(0, totalLikes + (userRating === "like" ? 1 : 0)) || 0}
-                  </span>
-                  <div className="w-px h-4 bg-gray-600 mx-1" />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={`p-1 h-auto ${
-                      userRating === "dislike" ? "text-red-500 hover:text-red-400" : "text-gray-400 hover:text-red-500"
-                    }`}
-                    onClick={() => handleDislike(channel)}
-                  >
-                    <ThumbsDown className={`w-4 h-4 ${userRating === "dislike" ? "fill-current" : ""}`} />
-                  </Button>
-                  <span className="text-red-500 text-sm font-medium">
-                    {Math.max(0, totalDislikes + (userRating === "dislike" ? 1 : 0)) || 0}
-                  </span>
-                </div>
-
-                <Button onClick={() => handleWatch(channel)} className="w-full" size="sm">
-                  <Play className="w-4 h-4 mr-2" />
-                  Regarder
-                </Button>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      {filteredChannels.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Aucune chaîne trouvée pour votre recherche.</p>
+              {categories.slice(1).map((category) => (
+                <SelectItem key={category} value={category} className="text-white">
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      )}
 
-      {/* Modal de lecture */}
-      <IframeModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={selectedChannel?.name || ""}
-        src={selectedChannel?.stream_url || ""}
-      />
+        {/* Grille des chaînes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredChannels.map((channel) => {
+            const isFavorite = favorites.includes(channel.id)
+            const userRating = userRatings[channel.id]
+            const totalLikes = getTotalVotes(channel.id, "like")
+            const totalDislikes = getTotalVotes(channel.id, "dislike")
+
+            return (
+              <Card
+                key={channel.id}
+                className="group hover:shadow-lg transition-all duration-300 bg-gray-800 border-gray-700"
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-white flex items-center justify-center border shadow-sm">
+                        <img
+                          src={channel.logo_url || "/placeholder.svg?height=48&width=48"}
+                          alt={channel.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.src = "/tv-channel-logo.jpg"
+                          }}
+                          loading="lazy"
+                        />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg text-white">{channel.name}</CardTitle>
+                        <Badge
+                          variant="secondary"
+                          className={`text-xs ${
+                            channel.category === "Sport"
+                              ? "bg-green-900/50 text-green-300 border-green-700"
+                              : channel.category === "Premium"
+                                ? "bg-yellow-900/50 text-yellow-300 border-yellow-700"
+                                : channel.category === "Généraliste"
+                                  ? "bg-blue-900/50 text-blue-300 border-blue-700"
+                                  : channel.category === "Jeunesse"
+                                    ? "bg-pink-900/50 text-pink-300 border-pink-700"
+                                    : channel.category === "Documentaire"
+                                      ? "bg-orange-900/50 text-orange-300 border-orange-700"
+                                      : channel.category === "Gaming"
+                                        ? "bg-purple-900/50 text-purple-300 border-purple-700"
+                                        : "bg-gray-700 text-gray-300"
+                          }`}
+                        >
+                          {channel.category}
+                        </Badge>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleFavorite(channel)}
+                      className={`${isFavorite ? "text-red-500 hover:text-red-600" : "text-gray-400 hover:text-red-500"}`}
+                    >
+                      <Heart className={`w-4 h-4 ${isFavorite ? "fill-current" : ""}`} />
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <CardDescription className="line-clamp-2 text-gray-400">
+                    {channel.description || "Aucune description disponible"}
+                  </CardDescription>
+
+                  <div className="flex items-center justify-between text-sm text-gray-400">
+                    <span>{channel.country || "Non spécifié"}</span>
+                    <div className="flex items-center gap-2">
+                      {channel.quality && (
+                        <Badge variant="outline" className="text-xs bg-gray-700 text-gray-300 border-gray-600">
+                          {channel.quality}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs bg-red-900/50 text-red-300 border-red-700">
+                        LIVE
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Votes compacts */}
+                  <div className="flex items-center justify-center gap-2 bg-gray-700/50 rounded-lg px-3 py-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`p-1 h-auto ${
+                        userRating === "like"
+                          ? "text-green-500 hover:text-green-400"
+                          : "text-gray-400 hover:text-green-500"
+                      }`}
+                      onClick={() => handleLike(channel)}
+                    >
+                      <ThumbsUp className={`w-4 h-4 ${userRating === "like" ? "fill-current" : ""}`} />
+                    </Button>
+                    <span className="text-green-500 text-sm font-medium">
+                      {Math.max(0, totalLikes + (userRating === "like" ? 1 : 0)) || 0}
+                    </span>
+                    <div className="w-px h-4 bg-gray-600 mx-1" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`p-1 h-auto ${
+                        userRating === "dislike"
+                          ? "text-red-500 hover:text-red-400"
+                          : "text-gray-400 hover:text-red-500"
+                      }`}
+                      onClick={() => handleDislike(channel)}
+                    >
+                      <ThumbsDown className={`w-4 h-4 ${userRating === "dislike" ? "fill-current" : ""}`} />
+                    </Button>
+                    <span className="text-red-500 text-sm font-medium">
+                      {Math.max(0, totalDislikes + (userRating === "dislike" ? 1 : 0)) || 0}
+                    </span>
+                  </div>
+
+                  <Button
+                    onClick={() => handleWatch(channel)}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    size="sm"
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    Regarder
+                  </Button>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+
+        {filteredChannels.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-gray-400">Aucune chaîne trouvée pour votre recherche.</p>
+          </div>
+        )}
+
+        {/* Modal de lecture */}
+        <IframeModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title={selectedChannel?.name || ""}
+          src={selectedChannel?.stream_url || ""}
+        />
+      </div>
     </div>
   )
 }

@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown } from "lucide-react"
+import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown, MessageSquare } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import {
   DropdownMenu,
@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
 import { useMobile } from "@/hooks/use-mobile"
+import { useMessaging } from "@/hooks/use-messaging"
+import { Badge } from "@/components/ui/badge"
 
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -24,6 +26,7 @@ export function Navigation() {
   const { user, signOut } = useAuth()
   const router = useRouter()
   const isMobile = useMobile()
+  const { unreadCount } = useMessaging()
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -156,13 +159,23 @@ export function Navigation() {
                     {user.isVip && (
                       <Crown className="w-4 h-4 absolute -top-1 -right-1 text-yellow-400 drop-shadow-glow" />
                     )}
+                    {user.isVipPlus && (
+                      <Crown className="w-4 h-4 absolute -top-1 -right-1 text-purple-400 drop-shadow-glow" />
+                    )}
                     {user.isAdmin && <Shield className="w-3 h-3 absolute top-0 left-0 text-red-400" />}
+                    {unreadCount > 0 && (
+                      <Badge className="absolute -bottom-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 text-white border-2 border-blue-950">
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </Badge>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 bg-blue-900 border-blue-700">
                   <div className="px-3 py-2 border-b border-blue-700">
                     <p className="text-sm font-medium text-white">{user.username || "Utilisateur"}</p>
-                    <p className="text-xs text-blue-300">{user.isVip ? "Membre VIP" : "Membre Standard"}</p>
+                    <p className="text-xs text-blue-300">
+                      {user.isVipPlus ? "Membre VIP Plus" : user.isVip ? "Membre VIP" : "Membre Standard"}
+                    </p>
                   </div>
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard" className="text-white hover:text-blue-300">
@@ -172,6 +185,22 @@ export function Navigation() {
                   <DropdownMenuItem asChild>
                     <Link href="/profile" className="text-white hover:text-blue-300">
                       Profil
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="/dashboard/messages"
+                      className="text-white hover:text-blue-300 flex items-center justify-between"
+                    >
+                      <span className="flex items-center">
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Messagerie
+                      </span>
+                      {unreadCount > 0 && (
+                        <Badge variant="destructive" className="ml-2">
+                          {unreadCount}
+                        </Badge>
+                      )}
                     </Link>
                   </DropdownMenuItem>
                   {!user.isVip && (
@@ -280,10 +309,19 @@ export function Navigation() {
                     <div className="relative h-10 w-10 rounded-full bg-blue-800 flex items-center justify-center">
                       <User className="w-5 h-5 text-white" />
                       {user.isVip && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-yellow-400" />}
+                      {user.isVipPlus && <Crown className="w-3 h-3 absolute -top-1 -right-1 text-purple-400" />}
+                      {user.isAdmin && <Shield className="w-3 h-3 absolute top-0 left-0 text-red-400" />}
+                      {unreadCount > 0 && (
+                        <Badge className="absolute -bottom-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-xs bg-red-500 text-white">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </Badge>
+                      )}
                     </div>
                     <div>
                       <p className="font-medium text-white">{user.username || "Utilisateur"}</p>
-                      <p className="text-xs text-blue-300">{user.isVip ? "Membre VIP" : "Membre Standard"}</p>
+                      <p className="text-xs text-blue-300">
+                        {user.isVipPlus ? "Membre VIP Plus" : user.isVip ? "Membre VIP" : "Membre Standard"}
+                      </p>
                     </div>
                   </div>
                   <Button
@@ -302,6 +340,27 @@ export function Navigation() {
                   >
                     <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
                       Profil
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="justify-start text-white hover:text-blue-300 hover:bg-blue-900"
+                  >
+                    <Link
+                      href="/dashboard/messages"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center justify-between w-full"
+                    >
+                      <span className="flex items-center">
+                        <MessageSquare className="w-4 h-4 mr-2" />
+                        Messagerie
+                      </span>
+                      {unreadCount > 0 && (
+                        <Badge variant="destructive" className="ml-2">
+                          {unreadCount}
+                        </Badge>
+                      )}
                     </Link>
                   </Button>
                   {!user.isVip && (
@@ -368,38 +427,6 @@ export function Navigation() {
                     <Link href="/anime" onClick={() => setIsMenuOpen(false)}>
                       Animés
                     </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    className="w-full justify-start text-blue-400 opacity-60 hover:text-blue-300 hover:bg-blue-900"
-                    disabled
-                  >
-                    Musiques <span className="ml-auto text-xs">Bientôt</span>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    className="w-full justify-start text-blue-400 opacity-60 hover:text-blue-300 hover:bg-blue-900"
-                    disabled
-                  >
-                    Logiciels <span className="ml-auto text-xs">Bientôt</span>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    className="w-full justify-start text-blue-400 opacity-60 hover:text-blue-300 hover:bg-blue-900"
-                    disabled
-                  >
-                    Jeux <span className="ml-auto text-xs">Bientôt</span>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    className="w-full justify-start text-blue-400 opacity-60 hover:text-blue-300 hover:bg-blue-900"
-                    disabled
-                  >
-                    Ebooks <span className="ml-auto text-xs">Bientôt</span>
                   </Button>
                 </div>
               </div>
