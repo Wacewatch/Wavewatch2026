@@ -109,12 +109,15 @@ export default function DashboardPage() {
   const handlePlayItem = (item: any) => {
     let playUrl = ""
 
-    if (item.type === "tv-channel" && item.streamUrl) {
-      playUrl = item.streamUrl
-    } else if (item.type === "radio" && item.streamUrl) {
-      playUrl = item.streamUrl
-    } else if (item.type === "game" && item.url) {
-      playUrl = item.url
+    if (item.type === "tv-channel") {
+      // For TV channels, get the stream_url from the item
+      playUrl = item.stream_url || item.streamUrl || ""
+    } else if (item.type === "radio") {
+      // For radio stations, get the stream_url
+      playUrl = item.stream_url || item.streamUrl || ""
+    } else if (item.type === "game") {
+      // For retrogaming, get the url
+      playUrl = item.url || item.game_url || ""
     }
 
     if (playUrl) {
@@ -122,7 +125,7 @@ export default function DashboardPage() {
       setSelectedItem({ ...item, url: playUrl })
       setIsModalOpen(true)
     } else {
-      console.log("[v0] No playable URL found for item:", item)
+      console.log("[v0] No playable URL found for item:", JSON.stringify(item))
     }
   }
 
