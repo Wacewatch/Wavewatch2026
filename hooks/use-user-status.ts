@@ -41,7 +41,7 @@ export function useUserStatus(contentId: number, contentType: "movie" | "tv" | "
         .eq("user_id", user.id)
         .eq("content_id", contentId)
         .eq("content_type", contentType)
-        .single()
+        .maybeSingle()
 
       // Check favorites
       const { data: favoriteData } = await supabase
@@ -50,7 +50,7 @@ export function useUserStatus(contentId: number, contentType: "movie" | "tv" | "
         .eq("user_id", user.id)
         .eq("content_id", contentId)
         .eq("content_type", contentType)
-        .single()
+        .maybeSingle()
 
       const { data: wishlistData } = await supabase
         .from("user_wishlist")
@@ -58,7 +58,7 @@ export function useUserStatus(contentId: number, contentType: "movie" | "tv" | "
         .eq("user_id", user.id)
         .eq("content_id", contentId)
         .eq("content_type", contentType)
-        .single()
+        .maybeSingle()
 
       setStatus({
         isWatched: !!watchData,
