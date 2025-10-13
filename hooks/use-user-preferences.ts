@@ -69,11 +69,11 @@ export function useUserPreferences() {
       const { data, error } = await supabase
         .from("user_profiles")
         .select("hide_adult_content, auto_mark_watched, theme_preference")
-        .eq("user_id", user.id)
+        .or(`id.eq.${user.id},user_id.eq.${user.id}`)
         .maybeSingle()
 
       if (error && error.code !== "PGRST116") {
-        console.error("[v0] Error loading preferences:", error)
+        console.error("[v0] Error loading preferences:", error.message)
         return
       }
 
@@ -109,8 +109,8 @@ export function useUserPreferences() {
           updateAdultContentPreference(false)
         }
       }
-    } catch (error) {
-      console.error("[v0] Error loading preferences:", error)
+    } catch (error: any) {
+      console.error("[v0] Error loading preferences:", error.message)
     } finally {
       setLoading(false)
     }
@@ -142,34 +142,28 @@ export function useUserPreferences() {
 
       const { data: existingProfile, error: checkError } = await supabase
         .from("user_profiles")
-        .select("user_id")
-        .eq("user_id", user.id)
+        .select("id, user_id")
+        .or(`id.eq.${user.id},user_id.eq.${user.id}`)
         .maybeSingle()
 
       if (checkError && checkError.code !== "PGRST116") {
-        console.error("[v0] Error checking profile:", checkError)
+        console.error("[v0] Error checking profile:", checkError.message)
         throw checkError
       }
 
       const { error } = await supabase
         .from("user_profiles")
-        .upsert(
-          {
-            user_id: user.id,
-            hide_adult_content: updatedPreferences.hideAdultContent,
-            auto_mark_watched: updatedPreferences.autoMarkWatched,
-            theme_preference: updatedPreferences.themePreference,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "user_id",
-            ignoreDuplicates: false,
-          },
-        )
-        .select()
+        .update({
+          user_id: user.id,
+          hide_adult_content: updatedPreferences.hideAdultContent,
+          auto_mark_watched: updatedPreferences.autoMarkWatched,
+          theme_preference: updatedPreferences.themePreference,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id)
 
       if (error) {
-        console.error("[v0] Error updating preferences:", error)
+        console.error("[v0] Error updating preferences:", error.message)
         setPreferences(preferences)
         if (typeof window !== "undefined") {
           localStorage.setItem("wavewatch_adult_content", preferences.showAdultContent.toString())
@@ -191,8 +185,8 @@ export function useUserPreferences() {
       )
 
       return true
-    } catch (error) {
-      console.error("[v0] Error updating preferences:", error)
+    } catch (error: any) {
+      console.error("[v0] Error updating preferences:", error.message)
       setPreferences(preferences)
       if (typeof window !== "undefined") {
         localStorage.setItem("wavewatch_adult_content", preferences.showAdultContent.toString())

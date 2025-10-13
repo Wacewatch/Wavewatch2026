@@ -84,7 +84,7 @@ export default function ProfilePage() {
     if (!user?.id) return
 
     try {
-      const { data, error } = await supabase.from("user_profiles").select("*").eq("user_id", user.id).single()
+      const { data, error } = await supabase.from("user_profiles").select("*").eq("id", user.id).single()
 
       if (error && error.code !== "PGRST116") {
         console.error("Error loading profile:", error)
@@ -142,22 +142,18 @@ export default function ProfilePage() {
     if (!user?.id) return
 
     try {
-      const { data, error } = await supabase
-        .from("user_profiles")
-        .select("allow_messages")
-        .eq("user_id", user.id)
-        .single()
+      const { data, error } = await supabase.from("user_profiles").select("allow_messages").eq("id", user.id).single()
 
-      if (error && error.code !== "PGRST116") {
-        console.error("Error loading message preferences:", error)
+      if (error) {
+        console.error("Error loading message preferences:", error.message)
         return
       }
 
       if (data) {
         setAllowMessages(data.allow_messages ?? true)
       }
-    } catch (error) {
-      console.error("Error loading message preferences:", error)
+    } catch (error: any) {
+      console.error("Error loading message preferences:", error.message)
     }
   }
 
@@ -167,7 +163,7 @@ export default function ProfilePage() {
     try {
       const { error } = await supabase.from("user_profiles").upsert(
         {
-          user_id: user.id,
+          id: user.id,
           birth_date: profile.birthDate,
           location: profile.location,
           bio: profile.bio,
@@ -176,7 +172,7 @@ export default function ProfilePage() {
           allow_messages: profile.allow_messages,
         },
         {
-          onConflict: "user_id",
+          onConflict: "id",
         },
       )
 
@@ -889,54 +885,6 @@ export default function ProfilePage() {
                   >
                     Supprimer tous les privilèges
                   </Button>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <Flask className="h-5 w-5 text-green-400" />
-                  Mes rapports de bugs
-                </CardTitle>
-                <CardDescription className="text-gray-400">{bugReports.length} rapport(s) soumis</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {bugReports.length === 0 ? (
-                  <p className="text-gray-400 text-sm">Aucun rapport de bug soumis</p>
-                ) : (
-                  <div className="space-y-3">
-                    {bugReports.slice(0, 3).map((report) => (
-                      <div key={report.id} className="bg-gray-700/50 p-3 rounded-lg">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-sm font-medium text-white truncate">{report.title}</h4>
-                          <Badge
-                            variant={
-                              report.status === "resolved"
-                                ? "default"
-                                : report.status === "in_progress"
-                                  ? "secondary"
-                                  : "outline"
-                            }
-                            className="text-xs"
-                          >
-                            {report.status === "resolved"
-                              ? "Résolu"
-                              : report.status === "in_progress"
-                                ? "En cours"
-                                : "Ouvert"}
-                          </Badge>
-                        </div>
-                        <p className="text-xs text-gray-400 line-clamp-2">{report.description}</p>
-                        <p className="text-xs text-gray-500 mt-1">{new Date(report.createdAt).toLocaleDateString()}</p>
-                      </div>
-                    ))}
-                    {bugReports.length > 3 && (
-                      <Button asChild variant="outline" size="sm" className="w-full bg-transparent">
-                        <Link href="/bug-reports">Voir tous les rapports</Link>
-                      </Button>
-                    )}
-                  </div>
                 )}
               </CardContent>
             </Card>

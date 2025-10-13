@@ -135,11 +135,15 @@ export function useMessaging() {
     if (!user?.id) return
 
     try {
-      const { data, error } = await supabase.rpc("get_unread_message_count", { user_uuid: user.id })
+      const { count, error } = await supabase
+        .from("user_messages")
+        .select("*", { count: "exact", head: true })
+        .eq("recipient_id", user.id)
+        .eq("is_read", false)
 
       if (error) throw error
 
-      setUnreadCount(data || 0)
+      setUnreadCount(count || 0)
     } catch (error) {
       console.error("Error loading unread count:", error)
     } finally {
@@ -262,12 +266,12 @@ export function useMessaging() {
         .select("id, username, email, allow_messages")
         .or(`username.ilike.%${query}%,email.ilike.%${query}%`)
         .neq("id", user?.id || "")
-        .eq("allow_messages", true)
         .limit(10)
 
       if (error) throw error
 
-      return data || []
+      // Filter for users who allow messages (default to true if column doesn't exist yet)
+      return (data || []).filter((u) => u.allow_messages !== false)
     } catch (error) {
       console.error("Error searching users:", error)
       return []
@@ -283,10 +287,7 @@ export function useMessaging() {
     try {
       console.log("[v0] Updating message preferences for user:", user.id, "to:", allowMessages)
 
-      const { error } = await supabase
-        .from("user_profiles")
-        .update({ allow_messages: allowMessages })
-        .eq("user_id", user.id)
+      const { error } = await supabase.from("user_profiles").update({ allow_messages: allowMessages }).eq("id", user.id)
 
       if (error) {
         console.error("[v0] Error updating message preferences:", error)
