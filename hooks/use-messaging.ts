@@ -307,9 +307,16 @@ export function useMessaging() {
     if (!user?.id) return false
 
     try {
+      console.log("[v0] Attempting to delete message:", messageId, "for user:", user.id)
+
       const { error } = await supabase.from("user_messages").delete().eq("id", messageId).eq("recipient_id", user.id)
 
-      if (error) throw error
+      if (error) {
+        console.error("[v0] Error deleting message:", error)
+        throw error
+      }
+
+      console.log("[v0] Message deleted successfully from database")
 
       setMessages((prev) => prev.filter((msg) => msg.id !== messageId))
       toast({

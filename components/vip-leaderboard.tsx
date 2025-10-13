@@ -40,14 +40,18 @@ export function VIPLeaderboard() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const { data: usersData, error: usersError } = await supabase
-        .from("user_profiles")
-        .select("id, username, is_vip, created_at")
+      const {
+        data: usersData,
+        error: usersError,
+        count,
+      } = await supabase.from("user_profiles").select("id, username, is_vip, created_at", { count: "exact" })
 
       if (usersError) {
         console.error("Error fetching users:", usersError)
         return
       }
+
+      console.log("[v0] VIP Leaderboard: Loaded", usersData?.length, "users (count:", count, ")")
 
       const totalUsers = usersData?.length || 0
       const vipUsers = usersData?.filter((user) => user.is_vip) || []

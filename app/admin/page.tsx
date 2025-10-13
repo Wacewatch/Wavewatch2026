@@ -284,17 +284,18 @@ export default function AdminPage() {
     try {
       console.log("🔄 Chargement des utilisateurs...")
 
-      const { data: allUsers, error: usersError } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .order("created_at", { ascending: false })
+      const {
+        data: allUsers,
+        error: usersError,
+        count,
+      } = await supabase.from("user_profiles").select("*", { count: "exact" }).order("created_at", { ascending: false })
 
       if (usersError) {
         console.error("❌ Erreur lors du chargement des utilisateurs:", usersError)
         setUsers([]) // Ensure users state is empty if there's an error
         throw usersError
       } else {
-        console.log(`✅ ${allUsers?.length || 0} utilisateurs chargés depuis Supabase`)
+        console.log(`✅ ${allUsers?.length || 0} utilisateurs chargés depuis Supabase (count: ${count})`)
 
         const correctedUsers = (allUsers || []).map((user) => ({
           ...user,
