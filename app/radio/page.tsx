@@ -139,6 +139,7 @@ export default function RadioPage() {
     const isCurrentlyFavorite = WatchTracker.isFavorite("radio", station.id)
     WatchTracker.toggleFavorite("radio", station.id, station.name, {
       logoUrl: station.logo_url,
+      streamUrl: station.stream_url,
     })
 
     // Mettre à jour l'état local
@@ -152,6 +153,7 @@ export default function RadioPage() {
   const handleLike = (station: RadioStation) => {
     const newRating = WatchTracker.toggleLike("radio", station.id, station.name, {
       logoUrl: station.logo_url,
+      streamUrl: station.stream_url,
     })
     setUserRatings((prev) => ({ ...prev, [station.id]: newRating }))
     toast({
@@ -163,6 +165,7 @@ export default function RadioPage() {
   const handleDislike = (station: RadioStation) => {
     const newRating = WatchTracker.toggleDislike("radio", station.id, station.name, {
       logoUrl: station.logo_url,
+      streamUrl: station.stream_url,
     })
     setUserRatings((prev) => ({ ...prev, [station.id]: newRating }))
     toast({

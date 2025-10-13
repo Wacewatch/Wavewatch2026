@@ -90,6 +90,7 @@ export default function TVChannelsPage() {
     const isCurrentlyFavorite = WatchTracker.isFavorite("tv-channel", channel.id)
     WatchTracker.toggleFavorite("tv-channel", channel.id, channel.name, {
       logoUrl: channel.logo_url,
+      streamUrl: channel.stream_url,
     })
 
     // Mettre à jour l'état local
@@ -103,6 +104,7 @@ export default function TVChannelsPage() {
   const handleLike = (channel: TVChannel) => {
     const newRating = WatchTracker.toggleLike("tv-channel", channel.id, channel.name, {
       logoUrl: channel.logo_url,
+      streamUrl: channel.stream_url,
     })
     setUserRatings((prev) => ({ ...prev, [channel.id]: newRating }))
     toast({
@@ -114,6 +116,7 @@ export default function TVChannelsPage() {
   const handleDislike = (channel: TVChannel) => {
     const newRating = WatchTracker.toggleDislike("tv-channel", channel.id, channel.name, {
       logoUrl: channel.logo_url,
+      streamUrl: channel.stream_url,
     })
     setUserRatings((prev) => ({ ...prev, [channel.id]: newRating }))
     toast({

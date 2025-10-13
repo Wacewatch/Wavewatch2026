@@ -479,12 +479,21 @@ export default function AdminPage() {
     try {
       console.log("🔄 Calcul des statistiques...")
 
-      // Get actual user count directly from database
-      const { count: actualUserCount, error: countError } = await supabase
-        .from("user_profiles")
-        .select("*", { count: "exact", head: true })
+      let actualUserCount = 0
+      try {
+        const { count: userCount, error: countError } = await supabase
+          .from("user_profiles")
+          .select("*", { count: "exact", head: true })
 
-      console.log("📊 Nombre d'utilisateurs réel:", actualUserCount)
+        if (countError) {
+          console.error("❌ Erreur lors du comptage des utilisateurs:", countError)
+        } else {
+          actualUserCount = userCount || 0
+          console.log("✅ Nombre réel d'utilisateurs:", actualUserCount)
+        }
+      } catch (error) {
+        console.error("❌ Erreur lors de la requête de comptage:", error)
+      }
 
       // Try to get stats from RPC function
       let dbStats: any = null
@@ -498,12 +507,11 @@ export default function AdminPage() {
         console.warn("⚠️ Impossible d'utiliser get_admin_stats, calcul manuel:", error)
       }
 
-      // Utiliser les données déjà chargées en état local ou les stats de la DB
+      // Utiliser le comptage réel ou les données déjà chargées
       const totalTVChannels = dbStats?.tv_channels || tvChannels.length
       const totalRadio = dbStats?.radio_stations || radioStations.length
       const totalRetrogaming = dbStats?.retrogaming_sources || retrogamingSources.length
       const totalUsers = actualUserCount || users.length
-      // </CHANGE>
 
       const vipUsers = users.filter((u) => u.is_vip || u.is_vip_plus).length
       const activeUsers = users.filter((u) => u.status === "active").length
