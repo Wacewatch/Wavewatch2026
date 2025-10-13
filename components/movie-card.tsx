@@ -1,11 +1,17 @@
 "use client"
 
+import type React from "react"
+
 import Link from "next/link"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Star } from "lucide-react"
+import { Star, Plus, Eye } from "lucide-react"
 import { ContentStatusIcons } from "@/components/content-status-icons"
+import { useState } from "react"
+import { WatchTracker } from "@/lib/watch-tracking"
+import { useAuth } from "@/components/auth-provider"
+import { AddToPlaylistButton } from "@/components/add-to-playlist-button"
 
 interface MovieCardProps {
   movie: {
@@ -20,13 +26,29 @@ interface MovieCardProps {
 }
 
 export function MovieCard({ movie, showBadges = true }: MovieCardProps) {
+  const { user } = useAuth()
+  const [isHovered, setIsHovered] = useState(false)
+  const [showPlaylistMenu, setShowPlaylistMenu] = useState(false)
+
   const posterUrl = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
     : "/placeholder.svg?height=750&width=500"
 
+  const handleMarkAsWatched = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    WatchTracker.markAsWatched("movie", movie.id, movie.title, 120, {
+      posterPath: movie.poster_path,
+    })
+  }
+
   return (
     <Link href={`/movies/${movie.id}`}>
-      <Card className="group overflow-hidden hover:scale-105 transition-transform duration-200">
+      <Card
+        className="group overflow-hidden hover:scale-105 transition-transform duration-200"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <CardContent className="p-0">
           <div className="relative aspect-[2/3]">
             <Image
@@ -39,6 +61,61 @@ export function MovieCard({ movie, showBadges = true }: MovieCardProps) {
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
 
             <ContentStatusIcons contentId={movie.id} contentType="movie" contentTitle={movie.title} />
+
+            {user && isHovered && (
+              <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 transition-opacity">
+                <button
+                  onClick={handleMarkAsWatched}
+                  className="p-3 bg-green-600 hover:bg-green-700 rounded-full transition-colors"
+                  title="Marquer comme vu"
+                >
+                  <Eye className="w-5 h-5 text-white" />
+                </button>
+                <div
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setShowPlaylistMenu(!showPlaylistMenu)
+                  }}
+                >
+                  <button
+                    className="p-3 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
+                    title="Ajouter à une playlist"
+                  >
+                    <Plus className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {showPlaylistMenu && (
+              <div
+                className="absolute inset-0 z-50 flex items-center justify-center bg-black/60"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }}
+              >
+                <div className="bg-gray-800 rounded-lg p-4 max-w-xs w-full mx-4">
+                  <AddToPlaylistButton
+                    tmdbId={movie.id}
+                    mediaType="movie"
+                    title={movie.title}
+                    posterPath={movie.poster_path}
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setShowPlaylistMenu(false)
+                    }}
+                    className="mt-2 w-full text-sm text-gray-400 hover:text-white"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="absolute top-2 right-2">
               <Badge variant="secondary" className="bg-black/70 text-white">

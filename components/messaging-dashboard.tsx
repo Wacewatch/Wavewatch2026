@@ -230,20 +230,32 @@ export function MessagingDashboard() {
 
       {/* Tabs */}
       <Tabs defaultValue="received" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 bg-gray-800 border-gray-700">
-          <TabsTrigger value="received" className="data-[state=active]:bg-gray-700 text-gray-300">
-            Messages reçus
+        <TabsList className="grid w-full grid-cols-3 bg-gray-800 border-gray-700 h-auto">
+          <TabsTrigger
+            value="received"
+            className="data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 py-2 sm:py-2.5 whitespace-normal sm:whitespace-nowrap"
+          >
+            <span className="hidden sm:inline">Messages reçus</span>
+            <span className="sm:hidden">Reçus</span>
             {unreadCount > 0 && (
-              <Badge variant="destructive" className="ml-2 text-xs">
+              <Badge variant="destructive" className="ml-1 sm:ml-2 text-xs">
                 {unreadCount}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="sent" className="data-[state=active]:bg-gray-700 text-gray-300">
-            Messages envoyés
+          <TabsTrigger
+            value="sent"
+            className="data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 py-2 sm:py-2.5 whitespace-normal sm:whitespace-nowrap"
+          >
+            <span className="hidden sm:inline">Messages envoyés</span>
+            <span className="sm:hidden">Envoyés</span>
           </TabsTrigger>
-          <TabsTrigger value="blocked" className="data-[state=active]:bg-gray-700 text-gray-300">
-            Utilisateurs bloqués
+          <TabsTrigger
+            value="blocked"
+            className="data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 py-2 sm:py-2.5 whitespace-normal sm:whitespace-nowrap"
+          >
+            <span className="hidden sm:inline">Utilisateurs bloqués</span>
+            <span className="sm:hidden">Bloqués</span>
           </TabsTrigger>
         </TabsList>
 

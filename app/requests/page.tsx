@@ -159,15 +159,24 @@ export default function RequestsPage() {
         </div>
 
         <Tabs defaultValue="submit" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 bg-gray-800 border-gray-700">
-            <TabsTrigger value="submit" className="data-[state=active]:bg-gray-700 text-gray-300 text-sm">
+          <TabsList className="inline-flex h-10 items-center justify-start rounded-md bg-gray-800 border-gray-700 p-1 text-gray-300 w-full overflow-x-auto">
+            <TabsTrigger
+              value="submit"
+              className="data-[state=active]:bg-gray-700 text-gray-300 text-sm px-3 py-1.5 whitespace-nowrap"
+            >
               Faire une demande
             </TabsTrigger>
-            <TabsTrigger value="browse" className="data-[state=active]:bg-gray-700 text-gray-300 text-sm">
+            <TabsTrigger
+              value="browse"
+              className="data-[state=active]:bg-gray-700 text-gray-300 text-sm px-3 py-1.5 whitespace-nowrap"
+            >
               Parcourir
             </TabsTrigger>
             {user && (
-              <TabsTrigger value="my-requests" className="data-[state=active]:bg-gray-700 text-gray-300 text-sm">
+              <TabsTrigger
+                value="my-requests"
+                className="data-[state=active]:bg-gray-700 text-gray-300 text-sm px-3 py-1.5 whitespace-nowrap"
+              >
                 Mes demandes
               </TabsTrigger>
             )}

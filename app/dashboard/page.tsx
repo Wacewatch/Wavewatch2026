@@ -30,6 +30,7 @@ import { VIPSystem, type VIPLevel } from "@/lib/vip-system"
 import Image from "next/image"
 import Link from "next/link"
 import { IframeModal } from "@/components/iframe-modal"
+import { AchievementsDashboard } from "@/components/achievements-dashboard"
 
 export default function DashboardPage() {
   const calculateRecentWatchTime = (days: number): number => {
@@ -243,6 +244,9 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
+
+        {/* Achievements Dashboard */}
+        <AchievementsDashboard />
 
         {/* Stats Cards principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">

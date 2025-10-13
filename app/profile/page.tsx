@@ -142,7 +142,11 @@ export default function ProfilePage() {
     if (!user?.id) return
 
     try {
-      const { data, error } = await supabase.from("user_profiles").select("allow_messages").eq("id", user.id).single()
+      const { data, error } = await supabase
+        .from("user_profiles")
+        .select("allow_messages")
+        .eq("user_id", user.id)
+        .single()
 
       if (error && error.code !== "PGRST116") {
         console.error("Error loading message preferences:", error)

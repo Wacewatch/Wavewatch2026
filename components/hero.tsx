@@ -17,7 +17,7 @@ export function Hero() {
       if (!response.ok) throw new Error("Failed to fetch")
       const trending = await response.json()
       if (trending.results && trending.results.length > 0) {
-        setFeaturedMovies(trending.results.slice(0, 5)) // Prendre les 5 premiers
+        setFeaturedMovies(trending.results.slice(0, 5))
       }
     } catch (error) {
       console.error("Error fetching featured movies:", error)
@@ -32,7 +32,7 @@ export function Hero() {
     if (featuredMovies.length > 0) {
       const interval = setInterval(() => {
         setCurrentIndex((prevIndex) => (prevIndex + 1) % featuredMovies.length)
-      }, 8000) // Change toutes les 8 secondes (pas trop vite)
+      }, 8000)
 
       return () => clearInterval(interval)
     }
@@ -42,6 +42,22 @@ export function Hero() {
 
   if (!featuredMovie) {
     return null
+  }
+
+  const getStylizedTitle = (title: string) => {
+    return (
+      <h1
+        className="text-2xl md:text-6xl lg:text-7xl font-bold text-white leading-tight text-center"
+        style={{
+          textShadow: "0 0 20px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.7), 2px 2px 4px rgba(0,0,0,1)",
+          fontFamily: "system-ui, -apple-system, sans-serif",
+          fontWeight: 900,
+          letterSpacing: "-0.02em",
+        }}
+      >
+        {title}
+      </h1>
+    )
   }
 
   return (
@@ -60,12 +76,10 @@ export function Hero() {
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 h-full flex items-center">
         <div className="w-full">
-          <div className="space-y-3 md:space-y-6 max-w-4xl">
-            <h1 className="text-2xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
-              {featuredMovie.title}
-            </h1>
+          <div className="space-y-3 md:space-y-6 max-w-4xl mx-auto">
+            {getStylizedTitle(featuredMovie.title)}
 
-            <div className="flex items-center space-x-3 text-gray-300">
+            <div className="flex items-center justify-center space-x-3 text-gray-300">
               <div className="flex items-center space-x-1 bg-black/40 rounded-full px-2 py-1 md:px-3 md:py-1">
                 <Star className="w-3 h-3 md:w-5 md:h-5 fill-yellow-400 text-yellow-400" />
                 <span className="text-xs md:text-lg font-medium">{featuredMovie.vote_average.toFixed(1)}</span>
@@ -76,11 +90,11 @@ export function Hero() {
               </span>
             </div>
 
-            <p className="text-xs md:text-xl text-gray-200 leading-relaxed max-w-2xl line-clamp-2 md:line-clamp-3">
+            <p className="text-xs md:text-xl text-gray-200 leading-relaxed max-w-2xl line-clamp-2 md:line-clamp-3 text-center mx-auto">
               {featuredMovie.overview}
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-2 md:gap-4">
+            <div className="flex flex-col sm:flex-row gap-2 md:gap-4 justify-center">
               <Button
                 size="lg"
                 className="bg-red-600 hover:bg-red-700 text-white px-4 md:px-8 py-2 md:py-4 text-sm md:text-lg h-9 md:h-14"
@@ -97,11 +111,11 @@ export function Hero() {
       </div>
 
       {/* Pagination Indicators */}
-      <div className="absolute bottom-4 left-0 w-full flex justify-center space-x-2">
+      <div className="absolute bottom-4 left-0 w-full flex justify-center space-x-2 z-20">
         {featuredMovies.map((_, index) => (
           <button
             key={index}
-            className={`h-2 w-2 rounded-full ${index === currentIndex ? "bg-white" : "bg-gray-500"}`}
+            className={`h-2 w-2 rounded-full transition-all ${index === currentIndex ? "bg-white w-8" : "bg-gray-500"}`}
             onClick={() => setCurrentIndex(index)}
           />
         ))}

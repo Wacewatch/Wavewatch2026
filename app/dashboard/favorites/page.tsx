@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useState } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,7 +17,7 @@ export default function FavoritesPage() {
   const { user } = useAuth()
   const [favoriteItems, setFavoriteItems] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
-  const [selectedChannel, setSelectedChannel] = useState<any | null>(null)
+  const [selectedItem, setSelectedItem] = useState<any | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [currentRadio, setCurrentRadio] = useState<any | null>(null)
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
@@ -42,54 +44,83 @@ export default function FavoritesPage() {
     }
   }, [audio])
 
-  const handleTVChannelClick = (item: any) => {
-    if (item.streamUrl) {
-      setSelectedChannel({
-        name: item.title,
-        stream_url: item.streamUrl,
+  const handlePlayItem = (item: any) => {
+    console.log("[v0] Playing item from favorites:", item)
+
+    // For TV channels
+    if (item.type === "tv-channel") {
+      const streamUrl = item.streamUrl || item.stream_url
+      if (streamUrl) {
+        setSelectedItem({
+          title: item.title,
+          url: streamUrl,
+          type: "tv-channel",
+        })
+        setIsModalOpen(true)
+      } else {
+        alert("URL de stream non disponible pour cette chaîne")
+      }
+      return
+    }
+
+    // For radio stations
+    if (item.type === "radio") {
+      const streamUrl = item.streamUrl || item.stream_url
+      if (!streamUrl) {
+        alert("URL de stream non disponible pour cette station")
+        return
+      }
+
+      if (audio) {
+        audio.pause()
+      }
+
+      if (currentRadio?.id === item.id && isPlaying) {
+        setIsPlaying(false)
+        setCurrentRadio(null)
+        return
+      }
+
+      const newAudio = new Audio(streamUrl)
+      newAudio.crossOrigin = "anonymous"
+
+      newAudio.addEventListener("canplay", () => {
+        newAudio
+          .play()
+          .then(() => {
+            setIsPlaying(true)
+            setCurrentRadio(item)
+          })
+          .catch((error) => {
+            console.error("Erreur de lecture:", error)
+            alert("Impossible de lire cette station radio. Veuillez réessayer.")
+          })
       })
-      setIsModalOpen(true)
-    }
-  }
 
-  const handleRadioClick = (item: any) => {
-    if (!item.streamUrl) {
-      alert("URL de stream non disponible pour cette station")
+      newAudio.addEventListener("error", (e) => {
+        console.error("Erreur audio:", e)
+        alert("Erreur lors du chargement de la station radio.")
+      })
+
+      setAudio(newAudio)
       return
     }
 
-    if (audio) {
-      audio.pause()
-    }
-
-    if (currentRadio?.id === item.id && isPlaying) {
-      setIsPlaying(false)
-      setCurrentRadio(null)
+    // For retrogaming
+    if (item.type === "game") {
+      const gameUrl = item.url || item.game_url
+      if (gameUrl) {
+        setSelectedItem({
+          title: item.title,
+          url: gameUrl,
+          type: "game",
+        })
+        setIsModalOpen(true)
+      } else {
+        alert("URL de jeu non disponible")
+      }
       return
     }
-
-    const newAudio = new Audio(item.streamUrl)
-    newAudio.crossOrigin = "anonymous"
-
-    newAudio.addEventListener("canplay", () => {
-      newAudio
-        .play()
-        .then(() => {
-          setIsPlaying(true)
-          setCurrentRadio(item)
-        })
-        .catch((error) => {
-          console.error("Erreur de lecture:", error)
-          alert("Impossible de lire cette station radio. Veuillez réessayer.")
-        })
-    })
-
-    newAudio.addEventListener("error", (e) => {
-      console.error("Erreur audio:", e)
-      alert("Erreur lors du chargement de la station radio.")
-    })
-
-    setAudio(newAudio)
   }
 
   if (!mounted) {
@@ -133,6 +164,8 @@ export default function FavoritesPage() {
         return "Chaînes TV"
       case "radio":
         return "Radios"
+      case "game":
+        return "Jeux Rétro"
       case "actor":
         return "Acteurs"
       case "playlist":
@@ -152,6 +185,8 @@ export default function FavoritesPage() {
         return "bg-purple-600"
       case "radio":
         return "bg-green-600"
+      case "game":
+        return "bg-orange-600"
       case "actor":
         return "bg-orange-600"
       case "playlist":
@@ -207,7 +242,7 @@ export default function FavoritesPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleRadioClick(currentRadio)}
+                  onClick={() => handlePlayItem(currentRadio)}
                   className="border-green-500 text-green-300 hover:bg-green-900"
                 >
                   Arrêter
@@ -267,6 +302,8 @@ export default function FavoritesPage() {
                             return null
                           case "radio":
                             return null
+                          case "game":
+                            return null
                           case "actor":
                             return `/actors/${item.tmdbId}`
                           case "playlist":
@@ -277,6 +314,14 @@ export default function FavoritesPage() {
                       }
 
                       const itemUrl = getItemUrl()
+                      const isPlayableItem = item.type === "tv-channel" || item.type === "radio" || item.type === "game"
+
+                      const handleItemClick = (e: React.MouseEvent) => {
+                        if (isPlayableItem) {
+                          e.preventDefault()
+                          handlePlayItem(item)
+                        }
+                      }
 
                       const content = (
                         <div className="space-y-2 group cursor-pointer" key={item.id}>
@@ -312,15 +357,9 @@ export default function FavoritesPage() {
                         </div>
                       )
 
-                      if (item.type === "tv-channel") {
+                      if (isPlayableItem) {
                         return (
-                          <div key={item.id} onClick={() => handleTVChannelClick(item)}>
-                            {content}
-                          </div>
-                        )
-                      } else if (item.type === "radio") {
-                        return (
-                          <div key={item.id} onClick={() => handleRadioClick(item)}>
+                          <div key={item.id} onClick={handleItemClick}>
                             {content}
                           </div>
                         )
@@ -344,9 +383,12 @@ export default function FavoritesPage() {
 
       <IframeModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title={selectedChannel?.name || ""}
-        src={selectedChannel?.stream_url || ""}
+        onClose={() => {
+          setIsModalOpen(false)
+          setSelectedItem(null)
+        }}
+        title={selectedItem?.title || ""}
+        src={selectedItem?.url || ""}
       />
     </div>
   )

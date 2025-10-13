@@ -283,7 +283,10 @@ export function useMessaging() {
     try {
       console.log("[v0] Updating message preferences for user:", user.id, "to:", allowMessages)
 
-      const { error } = await supabase.from("user_profiles").update({ allow_messages: allowMessages }).eq("id", user.id)
+      const { error } = await supabase
+        .from("user_profiles")
+        .update({ allow_messages: allowMessages })
+        .eq("user_id", user.id)
 
       if (error) {
         console.error("[v0] Error updating message preferences:", error)
