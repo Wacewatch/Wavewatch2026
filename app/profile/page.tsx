@@ -880,9 +880,6 @@ export default function ProfilePage() {
                 >
                   {isActivating ? "Activation..." : "Activer"}
                 </Button>
-                <div className="text-xs text-gray-500 bg-gray-700/50 p-3 rounded-lg">
-                  <strong>Codes disponibles :</strong> VIP, VIP+, Bêta Testeur, Admin
-                </div>
                 {(userVIPLevel !== "free" || user.isAdmin) && (
                   <Button
                     onClick={handleRemovePrivileges}

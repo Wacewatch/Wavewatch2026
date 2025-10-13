@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown, MessageSquare } from "lucide-react"
+import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import {
   DropdownMenu,
@@ -187,22 +187,6 @@ export function Navigation() {
                       Profil
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      href="/dashboard/messages"
-                      className="text-white hover:text-blue-300 flex items-center justify-between"
-                    >
-                      <span className="flex items-center">
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Messagerie
-                      </span>
-                      {unreadCount > 0 && (
-                        <Badge variant="destructive" className="ml-2">
-                          {unreadCount}
-                        </Badge>
-                      )}
-                    </Link>
-                  </DropdownMenuItem>
                   {!user.isVip && (
                     <DropdownMenuItem asChild>
                       <Link href="/subscription" className="text-yellow-400 hover:text-yellow-300">
@@ -340,27 +324,6 @@ export function Navigation() {
                   >
                     <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
                       Profil
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    className="justify-start text-white hover:text-blue-300 hover:bg-blue-900"
-                  >
-                    <Link
-                      href="/dashboard/messages"
-                      onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center justify-between w-full"
-                    >
-                      <span className="flex items-center">
-                        <MessageSquare className="w-4 h-4 mr-2" />
-                        Messagerie
-                      </span>
-                      {unreadCount > 0 && (
-                        <Badge variant="destructive" className="ml-2">
-                          {unreadCount}
-                        </Badge>
-                      )}
                     </Link>
                   </Button>
                   {!user.isVip && (

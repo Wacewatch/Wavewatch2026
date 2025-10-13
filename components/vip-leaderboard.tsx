@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Crown, Trophy, Medal, Award, Star, Zap, Clock, Users, Percent, Sparkles } from "lucide-react"
+import { Crown, Trophy, Medal, Award, Star, Zap, Users, Percent } from "lucide-react"
 import { VIPSystem, type VIPUser } from "@/lib/vip-system"
 import { supabase } from "@/lib/supabase"
 
@@ -259,7 +259,7 @@ export function VIPLeaderboard() {
         </CardHeader>
         <CardContent className="px-4 sm:px-6">
           <Tabs defaultValue="top-supporters" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 bg-gray-800/50 text-xs sm:text-sm">
+            <TabsList className="grid w-full grid-cols-2 bg-gray-800/50 text-xs sm:text-sm">
               <TabsTrigger value="top-supporters" className="data-[state=active]:bg-yellow-600/20 px-1 sm:px-3">
                 <Trophy className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Top Supporters</span>
@@ -269,16 +269,6 @@ export function VIPLeaderboard() {
                 <Star className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Nouveaux VIP</span>
                 <span className="sm:hidden">Nouveaux</span>
-              </TabsTrigger>
-              <TabsTrigger value="veterans" className="data-[state=active]:bg-blue-600/20 px-1 sm:px-3">
-                <Clock className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Vétérans</span>
-                <span className="sm:hidden">Vétérans</span>
-              </TabsTrigger>
-              <TabsTrigger value="beta" className="data-[state=active]:bg-cyan-600/20 px-1 sm:px-3">
-                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Beta</span>
-                <span className="sm:hidden">Beta</span>
               </TabsTrigger>
             </TabsList>
 
@@ -372,88 +362,6 @@ export function VIPLeaderboard() {
                   <div className="text-center py-8 text-gray-400">
                     <Star className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p className="text-sm sm:text-base">Soyez le prochain nouveau VIP !</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="veterans" className="mt-6">
-              <div className="space-y-3">
-                {oldestVIPs.length > 0 ? (
-                  oldestVIPs.map((veteran, index) => (
-                    <div
-                      key={veteran.id}
-                      className="flex items-center justify-between p-3 sm:p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 transition-all duration-300 hover:scale-105"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                        <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                            <p className={`font-bold text-sm sm:text-base truncate ${getUsernameColor(veteran.level)}`}>
-                              {veteran.username}
-                            </p>
-                            {getVIPBadge(veteran.level)}
-                            <Badge variant="secondary" className="text-blue-400 border-blue-400 text-xs">
-                              VÉTÉRAN
-                            </Badge>
-                          </div>
-                          <p className="text-xs sm:text-sm text-gray-400 truncate">
-                            Fidèle depuis {formatDate(veteran.subscriptionDate)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-xs sm:text-sm text-blue-400">
-                          {getDaysSince(veteran.subscriptionDate)} jours
-                        </p>
-                        <p className="text-xs text-gray-400">{veteran.totalContribution.toFixed(2)}€</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-400">
-                    <Clock className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-sm sm:text-base">Devenez un vétéran VIP !</p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="beta" className="mt-6">
-              <div className="space-y-3">
-                {betaUsers.length > 0 ? (
-                  betaUsers.map((beta, index) => (
-                    <div
-                      key={beta.id}
-                      className="flex items-center justify-between p-3 sm:p-4 rounded-lg bg-cyan-500/10 border border-cyan-500/20 transition-all duration-300 hover:scale-105"
-                    >
-                      <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 flex-shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                            <p className={`font-bold text-sm sm:text-base truncate ${getUsernameColor(beta.level)}`}>
-                              {beta.username}
-                            </p>
-                            {getVIPBadge(beta.level)}
-                            <Badge variant="secondary" className="text-cyan-400 border-cyan-400 text-xs">
-                              TESTEUR
-                            </Badge>
-                          </div>
-                          <p className="text-xs sm:text-sm text-gray-400 truncate">
-                            Beta depuis {formatDate(beta.subscriptionDate)}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-xs sm:text-sm text-cyan-400">{getDaysSince(beta.subscriptionDate)} jours</p>
-                        <p className="text-xs text-gray-400">{beta.totalContribution.toFixed(2)}€</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-gray-400">
-                    <Sparkles className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-sm sm:text-base">Aucun testeur Beta pour le moment !</p>
                   </div>
                 )}
               </div>

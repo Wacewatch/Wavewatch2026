@@ -1,3 +1,5 @@
+import { supabase } from "@/lib/supabase"
+
 export interface BugReport {
   id: string
   userId: string
@@ -35,17 +37,16 @@ export class BugTracker {
     return allReports.filter((report) => report.userId === userId)
   }
 
-  static submitBugReport(
+  static async submitBugReport(
     userId: string,
     title: string,
     description: string,
     contentType: "movie" | "tv" | "anime" | "other",
     contentId?: number,
     contentTitle?: string,
-  ): string {
+  ): Promise<string> {
     if (typeof window === "undefined") return ""
 
-    const reports = this.getAllBugReports()
     const newReport: BugReport = {
       id: `bug_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       userId,
@@ -59,10 +60,36 @@ export class BugTracker {
       updatedAt: new Date(),
     }
 
+    try {
+      const { data, error } = await supabase
+        .from("bug_reports")
+        .insert({
+          user_id: userId,
+          title,
+          description,
+          content_type: contentType,
+          content_id: contentId,
+          content_title: contentTitle,
+          status: "pending",
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error("[v0] Error saving bug report to Supabase:", error)
+      } else {
+        console.log("[v0] Bug report saved to Supabase:", data)
+      }
+    } catch (error) {
+      console.error("[v0] Error submitting bug report:", error)
+    }
+
+    // Also save to localStorage for backward compatibility
+    const reports = this.getAllBugReports()
     reports.push(newReport)
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(reports))
 
-    // Déclencher un événement pour notifier les autres composants
+    // Trigger event to notify other components
     window.dispatchEvent(new Event("bug-report-submitted"))
 
     return newReport.id

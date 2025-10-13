@@ -199,7 +199,7 @@ export default function SubscriptionPage() {
       </div>
 
       {/* Module de classement VIP */}
-      <VIPLeaderboard />
+      <VIPLeaderboard showTopSupporters={true} showNewest={true} />
     </div>
   )
 }
