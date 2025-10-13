@@ -1,11 +1,18 @@
 "use client"
 
+import type React from "react"
+
 import Link from "next/link"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Star } from "lucide-react"
+import { Star, Plus, Eye, Check } from "lucide-react"
 import { ContentStatusIcons } from "@/components/content-status-icons"
+import { useState } from "react"
+import { WatchTracker } from "@/lib/watch-tracking"
+import { useAuth } from "@/components/auth-provider"
+import { AddToPlaylistButton } from "@/components/add-to-playlist-button"
+import { useToast } from "@/hooks/use-toast"
 
 interface TVShowCardProps {
   show: {
@@ -21,19 +28,53 @@ interface TVShowCardProps {
 }
 
 export function TVShowCard({ show, isAnime = false, showBadges = true }: TVShowCardProps) {
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const [isHovered, setIsHovered] = useState(false)
+  const [showPlaylistMenu, setShowPlaylistMenu] = useState(false)
+  const contentType = isAnime ? "anime" : "tv"
+  const [isWatched, setIsWatched] = useState(() => WatchTracker.isWatched(contentType, show.id))
+
   const posterUrl = show.poster_path
     ? `https://image.tmdb.org/t/p/w500${show.poster_path}`
     : "/placeholder.svg?height=750&width=500"
 
   const linkPath = isAnime ? `/anime/${show.id}` : `/tv-shows/${show.id}`
-  const contentType = isAnime ? "anime" : "tv"
 
-  // Safe date handling
   const releaseYear = show.first_air_date ? new Date(show.first_air_date).getFullYear() : "N/A"
+
+  const handleMarkAsWatched = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const currentlyWatched = WatchTracker.isWatched(contentType, show.id)
+
+    if (currentlyWatched) {
+      WatchTracker.removeFromWatched(show.id, contentType)
+      setIsWatched(false)
+      toast({
+        title: "Retiré des vus",
+        description: `"${show.name}" a été retiré de votre historique`,
+      })
+    } else {
+      WatchTracker.markAsWatched(contentType, show.id, show.name, 45, {
+        posterPath: show.poster_path,
+      })
+      setIsWatched(true)
+      toast({
+        title: "Marqué comme vu",
+        description: `"${show.name}" a été ajouté à votre historique`,
+      })
+    }
+  }
 
   return (
     <Link href={linkPath}>
-      <Card className="group overflow-hidden hover:scale-105 transition-transform duration-200">
+      <Card
+        className="group overflow-hidden hover:scale-105 transition-transform duration-200"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         <CardContent className="p-0">
           <div className="relative aspect-[2/3]">
             <Image
@@ -50,6 +91,61 @@ export function TVShowCard({ show, isAnime = false, showBadges = true }: TVShowC
               contentType={contentType as "tv" | "anime"}
               contentTitle={show.name}
             />
+
+            {user && isHovered && (
+              <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 transition-opacity">
+                <button
+                  onClick={handleMarkAsWatched}
+                  className={`p-3 ${isWatched ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 hover:bg-gray-700"} rounded-full transition-colors`}
+                  title={isWatched ? "Retirer des vus" : "Marquer comme vu"}
+                >
+                  {isWatched ? <Check className="w-5 h-5 text-white" /> : <Eye className="w-5 h-5 text-white" />}
+                </button>
+                <div
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setShowPlaylistMenu(!showPlaylistMenu)
+                  }}
+                >
+                  <button
+                    className="p-3 bg-blue-600 hover:bg-blue-700 rounded-full transition-colors"
+                    title="Ajouter à une playlist"
+                  >
+                    <Plus className="w-5 h-5 text-white" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {showPlaylistMenu && (
+              <div
+                className="absolute inset-0 z-50 flex items-center justify-center bg-black/60"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }}
+              >
+                <div className="bg-gray-800 rounded-lg p-4 max-w-xs w-full mx-4">
+                  <AddToPlaylistButton
+                    tmdbId={show.id}
+                    mediaType={isAnime ? "anime" : "tv"}
+                    title={show.name}
+                    posterPath={show.poster_path}
+                  />
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setShowPlaylistMenu(false)
+                    }}
+                    className="mt-2 w-full text-sm text-gray-400 hover:text-white"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
 
             {showBadges && (
               <div className="absolute top-2 right-2">

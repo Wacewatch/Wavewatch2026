@@ -13,11 +13,7 @@ export function Footer() {
             <p className="text-blue-300 text-sm">Votre plateforme de streaming premium</p>
           </div>
 
-          {/* Links */}
           <div className="flex items-center gap-6">
-            <Link href="/requests" className="text-blue-300 hover:text-white transition-colors text-sm">
-              Support
-            </Link>
             <Link href="/changelogs" className="text-blue-300 hover:text-white transition-colors text-sm">
               Mise à jour
             </Link>

@@ -6,7 +6,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Star, Plus, Eye } from "lucide-react"
+import { Star, Plus, Eye, Check } from "lucide-react"
 import { ContentStatusIcons } from "@/components/content-status-icons"
 import { useState } from "react"
 import { WatchTracker } from "@/lib/watch-tracking"
@@ -31,6 +31,7 @@ export function MovieCard({ movie, showBadges = true }: MovieCardProps) {
   const { toast } = useToast()
   const [isHovered, setIsHovered] = useState(false)
   const [showPlaylistMenu, setShowPlaylistMenu] = useState(false)
+  const [isWatched, setIsWatched] = useState(() => WatchTracker.isWatched("movie", movie.id))
 
   const posterUrl = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
@@ -40,10 +41,11 @@ export function MovieCard({ movie, showBadges = true }: MovieCardProps) {
     e.preventDefault()
     e.stopPropagation()
 
-    const isWatched = WatchTracker.isWatched("movie", movie.id)
+    const currentlyWatched = WatchTracker.isWatched("movie", movie.id)
 
-    if (isWatched) {
+    if (currentlyWatched) {
       WatchTracker.removeFromWatched(movie.id, "movie")
+      setIsWatched(false)
       toast({
         title: "Retiré des vus",
         description: `"${movie.title}" a été retiré de votre historique`,
@@ -52,6 +54,7 @@ export function MovieCard({ movie, showBadges = true }: MovieCardProps) {
       WatchTracker.markAsWatched("movie", movie.id, movie.title, 120, {
         posterPath: movie.poster_path,
       })
+      setIsWatched(true)
       toast({
         title: "Marqué comme vu",
         description: `"${movie.title}" a été ajouté à votre historique`,
@@ -83,10 +86,10 @@ export function MovieCard({ movie, showBadges = true }: MovieCardProps) {
               <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 transition-opacity">
                 <button
                   onClick={handleMarkAsWatched}
-                  className="p-3 bg-green-600 hover:bg-green-700 rounded-full transition-colors"
-                  title="Marquer comme vu"
+                  className={`p-3 ${isWatched ? "bg-green-600 hover:bg-green-700" : "bg-gray-600 hover:bg-gray-700"} rounded-full transition-colors`}
+                  title={isWatched ? "Retirer des vus" : "Marquer comme vu"}
                 >
-                  <Eye className="w-5 h-5 text-white" />
+                  {isWatched ? <Check className="w-5 h-5 text-white" /> : <Eye className="w-5 h-5 text-white" />}
                 </button>
                 <div
                   onClick={(e) => {
