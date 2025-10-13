@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { Search, Plus, ExternalLink } from "lucide-react"
+import { Search, Plus, ExternalLink, ArrowLeft } from "lucide-react"
 import { searchMulti } from "@/lib/tmdb"
 import Image from "next/image"
 import Link from "next/link"
@@ -136,171 +136,195 @@ export default function RequestsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Demandes de contenu</h1>
-        <p className="text-muted-foreground">Recherchez et demandez l'ajout de films, séries ou animés</p>
-      </div>
+    <div className="min-h-screen bg-gray-900 text-white">
+      <div className="container mx-auto px-4 py-4 sm:py-8 space-y-6 sm:space-y-8">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+          >
+            <Link href="/dashboard">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
 
-      <Tabs defaultValue="submit" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="submit">Faire une demande</TabsTrigger>
-          <TabsTrigger value="browse">Parcourir les demandes</TabsTrigger>
-          {user && <TabsTrigger value="my-requests">Mes demandes</TabsTrigger>}
-        </TabsList>
+        <div className="space-y-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Demandes de contenu</h1>
+          <p className="text-sm sm:text-base text-gray-400">
+            Recherchez et demandez l'ajout de films, séries ou animés
+          </p>
+        </div>
 
-        <TabsContent value="submit" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Rechercher du contenu</CardTitle>
-              <CardDescription>
-                Tapez le nom d'un film, série ou animé pour le rechercher et faire une demande
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Search Input */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  type="text"
-                  placeholder="Rechercher un film, série ou animé..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+        <Tabs defaultValue="submit" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 bg-gray-800 border-gray-700">
+            <TabsTrigger value="submit" className="data-[state=active]:bg-gray-700 text-gray-300 text-sm">
+              Faire une demande
+            </TabsTrigger>
+            <TabsTrigger value="browse" className="data-[state=active]:bg-gray-700 text-gray-300 text-sm">
+              Parcourir
+            </TabsTrigger>
+            {user && (
+              <TabsTrigger value="my-requests" className="data-[state=active]:bg-gray-700 text-gray-300 text-sm">
+                Mes demandes
+              </TabsTrigger>
+            )}
+          </TabsList>
 
-              {!user && (
-                <p className="text-sm text-muted-foreground">Vous devez être connecté pour faire une demande.</p>
-              )}
-
-              {/* Search Results */}
-              {searching && (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                  <p className="text-muted-foreground mt-2">Recherche en cours...</p>
+          <TabsContent value="submit" className="space-y-6">
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white text-lg sm:text-xl">Rechercher du contenu</CardTitle>
+                <CardDescription className="text-gray-400 text-sm">
+                  Tapez le nom d'un film, série ou animé pour le rechercher et faire une demande
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    type="text"
+                    placeholder="Rechercher un film, série ou animé..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-gray-700 border-gray-600 text-white"
+                  />
                 </div>
-              )}
 
-              {searchResults.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Résultats de recherche :</h3>
-                  <div className="grid gap-4">
-                    {searchResults.slice(0, 10).map((result) => (
-                      <Card key={result.id} className="overflow-hidden">
-                        <CardContent className="p-4">
-                          <div className="flex items-start space-x-4">
-                            <div className="relative w-16 h-24 flex-shrink-0 rounded overflow-hidden">
-                              <Image
-                                src={
-                                  result.poster_path
-                                    ? `https://image.tmdb.org/t/p/w200${result.poster_path}`
-                                    : "/placeholder.svg?height=120&width=80"
-                                }
-                                alt={result.title || result.name || ""}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
+                {!user && <p className="text-sm text-gray-400">Vous devez être connecté pour faire une demande.</p>}
 
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between mb-2">
-                                <div>
-                                  <h4 className="font-semibold text-lg">{result.title || result.name}</h4>
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Badge variant="outline">{result.media_type === "movie" ? "Film" : "Série"}</Badge>
-                                    <span>
-                                      {result.release_date || result.first_air_date
-                                        ? new Date(result.release_date || result.first_air_date || "").getFullYear()
-                                        : "N/A"}
-                                    </span>
-                                  </div>
-                                </div>
-                                <Button
-                                  onClick={() => handleRequestContent(result)}
-                                  disabled={loading || !user}
-                                  size="sm"
-                                >
-                                  <Plus className="w-4 h-4 mr-2" />
-                                  Demander
-                                </Button>
+                {searching && (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+                    <p className="text-gray-400 mt-2">Recherche en cours...</p>
+                  </div>
+                )}
+
+                {searchResults.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-white">Résultats de recherche :</h3>
+                    <div className="grid gap-4">
+                      {searchResults.slice(0, 10).map((result) => (
+                        <Card key={result.id} className="overflow-hidden bg-gray-700 border-gray-600">
+                          <CardContent className="p-4">
+                            <div className="flex items-start space-x-4">
+                              <div className="relative w-16 h-24 flex-shrink-0 rounded overflow-hidden">
+                                <Image
+                                  src={
+                                    result.poster_path
+                                      ? `https://image.tmdb.org/t/p/w200${result.poster_path}`
+                                      : "/placeholder.svg?height=120&width=80"
+                                  }
+                                  alt={result.title || result.name || ""}
+                                  fill
+                                  className="object-cover"
+                                />
                               </div>
 
-                              {result.overview && (
-                                <p className="text-sm text-muted-foreground line-clamp-2">{result.overview}</p>
-                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between mb-2 gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <h4 className="font-semibold text-base sm:text-lg text-white truncate">
+                                      {result.title || result.name}
+                                    </h4>
+                                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                                      <Badge variant="outline" className="border-gray-500 text-gray-300">
+                                        {result.media_type === "movie" ? "Film" : "Série"}
+                                      </Badge>
+                                      <span>
+                                        {result.release_date || result.first_air_date
+                                          ? new Date(result.release_date || result.first_air_date || "").getFullYear()
+                                          : "N/A"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    onClick={() => handleRequestContent(result)}
+                                    disabled={loading || !user}
+                                    size="sm"
+                                    className="bg-blue-600 hover:bg-blue-700 flex-shrink-0"
+                                  >
+                                    <Plus className="w-4 h-4 sm:mr-2" />
+                                    <span className="hidden sm:inline">Demander</span>
+                                  </Button>
+                                </div>
+
+                                {result.overview && (
+                                  <p className="text-sm text-gray-400 line-clamp-2">{result.overview}</p>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {searchQuery && !searching && searchResults.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-muted-foreground">Aucun résultat trouvé pour "{searchQuery}"</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="browse" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Toutes les demandes</CardTitle>
-              <CardDescription>Parcourez les demandes de la communauté</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {requests.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Aucune demande pour le moment.</p>
-              ) : (
-                <div className="space-y-4">
-                  {requests.map((request: any) => (
-                    <div key={request.id} className="border rounded-lg p-4 space-y-2">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h3 className="font-semibold">{request.title}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {request.content_type === "movie"
-                              ? "Film"
-                              : request.content_type === "tv"
-                                ? "Série TV"
-                                : "Animé"}
-                          </p>
-                        </div>
-                        {getStatusBadge(request.status)}
-                      </div>
-                      {request.description && <p className="text-sm">{request.description}</p>}
-                      <p className="text-xs text-muted-foreground">
-                        Demandé le {new Date(request.created_at).toLocaleDateString("fr-FR")}
-                      </p>
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                  </div>
+                )}
 
-        {user && (
-          <TabsContent value="my-requests" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Mes demandes</CardTitle>
-                <CardDescription>Suivez le statut de vos demandes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-center text-muted-foreground py-8">
-                  Vous n'avez fait aucune demande pour le moment.
-                </p>
+                {searchQuery && !searching && searchResults.length === 0 && (
+                  <div className="text-center py-8">
+                    <p className="text-gray-400">Aucun résultat trouvé pour "{searchQuery}"</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
-        )}
-      </Tabs>
+
+          <TabsContent value="browse" className="space-y-6">
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Toutes les demandes</CardTitle>
+                <CardDescription className="text-gray-400">Parcourez les demandes de la communauté</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {requests.length === 0 ? (
+                  <p className="text-center text-gray-400 py-8">Aucune demande pour le moment.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {requests.map((request: any) => (
+                      <div key={request.id} className="border border-gray-700 rounded-lg p-4 space-y-2 bg-gray-700/50">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-semibold text-white">{request.title}</h3>
+                            <p className="text-sm text-gray-400">
+                              {request.content_type === "movie"
+                                ? "Film"
+                                : request.content_type === "tv"
+                                  ? "Série TV"
+                                  : "Animé"}
+                            </p>
+                          </div>
+                          {getStatusBadge(request.status)}
+                        </div>
+                        {request.description && <p className="text-sm text-gray-300">{request.description}</p>}
+                        <p className="text-xs text-gray-500">
+                          Demandé le {new Date(request.created_at).toLocaleDateString("fr-FR")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {user && (
+            <TabsContent value="my-requests" className="space-y-6">
+              <Card className="bg-gray-800 border-gray-700">
+                <CardHeader>
+                  <CardTitle className="text-white">Mes demandes</CardTitle>
+                  <CardDescription className="text-gray-400">Suivez le statut de vos demandes</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-center text-gray-400 py-8">Vous n'avez fait aucune demande pour le moment.</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+        </Tabs>
+      </div>
     </div>
   )
 }

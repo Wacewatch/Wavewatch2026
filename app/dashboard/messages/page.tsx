@@ -27,9 +27,9 @@ export default function MessagesPage() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
-      <div className="container mx-auto px-4 py-8 space-y-8">
+      <div className="container mx-auto px-4 py-4 sm:py-8 space-y-4 sm:space-y-8">
         {/* Header */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Button
             asChild
             variant="outline"

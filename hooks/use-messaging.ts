@@ -56,7 +56,6 @@ export function useMessaging() {
 
       if (messagesError) throw messagesError
 
-      // Get sender usernames separately
       const senderIds = [...new Set(messagesData?.map((msg) => msg.sender_id) || [])]
       const { data: sendersData, error: sendersError } = await supabase
         .from("user_profiles")
@@ -96,7 +95,6 @@ export function useMessaging() {
 
       if (messagesError) throw messagesError
 
-      // Get recipient usernames separately
       const recipientIds = [...new Set(messagesData?.map((msg) => msg.recipient_id) || [])]
       const { data: recipientsData, error: recipientsError } = await supabase
         .from("user_profiles")
@@ -277,12 +275,22 @@ export function useMessaging() {
   }
 
   const updateMessagePreferences = async (allowMessages: boolean) => {
-    if (!user?.id) return false
+    if (!user?.id) {
+      console.error("[v0] No user ID for updating message preferences")
+      return false
+    }
 
     try {
+      console.log("[v0] Updating message preferences for user:", user.id, "to:", allowMessages)
+
       const { error } = await supabase.from("user_profiles").update({ allow_messages: allowMessages }).eq("id", user.id)
 
-      if (error) throw error
+      if (error) {
+        console.error("[v0] Error updating message preferences:", error)
+        throw error
+      }
+
+      console.log("[v0] Message preferences updated successfully")
 
       toast({
         title: "Préférences mises à jour",
@@ -293,7 +301,7 @@ export function useMessaging() {
 
       return true
     } catch (error) {
-      console.error("Error updating preferences:", error)
+      console.error("[v0] Error updating preferences:", error)
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour vos préférences",
@@ -378,7 +386,7 @@ export function useMessaging() {
     loading,
     sendMessage,
     markAsRead,
-    deleteMessage, // Export deleteMessage function
+    deleteMessage,
     blockUser,
     unblockUser,
     searchUsers,
