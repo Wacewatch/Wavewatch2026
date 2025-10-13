@@ -22,6 +22,25 @@ export default function TVShowsPage() {
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
+    const savedPage = sessionStorage.getItem("tvShowsPage")
+    const savedGenre = sessionStorage.getItem("tvShowsGenre")
+    const savedSort = sessionStorage.getItem("tvShowsSort")
+    const savedSearch = sessionStorage.getItem("tvShowsSearch")
+
+    if (savedPage) setCurrentPage(Number.parseInt(savedPage))
+    if (savedGenre) setSelectedGenre(savedGenre)
+    if (savedSort) setSortBy(savedSort)
+    if (savedSearch) setSearchQuery(savedSearch)
+  }, [])
+
+  useEffect(() => {
+    sessionStorage.setItem("tvShowsPage", currentPage.toString())
+    sessionStorage.setItem("tvShowsGenre", selectedGenre)
+    sessionStorage.setItem("tvShowsSort", sortBy)
+    sessionStorage.setItem("tvShowsSearch", searchQuery)
+  }, [currentPage, selectedGenre, sortBy, searchQuery])
+
+  useEffect(() => {
     const fetchGenres = async () => {
       try {
         const genresData = await getGenres("tv")

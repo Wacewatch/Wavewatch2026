@@ -370,64 +370,91 @@ export default function ProfilePage() {
   }
 
   const handleAdultContentToggle = async (enabled: boolean) => {
-    const success = await updatePreferences({
-      showAdultContent: enabled,
-      hideAdultContent: !enabled,
-    })
-
-    if (success) {
-      toast({
-        title: enabled ? "Contenu adulte activé" : "Contenu adulte désactivé",
-        description: enabled
-          ? "Le contenu réservé aux adultes sera maintenant affiché dans les résultats"
-          : "Le contenu réservé aux adultes sera filtré des résultats",
+    try {
+      const success = await updatePreferences({
+        showAdultContent: enabled,
+        hideAdultContent: !enabled,
       })
-    } else {
+
+      if (success) {
+        toast({
+          title: enabled ? "Contenu adulte activé" : "Contenu adulte désactivé",
+          description: enabled
+            ? "Le contenu réservé aux adultes sera maintenant affiché dans les résultats"
+            : "Le contenu réservé aux adultes sera filtré des résultats",
+        })
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder les préférences. Veuillez réessayer.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error toggling adult content:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de sauvegarder les préférences",
+        description: "Une erreur est survenue lors de la sauvegarde",
         variant: "destructive",
       })
     }
   }
 
   const handleHideWatchedToggle = async (enabled: boolean) => {
-    const success = await updatePreferences({
-      showWatchedContent: !enabled,
-    })
-
-    if (success) {
-      toast({
-        title: enabled ? "Masquage du contenu vu activé" : "Masquage du contenu vu désactivé",
-        description: enabled
-          ? "Les films et séries déjà vus seront masqués des listes de contenu"
-          : "Tous les contenus seront affichés, même ceux déjà vus",
+    try {
+      const success = await updatePreferences({
+        showWatchedContent: !enabled,
       })
-    } else {
+
+      if (success) {
+        toast({
+          title: enabled ? "Masquage du contenu vu activé" : "Masquage du contenu vu désactivé",
+          description: enabled
+            ? "Les films et séries déjà vus seront masqués des listes de contenu"
+            : "Tous les contenus seront affichés, même ceux déjà vus",
+        })
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder les préférences. Veuillez réessayer.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error toggling hide watched:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de sauvegarder les préférences",
+        description: "Une erreur est survenue lors de la sauvegarde",
         variant: "destructive",
       })
     }
   }
 
   const handleAutoMarkWatchedToggle = async (enabled: boolean) => {
-    const success = await updatePreferences({
-      autoMarkWatched: enabled,
-    })
-
-    if (success) {
-      toast({
-        title: enabled ? "Marquage automatique activé" : "Marquage automatique désactivé",
-        description: enabled
-          ? "Le contenu sera automatiquement marqué comme vu quand vous cliquez sur 'Regarder'"
-          : "Vous devrez marquer manuellement le contenu comme vu",
+    try {
+      const success = await updatePreferences({
+        autoMarkWatched: enabled,
       })
-    } else {
+
+      if (success) {
+        toast({
+          title: enabled ? "Marquage automatique activé" : "Marquage automatique désactivé",
+          description: enabled
+            ? "Le contenu sera automatiquement marqué comme vu quand vous cliquez sur 'Regarder'"
+            : "Vous devrez marquer manuellement le contenu comme vu",
+        })
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder les préférences. Veuillez réessayer.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error toggling auto mark watched:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de sauvegarder les préférences",
+        description: "Une erreur est survenue lors de la sauvegarde",
         variant: "destructive",
       })
     }

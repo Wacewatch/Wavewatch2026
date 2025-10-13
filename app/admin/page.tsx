@@ -311,6 +311,7 @@ export default function AdminPage() {
         }))
 
         setUsers(correctedUsers)
+        console.log(`[v0] Total users loaded: ${correctedUsers.length}`)
         return correctedUsers
       }
     } catch (error) {

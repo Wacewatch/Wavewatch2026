@@ -309,16 +309,28 @@ export function useMessaging() {
     try {
       console.log("[v0] Attempting to delete message:", messageId, "for user:", user.id)
 
-      const { error } = await supabase.from("user_messages").delete().eq("id", messageId).eq("recipient_id", user.id)
+      const { error, data } = await supabase
+        .from("user_messages")
+        .delete()
+        .eq("id", messageId)
+        .eq("recipient_id", user.id)
+        .select()
 
       if (error) {
-        console.error("[v0] Error deleting message:", error)
+        console.error("[v0] Supabase error deleting message:", error)
         throw error
       }
 
-      console.log("[v0] Message deleted successfully from database")
+      console.log("[v0] Delete response:", data)
 
-      setMessages((prev) => prev.filter((msg) => msg.id !== messageId))
+      setMessages((prev) => {
+        const filtered = prev.filter((msg) => msg.id !== messageId)
+        console.log("[v0] Messages after deletion:", filtered.length)
+        return filtered
+      })
+
+      await loadMessages()
+
       toast({
         title: "Message supprimé",
         description: "Le message a été supprimé avec succès",
@@ -327,10 +339,10 @@ export function useMessaging() {
       await loadUnreadCount()
       return true
     } catch (error) {
-      console.error("Error deleting message:", error)
+      console.error("[v0] Error deleting message:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de supprimer le message",
+        description: "Impossible de supprimer le message. Vérifiez vos permissions.",
         variant: "destructive",
       })
       return false

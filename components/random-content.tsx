@@ -8,8 +8,7 @@ import { Shuffle, Film, Tv, Zap, Clock, Star, Sparkles, ChevronDown, ChevronUp, 
 import { getTrendingMovies, getTrendingTVShows, getTrendingAnime } from "@/lib/tmdb"
 import { useRouter } from "next/navigation"
 import { useMobile } from "@/hooks/use-mobile"
-import { WatchTracker } from "@/lib/watch-tracking"
-import { generateText } from "ai"
+import { getAIRecommendation } from "@/lib/ai-recommendation"
 
 export function RandomContent() {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -132,65 +131,23 @@ export function RandomContent() {
   const handleAIRecommendation = async () => {
     setIsAILoading(true)
     setError("")
-
     try {
-      const watchedItems = WatchTracker.getWatchedItems()
-      const favoriteItems = WatchTracker.getFavoriteItems()
+      const cache = await fetchContentData(true)
 
-      const watchedTitles = watchedItems.slice(0, 20).map((item) => item.title)
-      const favoriteTitles = favoriteItems.slice(0, 10).map((item) => item.title)
-
-      const cache = await fetchContentData()
       const allContent = [
-        ...cache.movies.map((item) => ({ ...item, type: "movie", title: item.title })),
-        ...cache.tvShows.map((item) => ({ ...item, type: "tv", title: item.name })),
-        ...cache.anime.map((item) => ({ ...item, type: "anime", title: item.name })),
+        ...cache.movies.map((m) => ({ ...m, type: "movie" as const })),
+        ...cache.tvShows.map((t) => ({ ...t, type: "tv" as const })),
+        ...cache.anime.map((a) => ({ ...a, type: "anime" as const })),
       ]
 
-      const { text } = await generateText({
-        model: "openai/gpt-4o-mini",
-        prompt: `Tu es un expert en recommandation de films et séries. 
-        
-Historique de visionnage de l'utilisateur: ${watchedTitles.length > 0 ? watchedTitles.join(", ") : "Aucun historique"}
-Favoris de l'utilisateur: ${favoriteTitles.length > 0 ? favoriteTitles.join(", ") : "Aucun favori"}
-
-Contenu disponible (format: titre|type|id):
-${allContent
-  .slice(0, 50)
-  .map((c) => `${c.title}|${c.type}|${c.id}`)
-  .join("\n")}
-
-Analyse les préférences de l'utilisateur et recommande UN SEUL contenu parmi la liste disponible qui correspondrait le mieux à ses goûts.
-Réponds UNIQUEMENT avec l'ID du contenu recommandé et son type, au format: ID|TYPE
-Exemple: 12345|movie
-
-IMPORTANT: Ne réponds qu'avec le format ID|TYPE, rien d'autre.`,
-      })
-
-      console.log("[v0] AI recommendation response:", text)
-
-      const trimmedText = text.trim()
-      const parts = trimmedText.split("|")
-
-      if (parts.length >= 2) {
-        const recommendedId = parts[0].trim()
-        const recommendedType = parts[1].trim().toLowerCase()
-        const id = Number.parseInt(recommendedId)
-
-        if (!isNaN(id) && (recommendedType === "movie" || recommendedType === "tv" || recommendedType === "anime")) {
-          if (recommendedType === "movie") {
-            router.push(`/movies/${id}`)
-          } else if (recommendedType === "anime") {
-            router.push(`/anime/${id}`)
-          } else {
-            router.push(`/tv-shows/${id}`)
-          }
-          return
-        }
+      if (allContent.length === 0) {
+        throw new Error("No content available")
       }
 
-      console.log("[v0] AI response parsing failed, using random fallback")
-      const content = getRandomContent(allContent)
+      const randomContent = allContent[Math.floor(Math.random() * allContent.length)]
+
+      const content = await getAIRecommendation(randomContent)
+
       if (content) {
         if (content.type === "movie") {
           router.push(`/movies/${content.id}`)
@@ -296,6 +253,12 @@ IMPORTANT: Ne réponds qu'avec le format ID|TYPE, rien d'autre.`,
     setPreferences({ type: "", genre: "", duration: "", rating: "" })
     setError("")
   }
+
+  const allContent = [
+    ...contentCache.movies.map((item) => ({ ...item, type: "movie" })),
+    ...contentCache.tvShows.map((item) => ({ ...item, type: "tv" })),
+    ...contentCache.anime.map((item) => ({ ...item, type: "anime" })),
+  ]
 
   return (
     <Card className="bg-gradient-to-br from-slate-900/50 to-blue-900/30 border-slate-700">

@@ -57,12 +57,10 @@ export function VIPLeaderboard() {
       const vipUsers = usersData?.filter((user) => user.is_vip) || []
       const totalVIPCount = vipUsers.length
 
-      // Récupérer les stats VIP du système local (pour les badges et contributions)
       const localVipStats = VIPSystem.getVIPStats()
       const allLocalVIPs = VIPSystem.getVIPUsers().filter((user) => user.level !== "free")
 
-      // Calculer le pourcentage réel - CORRECTION : Beta ne compte pas comme VIP
-      const totalVIPAndPremium = totalVIPCount + localVipStats.totalVIPPlus // Retirer totalBeta
+      const totalVIPAndPremium = totalVIPCount + localVipStats.totalVIPPlus
       const vipPercentage = totalUsers > 0 ? (totalVIPAndPremium / totalUsers) * 100 : 0
 
       console.log("Debug VIP calculation:", {
@@ -70,57 +68,51 @@ export function VIPLeaderboard() {
         totalVIPCount,
         totalVIPPlus: localVipStats.totalVIPPlus,
         totalBeta: localVipStats.totalBeta,
-        totalVIPAndPremium, // Maintenant sans Beta
+        totalVIPAndPremium,
         vipPercentage,
       })
 
       setStats({
-        totalVIP: totalVIPCount, // Utiliser les vrais chiffres de la DB
-        totalVIPPlus: localVipStats.totalVIPPlus, // Garder les VIP+ du système local
-        totalBeta: localVipStats.totalBeta, // Garder les Beta du système local
+        totalVIP: totalVIPCount,
+        totalVIPPlus: localVipStats.totalVIPPlus,
+        totalBeta: localVipStats.totalBeta,
         monthlyRevenue: localVipStats.monthlyRevenue,
         totalRevenue: localVipStats.totalRevenue,
-        totalUsers: totalUsers, // Vrais utilisateurs de la DB
-        vipPercentage: Math.round(vipPercentage * 10) / 10, // Vrai pourcentage CORRIGÉ
+        totalUsers: totalUsers,
+        vipPercentage: Math.round(vipPercentage * 10) / 10,
       })
 
-      // Top contributeurs (système local pour les contributions)
       setTopSupporters([...allLocalVIPs].sort((a, b) => b.totalContribution - a.totalContribution).slice(0, 5))
 
-      // Nouveaux VIP - mélanger les données DB et locales
       const dbVIPs = vipUsers.map((user) => ({
         id: user.id,
         username: user.username,
         level: "vip" as const,
         subscriptionDate: new Date(user.created_at),
-        totalContribution: 0.99, // Contribution par défaut pour les VIP DB
+        totalContribution: 0.99,
         monthlyContribution: 0.99,
       }))
 
       const allVIPs = [...allLocalVIPs, ...dbVIPs]
 
-      // Supprimer les doublons basés sur l'username
       const uniqueVIPs = allVIPs.filter(
         (vip, index, self) => index === self.findIndex((v) => v.username === vip.username),
       )
 
-      // Nouveaux VIP (les plus récents)
       setNewestVIPs(
         [...uniqueVIPs]
           .sort((a, b) => new Date(b.subscriptionDate).getTime() - new Date(a.subscriptionDate).getTime())
           .slice(0, 5),
       )
 
-      // VIP les plus anciens (fidélité)
       setOldestVIPs(
         [...uniqueVIPs]
           .sort((a, b) => new Date(a.subscriptionDate).getTime() - new Date(b.subscriptionDate).getTime())
           .slice(0, 5),
       )
 
-      // Utilisateurs Beta
       const betaUsersList = allLocalVIPs.filter((user) => user.level === "beta")
-      setBetaUsers(betaUsersList.slice(0, 10)) // Top 10 Beta users
+      setBetaUsers(betaUsersList.slice(0, 10))
     } catch (error) {
       console.error("Error loading VIP data:", error)
     } finally {
