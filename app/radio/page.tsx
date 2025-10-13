@@ -139,6 +139,7 @@ export default function RadioPage() {
     const isCurrentlyFavorite = WatchTracker.isFavorite("radio", station.id)
     WatchTracker.toggleFavorite("radio", station.id, station.name, {
       logoUrl: station.logo_url,
+      streamUrl: station.stream_url,
     })
 
     // Mettre à jour l'état local

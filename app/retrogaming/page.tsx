@@ -55,6 +55,7 @@ export default function RetrogamingPage() {
     const isCurrentlyFavorite = WatchTracker.isFavorite("game", source.id)
     WatchTracker.toggleFavorite("game", source.id, source.name, {
       logoUrl: source.url,
+      url: source.url,
     })
 
     // Mettre à jour l'état local

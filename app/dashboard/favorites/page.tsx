@@ -49,7 +49,7 @@ export default function FavoritesPage() {
 
     // For TV channels
     if (item.type === "tv-channel") {
-      const streamUrl = item.streamUrl || item.stream_url
+      const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
       if (streamUrl) {
         setSelectedItem({
           title: item.title,
@@ -58,18 +58,18 @@ export default function FavoritesPage() {
         })
         setIsModalOpen(true)
       } else {
-        console.log("[v0] No stream URL found for TV channel:", item)
-        alert("URL de stream non disponible pour cette chaîne")
+        console.error("[v0] No stream URL found for TV channel:", JSON.stringify(item))
+        alert(`Impossible de lire "${item.title}". URL de streaming non disponible.`)
       }
       return
     }
 
     // For radio stations
     if (item.type === "radio") {
-      const streamUrl = item.streamUrl || item.stream_url
+      const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
       if (!streamUrl) {
-        console.log("[v0] No stream URL found for radio:", item)
-        alert("URL de stream non disponible pour cette station")
+        console.error("[v0] No stream URL found for radio:", JSON.stringify(item))
+        alert(`Impossible de lire "${item.title}". URL de streaming non disponible.`)
         return
       }
 
@@ -110,7 +110,7 @@ export default function FavoritesPage() {
 
     // For retrogaming
     if (item.type === "game") {
-      const gameUrl = item.url || item.game_url
+      const gameUrl = item.url || item.game_url || item.gameUrl
       if (gameUrl) {
         setSelectedItem({
           title: item.title,
@@ -119,8 +119,8 @@ export default function FavoritesPage() {
         })
         setIsModalOpen(true)
       } else {
-        console.log("[v0] No game URL found:", item)
-        alert("URL de jeu non disponible")
+        console.error("[v0] No game URL found:", JSON.stringify(item))
+        alert(`Impossible de lire "${item.title}". URL de jeu non disponible.`)
       }
       return
     }

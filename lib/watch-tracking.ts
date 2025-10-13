@@ -24,13 +24,15 @@ export interface WishlistItem {
 
 export interface FavoriteItem {
   id: string
-  type: "movie" | "tv" | "tv-channel" | "radio" | "actor" | "playlist"
+  type: "movie" | "tv" | "tv-channel" | "radio" | "actor" | "playlist" | "game"
   tmdbId: number
   title: string
   addedAt: Date
   posterPath?: string
   profilePath?: string // pour les acteurs
-  logoUrl?: string // pour les chaînes/radio
+  logoUrl?: string // pour les chaînes/radio/jeux
+  streamUrl?: string // pour les chaînes TV et radios
+  url?: string // pour les jeux rétro
 }
 
 export interface RatingItem {
@@ -418,7 +420,10 @@ export class WatchTracker {
     }
   }
 
-  static isFavorite(type: "movie" | "tv" | "tv-channel" | "radio" | "actor" | "playlist", tmdbId: number): boolean {
+  static isFavorite(
+    type: "movie" | "tv" | "tv-channel" | "radio" | "actor" | "playlist" | "game",
+    tmdbId: number,
+  ): boolean {
     const items = this.getFavoriteItems()
     return items.some((item) => item.type === type && item.tmdbId === tmdbId)
   }
@@ -447,13 +452,15 @@ export class WatchTracker {
   }
 
   static toggleFavorite(
-    type: "movie" | "tv" | "tv-channel" | "radio" | "actor" | "playlist",
+    type: "movie" | "tv" | "tv-channel" | "radio" | "actor" | "playlist" | "game",
     tmdbId: number,
     title: string,
     options?: {
       posterPath?: string
       profilePath?: string
       logoUrl?: string
+      streamUrl?: string
+      url?: string
     },
   ): boolean {
     if (typeof window === "undefined") return false

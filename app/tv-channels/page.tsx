@@ -90,6 +90,7 @@ export default function TVChannelsPage() {
     const isCurrentlyFavorite = WatchTracker.isFavorite("tv-channel", channel.id)
     WatchTracker.toggleFavorite("tv-channel", channel.id, channel.name, {
       logoUrl: channel.logo_url,
+      streamUrl: channel.stream_url,
     })
 
     // Mettre à jour l'état local
