@@ -258,12 +258,12 @@ export function VIPLeaderboard() {
           </CardDescription>
         </CardHeader>
         <CardContent className="px-4 sm:px-6">
-          <Tabs defaultValue="top-supporters" className="w-full">
+          <Tabs defaultValue="veterans" className="w-full">
             <TabsList className="grid w-full grid-cols-2 bg-gray-800/50 text-xs sm:text-sm">
-              <TabsTrigger value="top-supporters" className="data-[state=active]:bg-yellow-600/20 px-1 sm:px-3">
+              <TabsTrigger value="veterans" className="data-[state=active]:bg-purple-600/20 px-1 sm:px-3">
                 <Trophy className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Top Supporters</span>
-                <span className="sm:hidden">Top</span>
+                <span className="hidden sm:inline">Vétérans</span>
+                <span className="sm:hidden">Vétérans</span>
               </TabsTrigger>
               <TabsTrigger value="newest" className="data-[state=active]:bg-green-600/20 px-1 sm:px-3">
                 <Star className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
@@ -272,50 +272,46 @@ export function VIPLeaderboard() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="top-supporters" className="mt-6">
+            <TabsContent value="veterans" className="mt-6">
               <div className="space-y-3">
-                {topSupporters.length > 0 ? (
-                  topSupporters.map((supporter, index) => (
+                {oldestVIPs.length > 0 ? (
+                  oldestVIPs.map((vip, index) => (
                     <div
-                      key={supporter.id}
-                      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg transition-all duration-300 hover:scale-105 ${
-                        index === 0
-                          ? "bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 border border-yellow-500/30"
-                          : index === 1
-                            ? "bg-gradient-to-r from-gray-400/20 to-gray-500/20 border border-gray-400/30"
-                            : index === 2
-                              ? "bg-gradient-to-r from-amber-600/20 to-amber-700/20 border border-amber-600/30"
-                              : "bg-gray-700/30 border border-gray-600/30"
-                      }`}
+                      key={vip.id}
+                      className="flex items-center justify-between p-3 sm:p-4 rounded-lg bg-purple-500/10 border border-purple-500/20 transition-all duration-300 hover:scale-105"
                     >
                       <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                        <div className="flex-shrink-0">{getPositionIcon(index)}</div>
+                        <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                            <p
-                              className={`font-bold text-sm sm:text-base truncate ${getUsernameColor(supporter.level)}`}
-                            >
-                              {supporter.username}
+                            <p className={`font-bold text-sm sm:text-base truncate ${getUsernameColor(vip.level)}`}>
+                              {vip.username}
                             </p>
-                            {getVIPBadge(supporter.level)}
+                            {getVIPBadge(vip.level)}
+                            {getDaysSince(vip.subscriptionDate) >= 365 && (
+                              <Badge
+                                variant="secondary"
+                                className="text-purple-400 border-purple-400 text-xs animate-pulse"
+                              >
+                                VÉTÉRAN
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-xs sm:text-sm text-gray-400 truncate">
-                            Membre depuis {formatDate(supporter.subscriptionDate)}
+                            Membre depuis {formatDate(vip.subscriptionDate)}
                           </p>
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-green-400 text-sm sm:text-base">
-                          {supporter.totalContribution.toFixed(2)}€
-                        </p>
-                        <p className="text-xs text-gray-400">Total</p>
+                        <p className="text-xs sm:text-sm text-purple-400">{getDaysSince(vip.subscriptionDate)} jours</p>
+                        <p className="text-xs text-gray-400">d'ancienneté</p>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="text-center py-8 text-gray-400">
                     <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-sm sm:text-base">Soyez le premier à apparaître dans ce classement !</p>
+                    <p className="text-sm sm:text-base">Soyez parmi les premiers vétérans VIP !</p>
                   </div>
                 )}
               </div>
@@ -337,14 +333,6 @@ export function VIPLeaderboard() {
                               {vip.username}
                             </p>
                             {getVIPBadge(vip.level)}
-                            {getDaysSince(vip.subscriptionDate) <= 7 && (
-                              <Badge
-                                variant="secondary"
-                                className="text-green-400 border-green-400 text-xs animate-pulse"
-                              >
-                                NOUVEAU
-                              </Badge>
-                            )}
                           </div>
                           <p className="text-xs sm:text-sm text-gray-400 truncate">
                             Rejoint le {formatDate(vip.subscriptionDate)}

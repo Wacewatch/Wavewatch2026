@@ -116,12 +116,17 @@ export default function DashboardPage() {
   const handlePlayItem = (item: any) => {
     let playUrl = ""
 
+    console.log("[v0] Attempting to play item:", item)
+
     if (item.type === "tv-channel") {
-      playUrl = item.streamUrl || item.stream_url || ""
+      // Try multiple possible property names for TV channels
+      playUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl || ""
     } else if (item.type === "radio") {
-      playUrl = item.streamUrl || item.stream_url || ""
+      // Try multiple possible property names for radio stations
+      playUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl || ""
     } else if (item.type === "game") {
-      playUrl = item.url || item.game_url || ""
+      // Try multiple possible property names for games
+      playUrl = item.url || item.game_url || item.gameUrl || ""
     }
 
     if (playUrl) {
@@ -129,7 +134,9 @@ export default function DashboardPage() {
       setSelectedItem({ ...item, url: playUrl })
       setIsModalOpen(true)
     } else {
-      console.log("[v0] No playable URL found for item:", JSON.stringify(item))
+      console.error("[v0] No playable URL found for item:", JSON.stringify(item))
+      // Show a toast notification to the user
+      alert(`Impossible de lire "${item.title}". URL de streaming non disponible.`)
     }
   }
 
