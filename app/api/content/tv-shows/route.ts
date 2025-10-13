@@ -10,18 +10,15 @@ export async function GET(request: NextRequest) {
 
     let data
     if (useCache) {
+      // Utiliser le cache pour la première page
       if (page === 1) {
         data = await contentUpdater.getTrendingTVShowsCache()
       } else {
-        // For other pages, call the API directly
+        // Pour les autres pages, appeler directement l'API
         data = await getPopularTVShows(page)
       }
     } else {
       data = await getPopularTVShows(page)
-      if (page === 1) {
-        // Update the cache with fresh data
-        await contentUpdater.updateTrendingTVShows()
-      }
     }
 
     return NextResponse.json(data)

@@ -303,73 +303,6 @@ export function useMessaging() {
     }
   }
 
-  const deleteMessage = async (messageId: string) => {
-    if (!user?.id) return false
-
-    try {
-      console.log("[v0] Attempting to delete message:", messageId, "for user:", user.id)
-
-      const { data: messageCheck, error: checkError } = await supabase
-        .from("user_messages")
-        .select("id, recipient_id")
-        .eq("id", messageId)
-        .eq("recipient_id", user.id)
-        .maybeSingle()
-
-      if (checkError) {
-        console.error("[v0] Error checking message:", checkError)
-        throw checkError
-      }
-
-      if (!messageCheck) {
-        console.log("[v0] Message not found or not owned by user")
-        toast({
-          title: "Erreur",
-          description: "Message introuvable ou vous n'avez pas les permissions",
-          variant: "destructive",
-        })
-        return false
-      }
-
-      const { error: deleteError } = await supabase
-        .from("user_messages")
-        .delete()
-        .eq("id", messageId)
-        .eq("recipient_id", user.id)
-
-      if (deleteError) {
-        console.error("[v0] Supabase error deleting message:", deleteError)
-        throw deleteError
-      }
-
-      console.log("[v0] Message deleted successfully")
-
-      setMessages((prev) => {
-        const filtered = prev.filter((msg) => msg.id !== messageId)
-        console.log("[v0] Messages after deletion:", filtered.length)
-        return filtered
-      })
-
-      await loadMessages()
-
-      toast({
-        title: "Message supprimé",
-        description: "Le message a été supprimé avec succès",
-      })
-
-      await loadUnreadCount()
-      return true
-    } catch (error) {
-      console.error("[v0] Error deleting message:", error)
-      toast({
-        title: "Erreur",
-        description: "Impossible de supprimer le message. Vérifiez vos permissions.",
-        variant: "destructive",
-      })
-      return false
-    }
-  }
-
   return {
     messages,
     sentMessages,
@@ -378,7 +311,6 @@ export function useMessaging() {
     loading,
     sendMessage,
     markAsRead,
-    deleteMessage, // Export deleteMessage function
     blockUser,
     unblockUser,
     searchUsers,

@@ -22,25 +22,6 @@ export default function MoviesPage() {
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
-    const savedPage = sessionStorage.getItem("moviesPage")
-    const savedGenre = sessionStorage.getItem("moviesGenre")
-    const savedSort = sessionStorage.getItem("moviesSort")
-    const savedSearch = sessionStorage.getItem("moviesSearch")
-
-    if (savedPage) setCurrentPage(Number.parseInt(savedPage))
-    if (savedGenre) setSelectedGenre(savedGenre)
-    if (savedSort) setSortBy(savedSort)
-    if (savedSearch) setSearchQuery(savedSearch)
-  }, [])
-
-  useEffect(() => {
-    sessionStorage.setItem("moviesPage", currentPage.toString())
-    sessionStorage.setItem("moviesGenre", selectedGenre)
-    sessionStorage.setItem("moviesSort", sortBy)
-    sessionStorage.setItem("moviesSearch", searchQuery)
-  }, [currentPage, selectedGenre, sortBy, searchQuery])
-
-  useEffect(() => {
     const fetchGenres = async () => {
       try {
         const genresData = await getGenres("movie")
@@ -66,6 +47,7 @@ export default function MoviesPage() {
         } else if (selectedGenre !== "all") {
           data = await getMoviesByGenre(Number.parseInt(selectedGenre), currentPage)
         } else {
+          // Utiliser la nouvelle API qui utilise le cache
           const response = await fetch(`/api/content/movies?page=${currentPage}&cache=true`)
           if (!response.ok) throw new Error("Failed to fetch movies")
           data = await response.json()
@@ -93,7 +75,6 @@ export default function MoviesPage() {
           })
         }
 
-        console.log("[v0] Loaded movies for page", currentPage, ":", data.results?.length)
         setMovies(data.results || [])
         setTotalPages(data.total_pages || 1)
       } catch (error) {

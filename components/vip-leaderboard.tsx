@@ -40,27 +40,26 @@ export function VIPLeaderboard() {
   const loadData = async () => {
     setLoading(true)
     try {
-      const {
-        data: usersData,
-        error: usersError,
-        count,
-      } = await supabase.from("user_profiles").select("id, username, is_vip, created_at", { count: "exact" })
+      // Récupérer les vraies données depuis Supabase
+      const { data: usersData, error: usersError } = await supabase
+        .from("user_profiles")
+        .select("id, username, is_vip, created_at")
 
       if (usersError) {
         console.error("Error fetching users:", usersError)
         return
       }
 
-      console.log("[v0] VIP Leaderboard: Loaded", usersData?.length, "users (count:", count, ")")
-
       const totalUsers = usersData?.length || 0
       const vipUsers = usersData?.filter((user) => user.is_vip) || []
       const totalVIPCount = vipUsers.length
 
+      // Récupérer les stats VIP du système local (pour les badges et contributions)
       const localVipStats = VIPSystem.getVIPStats()
       const allLocalVIPs = VIPSystem.getVIPUsers().filter((user) => user.level !== "free")
 
-      const totalVIPAndPremium = totalVIPCount + localVipStats.totalVIPPlus
+      // Calculer le pourcentage réel - CORRECTION : Beta ne compte pas comme VIP
+      const totalVIPAndPremium = totalVIPCount + localVipStats.totalVIPPlus // Retirer totalBeta
       const vipPercentage = totalUsers > 0 ? (totalVIPAndPremium / totalUsers) * 100 : 0
 
       console.log("Debug VIP calculation:", {
@@ -68,51 +67,57 @@ export function VIPLeaderboard() {
         totalVIPCount,
         totalVIPPlus: localVipStats.totalVIPPlus,
         totalBeta: localVipStats.totalBeta,
-        totalVIPAndPremium,
+        totalVIPAndPremium, // Maintenant sans Beta
         vipPercentage,
       })
 
       setStats({
-        totalVIP: totalVIPCount,
-        totalVIPPlus: localVipStats.totalVIPPlus,
-        totalBeta: localVipStats.totalBeta,
+        totalVIP: totalVIPCount, // Utiliser les vrais chiffres de la DB
+        totalVIPPlus: localVipStats.totalVIPPlus, // Garder les VIP+ du système local
+        totalBeta: localVipStats.totalBeta, // Garder les Beta du système local
         monthlyRevenue: localVipStats.monthlyRevenue,
         totalRevenue: localVipStats.totalRevenue,
-        totalUsers: totalUsers,
-        vipPercentage: Math.round(vipPercentage * 10) / 10,
+        totalUsers: totalUsers, // Vrais utilisateurs de la DB
+        vipPercentage: Math.round(vipPercentage * 10) / 10, // Vrai pourcentage CORRIGÉ
       })
 
+      // Top contributeurs (système local pour les contributions)
       setTopSupporters([...allLocalVIPs].sort((a, b) => b.totalContribution - a.totalContribution).slice(0, 5))
 
+      // Nouveaux VIP - mélanger les données DB et locales
       const dbVIPs = vipUsers.map((user) => ({
         id: user.id,
         username: user.username,
         level: "vip" as const,
         subscriptionDate: new Date(user.created_at),
-        totalContribution: 0.99,
+        totalContribution: 0.99, // Contribution par défaut pour les VIP DB
         monthlyContribution: 0.99,
       }))
 
       const allVIPs = [...allLocalVIPs, ...dbVIPs]
 
+      // Supprimer les doublons basés sur l'username
       const uniqueVIPs = allVIPs.filter(
         (vip, index, self) => index === self.findIndex((v) => v.username === vip.username),
       )
 
+      // Nouveaux VIP (les plus récents)
       setNewestVIPs(
         [...uniqueVIPs]
           .sort((a, b) => new Date(b.subscriptionDate).getTime() - new Date(a.subscriptionDate).getTime())
           .slice(0, 5),
       )
 
+      // VIP les plus anciens (fidélité)
       setOldestVIPs(
         [...uniqueVIPs]
           .sort((a, b) => new Date(a.subscriptionDate).getTime() - new Date(b.subscriptionDate).getTime())
           .slice(0, 5),
       )
 
+      // Utilisateurs Beta
       const betaUsersList = allLocalVIPs.filter((user) => user.level === "beta")
-      setBetaUsers(betaUsersList.slice(0, 10))
+      setBetaUsers(betaUsersList.slice(0, 10)) // Top 10 Beta users
     } catch (error) {
       console.error("Error loading VIP data:", error)
     } finally {

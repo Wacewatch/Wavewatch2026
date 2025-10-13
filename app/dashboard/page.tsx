@@ -76,14 +76,16 @@ export default function DashboardPage() {
   const [userVIPLevel, setUserVIPLevel] = useState<VIPLevel>("free")
   const [watchedItems, setWatchedItems] = useState<any[]>([])
   const [favoriteItems, setFavoriteItems] = useState<any[]>([])
-  const [selectedItem, setSelectedItem] = useState<any>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const [monthlyGoal, setMonthlyGoal] = useState(() => {
     if (typeof window !== "undefined") {
       return Number.parseInt(localStorage.getItem("monthlyGoal") || "10")
     }
     return 10
   })
+
+  const [selectedMedia, setSelectedMedia] = useState<{ url: string; title: string; type: string } | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [audioPlayer, setAudioPlayer] = useState<HTMLAudioElement | null>(null)
 
   const refreshStats = () => {
     const userStats = WatchTracker.getStats()
@@ -97,7 +99,6 @@ export default function DashboardPage() {
       setUserVIPLevel(VIPSystem.getUserVIPStatus(user.id))
     }
 
-    // Force un re-render pour s'assurer que les stats sont à jour
     console.log("Stats refreshed:", userStats)
   }
 
@@ -106,26 +107,26 @@ export default function DashboardPage() {
     localStorage.setItem("monthlyGoal", newGoal.toString())
   }
 
-  const handlePlayItem = (item: any) => {
-    let playUrl = ""
+  const handleFavoriteClick = (item: any, e: React.MouseEvent) => {
+    if (item.type === "tv-channel" || item.type === "radio" || item.type === "game") {
+      e.preventDefault()
 
-    if (item.type === "tv-channel") {
-      // For TV channels, get the stream_url from the item
-      playUrl = item.stream_url || item.streamUrl || ""
-    } else if (item.type === "radio") {
-      // For radio stations, get the stream_url
-      playUrl = item.stream_url || item.streamUrl || ""
-    } else if (item.type === "game") {
-      // For retrogaming, get the url
-      playUrl = item.url || item.game_url || ""
-    }
-
-    if (playUrl) {
-      console.log("[v0] Opening player for:", item.title, "URL:", playUrl)
-      setSelectedItem({ ...item, url: playUrl })
-      setIsModalOpen(true)
-    } else {
-      console.log("[v0] No playable URL found for item:", JSON.stringify(item))
+      if (item.type === "radio") {
+        if (audioPlayer) {
+          audioPlayer.pause()
+        }
+        const audio = new Audio(item.logoUrl)
+        audio.crossOrigin = "anonymous"
+        audio.play().catch(console.error)
+        setAudioPlayer(audio)
+      } else {
+        setSelectedMedia({
+          url: item.logoUrl,
+          title: item.title,
+          type: item.type,
+        })
+        setIsModalOpen(true)
+      }
     }
   }
 
@@ -146,6 +147,10 @@ export default function DashboardPage() {
       window.removeEventListener("vip-updated", handleUpdate)
       window.removeEventListener("storage", handleUpdate)
       clearInterval(interval)
+      if (audioPlayer) {
+        audioPlayer.pause()
+        audioPlayer.src = ""
+      }
     }
   }, [user])
 
@@ -173,7 +178,6 @@ export default function DashboardPage() {
   const vipBadge = VIPSystem.getVIPBadge(userVIPLevel)
   const usernameColor = VIPSystem.getUsernameColor(userVIPLevel)
 
-  // Calculs de statistiques supplémentaires
   const totalHours = Math.floor(stats.totalWatchTime / 60)
   const totalDays = Math.floor(totalHours / 24)
   const currentMonth = new Date().getMonth()
@@ -244,7 +248,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Stats Cards principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <Card className="bg-gray-800 border-gray-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -295,7 +298,6 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Statistiques Like/Dislike détaillées */}
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-white">
@@ -380,7 +382,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Stats détaillées */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
@@ -439,7 +440,6 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Contenu regardé détaillé */}
         <Card className="bg-gray-800 border-gray-700">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-white">
@@ -469,7 +469,6 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Interesting Facts - Section améliorée */}
         {interestingFacts.length > 0 && (
           <Card className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border-blue-700">
             <CardHeader>
@@ -499,7 +498,6 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        {/* Tabs */}
         <Tabs defaultValue="history" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 bg-gray-800 border-gray-700">
             <TabsTrigger value="history" className="data-[state=active]:bg-gray-700 text-gray-300">
@@ -523,41 +521,19 @@ export default function DashboardPage() {
                   <>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                       {watchedItems.map((item) => {
-                        let imageUrl = ""
+                        let imageUrl = "/placeholder.svg?height=300&width=200"
 
-                        // Handle different item types with proper image URLs
-                        if (item.type === "tv-channel" || item.type === "radio") {
-                          // For TV channels and radio, use logoUrl if available
-                          imageUrl = item.logoUrl || ""
-                        } else if (item.type === "game") {
-                          // For games, use the game's image URL
-                          imageUrl = item.imageUrl || item.logoUrl || ""
-                        } else if (item.type === "playlist") {
-                          // For playlists, use the playlist's cover image
-                          imageUrl = item.coverImage || ""
-                        } else if (item.posterPath) {
-                          // For movies/TV shows, construct TMDB URL
+                        if (item.posterPath) {
                           if (item.posterPath.startsWith("http")) {
                             imageUrl = item.posterPath
                           } else {
                             imageUrl = `https://image.tmdb.org/t/p/w300${item.posterPath}`
                           }
                         } else if (item.profilePath) {
-                          // For actors
                           imageUrl = `https://image.tmdb.org/t/p/w300${item.profilePath}`
+                        } else if (item.logoUrl) {
+                          imageUrl = item.logoUrl
                         }
-
-                        // Fallback placeholder based on item type
-                        const fallbackImage =
-                          item.type === "tv-channel"
-                            ? "/placeholder.svg?height=300&width=200&text=TV"
-                            : item.type === "radio"
-                              ? "/placeholder.svg?height=300&width=200&text=Radio"
-                              : item.type === "game"
-                                ? "/placeholder.svg?height=300&width=200&text=Game"
-                                : item.type === "playlist"
-                                  ? "/placeholder.svg?height=300&width=200&text=Playlist"
-                                  : "/placeholder.svg?height=300&width=200&text=No+Image"
 
                         const getItemUrl = () => {
                           if (item.type === "movie") {
@@ -572,29 +548,19 @@ export default function DashboardPage() {
                           return `/movies/${item.tmdbId || item.id}`
                         }
 
-                        const isPlayableItem =
-                          item.type === "tv-channel" || item.type === "radio" || item.type === "game"
-
-                        const handleItemClick = (e: React.MouseEvent) => {
-                          if (isPlayableItem) {
-                            e.preventDefault()
-                            handlePlayItem(item)
-                          }
-                        }
-
                         return (
-                          <Link key={item.id} href={isPlayableItem ? "#" : getItemUrl()} onClick={handleItemClick}>
+                          <Link key={item.id} href={getItemUrl()}>
                             <div className="space-y-2 group cursor-pointer">
                               <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
                                 <Image
-                                  src={imageUrl || fallbackImage}
+                                  src={imageUrl || "/placeholder.svg"}
                                   alt={item.title}
                                   fill
                                   className="object-cover group-hover:scale-105 transition-transform"
                                   sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement
-                                    target.src = fallbackImage
+                                    target.src = "/placeholder.svg?height=300&width=200"
                                   }}
                                 />
                                 <div className="absolute top-2 right-2">
@@ -651,16 +617,9 @@ export default function DashboardPage() {
                   <>
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                       {favoriteItems.map((item) => {
-                        let imageUrl = ""
+                        let imageUrl = "/placeholder.svg?height=300&width=200"
 
-                        // Handle different item types with proper image URLs
-                        if (item.type === "tv-channel" || item.type === "radio") {
-                          imageUrl = item.logoUrl || ""
-                        } else if (item.type === "game") {
-                          imageUrl = item.imageUrl || item.logoUrl || ""
-                        } else if (item.type === "playlist") {
-                          imageUrl = item.coverImage || ""
-                        } else if (item.posterPath) {
+                        if (item.posterPath) {
                           if (item.posterPath.startsWith("http")) {
                             imageUrl = item.posterPath
                           } else {
@@ -668,21 +627,9 @@ export default function DashboardPage() {
                           }
                         } else if (item.profilePath) {
                           imageUrl = `https://image.tmdb.org/t/p/w300${item.profilePath}`
+                        } else if (item.logoUrl) {
+                          imageUrl = item.logoUrl
                         }
-
-                        // Fallback placeholder based on item type
-                        const fallbackImage =
-                          item.type === "tv-channel"
-                            ? "/placeholder.svg?height=300&width=200&text=TV"
-                            : item.type === "radio"
-                              ? "/placeholder.svg?height=300&width=200&text=Radio"
-                              : item.type === "game"
-                                ? "/placeholder.svg?height=300&width=200&text=Game"
-                                : item.type === "playlist"
-                                  ? "/placeholder.svg?height=300&width=200&text=Playlist"
-                                  : item.type === "actor"
-                                    ? "/placeholder.svg?height=300&width=200&text=Actor"
-                                    : "/placeholder.svg?height=300&width=200&text=No+Image"
 
                         const getItemUrl = () => {
                           switch (item.type) {
@@ -703,29 +650,68 @@ export default function DashboardPage() {
                           }
                         }
 
-                        const isPlayableItem =
+                        const shouldUseModal =
                           item.type === "tv-channel" || item.type === "radio" || item.type === "game"
 
-                        const handleItemClick = (e: React.MouseEvent) => {
-                          if (isPlayableItem) {
-                            e.preventDefault()
-                            handlePlayItem(item)
-                          }
-                        }
-
-                        return (
-                          <Link key={item.id} href={isPlayableItem ? "#" : getItemUrl()} onClick={handleItemClick}>
-                            <div className="space-y-2 group cursor-pointer">
+                        return shouldUseModal ? (
+                          <div key={item.id} onClick={(e) => handleFavoriteClick(item, e)} className="cursor-pointer">
+                            <div className="space-y-2 group">
                               <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
                                 <Image
-                                  src={imageUrl || fallbackImage}
+                                  src={imageUrl || "/placeholder.svg"}
                                   alt={item.title}
                                   fill
                                   className="object-cover group-hover:scale-105 transition-transform"
                                   sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement
-                                    target.src = fallbackImage
+                                    target.src = "/placeholder.svg?height=300&width=200"
+                                  }}
+                                />
+                                <div className="absolute top-2 right-2">
+                                  <Badge variant="secondary" className="bg-red-600 text-white text-xs">
+                                    <Heart className="w-3 h-3" />
+                                  </Badge>
+                                </div>
+                                <div className="absolute bottom-2 left-2">
+                                  <Badge variant="secondary" className="text-xs bg-gray-700 text-gray-300">
+                                    {item.type === "movie"
+                                      ? "Film"
+                                      : item.type === "tv"
+                                        ? "Série"
+                                        : item.type === "tv-channel"
+                                          ? "TV"
+                                          : item.type === "radio"
+                                            ? "Radio"
+                                            : item.type === "actor"
+                                              ? "Acteur"
+                                              : item.type === "playlist"
+                                                ? "Playlist"
+                                                : "Autre"}
+                                  </Badge>
+                                </div>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white">
+                                  {item.title}
+                                </p>
+                                <p className="text-xs text-gray-400">{new Date(item.addedAt).toLocaleDateString()}</p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <Link key={item.id} href={getItemUrl()}>
+                            <div className="space-y-2 group cursor-pointer">
+                              <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
+                                <Image
+                                  src={imageUrl || "/placeholder.svg"}
+                                  alt={item.title}
+                                  fill
+                                  className="object-cover group-hover:scale-105 transition-transform"
+                                  sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 16vw"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement
+                                    target.src = "/placeholder.svg?height=300&width=200"
                                   }}
                                 />
                                 <div className="absolute top-2 right-2">
@@ -784,15 +770,15 @@ export default function DashboardPage() {
         </Tabs>
       </div>
 
-      {selectedItem && (
+      {selectedMedia && (
         <IframeModal
           isOpen={isModalOpen}
           onClose={() => {
             setIsModalOpen(false)
-            setSelectedItem(null)
+            setSelectedMedia(null)
           }}
-          title={selectedItem.title}
-          src={selectedItem.url}
+          title={selectedMedia.title}
+          src={selectedMedia.url}
         />
       )}
     </div>

@@ -56,7 +56,7 @@ export function PlaylistManager() {
   const [formData, setFormData] = useState<PlaylistFormData>({
     title: "",
     description: "",
-    isPublic: true,
+    isPublic: false,
     themeColor: "#3B82F6",
   })
 
@@ -74,7 +74,7 @@ export function PlaylistManager() {
       setFormData({
         title: "",
         description: "",
-        isPublic: true,
+        isPublic: false,
         themeColor: "#3B82F6",
       })
     }
@@ -95,7 +95,7 @@ export function PlaylistManager() {
       setFormData({
         title: "",
         description: "",
-        isPublic: true,
+        isPublic: false,
         themeColor: "#3B82F6",
       })
     }
