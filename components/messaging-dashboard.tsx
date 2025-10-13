@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { MessageSquare, Send, Search, UserX, Mail, MailOpen, Plus, Shield, Trash2 } from "lucide-react"
+import { MessageSquare, Send, Search, UserX, Mail, MailOpen, Plus, Shield, Trash2, Reply } from "lucide-react"
 import { useMessaging } from "@/hooks/use-messaging"
 import { useAuth } from "@/components/auth-provider"
 import { formatDistanceToNow } from "date-fns"
@@ -49,6 +49,7 @@ export function MessagingDashboard() {
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [sending, setSending] = useState(false)
   const [allowMessages, setAllowMessages] = useState(true)
+  const [replyingTo, setReplyingTo] = useState<any>(null)
 
   const handleUserSearch = async (query: string) => {
     setUserSearch(query)
@@ -73,6 +74,7 @@ export function MessagingDashboard() {
       setMessageContent("")
       setUserSearch("")
       setSearchResults([])
+      setReplyingTo(null)
     }
 
     setSending(false)
@@ -93,6 +95,18 @@ export function MessagingDashboard() {
 
   const handleUnblockUser = async (userId: string) => {
     await unblockUser(userId)
+  }
+
+  const handleReply = (message: any, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setReplyingTo(message)
+    setSelectedRecipient({
+      id: message.sender_id,
+      username: message.sender_username,
+    })
+    setMessageSubject(message.subject ? `Re: ${message.subject}` : "Re: Votre message")
+    setMessageContent(`\n\n--- Message original de ${message.sender_username} ---\n${message.content}`)
+    setNewMessageOpen(true)
   }
 
   if (loading) {
@@ -130,9 +144,13 @@ export function MessagingDashboard() {
             </DialogTrigger>
             <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-md">
               <DialogHeader>
-                <DialogTitle className="text-white">Nouveau message</DialogTitle>
+                <DialogTitle className="text-white">
+                  {replyingTo ? "Répondre au message" : "Nouveau message"}
+                </DialogTitle>
                 <DialogDescription className="text-gray-400">
-                  Envoyez un message à un autre utilisateur
+                  {replyingTo
+                    ? `Répondre à ${replyingTo.sender_username}`
+                    : "Envoyez un message à un autre utilisateur"}
                 </DialogDescription>
               </DialogHeader>
 
@@ -143,14 +161,16 @@ export function MessagingDashboard() {
                   {selectedRecipient ? (
                     <div className="flex items-center justify-between p-2 bg-gray-800 rounded border border-gray-700">
                       <span className="text-white">{selectedRecipient.username}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedRecipient(null)}
-                        className="text-gray-400 hover:text-white"
-                      >
-                        <UserX className="w-4 h-4" />
-                      </Button>
+                      {!replyingTo && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedRecipient(null)}
+                          className="text-gray-400 hover:text-white"
+                        >
+                          <UserX className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     <>
@@ -308,8 +328,18 @@ export function MessagingDashboard() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={(e) => handleReply(message, e)}
+                          className="text-gray-400 hover:text-blue-400"
+                          title="Répondre"
+                        >
+                          <Reply className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={(e) => handleDeleteMessage(message.id, e)}
                           className="text-gray-400 hover:text-red-400"
+                          title="Supprimer"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -321,6 +351,7 @@ export function MessagingDashboard() {
                             handleBlockUser(message.sender_id)
                           }}
                           className="text-gray-400 hover:text-red-400"
+                          title="Bloquer l'utilisateur"
                         >
                           <Shield className="w-4 h-4" />
                         </Button>

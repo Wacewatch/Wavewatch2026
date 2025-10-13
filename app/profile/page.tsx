@@ -24,6 +24,7 @@ import {
   X,
   Flag as Flask,
   MessageSquare,
+  AlertCircle,
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { VIPSystem } from "@/lib/vip-system"
@@ -842,6 +843,56 @@ export default function ProfilePage() {
                     </Link>
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <AlertCircle className="h-5 w-5 text-orange-400" />
+                  Mes rapports de bug
+                </CardTitle>
+                <CardDescription className="text-gray-400">Suivez vos signalements de problèmes</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {bugReports.length === 0 ? (
+                  <p className="text-center text-gray-400 py-4 text-sm">Aucun rapport de bug pour le moment.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {bugReports.slice(0, 5).map((report) => (
+                      <div key={report.id} className="border border-gray-700 rounded-lg p-3 space-y-1 bg-gray-700/50">
+                        <div className="flex items-start justify-between gap-2">
+                          <h4 className="font-medium text-white text-sm line-clamp-1">{report.title}</h4>
+                          <Badge
+                            variant={
+                              report.status === "resolved"
+                                ? "default"
+                                : report.status === "in_progress"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                            className="text-xs flex-shrink-0"
+                          >
+                            {report.status === "open"
+                              ? "Ouvert"
+                              : report.status === "in_progress"
+                                ? "En cours"
+                                : "Résolu"}
+                          </Badge>
+                        </div>
+                        {report.contentTitle && <p className="text-xs text-gray-400">Contenu: {report.contentTitle}</p>}
+                        <p className="text-xs text-gray-500">
+                          {new Date(report.createdAt).toLocaleDateString("fr-FR")}
+                        </p>
+                      </div>
+                    ))}
+                    {bugReports.length > 5 && (
+                      <p className="text-xs text-gray-400 text-center pt-2">
+                        Et {bugReports.length - 5} autre(s) rapport(s)
+                      </p>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
