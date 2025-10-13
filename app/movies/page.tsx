@@ -22,6 +22,26 @@ export default function MoviesPage() {
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
+    // Restore page state from sessionStorage on mount
+    const savedPage = sessionStorage.getItem("moviesPage")
+    const savedGenre = sessionStorage.getItem("moviesGenre")
+    const savedSort = sessionStorage.getItem("moviesSort")
+    const savedSearch = sessionStorage.getItem("moviesSearch")
+
+    if (savedPage) setCurrentPage(Number.parseInt(savedPage))
+    if (savedGenre) setSelectedGenre(savedGenre)
+    if (savedSort) setSortBy(savedSort)
+    if (savedSearch) setSearchQuery(savedSearch)
+  }, [])
+
+  useEffect(() => {
+    sessionStorage.setItem("moviesPage", currentPage.toString())
+    sessionStorage.setItem("moviesGenre", selectedGenre)
+    sessionStorage.setItem("moviesSort", sortBy)
+    sessionStorage.setItem("moviesSearch", searchQuery)
+  }, [currentPage, selectedGenre, sortBy, searchQuery])
+
+  useEffect(() => {
     const fetchGenres = async () => {
       try {
         const genresData = await getGenres("movie")

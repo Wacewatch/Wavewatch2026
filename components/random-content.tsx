@@ -151,42 +151,59 @@ export function RandomContent() {
         model: "openai/gpt-4o-mini",
         prompt: `Tu es un expert en recommandation de films et séries. 
         
-Historique de visionnage de l'utilisateur: ${watchedTitles.join(", ")}
-Favoris de l'utilisateur: ${favoriteTitles.join(", ")}
+Historique de visionnage de l'utilisateur: ${watchedTitles.length > 0 ? watchedTitles.join(", ") : "Aucun historique"}
+Favoris de l'utilisateur: ${favoriteTitles.length > 0 ? favoriteTitles.join(", ") : "Aucun favori"}
 
 Contenu disponible (format: titre|type|id):
-${allContent.map((c) => `${c.title}|${c.type}|${c.id}`).join("\n")}
+${allContent
+  .slice(0, 50)
+  .map((c) => `${c.title}|${c.type}|${c.id}`)
+  .join("\n")}
 
 Analyse les préférences de l'utilisateur et recommande UN SEUL contenu parmi la liste disponible qui correspondrait le mieux à ses goûts.
 Réponds UNIQUEMENT avec l'ID du contenu recommandé et son type, au format: ID|TYPE
-Exemple: 12345|movie`,
+Exemple: 12345|movie
+
+IMPORTANT: Ne réponds qu'avec le format ID|TYPE, rien d'autre.`,
       })
 
-      const [recommendedId, recommendedType] = text.trim().split("|")
+      console.log("[v0] AI recommendation response:", text)
 
-      if (recommendedId && recommendedType) {
+      const trimmedText = text.trim()
+      const parts = trimmedText.split("|")
+
+      if (parts.length >= 2) {
+        const recommendedId = parts[0].trim()
+        const recommendedType = parts[1].trim().toLowerCase()
         const id = Number.parseInt(recommendedId)
-        if (recommendedType === "movie") {
-          router.push(`/movies/${id}`)
-        } else if (recommendedType === "anime") {
-          router.push(`/anime/${id}`)
-        } else {
-          router.push(`/tv-shows/${id}`)
-        }
-      } else {
-        const content = getRandomContent(allContent)
-        if (content) {
-          if (content.type === "movie") {
-            router.push(`/movies/${content.id}`)
-          } else if (content.type === "anime") {
-            router.push(`/anime/${content.id}`)
+
+        if (!isNaN(id) && (recommendedType === "movie" || recommendedType === "tv" || recommendedType === "anime")) {
+          if (recommendedType === "movie") {
+            router.push(`/movies/${id}`)
+          } else if (recommendedType === "anime") {
+            router.push(`/anime/${id}`)
           } else {
-            router.push(`/tv-shows/${content.id}`)
+            router.push(`/tv-shows/${id}`)
           }
+          return
         }
       }
+
+      console.log("[v0] AI response parsing failed, using random fallback")
+      const content = getRandomContent(allContent)
+      if (content) {
+        if (content.type === "movie") {
+          router.push(`/movies/${content.id}`)
+        } else if (content.type === "anime") {
+          router.push(`/anime/${content.id}`)
+        } else {
+          router.push(`/tv-shows/${content.id}`)
+        }
+      } else {
+        throw new Error("No content available")
+      }
     } catch (error) {
-      console.error("Error getting AI recommendation:", error)
+      console.error("[v0] Error getting AI recommendation:", error)
       setError("Erreur lors de la recommandation IA. Essayez la surprise aléatoire.")
     } finally {
       setIsAILoading(false)
