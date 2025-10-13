@@ -47,6 +47,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
   const [collection, setCollection] = useState<any>(null)
   const [userRating, setUserRating] = useState<"like" | "dislike" | null>(null)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
+  const [certification, setCertification] = useState<string | null>(null)
   const { user } = useAuth()
   const { toast } = useToast()
   const { preferences } = useUserPreferences()
@@ -98,6 +99,31 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
     fetchData()
   }, [movie.id, movie.belongs_to_collection])
 
+  useEffect(() => {
+    const fetchCertification = async () => {
+      try {
+        const response = await fetch(
+          `https://api.themoviedb.org/3/movie/${movie.id}/release_dates?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`,
+        )
+        if (response.ok) {
+          const data = await response.json()
+          // Find US or FR certification
+          const usRelease = data.results?.find((r: any) => r.iso_3166_1 === "US")
+          const frRelease = data.results?.find((r: any) => r.iso_3166_1 === "FR")
+
+          const cert = frRelease?.release_dates?.[0]?.certification || usRelease?.release_dates?.[0]?.certification
+          if (cert) {
+            setCertification(cert)
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching certification:", error)
+      }
+    }
+
+    fetchCertification()
+  }, [movie.id])
+
   const posterUrl = movie.poster_path
     ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
     : "/placeholder.svg?height=750&width=500"
@@ -110,21 +136,26 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
   const downloadUrl = `https://embed.wavewatch.xyz/download/movie?tmdb=${movie.id}`
 
   const handleWatch = async () => {
-    if (user && !isWatched && preferences.autoMarkWatched) {
+    if (user) {
       try {
+        console.log("[v0] Tracking watch for movie:", movie.title)
         WatchTracker.markAsWatched("movie", movie.id, movie.title, movie.runtime || 120, {
           genre: movie.genres[0]?.name,
           rating: Math.round(movie.vote_average),
           posterPath: movie.poster_path,
         })
 
-        setIsWatched(true)
+        // Only update the UI state if auto-mark is enabled
+        if (preferences.autoMarkWatched) {
+          setIsWatched(true)
+        }
+
         toast({
-          title: "Film marqué comme vu",
+          title: "Ajouté à l'historique",
           description: `${movie.title} a été ajouté à votre historique.`,
         })
       } catch (error) {
-        console.error("Error marking as watched:", error)
+        console.error("Error tracking watch:", error)
       }
     }
     setShowStreamingModal(true)
@@ -349,6 +380,11 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
                     <Clock className="w-5 h-5" />
                     <span>{movie.runtime} min</span>
                   </div>
+                )}
+                {certification && (
+                  <Badge variant="outline" className="border-orange-500 text-orange-400 font-semibold">
+                    {certification}
+                  </Badge>
                 )}
                 {/* Votes compacts */}
                 <div className="flex items-center gap-2 bg-gray-800/50 rounded-lg px-3 py-1">

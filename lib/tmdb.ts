@@ -7,7 +7,11 @@ const getUserAdultContentPreference = async (): Promise<boolean> => {
   if (typeof window === "undefined") return false
 
   try {
-    // Dispatch event to get user preferences from the hook
+    const storedPreference = localStorage.getItem("wavewatch_adult_content")
+    if (storedPreference !== null) {
+      return storedPreference === "true"
+    }
+
     const event = new CustomEvent("get-user-preferences")
     let preferences = null
 
@@ -18,22 +22,15 @@ const getUserAdultContentPreference = async (): Promise<boolean> => {
     window.addEventListener("user-preferences-response", handlePreferencesResponse)
     window.dispatchEvent(event)
 
-    // Wait a bit for the response
-    await new Promise((resolve) => setTimeout(resolve, 50)) // Augmenté le délai
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
     window.removeEventListener("user-preferences-response", handlePreferencesResponse)
 
     if (preferences && typeof preferences.showAdultContent === "boolean") {
+      localStorage.setItem("wavewatch_adult_content", preferences.showAdultContent.toString())
       return preferences.showAdultContent
     }
 
-    // Fallback to localStorage for backward compatibility
-    const storedPreference = localStorage.getItem("wavewatch_adult_content")
-    if (storedPreference !== null) {
-      return storedPreference === "true"
-    }
-
-    // Default to false (hide adult content by default)
     return false
   } catch (error) {
     console.error("Error getting adult content preference:", error)
@@ -148,7 +145,49 @@ const filterAdultContent = async (items: any[]) => {
     return items // Show all content including adult
   }
 
-  return items.filter((item) => !item.adult) // Filter out adult content
+  return items.filter((item) => {
+    // Filter by adult flag
+    if (item.adult) return false
+
+    // Filter by content rating for movies (check release_dates for certification)
+    if (item.release_dates?.results) {
+      for (const country of item.release_dates.results) {
+        for (const release of country.release_dates) {
+          if (release.certification && isAdultCertification(release.certification, country.iso_3166_1)) {
+            return false
+          }
+        }
+      }
+    }
+
+    // Filter by content rating for TV shows
+    if (item.content_ratings?.results) {
+      for (const rating of item.content_ratings.results) {
+        if (rating.rating && isAdultCertification(rating.rating, rating.iso_3166_1)) {
+          return false
+        }
+      }
+    }
+
+    return true
+  })
+}
+
+const isAdultCertification = (certification: string, country: string): boolean => {
+  const adultCertifications: Record<string, string[]> = {
+    US: ["NC-17", "R", "TV-MA"],
+    FR: ["18", "-18", "X"],
+    GB: ["18", "R18"],
+    DE: ["18", "FSK 18"],
+    CA: ["18A", "R", "A"],
+    AU: ["R18+", "MA15+"],
+    JP: ["R18+", "R15+"],
+    KR: ["청소년관람불가", "18"],
+    BR: ["18", "L"],
+  }
+
+  const countryRatings = adultCertifications[country] || []
+  return countryRatings.some((rating) => certification.includes(rating))
 }
 
 // Helper function to check if a show is anime
@@ -768,7 +807,6 @@ export async function getTVShowEpisode(tvId: number, seasonNumber: number, episo
 
 export function updateAdultContentPreference(showAdultContent: boolean) {
   if (typeof window !== "undefined") {
-    // Keep localStorage for backward compatibility
     localStorage.setItem("wavewatch_adult_content", showAdultContent.toString())
 
     // Dispatch custom event for database update

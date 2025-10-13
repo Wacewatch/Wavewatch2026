@@ -9,11 +9,17 @@ import { ArrowLeft, Star } from "lucide-react"
 import { WatchTracker } from "@/lib/watch-tracking"
 import Image from "next/image"
 import Link from "next/link"
+import { IframeModal } from "@/components/iframe-modal"
 
 export default function FavoritesPage() {
   const { user } = useAuth()
   const [favoriteItems, setFavoriteItems] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
+  const [selectedChannel, setSelectedChannel] = useState<any | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [currentRadio, setCurrentRadio] = useState<any | null>(null)
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -26,6 +32,65 @@ export default function FavoritesPage() {
     window.addEventListener("favorites-updated", handleUpdate)
     return () => window.removeEventListener("favorites-updated", handleUpdate)
   }, [])
+
+  useEffect(() => {
+    return () => {
+      if (audio) {
+        audio.pause()
+        audio.src = ""
+      }
+    }
+  }, [audio])
+
+  const handleTVChannelClick = (item: any) => {
+    if (item.streamUrl) {
+      setSelectedChannel({
+        name: item.title,
+        stream_url: item.streamUrl,
+      })
+      setIsModalOpen(true)
+    }
+  }
+
+  const handleRadioClick = (item: any) => {
+    if (!item.streamUrl) {
+      alert("URL de stream non disponible pour cette station")
+      return
+    }
+
+    if (audio) {
+      audio.pause()
+    }
+
+    if (currentRadio?.id === item.id && isPlaying) {
+      setIsPlaying(false)
+      setCurrentRadio(null)
+      return
+    }
+
+    const newAudio = new Audio(item.streamUrl)
+    newAudio.crossOrigin = "anonymous"
+
+    newAudio.addEventListener("canplay", () => {
+      newAudio
+        .play()
+        .then(() => {
+          setIsPlaying(true)
+          setCurrentRadio(item)
+        })
+        .catch((error) => {
+          console.error("Erreur de lecture:", error)
+          alert("Impossible de lire cette station radio. Veuillez réessayer.")
+        })
+    })
+
+    newAudio.addEventListener("error", (e) => {
+      console.error("Erreur audio:", e)
+      alert("Erreur lors du chargement de la station radio.")
+    })
+
+    setAudio(newAudio)
+  }
 
   if (!mounted) {
     return (
@@ -48,7 +113,6 @@ export default function FavoritesPage() {
     )
   }
 
-  // Grouper les favoris par type
   const groupedFavorites = favoriteItems.reduce(
     (acc, item) => {
       const type = item.type || "other"
@@ -117,6 +181,42 @@ export default function FavoritesPage() {
           </div>
         </div>
 
+        {currentRadio && isPlaying && (
+          <Card className="bg-gradient-to-r from-green-900/50 to-emerald-900/50 border-green-700">
+            <CardContent className="flex items-center justify-between p-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-md">
+                  <img
+                    src={currentRadio.logoUrl || "/placeholder.svg"}
+                    alt={currentRadio.title}
+                    className="w-full h-full object-contain p-1"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">{currentRadio.title}</h3>
+                  <p className="text-sm text-green-300">En cours de lecture...</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="flex space-x-1">
+                  <div className="w-1 h-4 bg-green-400 animate-pulse"></div>
+                  <div className="w-1 h-6 bg-green-400 animate-pulse" style={{ animationDelay: "0.1s" }}></div>
+                  <div className="w-1 h-3 bg-green-400 animate-pulse" style={{ animationDelay: "0.2s" }}></div>
+                  <div className="w-1 h-5 bg-green-400 animate-pulse" style={{ animationDelay: "0.3s" }}></div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleRadioClick(currentRadio)}
+                  className="border-green-500 text-green-300 hover:bg-green-900"
+                >
+                  Arrêter
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {favoriteItems.length === 0 ? (
           <Card className="bg-gray-800 border-gray-700">
             <CardContent className="text-center py-12">
@@ -164,53 +264,75 @@ export default function FavoritesPage() {
                           case "tv":
                             return `/tv-shows/${item.tmdbId}`
                           case "tv-channel":
-                            return `/tv-channels`
+                            return null
                           case "radio":
-                            return `/radio`
+                            return null
                           case "actor":
                             return `/actors/${item.tmdbId}`
                           case "playlist":
-                            return `/playlists/${item.id}` // Use item.id instead of tmdbId for playlists
+                            return `/playlists/${item.id}`
                           default:
                             return `/movies/${item.tmdbId}`
                         }
                       }
 
-                      return (
-                        <Link key={item.id} href={getItemUrl()}>
-                          <div className="space-y-2 group cursor-pointer">
-                            <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
-                              <Image
-                                src={imageUrl || "/placeholder.svg"}
-                                alt={item.title}
-                                fill
-                                className="object-cover group-hover:scale-105 transition-transform"
-                                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 12.5vw"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement
-                                  target.src = "/placeholder.svg?height=300&width=200"
-                                }}
-                              />
-                              <div className="absolute top-2 right-2">
-                                <Badge variant="secondary" className="bg-yellow-600 text-white text-xs">
-                                  <Star className="w-3 h-3" />
-                                </Badge>
-                              </div>
-                              <div className="absolute bottom-2 left-2">
-                                <Badge variant="secondary" className={`text-xs text-white ${getTypeColor(item.type)}`}>
-                                  {getTypeLabel(item.type).slice(0, -1)}
-                                </Badge>
-                              </div>
+                      const itemUrl = getItemUrl()
+
+                      const content = (
+                        <div className="space-y-2 group cursor-pointer" key={item.id}>
+                          <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
+                            <Image
+                              src={imageUrl || "/placeholder.svg"}
+                              alt={item.title}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform"
+                              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 12.5vw"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.src = "/placeholder.svg?height=300&width=200"
+                              }}
+                            />
+                            <div className="absolute top-2 right-2">
+                              <Badge variant="secondary" className="bg-yellow-600 text-white text-xs">
+                                <Star className="w-3 h-3" />
+                              </Badge>
                             </div>
-                            <div>
-                              <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white">
-                                {item.title}
-                              </p>
-                              <p className="text-xs text-gray-400">{new Date(item.addedAt).toLocaleDateString()}</p>
+                            <div className="absolute bottom-2 left-2">
+                              <Badge variant="secondary" className={`text-xs text-white ${getTypeColor(item.type)}`}>
+                                {getTypeLabel(item.type).slice(0, -1)}
+                              </Badge>
                             </div>
                           </div>
-                        </Link>
+                          <div>
+                            <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white">
+                              {item.title}
+                            </p>
+                            <p className="text-xs text-gray-400">{new Date(item.addedAt).toLocaleDateString()}</p>
+                          </div>
+                        </div>
                       )
+
+                      if (item.type === "tv-channel") {
+                        return (
+                          <div key={item.id} onClick={() => handleTVChannelClick(item)}>
+                            {content}
+                          </div>
+                        )
+                      } else if (item.type === "radio") {
+                        return (
+                          <div key={item.id} onClick={() => handleRadioClick(item)}>
+                            {content}
+                          </div>
+                        )
+                      } else if (itemUrl) {
+                        return (
+                          <Link key={item.id} href={itemUrl}>
+                            {content}
+                          </Link>
+                        )
+                      } else {
+                        return <div key={item.id}>{content}</div>
+                      }
                     })}
                   </div>
                 </CardContent>
@@ -219,6 +341,13 @@ export default function FavoritesPage() {
           </div>
         )}
       </div>
+
+      <IframeModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={selectedChannel?.name || ""}
+        src={selectedChannel?.stream_url || ""}
+      />
     </div>
   )
 }

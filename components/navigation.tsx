@@ -39,9 +39,9 @@ export function Navigation() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 group">
-            <div className="relative w-24 h-6 sm:w-32 sm:h-8 md:w-48 md:h-12 lg:w-64 lg:h-16 transition-transform group-hover:scale-105">
+            <div className="relative w-32 h-10 sm:w-40 sm:h-12 md:w-48 md:h-14 transition-transform group-hover:scale-105">
               <Image
-                src="/images/logo.png"
+                src="/images/logo_wavewatch.png"
                 alt="WaveWatch - Plateforme de Streaming Premium"
                 fill
                 className="object-contain drop-shadow-lg logo-glow"
@@ -153,7 +153,7 @@ export function Navigation() {
                   </DropdownMenuItem>
                   {!user.isVip && (
                     <DropdownMenuItem asChild>
-                      <Link href="/subscription" className="text-white hover:text-blue-300">
+                      <Link href="/subscription" className="text-yellow-400 hover:text-yellow-300">
                         <Crown className="w-4 h-4 mr-2" />
                         Devenir VIP
                       </Link>
@@ -203,9 +203,9 @@ export function Navigation() {
           <div className="container mx-auto px-4 py-6">
             <div className="flex justify-between items-center mb-6">
               <Link href="/" className="flex items-center space-x-3" onClick={() => setIsMenuOpen(false)}>
-                <div className="relative w-40 h-10">
+                <div className="relative w-32 h-10">
                   <Image
-                    src="/images/logo.png"
+                    src="/images/logo_wavewatch.png"
                     alt="WaveWatch - Plateforme de Streaming Premium"
                     fill
                     className="object-contain logo-glow"
@@ -285,7 +285,7 @@ export function Navigation() {
                     <Button
                       asChild
                       variant="ghost"
-                      className="justify-start text-white hover:text-blue-300 hover:bg-blue-900"
+                      className="justify-start text-yellow-400 hover:text-yellow-300 hover:bg-blue-900"
                     >
                       <Link href="/subscription" onClick={() => setIsMenuOpen(false)}>
                         <Crown className="w-4 h-4 mr-2" />

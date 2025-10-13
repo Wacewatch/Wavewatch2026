@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,7 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { MessageSquare, Send, Search, UserX, Mail, MailOpen, Plus, Shield } from "lucide-react"
+import { MessageSquare, Send, Search, UserX, Mail, MailOpen, Plus, Shield, Trash2 } from "lucide-react"
 import { useMessaging } from "@/hooks/use-messaging"
 import { useAuth } from "@/components/auth-provider"
 import { formatDistanceToNow } from "date-fns"
@@ -32,6 +34,7 @@ export function MessagingDashboard() {
     loading,
     sendMessage,
     markAsRead,
+    deleteMessage,
     blockUser,
     unblockUser,
     searchUsers,
@@ -77,6 +80,11 @@ export function MessagingDashboard() {
 
   const handleMarkAsRead = async (messageId: string) => {
     await markAsRead(messageId)
+  }
+
+  const handleDeleteMessage = async (messageId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    await deleteMessage(messageId)
   }
 
   const handleBlockUser = async (userId: string) => {
@@ -222,35 +230,22 @@ export function MessagingDashboard() {
 
       {/* Tabs */}
       <Tabs defaultValue="received" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 bg-gray-800 border-gray-700 gap-1">
-          <TabsTrigger
-            value="received"
-            className="data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-4"
-          >
-            <span className="hidden sm:inline">Messages reçus</span>
-            <span className="sm:hidden">Reçus</span>
+        <TabsList className="grid w-full grid-cols-3 bg-gray-800 border-gray-700">
+          <TabsTrigger value="received" className="data-[state=active]:bg-gray-700 text-gray-300">
+            Messages reçus
             {unreadCount > 0 && (
-              <Badge variant="destructive" className="ml-1 sm:ml-2 text-xs">
+              <Badge variant="destructive" className="ml-2 text-xs">
                 {unreadCount}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger
-            value="sent"
-            className="data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-4"
-          >
-            <span className="hidden sm:inline">Messages envoyés</span>
-            <span className="sm:hidden">Envoyés</span>
+          <TabsTrigger value="sent" className="data-[state=active]:bg-gray-700 text-gray-300">
+            Messages envoyés
           </TabsTrigger>
-          <TabsTrigger
-            value="blocked"
-            className="data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-4"
-          >
-            <span className="hidden sm:inline">Utilisateurs bloqués</span>
-            <span className="sm:hidden">Bloqués</span>
+          <TabsTrigger value="blocked" className="data-[state=active]:bg-gray-700 text-gray-300">
+            Utilisateurs bloqués
           </TabsTrigger>
         </TabsList>
-        {/* </CHANGE> */}
 
         <TabsContent value="received" className="space-y-4">
           {messages.length === 0 ? (
@@ -298,6 +293,14 @@ export function MessagingDashboard() {
                             locale: fr,
                           })}
                         </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => handleDeleteMessage(message.id, e)}
+                          className="text-gray-400 hover:text-red-400"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"

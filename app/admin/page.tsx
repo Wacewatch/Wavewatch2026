@@ -284,33 +284,39 @@ export default function AdminPage() {
     try {
       console.log("🔄 Chargement des utilisateurs...")
 
-      const { data, error } = await supabase.from("user_profiles").select("*").order("created_at", { ascending: false })
+      const {
+        data: allUsers,
+        error: usersError,
+        count,
+      } = await supabase.from("user_profiles").select("*", { count: "exact" }).order("created_at", { ascending: false })
 
-      if (error) {
-        console.error("❌ Erreur Supabase user profiles:", error)
-        throw error
+      if (usersError) {
+        console.error("❌ Erreur lors du chargement des utilisateurs:", usersError)
+        setUsers([]) // Ensure users state is empty if there's an error
+        throw usersError
+      } else {
+        console.log(`✅ ${allUsers?.length || 0} utilisateurs chargés depuis Supabase (count: ${count})`)
+
+        const correctedUsers = (allUsers || []).map((user) => ({
+          ...user,
+          // S'assurer que les booléens sont bien définis
+          is_admin: Boolean(user.is_admin),
+          is_vip: Boolean(user.is_vip),
+          is_vip_plus: Boolean(user.is_vip_plus),
+          is_beta: Boolean(user.is_beta),
+          // Définir un statut par défaut si non défini
+          status: user.status || "active",
+          // S'assurer que le nom d'utilisateur est défini
+          username: user.username || user.email?.split("@")[0] || "Utilisateur",
+        }))
+
+        setUsers(correctedUsers)
+        console.log(`[v0] Total users loaded: ${correctedUsers.length}`)
+        return { users: correctedUsers, count } // Return count as well
       }
-
-      console.log(`✅ ${data?.length || 0} utilisateurs chargés:`, data)
-
-      const correctedUsers = (data || []).map((user) => ({
-        ...user,
-        // S'assurer que les booléens sont bien définis
-        is_admin: Boolean(user.is_admin),
-        is_vip: Boolean(user.is_vip),
-        is_vip_plus: Boolean(user.is_vip_plus),
-        is_beta: Boolean(user.is_beta),
-        // Définir un statut par défaut si non défini
-        status: user.status || "active",
-        // S'assurer que le nom d'utilisateur est défini
-        username: user.username || user.email?.split("@")[0] || "Utilisateur",
-      }))
-
-      setUsers(correctedUsers)
-      return correctedUsers
     } catch (error) {
       console.error("❌ Erreur lors du chargement des utilisateurs:", error)
-      setUsers([])
+      setUsers([]) // Ensure users state is empty on error
       throw error
     }
   }
@@ -479,24 +485,9 @@ export default function AdminPage() {
     try {
       console.log("🔄 Calcul des statistiques...")
 
-      let actualUserCount = 0
-      try {
-        const { count: userCount, error: countError } = await supabase
-          .from("user_profiles")
-          .select("*", { count: "exact", head: true })
-
-        if (countError) {
-          console.error("❌ Erreur lors du comptage des utilisateurs:", countError)
-        } else {
-          actualUserCount = userCount || 0
-          console.log("✅ Nombre réel d'utilisateurs:", actualUserCount)
-        }
-      } catch (error) {
-        console.error("❌ Erreur lors de la requête de comptage:", error)
-      }
-
-      // Try to get stats from RPC function
-      let dbStats: any = null
+      // Essayer d'utiliser la fonction SQL pour obtenir les stats
+      let dbStats = null
+      let supabaseUserCount = 0
       try {
         const { data: statsData, error: statsError } = await supabase.rpc("get_admin_stats")
         if (!statsError && statsData) {
@@ -507,14 +498,26 @@ export default function AdminPage() {
         console.warn("⚠️ Impossible d'utiliser get_admin_stats, calcul manuel:", error)
       }
 
-      // Utiliser le comptage réel ou les données déjà chargées
+      // Utiliser les données déjà chargées en état local ou les stats de la DB
       const totalTVChannels = dbStats?.tv_channels || tvChannels.length
       const totalRadio = dbStats?.radio_stations || radioStations.length
       const totalRetrogaming = dbStats?.retrogaming_sources || retrogamingSources.length
-      const totalUsers = actualUserCount || users.length
 
-      const vipUsers = users.filter((u) => u.is_vip || u.is_vip_plus).length
-      const activeUsers = users.filter((u) => u.status === "active").length
+      // Fetch user count separately if not available from RPC or if we want to ensure it's fresh
+      if (!dbStats?.total_users) {
+        const { count, error: countError } = await supabase
+          .from("user_profiles")
+          .select("id", { count: "exact", head: true })
+        if (!countError && count !== null) {
+          supabaseUserCount = count
+        } else if (countError) {
+          console.error("❌ Erreur lors de la récupération du compte utilisateur:", countError)
+        }
+      }
+
+      const totalUsers = dbStats?.total_users || supabaseUserCount || users.length // Use the count from Supabase query or array length
+      const vipUsers = (users || []).filter((u) => u.is_vip || u.is_vip_plus).length
+      const activeUsers = (users || []).filter((u) => u.status === "active").length
 
       console.log("📊 Statistiques locales:", {
         totalTVChannels,
@@ -560,7 +563,7 @@ export default function AdminPage() {
 
       // Charger les statistiques d'activité depuis Supabase
       let totalViews = dbStats?.watched_items || 0
-      if (!dbStats) {
+      if (!dbStats?.watched_items) {
         try {
           const { count: watchedCount } = await supabase
             .from("watched_items")

@@ -47,6 +47,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
   const [isMarkingWatched, setIsMarkingWatched] = useState(false)
   const [userRating, setUserRating] = useState<"like" | "dislike" | null>(null)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
+  const [certification, setCertification] = useState<string | null>(null)
   const { user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
@@ -86,6 +87,31 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
     }
 
     fetchSimilarShows()
+  }, [show.id])
+
+  useEffect(() => {
+    const fetchCertification = async () => {
+      try {
+        const response = await fetch(
+          `https://api.themoviedb.org/3/tv/${show.id}/content_ratings?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`,
+        )
+        if (response.ok) {
+          const data = await response.json()
+          // Find US or FR rating
+          const usRating = data.results?.find((r: any) => r.iso_3166_1 === "US")
+          const frRating = data.results?.find((r: any) => r.iso_3166_1 === "FR")
+
+          const cert = frRating?.rating || usRating?.rating
+          if (cert) {
+            setCertification(cert)
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching certification:", error)
+      }
+    }
+
+    fetchCertification()
   }, [show.id])
 
   const posterUrl = show.poster_path
@@ -440,6 +466,11 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                 <div>
                   <span>{show.number_of_episodes} épisodes</span>
                 </div>
+                {certification && (
+                  <Badge variant="outline" className="border-orange-500 text-orange-400 font-semibold">
+                    {certification}
+                  </Badge>
+                )}
                 {/* Votes compacts */}
                 <div className="flex items-center gap-2 bg-gray-800/50 rounded-lg px-3 py-1">
                   <Button
