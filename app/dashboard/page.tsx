@@ -117,13 +117,10 @@ export default function DashboardPage() {
     let playUrl = ""
 
     if (item.type === "tv-channel") {
-      // For TV channels, get the stream_url from the item
-      playUrl = item.stream_url || item.streamUrl || ""
+      playUrl = item.streamUrl || item.stream_url || ""
     } else if (item.type === "radio") {
-      // For radio stations, get the stream_url
-      playUrl = item.stream_url || item.streamUrl || ""
+      playUrl = item.streamUrl || item.stream_url || ""
     } else if (item.type === "game") {
-      // For retrogaming, get the url
       playUrl = item.url || item.game_url || ""
     }
 

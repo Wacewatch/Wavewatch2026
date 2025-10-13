@@ -58,6 +58,7 @@ export default function FavoritesPage() {
         })
         setIsModalOpen(true)
       } else {
+        console.log("[v0] No stream URL found for TV channel:", item)
         alert("URL de stream non disponible pour cette chaîne")
       }
       return
@@ -67,6 +68,7 @@ export default function FavoritesPage() {
     if (item.type === "radio") {
       const streamUrl = item.streamUrl || item.stream_url
       if (!streamUrl) {
+        console.log("[v0] No stream URL found for radio:", item)
         alert("URL de stream non disponible pour cette station")
         return
       }
@@ -117,6 +119,7 @@ export default function FavoritesPage() {
         })
         setIsModalOpen(true)
       } else {
+        console.log("[v0] No game URL found:", item)
         alert("URL de jeu non disponible")
       }
       return

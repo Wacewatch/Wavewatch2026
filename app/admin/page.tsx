@@ -27,7 +27,6 @@ import {
   Eye,
   EyeOff,
   BarChart3,
-  DollarSign,
   FileText,
   Zap,
   Trophy,
@@ -745,12 +744,24 @@ export default function AdminPage() {
       switch (type) {
         case "tvchannel":
           setTvChannels((prev) => [result.data, ...prev])
+          toast({
+            title: "Chaîne TV ajoutée",
+            description: `${formData.name} a été ajoutée avec succès.`,
+          })
           break
         case "radio":
           setRadioStations((prev) => [result.data, ...prev])
+          toast({
+            title: "Station radio ajoutée",
+            description: `${formData.name} a été ajoutée avec succès.`,
+          })
           break
         case "retrogaming-source":
           setRetrogamingSources((prev) => [result.data, ...prev])
+          toast({
+            title: "Source retrogaming ajoutée",
+            description: `${formData.name} a été ajoutée avec succès.`,
+          })
           break
       }
 
@@ -796,8 +807,6 @@ export default function AdminPage() {
           })
           break
       }
-
-      toast({ title: "Ajouté avec succès", description: `${type} ajouté à la base de données.` })
 
       // Recharger les statistiques
       await loadStatistics()
@@ -1445,1396 +1454,1404 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Administration WaveWatch</h1>
-        <p className="text-muted-foreground">Tableau de bord complet pour gérer votre plateforme de streaming</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="container mx-auto px-4 py-8 space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold">Administration WaveWatch</h1>
+          <p className="text-muted-foreground">Tableau de bord complet pour gérer votre plateforme de streaming</p>
+        </div>
 
-      <Tabs defaultValue="dashboard" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="dashboard" className="flex items-center gap-1">
-            <BarChart3 className="w-4 h-4" />
-            <span className="hidden sm:inline">Dashboard</span>
-          </TabsTrigger>
-          <TabsTrigger value="tvchannels" className="flex items-center gap-1">
-            <Zap className="w-4 h-4" />
-            <span className="hidden sm:inline">TV ({tvChannels.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="radio" className="flex items-center gap-1">
-            <Radio className="w-4 h-4" />
-            <span className="hidden sm:inline">Radio ({radioStations.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="retrogaming" className="flex items-center gap-1">
-            <Trophy className="w-4 h-4" />
-            <span className="hidden sm:inline">Rétro ({retrogamingSources.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-1">
-            <Users className="w-4 h-4" />
-            <span className="hidden sm:inline">Users ({users.length})</span>
-          </TabsTrigger>
-          <TabsTrigger value="changelogs" className="flex items-center gap-1">
-            <FileText className="w-4 h-4" />
-            <span className="hidden sm:inline">Logs ({changelogs.length})</span>
-          </TabsTrigger>
-        </TabsList>
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="dashboard" className="flex items-center gap-1">
+              <BarChart3 className="w-4 h-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+            </TabsTrigger>
+            <TabsTrigger value="tvchannels" className="flex items-center gap-1">
+              <Zap className="w-4 h-4" />
+              <span className="hidden sm:inline">TV ({tvChannels.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="radio" className="flex items-center gap-1">
+              <Radio className="w-4 h-4" />
+              <span className="hidden sm:inline">Radio ({radioStations.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="retrogaming" className="flex items-center gap-1">
+              <Trophy className="w-4 h-4" />
+              <span className="hidden sm:inline">Rétro ({retrogamingSources.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-1">
+              <Users className="w-4 h-4" />
+              <span className="hidden sm:inline">Users ({users.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="changelogs" className="flex items-center gap-1">
+              <FileText className="w-4 h-4" />
+              <span className="hidden sm:inline">Logs ({changelogs.length})</span>
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Dashboard avec Statistiques */}
-        <TabsContent value="dashboard" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 border-blue-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-blue-800">Contenu Total</CardTitle>
-                <FileText className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-900">{stats.totalContent.toLocaleString()}</div>
-                <p className="text-xs text-blue-600">+12% ce mois</p>
-              </CardContent>
-            </Card>
+          {/* Dashboard avec Statistiques */}
+          <TabsContent value="dashboard" className="space-y-6">
+            {/* Stats Cards - Only showing Total Content and Total Users */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="bg-gradient-to-br from-blue-50 to-cyan-100 border-blue-200">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-blue-800">Contenu Total</CardTitle>
+                  <Film className="h-4 w-4 text-blue-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-900">{stats.totalContent.toLocaleString()}</div>
+                  <p className="text-xs text-blue-600">Films, séries, chaînes TV, radios, jeux</p>
+                </CardContent>
+              </Card>
 
-            <Card className="bg-gradient-to-br from-green-50 to-emerald-100 border-green-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-green-800">Utilisateurs</CardTitle>
-                <Users className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-900">{stats.totalUsers.toLocaleString()}</div>
-                <p className="text-xs text-green-600">+{stats.vipUsers} VIP</p>
-              </CardContent>
-            </Card>
+              <Card className="bg-gradient-to-br from-green-50 to-emerald-100 border-green-200">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-green-800">Utilisateurs</CardTitle>
+                  <Users className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-900">{stats.totalUsers.toLocaleString()}</div>
+                  <p className="text-xs text-green-600">+{stats.vipUsers} VIP</p>
+                </CardContent>
+              </Card>
+            </div>
 
-            <Card className="bg-gradient-to-br from-purple-50 to-violet-100 border-purple-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-purple-800">Vues Totales</CardTitle>
-                <Eye className="h-4 w-4 text-purple-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-900">{stats.totalViews.toLocaleString()}</div>
-                <p className="text-xs text-purple-600">+8% cette semaine</p>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-orange-50 to-amber-100 border-orange-200">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-orange-800">Revenus VIP</CardTitle>
-                <DollarSign className="h-4 w-4 text-orange-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-900">{stats.totalRevenue.toLocaleString()}€</div>
-                <p className="text-xs text-orange-600">+15% ce mois</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Modules de mise à jour TMDB et état du système */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Module de mise à jour TMDB */}
-            <Card className="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 border-slate-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <Activity className="w-5 h-5 text-cyan-400" />
-                  Mise à jour TMDB
-                </CardTitle>
-                <CardDescription className="text-slate-300">
-                  Forcer la mise à jour du contenu depuis l'API TMDB
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <Button
-                    onClick={() => handleContentUpdate("movies")}
-                    disabled={isUpdating}
-                    className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white border-0 shadow-lg"
-                    size="sm"
-                  >
-                    <Tv className="w-4 h-4 mr-2" />
-                    {isUpdating ? "..." : "Films"}
-                  </Button>
-
-                  <Button
-                    onClick={() => handleContentUpdate("tvshows")}
-                    disabled={isUpdating}
-                    className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white border-0 shadow-lg"
-                    size="sm"
-                  >
-                    <Tv className="w-4 h-4 mr-2" />
-                    {isUpdating ? "..." : "Séries"}
-                  </Button>
-
-                  <Button
-                    onClick={() => handleContentUpdate("anime")}
-                    disabled={isUpdating}
-                    className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white border-0 shadow-lg"
-                    size="sm"
-                  >
-                    <Tv className="w-4 h-4 mr-2" />
-                    {isUpdating ? "..." : "Animés"}
-                  </Button>
-
-                  <Button
-                    onClick={() => handleContentUpdate("calendar")}
-                    disabled={isUpdating}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg"
-                    size="sm"
-                  >
-                    <Calendar className="w-4 h-4 mr-2" />
-                    {isUpdating ? "..." : "Calendrier"}
-                  </Button>
-                </div>
-
-                <Button
-                  onClick={() => handleContentUpdate("all")}
-                  disabled={isUpdating}
-                  className="w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-600 hover:from-orange-600 hover:via-red-600 hover:to-pink-700 text-white shadow-xl"
-                  size="sm"
-                >
-                  <Zap className="w-4 h-4 mr-2" />
-                  {isUpdating ? "Mise à jour en cours..." : "Tout mettre à jour"}
-                </Button>
-
-                {lastUpdate && (
-                  <div className="flex items-center gap-2 text-sm text-slate-400 mt-3">
-                    <Clock className="w-4 h-4" />
-                    Dernière mise à jour : {lastUpdate}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Module d'état du système amélioré */}
-            <Card className="bg-gradient-to-br from-emerald-50 to-teal-100 border-emerald-200">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-emerald-800">
-                  <Shield className="w-5 h-5 text-emerald-600" />
-                  État du système
-                </CardTitle>
-                <CardDescription className="text-emerald-700">Surveillance en temps réel</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-emerald-200 shadow-sm">
-                    <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <div className="flex-1">
-                      <p className="text-emerald-800 font-medium">API TMDB</p>
-                      <p className="text-sm text-emerald-600">
-                        {systemCheck.results.tmdb.status === "operational" ? "Opérationnel" : "Hors ligne"}
-                      </p>
-                    </div>
-                    <div className="text-xs text-emerald-600 font-mono">{systemCheck.results.tmdb.responseTime}</div>
-                  </div>
-
-                  <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-blue-200 shadow-sm">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                    <div className="flex-1">
-                      <p className="text-blue-800 font-medium">Base de données</p>
-                      <p className="text-sm text-blue-600">
-                        {systemCheck.results.database.status === "connected" ? "Connectée" : "Déconnectée"}
-                      </p>
-                    </div>
-                    <div className="text-xs text-blue-600 font-mono">{systemCheck.results.database.responseTime}</div>
-                  </div>
-
-                  <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-purple-200 shadow-sm">
-                    <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
-                    <div className="flex-1">
-                      <p className="text-purple-800 font-medium">Serveurs</p>
-                      <p className="text-sm text-purple-600">
-                        {systemCheck.results.servers.status === "online" ? "En ligne" : "Hors ligne"}
-                      </p>
-                    </div>
-                    <div className="text-xs text-purple-600 font-mono">{systemCheck.results.servers.responseTime}</div>
-                  </div>
-
-                  <div className="pt-4 border-t border-emerald-200">
+            {/* Modules de mise à jour TMDB et état du système */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Module de mise à jour TMDB */}
+              <Card className="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <Activity className="w-5 h-5 text-cyan-400" />
+                    Mise à jour TMDB
+                  </CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Forcer la mise à jour du contenu depuis l'API TMDB
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3 mb-4">
                     <Button
-                      onClick={handleSystemCheck}
-                      disabled={systemCheck.checking}
-                      className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg"
+                      onClick={() => handleContentUpdate("movies")}
+                      disabled={isUpdating}
+                      className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white border-0 shadow-lg"
+                      size="sm"
                     >
-                      {systemCheck.checking ? (
-                        <>
-                          <Clock className="w-4 h-4 mr-2 animate-spin" />
-                          Vérification en cours...
-                        </>
-                      ) : (
-                        <>
-                          <Shield className="w-4 h-4 mr-2" />
-                          Vérifier le système
-                        </>
-                      )}
+                      <Tv className="w-4 h-4 mr-2" />
+                      {isUpdating ? "..." : "Films"}
                     </Button>
 
-                    {systemCheck.lastCheck && (
-                      <div className="flex items-center gap-2 text-xs text-emerald-600 mt-3 justify-center">
-                        <Clock className="w-3 h-3" />
-                        Dernière vérification : {systemCheck.lastCheck}
+                    <Button
+                      onClick={() => handleContentUpdate("tvshows")}
+                      disabled={isUpdating}
+                      className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white border-0 shadow-lg"
+                      size="sm"
+                    >
+                      <Tv className="w-4 h-4 mr-2" />
+                      {isUpdating ? "..." : "Séries"}
+                    </Button>
+
+                    <Button
+                      onClick={() => handleContentUpdate("anime")}
+                      disabled={isUpdating}
+                      className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white border-0 shadow-lg"
+                      size="sm"
+                    >
+                      <Tv className="w-4 h-4 mr-2" />
+                      {isUpdating ? "..." : "Animés"}
+                    </Button>
+
+                    <Button
+                      onClick={() => handleContentUpdate("calendar")}
+                      disabled={isUpdating}
+                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg"
+                      size="sm"
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      {isUpdating ? "..." : "Calendrier"}
+                    </Button>
+                  </div>
+
+                  <Button
+                    onClick={() => handleContentUpdate("all")}
+                    disabled={isUpdating}
+                    className="w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-600 hover:from-orange-600 hover:via-red-600 hover:to-pink-700 text-white shadow-xl"
+                    size="sm"
+                  >
+                    <Zap className="w-4 h-4 mr-2" />
+                    {isUpdating ? "Mise à jour en cours..." : "Tout mettre à jour"}
+                  </Button>
+
+                  {lastUpdate && (
+                    <div className="flex items-center gap-2 text-sm text-slate-400 mt-3">
+                      <Clock className="w-4 h-4" />
+                      Dernière mise à jour : {lastUpdate}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Module d'état du système amélioré */}
+              <Card className="bg-gradient-to-br from-emerald-50 to-teal-100 border-emerald-200">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-emerald-800">
+                    <Shield className="w-5 h-5 text-emerald-600" />
+                    État du système
+                  </CardTitle>
+                  <CardDescription className="text-emerald-700">Surveillance en temps réel</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-emerald-200 shadow-sm">
+                      <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                      <div className="flex-1">
+                        <p className="text-emerald-800 font-medium">API TMDB</p>
+                        <p className="text-sm text-emerald-600">
+                          {systemCheck.results.tmdb.status === "operational" ? "Opérationnel" : "Hors ligne"}
+                        </p>
                       </div>
-                    )}
+                      <div className="text-xs text-emerald-600 font-mono">{systemCheck.results.tmdb.responseTime}</div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-blue-200 shadow-sm">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+                      <div className="flex-1">
+                        <p className="text-blue-800 font-medium">Base de données</p>
+                        <p className="text-sm text-blue-600">
+                          {systemCheck.results.database.status === "connected" ? "Connectée" : "Déconnectée"}
+                        </p>
+                      </div>
+                      <div className="text-xs text-blue-600 font-mono">{systemCheck.results.database.responseTime}</div>
+                    </div>
+
+                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-purple-200 shadow-sm">
+                      <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
+                      <div className="flex-1">
+                        <p className="text-purple-800 font-medium">Serveurs</p>
+                        <p className="text-sm text-purple-600">
+                          {systemCheck.results.servers.status === "online" ? "En ligne" : "Hors ligne"}
+                        </p>
+                      </div>
+                      <div className="text-xs text-purple-600 font-mono">
+                        {systemCheck.results.servers.responseTime}
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-emerald-200">
+                      <Button
+                        onClick={handleSystemCheck}
+                        disabled={systemCheck.checking}
+                        className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg"
+                      >
+                        {systemCheck.checking ? (
+                          <>
+                            <Clock className="w-4 h-4 mr-2 animate-spin" />
+                            Vérification en cours...
+                          </>
+                        ) : (
+                          <>
+                            <Shield className="w-4 h-4 mr-2" />
+                            Vérifier le système
+                          </>
+                        )}
+                      </Button>
+
+                      {systemCheck.lastCheck && (
+                        <div className="flex items-center gap-2 text-xs text-emerald-600 mt-3 justify-center">
+                          <Clock className="w-3 h-3" />
+                          Dernière vérification : {systemCheck.lastCheck}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Module Contenu par Type - Design amélioré */}
+            <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-gray-700" />
+                  Contenu par Type
+                </CardTitle>
+                <CardDescription>Répartition du contenu disponible sur la plateforme</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                  <div className="relative group">
+                    <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <div className="flex flex-col items-center text-center">
+                        <Film className="w-8 h-8 mb-3 opacity-90" />
+                        <div className="text-2xl font-bold mb-1">{stats.contentByType.movies.toLocaleString()}</div>
+                        <div className="text-sm opacity-90">Films</div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-br from-red-400/20 to-transparent rounded-xl"></div>
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <div className="flex flex-col items-center text-center">
+                        <Clapperboard className="w-8 h-8 mb-3 opacity-90" />
+                        <div className="text-2xl font-bold mb-1">{stats.contentByType.tvShows.toLocaleString()}</div>
+                        <div className="text-sm opacity-90">Séries</div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-transparent rounded-xl"></div>
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <div className="flex flex-col items-center text-center">
+                        <Sparkles className="w-8 h-8 mb-3 opacity-90" />
+                        <div className="text-2xl font-bold mb-1">{stats.contentByType.anime.toLocaleString()}</div>
+                        <div className="text-sm opacity-90">Animés</div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-400/20 to-transparent rounded-xl"></div>
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <div className="flex flex-col items-center text-center">
+                        <Monitor className="w-8 h-8 mb-3 opacity-90" />
+                        <div className="text-2xl font-bold mb-1">{stats.contentByType.tvChannels.toLocaleString()}</div>
+                        <div className="text-sm opacity-90">Chaînes TV</div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-br from-green-400/20 to-transparent rounded-xl"></div>
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <div className="flex flex-col items-center text-center">
+                        <Headphones className="w-8 h-8 mb-3 opacity-90" />
+                        <div className="text-2xl font-bold mb-1">{stats.contentByType.radio.toLocaleString()}</div>
+                        <div className="text-sm opacity-90">Radio</div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-br from-orange-400/20 to-transparent rounded-xl"></div>
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <div className="flex flex-col items-center text-center">
+                        <Gamepad2 className="w-8 h-8 mb-3 opacity-90" />
+                        <div className="text-2xl font-bold mb-1">
+                          {stats.contentByType.retrogaming.toLocaleString()}
+                        </div>
+                        <div className="text-sm opacity-90">Retrogaming</div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-400/20 to-transparent rounded-xl"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between text-sm text-gray-600">
+                    <span>Total du contenu disponible</span>
+                    <span className="font-bold text-lg text-gray-900">{stats.totalContent.toLocaleString()}</span>
+                  </div>
+                  <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-1000"
+                      style={{ width: "85%" }}
+                    ></div>
+                  </div>
+                  <div className="mt-2 text-xs text-gray-500">
+                    Croissance de +12% ce mois • Mise à jour automatique via TMDB
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Module Contenu par Type - Design amélioré */}
-          <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-gray-700" />
-                Contenu par Type
-              </CardTitle>
-              <CardDescription>Répartition du contenu disponible sur la plateforme</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                <div className="relative group">
-                  <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <div className="flex flex-col items-center text-center">
-                      <Film className="w-8 h-8 mb-3 opacity-90" />
-                      <div className="text-2xl font-bold mb-1">{stats.contentByType.movies.toLocaleString()}</div>
-                      <div className="text-sm opacity-90">Films</div>
+            {/* Module d'activités récentes */}
+            <Card className="col-span-full">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Activités Récentes
+                  </CardTitle>
+                  <CardDescription>Toutes les actions des utilisateurs en temps réel</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={loadRecentActivities} disabled={activityLoading}>
+                  <Clock className="w-4 h-4 mr-2" />
+                  {activityLoading ? "Actualisation..." : "Actualiser"}
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {recentActivities.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                      <p>Aucune activité récente</p>
                     </div>
-                    <div className="absolute inset-0 bg-gradient-to-br from-red-400/20 to-transparent rounded-xl"></div>
-                  </div>
-                </div>
+                  ) : (
+                    recentActivities.map((activity) => {
+                      const Icon = activity.icon
+                      const timeAgo = formatTimeAgo(activity.timestamp)
 
-                <div className="relative group">
-                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <div className="flex flex-col items-center text-center">
-                      <Clapperboard className="w-8 h-8 mb-3 opacity-90" />
-                      <div className="text-2xl font-bold mb-1">{stats.contentByType.tvShows.toLocaleString()}</div>
-                      <div className="text-sm opacity-90">Séries</div>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-transparent rounded-xl"></div>
-                  </div>
-                </div>
-
-                <div className="relative group">
-                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <div className="flex flex-col items-center text-center">
-                      <Sparkles className="w-8 h-8 mb-3 opacity-90" />
-                      <div className="text-2xl font-bold mb-1">{stats.contentByType.anime.toLocaleString()}</div>
-                      <div className="text-sm opacity-90">Animés</div>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-br from-purple-400/20 to-transparent rounded-xl"></div>
-                  </div>
-                </div>
-
-                <div className="relative group">
-                  <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <div className="flex flex-col items-center text-center">
-                      <Monitor className="w-8 h-8 mb-3 opacity-90" />
-                      <div className="text-2xl font-bold mb-1">{stats.contentByType.tvChannels.toLocaleString()}</div>
-                      <div className="text-sm opacity-90">Chaînes TV</div>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-br from-green-400/20 to-transparent rounded-xl"></div>
-                  </div>
-                </div>
-
-                <div className="relative group">
-                  <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <div className="flex flex-col items-center text-center">
-                      <Headphones className="w-8 h-8 mb-3 opacity-90" />
-                      <div className="text-2xl font-bold mb-1">{stats.contentByType.radio.toLocaleString()}</div>
-                      <div className="text-sm opacity-90">Radio</div>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-br from-orange-400/20 to-transparent rounded-xl"></div>
-                  </div>
-                </div>
-
-                <div className="relative group">
-                  <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <div className="flex flex-col items-center text-center">
-                      <Gamepad2 className="w-8 h-8 mb-3 opacity-90" />
-                      <div className="text-2xl font-bold mb-1">{stats.contentByType.retrogaming.toLocaleString()}</div>
-                      <div className="text-sm opacity-90">Retrogaming</div>
-                    </div>
-                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-400/20 to-transparent rounded-xl"></div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
-                <div className="flex items-center justify-between text-sm text-gray-600">
-                  <span>Total du contenu disponible</span>
-                  <span className="font-bold text-lg text-gray-900">{stats.totalContent.toLocaleString()}</span>
-                </div>
-                <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-1000"
-                    style={{ width: "85%" }}
-                  ></div>
-                </div>
-                <div className="mt-2 text-xs text-gray-500">
-                  Croissance de +12% ce mois • Mise à jour automatique via TMDB
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Module d'activités récentes */}
-          <Card className="col-span-full">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
-                  Activités Récentes
-                </CardTitle>
-                <CardDescription>Toutes les actions des utilisateurs en temps réel</CardDescription>
-              </div>
-              <Button variant="outline" size="sm" onClick={loadRecentActivities} disabled={activityLoading}>
-                <Clock className="w-4 h-4 mr-2" />
-                {activityLoading ? "Actualisation..." : "Actualiser"}
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {recentActivities.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucune activité récente</p>
-                  </div>
-                ) : (
-                  recentActivities.map((activity) => {
-                    const Icon = activity.icon
-                    const timeAgo = formatTimeAgo(activity.timestamp)
-
-                    return (
-                      <div
-                        key={activity.id}
-                        className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                      >
-                        <div className={`p-2 rounded-full ${activity.bgColor}`}>
-                          <Icon className={`w-4 h-4 ${activity.color}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-sm">{activity.user}</span>
-                            <span className="text-xs text-muted-foreground">{timeAgo}</span>
-                            {activity.contentType && (
-                              <Badge variant="outline" className="text-xs">
-                                {activity.contentType === "movie"
-                                  ? "Film"
-                                  : activity.contentType === "tv"
-                                    ? "Série"
-                                    : activity.contentType === "anime"
-                                      ? "Animé"
-                                      : activity.contentType === "tv-channel"
-                                        ? "TV"
-                                        : activity.contentType === "radio"
-                                          ? "Radio"
-                                          : activity.contentType === "game"
-                                            ? "Jeu"
-                                            : activity.contentType}
+                      return (
+                        <div
+                          key={activity.id}
+                          className="flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                        >
+                          <div className={`p-2 rounded-full ${activity.bgColor}`}>
+                            <Icon className={`w-4 h-4 ${activity.color}`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-sm">{activity.user}</span>
+                              <span className="text-xs text-muted-foreground">{timeAgo}</span>
+                              {activity.contentType && (
+                                <Badge variant="outline" className="text-xs">
+                                  {activity.contentType === "movie"
+                                    ? "Film"
+                                    : activity.contentType === "tv"
+                                      ? "Série"
+                                      : activity.contentType === "anime"
+                                        ? "Animé"
+                                        : activity.contentType === "tv-channel"
+                                          ? "TV"
+                                          : activity.contentType === "radio"
+                                            ? "Radio"
+                                            : activity.contentType === "game"
+                                              ? "Jeu"
+                                              : activity.contentType}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">{activity.description}</p>
+                            {activity.details && (
+                              <p className="text-xs text-muted-foreground mt-1">{activity.details}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {activity.type === "rating" && (
+                              <Badge
+                                variant={activity.rating === "like" ? "default" : "destructive"}
+                                className="text-xs"
+                              >
+                                {activity.rating === "like" ? "+1" : "-1"}
+                              </Badge>
+                            )}
+                            {activity.type === "watched" && (
+                              <Badge variant="secondary" className="text-xs">
+                                <Play className="w-3 h-3 mr-1" />
+                                Vu
+                              </Badge>
+                            )}
+                            {activity.type === "new_user" && (
+                              <Badge variant="default" className="text-xs bg-green-600">
+                                <UserPlus className="w-3 h-3 mr-1" />
+                                Nouveau
+                              </Badge>
+                            )}
+                            {activity.type === "login" && (
+                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                                <LogIn className="w-3 h-3 mr-1" />
+                                Connexion
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">{activity.description}</p>
-                          {activity.details && <p className="text-xs text-muted-foreground mt-1">{activity.details}</p>}
                         </div>
-                        <div className="flex items-center gap-2">
-                          {activity.type === "rating" && (
-                            <Badge variant={activity.rating === "like" ? "default" : "destructive"} className="text-xs">
-                              {activity.rating === "like" ? "+1" : "-1"}
-                            </Badge>
-                          )}
-                          {activity.type === "watched" && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Play className="w-3 h-3 mr-1" />
-                              Vu
-                            </Badge>
-                          )}
-                          {activity.type === "new_user" && (
-                            <Badge variant="default" className="text-xs bg-green-600">
-                              <UserPlus className="w-3 h-3 mr-1" />
-                              Nouveau
-                            </Badge>
-                          )}
-                          {activity.type === "login" && (
-                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                              <LogIn className="w-3 h-3 mr-1" />
-                              Connexion
-                            </Badge>
-                          )}
-                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Gestion des Chaînes TV */}
+          <TabsContent value="tvchannels" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Chaînes TV</CardTitle>
+                  <CardDescription>Gérez votre catalogue de chaînes de télévision en direct</CardDescription>
+                </div>
+                <Dialog open={activeModal === "tvchannel"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setEditingItem(null)
+                        setTvChannelForm({
+                          name: "",
+                          category: "",
+                          country: "",
+                          language: "",
+                          stream_url: "",
+                          logo_url: "",
+                          description: "",
+                          quality: "HD",
+                          is_active: true,
+                        })
+                        setActiveModal("tvchannel")
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter une chaîne
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} une chaîne TV</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nom de la chaîne</Label>
+                        <Input
+                          value={tvChannelForm.name}
+                          onChange={(e) => setTvChannelForm({ ...tvChannelForm, name: e.target.value })}
+                          placeholder="TF1, France 2, Canal+..."
+                        />
                       </div>
-                    )
-                  })
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Gestion des Chaînes TV */}
-        <TabsContent value="tvchannels" className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Gestion des Chaînes TV</CardTitle>
-                <CardDescription>Gérez votre catalogue de chaînes de télévision en direct</CardDescription>
-              </div>
-              <Dialog open={activeModal === "tvchannel"} onOpenChange={(open) => !open && setActiveModal(null)}>
-                <DialogTrigger asChild>
-                  <Button
-                    onClick={() => {
-                      setEditingItem(null)
-                      setTvChannelForm({
-                        name: "",
-                        category: "",
-                        country: "",
-                        language: "",
-                        stream_url: "",
-                        logo_url: "",
-                        description: "",
-                        quality: "HD",
-                        is_active: true,
-                      })
-                      setActiveModal("tvchannel")
-                    }}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Ajouter une chaîne
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} une chaîne TV</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nom de la chaîne</Label>
-                      <Input
-                        value={tvChannelForm.name}
-                        onChange={(e) => setTvChannelForm({ ...tvChannelForm, name: e.target.value })}
-                        placeholder="TF1, France 2, Canal+..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Catégorie</Label>
-                      <Select
-                        value={tvChannelForm.category}
-                        onValueChange={(value) => setTvChannelForm({ ...tvChannelForm, category: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner une catégorie" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Généraliste">Généraliste</SelectItem>
-                          <SelectItem value="Sport">Sport</SelectItem>
-                          <SelectItem value="Premium">Premium</SelectItem>
-                          <SelectItem value="Jeunesse">Jeunesse</SelectItem>
-                          <SelectItem value="Documentaire">Documentaire</SelectItem>
-                          <SelectItem value="Gaming">Gaming</SelectItem>
-                          <SelectItem value="Divertissement">Divertissement</SelectItem>
-                          <SelectItem value="Info">Information</SelectItem>
-                          <SelectItem value="Musique">Musique</SelectItem>
-                          <SelectItem value="Cinéma">Cinéma</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Pays</Label>
-                      <Input
-                        value={tvChannelForm.country}
-                        onChange={(e) => setTvChannelForm({ ...tvChannelForm, country: e.target.value })}
-                        placeholder="France, USA, UK..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Langue</Label>
-                      <Input
-                        value={tvChannelForm.language}
-                        onChange={(e) => setTvChannelForm({ ...tvChannelForm, language: e.target.value })}
-                        placeholder="Français, Anglais..."
-                      />
-                    </div>
-                    <div className="space-y-2 col-span-2">
-                      <Label>URL de diffusion (Stream)</Label>
-                      <Input
-                        value={tvChannelForm.stream_url}
-                        onChange={(e) => setTvChannelForm({ ...tvChannelForm, stream_url: e.target.value })}
-                        placeholder="https://embed.wavewatch.xyz/embed/..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>URL du logo</Label>
-                      <Input
-                        value={tvChannelForm.logo_url}
-                        onChange={(e) => setTvChannelForm({ ...tvChannelForm, logo_url: e.target.value })}
-                        placeholder="https://example.com/logo.png"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Qualité</Label>
-                      <Select
-                        value={tvChannelForm.quality}
-                        onChange={(value) => setTvChannelForm({ ...tvChannelForm, quality: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner une qualité" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="HD">HD</SelectItem>
-                          <SelectItem value="SD">SD</SelectItem>
-                          <SelectItem value="4K">4K</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Statut</Label>
-                      <Select
-                        value={tvChannelForm.is_active ? "active" : "inactive"}
-                        onValueChange={(value) => setTvChannelForm({ ...tvChannelForm, is_active: value === "active" })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="active">Actif</SelectItem>
-                          <SelectItem value="inactive">Inactif</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2 col-span-2">
-                      <Label>Description</Label>
-                      <Textarea
-                        value={tvChannelForm.description}
-                        onChange={(e) => setTvChannelForm({ ...tvChannelForm, description: e.target.value })}
-                        placeholder="Description de la chaîne..."
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setActiveModal(null)}>
-                      Annuler
-                    </Button>
-                    <Button
-                      onClick={() =>
-                        editingItem ? handleUpdate("tvchannel", tvChannelForm) : handleAdd("tvchannel", tvChannelForm)
-                      }
-                    >
-                      {editingItem ? "Modifier" : "Ajouter"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="Rechercher une chaîne TV..."
-                    value={searchTerms.tvchannels || ""}
-                    onChange={(e) => setSearchTerms({ ...searchTerms, tvchannels: e.target.value })}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Catégorie</TableHead>
-                    <TableHead>Pays</TableHead>
-                    <TableHead>Qualité</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {getFilteredData(tvChannels, "tvchannels").map((channel) => (
-                    <TableRow key={channel.id}>
-                      <TableCell className="font-medium">{channel.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{channel.category}</Badge>
-                      </TableCell>
-                      <TableCell>{channel.country}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{channel.quality}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={channel.is_active === true ? "default" : "secondary"}>
-                          {channel.is_active === true ? "Actif" : "Inactif"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => toggleStatus("tvchannel", channel.id)}>
-                            {channel.is_active === true ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit("tvchannel", channel)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDelete("tvchannel", channel.id)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {tvChannels.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Tv className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Aucune chaîne TV trouvée</p>
-                  <p className="text-sm">Ajoutez votre première chaîne TV pour commencer</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Gestion Radio FM */}
-        <TabsContent value="radio" className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Gestion des Stations Radio FM</CardTitle>
-                <CardDescription>Gérez votre catalogue de stations radio en direct</CardDescription>
-              </div>
-              <Dialog open={activeModal === "radio"} onOpenChange={(open) => !open && setActiveModal(null)}>
-                <DialogTrigger asChild>
-                  <Button
-                    onClick={() => {
-                      setEditingItem(null)
-                      setRadioForm({
-                        name: "",
-                        genre: "",
-                        country: "",
-                        frequency: "",
-                        stream_url: "",
-                        logo_url: "",
-                        description: "",
-                        website: "",
-                        is_active: true,
-                      })
-                      setActiveModal("radio")
-                    }}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Ajouter une station
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} une station radio</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nom de la station</Label>
-                      <Input
-                        value={radioForm.name}
-                        onChange={(e) => setRadioForm({ ...radioForm, name: e.target.value })}
-                        placeholder="NRJ, RTL, France Inter..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Genre</Label>
-                      <Select
-                        value={radioForm.genre}
-                        onValueChange={(value) => setRadioForm({ ...radioForm, genre: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un genre" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Pop">Pop</SelectItem>
-                          <SelectItem value="Rock">Rock</SelectItem>
-                          <SelectItem value="Rap/Hip-Hop">Rap/Hip-Hop</SelectItem>
-                          <SelectItem value="Jazz">Jazz</SelectItem>
-                          <SelectItem value="Classique">Classique</SelectItem>
-                          <SelectItem value="Électronique">Électronique</SelectItem>
-                          <SelectItem value="Reggae">Reggae</SelectItem>
-                          <SelectItem value="Country">Country</SelectItem>
-                          <SelectItem value="Blues">Blues</SelectItem>
-                          <SelectItem value="Folk">Folk</SelectItem>
-                          <SelectItem value="Talk/News">Talk/News</SelectItem>
-                          <SelectItem value="Variété">Variété</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Pays</Label>
-                      <Select
-                        value={radioForm.country}
-                        onValueChange={(value) => setRadioForm({ ...radioForm, country: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un pays" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="France">France</SelectItem>
-                          <SelectItem value="USA">États-Unis</SelectItem>
-                          <SelectItem value="UK">Royaume-Uni</SelectItem>
-                          <SelectItem value="Germany">Allemagne</SelectItem>
-                          <SelectItem value="Spain">Espagne</SelectItem>
-                          <SelectItem value="Italy">Italie</SelectItem>
-                          <SelectItem value="Canada">Canada</SelectItem>
-                          <SelectItem value="Belgium">Belgique</SelectItem>
-                          <SelectItem value="Switzerland">Suisse</SelectItem>
-                          <SelectItem value="International">International</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Fréquence</Label>
-                      <Input
-                        value={radioForm.frequency}
-                        onChange={(e) => setRadioForm({ ...radioForm, frequency: e.target.value })}
-                        placeholder="100.3 FM, 87.8 FM..."
-                      />
-                    </div>
-                    <div className="space-y-2 col-span-2">
-                      <Label>URL de diffusion (Stream)</Label>
-                      <Input
-                        value={radioForm.stream_url}
-                        onChange={(e) => setRadioForm({ ...radioForm, stream_url: e.target.value })}
-                        placeholder="https://stream.radio.com/..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>URL du logo</Label>
-                      <Input
-                        value={radioForm.logo_url}
-                        onChange={(e) => setRadioForm({ ...radioForm, logo_url: e.target.value })}
-                        placeholder="https://example.com/logo.png"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Site web (optionnel)</Label>
-                      <Input
-                        value={radioForm.website}
-                        onChange={(e) => setRadioForm({ ...radioForm, website: e.target.value })}
-                        placeholder="https://nrj.fr"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Statut</Label>
-                      <Select
-                        value={radioForm.is_active ? "active" : "inactive"}
-                        onValueChange={(value) => setRadioForm({ ...radioForm, is_active: value === "active" })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="active">Actif</SelectItem>
-                          <SelectItem value="inactive">Inactif</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2 col-span-2">
-                      <Label>Description</Label>
-                      <Textarea
-                        value={radioForm.description}
-                        onChange={(e) => setRadioForm({ ...radioForm, description: e.target.value })}
-                        placeholder="Description de la station radio..."
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setActiveModal(null)}>
-                      Annuler
-                    </Button>
-                    <Button
-                      onClick={() => (editingItem ? handleUpdate("radio", radioForm) : handleAdd("radio", radioForm))}
-                    >
-                      {editingItem ? "Modifier" : "Ajouter"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="Rechercher une station radio..."
-                    value={searchTerms.radio || ""}
-                    onChange={(e) => setSearchTerms({ ...searchTerms, radio: e.target.value })}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Genre</TableHead>
-                    <TableHead>Pays</TableHead>
-                    <TableHead>Fréquence</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {getFilteredData(radioStations, "radio").map((station) => (
-                    <TableRow key={station.id}>
-                      <TableCell className="font-medium">{station.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{station.genre}</Badge>
-                      </TableCell>
-                      <TableCell>{station.country}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{station.frequency}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={station.is_active === true ? "default" : "secondary"}>
-                          {station.is_active === true ? "Actif" : "Inactif"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm" onClick={() => toggleStatus("radio", station.id)}>
-                            {station.is_active === true ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit("radio", station)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDelete("radio", station.id)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {radioStations.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Radio className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Aucune station radio trouvée</p>
-                  <p className="text-sm">Ajoutez votre première station radio pour commencer</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Gestion Retrogaming */}
-        <TabsContent value="retrogaming" className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Gestion des Sources Retrogaming</CardTitle>
-                <CardDescription>Gérez votre catalogue de sources de jeux rétro</CardDescription>
-              </div>
-              <Dialog
-                open={activeModal === "retrogaming-source"}
-                onOpenChange={(open) => !open && setActiveModal(null)}
-              >
-                <DialogTrigger asChild>
-                  <Button
-                    onClick={() => {
-                      setEditingItem(null)
-                      setRetrogamingSourceForm({
-                        name: "",
-                        description: "",
-                        url: "",
-                        color: "bg-blue-600",
-                        category: "",
-                        is_active: true,
-                      })
-                      setActiveModal("retrogaming-source")
-                    }}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Ajouter une source
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} une source retrogaming</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Nom de la source</Label>
-                      <Input
-                        value={retrogamingSourceForm.name}
-                        onChange={(e) => setRetrogamingSourceForm({ ...retrogamingSourceForm, name: e.target.value })}
-                        placeholder="RetroArch, MAME, Dolphin..."
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Catégorie</Label>
-                      <Select
-                        value={retrogamingSourceForm.category}
-                        onValueChange={(value) =>
-                          setRetrogamingSourceForm({ ...retrogamingSourceForm, category: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner une catégorie" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Émulateur">Émulateur</SelectItem>
-                          <SelectItem value="Console">Console</SelectItem>
-                          <SelectItem value="Arcade">Arcade</SelectItem>
-                          <SelectItem value="PC">PC</SelectItem>
-                          <SelectItem value="Mobile">Mobile</SelectItem>
-                          <SelectItem value="Homebrew">Homebrew</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2 col-span-2">
-                      <Label>URL</Label>
-                      <Input
-                        value={retrogamingSourceForm.url}
-                        onChange={(e) => setRetrogamingSourceForm({ ...retrogamingSourceForm, url: e.target.value })}
-                        placeholder="https://retroarch.com"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Couleur</Label>
-                      <Select
-                        value={retrogamingSourceForm.color}
-                        onValueChange={(value) => setRetrogamingSourceForm({ ...retrogamingSourceForm, color: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="bg-blue-600">Bleu</SelectItem>
-                          <SelectItem value="bg-red-600">Rouge</SelectItem>
-                          <SelectItem value="bg-green-600">Vert</SelectItem>
-                          <SelectItem value="bg-purple-600">Violet</SelectItem>
-                          <SelectItem value="bg-orange-600">Orange</SelectItem>
-                          <SelectItem value="bg-pink-600">Rose</SelectItem>
-                          <SelectItem value="bg-indigo-600">Indigo</SelectItem>
-                          <SelectItem value="bg-yellow-600">Jaune</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Statut</Label>
-                      <Select
-                        value={retrogamingSourceForm.is_active ? "active" : "inactive"}
-                        onValueChange={(value) =>
-                          setRetrogamingSourceForm({ ...retrogamingSourceForm, is_active: value === "active" })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="active">Actif</SelectItem>
-                          <SelectItem value="inactive">Inactif</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2 col-span-2">
-                      <Label>Description</Label>
-                      <Textarea
-                        value={retrogamingSourceForm.description}
-                        onChange={(e) =>
-                          setRetrogamingSourceForm({ ...retrogamingSourceForm, description: e.target.value })
-                        }
-                        placeholder="Description de la source retrogaming..."
-                        rows={3}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setActiveModal(null)}>
-                      Annuler
-                    </Button>
-                    <Button
-                      onClick={() =>
-                        editingItem
-                          ? handleUpdate("retrogaming-source", retrogamingSourceForm)
-                          : handleAdd("retrogaming-source", retrogamingSourceForm)
-                      }
-                    >
-                      {editingItem ? "Modifier" : "Ajouter"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="Rechercher une source retrogaming..."
-                    value={searchTerms.retrogaming || ""}
-                    onChange={(e) => setSearchTerms({ ...searchTerms, retrogaming: e.target.value })}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nom</TableHead>
-                    <TableHead>Catégorie</TableHead>
-                    <TableHead>Couleur</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {getFilteredData(retrogamingSources, "retrogaming").map((source) => (
-                    <TableRow key={source.id}>
-                      <TableCell className="font-medium">{source.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{source.category}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className={`w-6 h-6 rounded ${source.color}`}></div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={source.is_active === true ? "default" : "secondary"}>
-                          {source.is_active === true ? "Actif" : "Inactif"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleStatus("retrogaming-source", source.id)}
-                          >
-                            {source.is_active === true ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit("retrogaming-source", source)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete("retrogaming-source", source.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {retrogamingSources.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Aucune source retrogaming trouvée</p>
-                  <p className="text-sm">Ajoutez votre première source retrogaming pour commencer</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Gestion des Utilisateurs */}
-        <TabsContent value="users" className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Gestion des Utilisateurs</CardTitle>
-                <CardDescription>Gérez les comptes utilisateurs et leurs privilèges</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="Rechercher un utilisateur..."
-                    value={searchTerms.users || ""}
-                    onChange={(e) => setSearchTerms({ ...searchTerms, users: e.target.value })}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Utilisateur</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Privilèges</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {getFilteredData(users, "users").map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.username}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            user.status === "active"
-                              ? "default"
-                              : user.status === "banned"
-                                ? "destructive"
-                                : "secondary"
+                      <div className="space-y-2">
+                        <Label>Catégorie</Label>
+                        <Select
+                          value={tvChannelForm.category}
+                          onValueChange={(value) => setTvChannelForm({ ...tvChannelForm, category: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une catégorie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Généraliste">Généraliste</SelectItem>
+                            <SelectItem value="Sport">Sport</SelectItem>
+                            <SelectItem value="Premium">Premium</SelectItem>
+                            <SelectItem value="Jeunesse">Jeunesse</SelectItem>
+                            <SelectItem value="Documentaire">Documentaire</SelectItem>
+                            <SelectItem value="Gaming">Gaming</SelectItem>
+                            <SelectItem value="Divertissement">Divertissement</SelectItem>
+                            <SelectItem value="Info">Information</SelectItem>
+                            <SelectItem value="Musique">Musique</SelectItem>
+                            <SelectItem value="Cinéma">Cinéma</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Pays</Label>
+                        <Input
+                          value={tvChannelForm.country}
+                          onChange={(e) => setTvChannelForm({ ...tvChannelForm, country: e.target.value })}
+                          placeholder="France, USA, UK..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Langue</Label>
+                        <Input
+                          value={tvChannelForm.language}
+                          onChange={(e) => setTvChannelForm({ ...tvChannelForm, language: e.target.value })}
+                          placeholder="Français, Anglais..."
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de diffusion (Stream)</Label>
+                        <Input
+                          value={tvChannelForm.stream_url}
+                          onChange={(e) => setTvChannelForm({ ...tvChannelForm, stream_url: e.target.value })}
+                          placeholder="https://embed.wavewatch.xyz/embed/..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>URL du logo</Label>
+                        <Input
+                          value={tvChannelForm.logo_url}
+                          onChange={(e) => setTvChannelForm({ ...tvChannelForm, logo_url: e.target.value })}
+                          placeholder="https://example.com/logo.png"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Qualité</Label>
+                        <Select
+                          value={tvChannelForm.quality}
+                          onValueChange={(value) => setTvChannelForm({ ...tvChannelForm, quality: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une qualité" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="HD">HD</SelectItem>
+                            <SelectItem value="SD">SD</SelectItem>
+                            <SelectItem value="4K">4K</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Statut</Label>
+                        <Select
+                          value={tvChannelForm.is_active ? "active" : "inactive"}
+                          onValueChange={(value) =>
+                            setTvChannelForm({ ...tvChannelForm, is_active: value === "active" })
                           }
                         >
-                          {user.status === "active" ? "Actif" : user.status === "banned" ? "Banni" : "Inactif"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1 flex-wrap">
-                          {user.is_admin && (
-                            <Badge variant="destructive" className="text-xs">
-                              <Shield className="w-3 h-3 mr-1" />
-                              Admin
-                            </Badge>
-                          )}
-                          {user.is_vip_plus && (
-                            <Badge variant="secondary" className="text-purple-600 border-purple-400 text-xs">
-                              <Crown className="w-3 h-3 mr-1" />
-                              VIP+
-                            </Badge>
-                          )}
-                          {user.is_vip && !user.is_vip_plus && (
-                            <Badge variant="secondary" className="text-yellow-600 border-yellow-400 text-xs">
-                              <Crown className="w-3 h-3 mr-1" />
-                              VIP
-                            </Badge>
-                          )}
-                          {user.is_beta && (
-                            <Badge variant="secondary" className="text-cyan-400 border-cyan-400 text-xs">
-                              <Flask className="w-3 h-3 mr-1" />
-                              BETA
-                            </Badge>
-                          )}
-                          {!user.is_admin && !user.is_vip && !user.is_vip_plus && !user.is_beta && (
-                            <Badge variant="outline" className="text-xs">
-                              Standard
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Button variant="outline" size="sm" onClick={() => toggleUserVIP(user.id)}>
-                            <Crown className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => toggleUserVIPPlus(user.id)}>
-                            <Crown className="w-4 h-4 text-purple-600" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => toggleUserBeta(user.id)}>
-                            <Flask className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => toggleUserAdmin(user.id)}>
-                            <Shield className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => banUser(user.id)}>
-                            <UserX className="w-4 h-4" />
-                          </Button>
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="outline" size="sm" onClick={() => handleEdit("user", user)}>
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>Modifier l'utilisateur</DialogTitle>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div className="space-y-2">
-                                  <Label>Nom d'utilisateur</Label>
-                                  <Input
-                                    value={userForm.username}
-                                    onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                                  />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label>Email</Label>
-                                  <Input
-                                    value={userForm.email}
-                                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                                  />
-                                </div>
-                                <div className="space-y-4">
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="is_admin"
-                                      checked={userForm.is_admin}
-                                      onCheckedChange={(checked) => setUserForm({ ...userForm, is_admin: checked })}
-                                    />
-                                    <Label htmlFor="is_admin">Administrateur</Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="is_vip_plus"
-                                      checked={userForm.is_vip_plus}
-                                      onCheckedChange={(checked) => setUserForm({ ...userForm, is_vip_plus: checked })}
-                                    />
-                                    <Label htmlFor="is_vip_plus">VIP+</Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="is_vip"
-                                      checked={userForm.is_vip}
-                                      onCheckedChange={(checked) => setUserForm({ ...userForm, is_vip: checked })}
-                                    />
-                                    <Label htmlFor="is_vip">VIP</Label>
-                                  </div>
-                                  <div className="flex items-center space-x-2">
-                                    <Checkbox
-                                      id="is_beta"
-                                      checked={userForm.is_beta}
-                                      onCheckedChange={(checked) => setUserForm({ ...userForm, is_beta: checked })}
-                                    />
-                                    <Label htmlFor="is_beta">Bêta Testeur</Label>
-                                  </div>
-                                </div>
-                              </div>
-                              <DialogFooter>
-                                <Button onClick={() => handleUpdate("user", userForm)}>Sauvegarder</Button>
-                              </DialogFooter>
-                            </DialogContent>
-                          </Dialog>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {users.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>Aucun utilisateur trouvé</p>
-                  <p className="text-sm">Les utilisateurs apparaîtront ici une fois inscrits</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="changelogs" className="space-y-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Gestion des Changelogs</CardTitle>
-                <CardDescription>Gérez l'historique des versions et mises à jour</CardDescription>
-              </div>
-              <Dialog open={activeModal === "changelog"} onOpenChange={(open) => !open && setActiveModal(null)}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => setActiveModal("changelog")} className="bg-blue-600 hover:bg-blue-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Nouveau Changelog
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-blue-900 border-blue-700 max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle className="text-white">Créer un Changelog</DialogTitle>
-                    <DialogDescription className="text-blue-300">
-                      Ajoutez une nouvelle version avec ses changements
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-white mb-2 block">Version</label>
-                        <Input
-                          placeholder="1.0.0"
-                          value={newChangelog.version}
-                          onChange={(e) => setNewChangelog({ ...newChangelog, version: e.target.value })}
-                          className="bg-blue-800 border-blue-600 text-white"
-                        />
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            <SelectItem value="inactive">Inactif</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-white mb-2 block">Date de sortie</label>
-                        <Input
-                          type="date"
-                          value={newChangelog.release_date}
-                          onChange={(e) => setNewChangelog({ ...newChangelog, release_date: e.target.value })}
-                          className="bg-blue-800 border-blue-600 text-white"
+                      <div className="space-y-2 col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={tvChannelForm.description}
+                          onChange={(e) => setTvChannelForm({ ...tvChannelForm, description: e.target.value })}
+                          placeholder="Description de la chaîne..."
+                          rows={3}
                         />
                       </div>
                     </div>
-                    <div>
-                      <label className="text-sm font-medium text-white mb-2 block">Titre</label>
-                      <Input
-                        placeholder="Nouvelle fonctionnalité"
-                        value={newChangelog.title}
-                        onChange={(e) => setNewChangelog({ ...newChangelog, title: e.target.value })}
-                        className="bg-blue-800 border-blue-600 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-white mb-2 block">Description</label>
-                      <textarea
-                        placeholder="Décrivez les changements de cette version..."
-                        value={newChangelog.description}
-                        onChange={(e) => setNewChangelog({ ...newChangelog, description: e.target.value })}
-                        className="w-full min-h-[200px] bg-blue-800 border-blue-600 text-white rounded-md p-3"
-                      />
-                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)}>
+                        Annuler
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          editingItem ? handleUpdate("tvchannel", tvChannelForm) : handleAdd("tvchannel", tvChannelForm)
+                        }
+                      >
+                        {editingItem ? "Modifier" : "Ajouter"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher une chaîne TV..."
+                      value={searchTerms.tvchannels || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, tvchannels: e.target.value })}
+                      className="pl-10"
+                    />
                   </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setActiveModal(null)} className="border-blue-600">
-                      Annuler
-                    </Button>
-                    <Button onClick={handleCreateChangelog} className="bg-blue-600 hover:bg-blue-700">
-                      Créer
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-blue-800">
-                    <TableHead className="text-blue-300">Version</TableHead>
-                    <TableHead className="text-blue-300">Titre</TableHead>
-                    <TableHead className="text-blue-300">Date</TableHead>
-                    <TableHead className="text-blue-300 text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {changelogs.map((changelog) => (
-                    <TableRow key={changelog.id} className="border-blue-800">
-                      <TableCell className="font-medium text-white">{changelog.version}</TableCell>
-                      <TableCell className="text-blue-200">{changelog.title}</TableCell>
-                      <TableCell className="text-blue-300">
-                        {new Date(changelog.release_date).toLocaleDateString("fr-FR")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteChangelog(changelog.id)}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-950"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-
-              {changelogs.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="w-12 h-12 mx-auto mb-2 text-blue-600" />
-                  <p>Aucun changelog pour le moment</p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Pays</TableHead>
+                      <TableHead>Qualité</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(tvChannels, "tvchannels").map((channel) => (
+                      <TableRow key={channel.id}>
+                        <TableCell className="font-medium">{channel.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{channel.category}</Badge>
+                        </TableCell>
+                        <TableCell>{channel.country}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{channel.quality}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={channel.is_active === true ? "default" : "secondary"}>
+                            {channel.is_active === true ? "Actif" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => toggleStatus("tvchannel", channel.id)}>
+                              {channel.is_active === true ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit("tvchannel", channel)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete("tvchannel", channel.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {tvChannels.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Tv className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucune chaîne TV trouvée</p>
+                    <p className="text-sm">Ajoutez votre première chaîne TV pour commencer</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Gestion Radio FM */}
+          <TabsContent value="radio" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Stations Radio FM</CardTitle>
+                  <CardDescription>Gérez votre catalogue de stations radio en direct</CardDescription>
+                </div>
+                <Dialog open={activeModal === "radio"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setEditingItem(null)
+                        setRadioForm({
+                          name: "",
+                          genre: "",
+                          country: "",
+                          frequency: "",
+                          stream_url: "",
+                          logo_url: "",
+                          description: "",
+                          website: "",
+                          is_active: true,
+                        })
+                        setActiveModal("radio")
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter une station
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} une station radio</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nom de la station</Label>
+                        <Input
+                          value={radioForm.name}
+                          onChange={(e) => setRadioForm({ ...radioForm, name: e.target.value })}
+                          placeholder="NRJ, RTL, France Inter..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Genre</Label>
+                        <Select
+                          value={radioForm.genre}
+                          onValueChange={(value) => setRadioForm({ ...radioForm, genre: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un genre" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Pop">Pop</SelectItem>
+                            <SelectItem value="Rock">Rock</SelectItem>
+                            <SelectItem value="Rap/Hip-Hop">Rap/Hip-Hop</SelectItem>
+                            <SelectItem value="Jazz">Jazz</SelectItem>
+                            <SelectItem value="Classique">Classique</SelectItem>
+                            <SelectItem value="Électronique">Électronique</SelectItem>
+                            <SelectItem value="Reggae">Reggae</SelectItem>
+                            <SelectItem value="Country">Country</SelectItem>
+                            <SelectItem value="Blues">Blues</SelectItem>
+                            <SelectItem value="Folk">Folk</SelectItem>
+                            <SelectItem value="Talk/News">Talk/News</SelectItem>
+                            <SelectItem value="Variété">Variété</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Pays</Label>
+                        <Select
+                          value={radioForm.country}
+                          onValueChange={(value) => setRadioForm({ ...radioForm, country: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un pays" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="France">France</SelectItem>
+                            <SelectItem value="USA">États-Unis</SelectItem>
+                            <SelectItem value="UK">Royaume-Uni</SelectItem>
+                            <SelectItem value="Germany">Allemagne</SelectItem>
+                            <SelectItem value="Spain">Espagne</SelectItem>
+                            <SelectItem value="Italy">Italie</SelectItem>
+                            <SelectItem value="Canada">Canada</SelectItem>
+                            <SelectItem value="Belgium">Belgique</SelectItem>
+                            <SelectItem value="Switzerland">Suisse</SelectItem>
+                            <SelectItem value="International">International</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Fréquence</Label>
+                        <Input
+                          value={radioForm.frequency}
+                          onChange={(e) => setRadioForm({ ...radioForm, frequency: e.target.value })}
+                          placeholder="100.3 FM, 87.8 FM..."
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de diffusion (Stream)</Label>
+                        <Input
+                          value={radioForm.stream_url}
+                          onChange={(e) => setRadioForm({ ...radioForm, stream_url: e.target.value })}
+                          placeholder="https://stream.radio.com/..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>URL du logo</Label>
+                        <Input
+                          value={radioForm.logo_url}
+                          onChange={(e) => setRadioForm({ ...radioForm, logo_url: e.target.value })}
+                          placeholder="https://example.com/logo.png"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Site web (optionnel)</Label>
+                        <Input
+                          value={radioForm.website}
+                          onChange={(e) => setRadioForm({ ...radioForm, website: e.target.value })}
+                          placeholder="https://nrj.fr"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Statut</Label>
+                        <Select
+                          value={radioForm.is_active ? "active" : "inactive"}
+                          onValueChange={(value) => setRadioForm({ ...radioForm, is_active: value === "active" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            <SelectItem value="inactive">Inactif</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={radioForm.description}
+                          onChange={(e) => setRadioForm({ ...radioForm, description: e.target.value })}
+                          placeholder="Description de la station radio..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)}>
+                        Annuler
+                      </Button>
+                      <Button
+                        onClick={() => (editingItem ? handleUpdate("radio", radioForm) : handleAdd("radio", radioForm))}
+                      >
+                        {editingItem ? "Modifier" : "Ajouter"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher une station radio..."
+                      value={searchTerms.radio || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, radio: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Genre</TableHead>
+                      <TableHead>Pays</TableHead>
+                      <TableHead>Fréquence</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(radioStations, "radio").map((station) => (
+                      <TableRow key={station.id}>
+                        <TableCell className="font-medium">{station.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{station.genre}</Badge>
+                        </TableCell>
+                        <TableCell>{station.country}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{station.frequency}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={station.is_active === true ? "default" : "secondary"}>
+                            {station.is_active === true ? "Actif" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => toggleStatus("radio", station.id)}>
+                              {station.is_active === true ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit("radio", station)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete("radio", station.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {radioStations.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Radio className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucune station radio trouvée</p>
+                    <p className="text-sm">Ajoutez votre première station radio pour commencer</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Gestion Retrogaming */}
+          <TabsContent value="retrogaming" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Sources Retrogaming</CardTitle>
+                  <CardDescription>Gérez votre catalogue de sources de jeux rétro</CardDescription>
+                </div>
+                <Dialog
+                  open={activeModal === "retrogaming-source"}
+                  onOpenChange={(open) => !open && setActiveModal(null)}
+                >
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setEditingItem(null)
+                        setRetrogamingSourceForm({
+                          name: "",
+                          description: "",
+                          url: "",
+                          color: "bg-blue-600",
+                          category: "",
+                          is_active: true,
+                        })
+                        setActiveModal("retrogaming-source")
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter une source
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} une source retrogaming</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nom de la source</Label>
+                        <Input
+                          value={retrogamingSourceForm.name}
+                          onChange={(e) => setRetrogamingSourceForm({ ...retrogamingSourceForm, name: e.target.value })}
+                          placeholder="RetroArch, MAME, Dolphin..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Catégorie</Label>
+                        <Select
+                          value={retrogamingSourceForm.category}
+                          onValueChange={(value) =>
+                            setRetrogamingSourceForm({ ...retrogamingSourceForm, category: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une catégorie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Émulateur">Émulateur</SelectItem>
+                            <SelectItem value="Console">Console</SelectItem>
+                            <SelectItem value="Arcade">Arcade</SelectItem>
+                            <SelectItem value="PC">PC</SelectItem>
+                            <SelectItem value="Mobile">Mobile</SelectItem>
+                            <SelectItem value="Homebrew">Homebrew</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL</Label>
+                        <Input
+                          value={retrogamingSourceForm.url}
+                          onChange={(e) => setRetrogamingSourceForm({ ...retrogamingSourceForm, url: e.target.value })}
+                          placeholder="https://retroarch.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Couleur</Label>
+                        <Select
+                          value={retrogamingSourceForm.color}
+                          onValueChange={(value) =>
+                            setRetrogamingSourceForm({ ...retrogamingSourceForm, color: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="bg-blue-600">Bleu</SelectItem>
+                            <SelectItem value="bg-red-600">Rouge</SelectItem>
+                            <SelectItem value="bg-green-600">Vert</SelectItem>
+                            <SelectItem value="bg-purple-600">Violet</SelectItem>
+                            <SelectItem value="bg-orange-600">Orange</SelectItem>
+                            <SelectItem value="bg-pink-600">Rose</SelectItem>
+                            <SelectItem value="bg-indigo-600">Indigo</SelectItem>
+                            <SelectItem value="bg-yellow-600">Jaune</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Statut</Label>
+                        <Select
+                          value={retrogamingSourceForm.is_active ? "active" : "inactive"}
+                          onValueChange={(value) =>
+                            setRetrogamingSourceForm({ ...retrogamingSourceForm, is_active: value === "active" })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            <SelectItem value="inactive">Inactif</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={retrogamingSourceForm.description}
+                          onChange={(e) =>
+                            setRetrogamingSourceForm({ ...retrogamingSourceForm, description: e.target.value })
+                          }
+                          placeholder="Description de la source retrogaming..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)}>
+                        Annuler
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          editingItem
+                            ? handleUpdate("retrogaming-source", retrogamingSourceForm)
+                            : handleAdd("retrogaming-source", retrogamingSourceForm)
+                        }
+                      >
+                        {editingItem ? "Modifier" : "Ajouter"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher une source retrogaming..."
+                      value={searchTerms.retrogaming || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, retrogaming: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Couleur</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(retrogamingSources, "retrogaming").map((source) => (
+                      <TableRow key={source.id}>
+                        <TableCell className="font-medium">{source.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{source.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className={`w-6 h-6 rounded ${source.color}`}></div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={source.is_active === true ? "default" : "secondary"}>
+                            {source.is_active === true ? "Actif" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleStatus("retrogaming-source", source.id)}
+                            >
+                              {source.is_active === true ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEdit("retrogaming-source", source)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDelete("retrogaming-source", source.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {retrogamingSources.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucune source retrogaming trouvée</p>
+                    <p className="text-sm">Ajoutez votre première source retrogaming pour commencer</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Gestion des Utilisateurs */}
+          <TabsContent value="users" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Utilisateurs</CardTitle>
+                  <CardDescription>Gérez les comptes utilisateurs et leurs privilèges</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher un utilisateur..."
+                      value={searchTerms.users || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, users: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Utilisateur</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Privilèges</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(users, "users").map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">{user.username}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              user.status === "active"
+                                ? "default"
+                                : user.status === "banned"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                          >
+                            {user.status === "active" ? "Actif" : user.status === "banned" ? "Banni" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1 flex-wrap">
+                            {user.is_admin && (
+                              <Badge variant="destructive" className="text-xs">
+                                <Shield className="w-3 h-3 mr-1" />
+                                Admin
+                              </Badge>
+                            )}
+                            {user.is_vip_plus && (
+                              <Badge variant="secondary" className="text-purple-600 border-purple-400 text-xs">
+                                <Crown className="w-3 h-3 mr-1" />
+                                VIP+
+                              </Badge>
+                            )}
+                            {user.is_vip && !user.is_vip_plus && (
+                              <Badge variant="secondary" className="text-yellow-600 border-yellow-400 text-xs">
+                                <Crown className="w-3 h-3 mr-1" />
+                                VIP
+                              </Badge>
+                            )}
+                            {user.is_beta && (
+                              <Badge variant="secondary" className="text-cyan-400 border-cyan-400 text-xs">
+                                <Flask className="w-3 h-3 mr-1" />
+                                BETA
+                              </Badge>
+                            )}
+                            {!user.is_admin && !user.is_vip && !user.is_vip_plus && !user.is_beta && (
+                              <Badge variant="outline" className="text-xs">
+                                Standard
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Button variant="outline" size="sm" onClick={() => toggleUserVIP(user.id)}>
+                              <Crown className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => toggleUserVIPPlus(user.id)}>
+                              <Crown className="w-4 h-4 text-purple-600" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => toggleUserBeta(user.id)}>
+                              <Flask className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => toggleUserAdmin(user.id)}>
+                              <Shield className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => banUser(user.id)}>
+                              <UserX className="w-4 h-4" />
+                            </Button>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" onClick={() => handleEdit("user", user)}>
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Modifier l'utilisateur</DialogTitle>
+                                </DialogHeader>
+                                <div className="space-y-4">
+                                  <div className="space-y-2">
+                                    <Label>Nom d'utilisateur</Label>
+                                    <Input
+                                      value={userForm.username}
+                                      onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label>Email</Label>
+                                    <Input
+                                      value={userForm.email}
+                                      onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                                    />
+                                  </div>
+                                  <div className="space-y-4">
+                                    <div className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id="is_admin"
+                                        checked={userForm.is_admin}
+                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_admin: checked })}
+                                      />
+                                      <Label htmlFor="is_admin">Administrateur</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id="is_vip_plus"
+                                        checked={userForm.is_vip_plus}
+                                        onCheckedChange={(checked) =>
+                                          setUserForm({ ...userForm, is_vip_plus: checked })
+                                        }
+                                      />
+                                      <Label htmlFor="is_vip_plus">VIP+</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id="is_vip"
+                                        checked={userForm.is_vip}
+                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_vip: checked })}
+                                      />
+                                      <Label htmlFor="is_vip">VIP</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id="is_beta"
+                                        checked={userForm.is_beta}
+                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_beta: checked })}
+                                      />
+                                      <Label htmlFor="is_beta">Bêta Testeur</Label>
+                                    </div>
+                                  </div>
+                                </div>
+                                <DialogFooter>
+                                  <Button onClick={() => handleUpdate("user", userForm)}>Sauvegarder</Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {users.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun utilisateur trouvé</p>
+                    <p className="text-sm">Les utilisateurs apparaîtront ici une fois inscrits</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="changelogs" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Changelogs</CardTitle>
+                  <CardDescription>Gérez l'historique des versions et mises à jour</CardDescription>
+                </div>
+                <Dialog open={activeModal === "changelog"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => setActiveModal("changelog")} className="bg-blue-600 hover:bg-blue-700">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Nouveau Changelog
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-blue-900 border-blue-700 max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-white">Créer un Changelog</DialogTitle>
+                      <DialogDescription className="text-blue-300">
+                        Ajoutez une nouvelle version avec ses changements
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-white mb-2 block">Version</label>
+                          <Input
+                            placeholder="1.0.0"
+                            value={newChangelog.version}
+                            onChange={(e) => setNewChangelog({ ...newChangelog, version: e.target.value })}
+                            className="bg-blue-800 border-blue-600 text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-white mb-2 block">Date de sortie</label>
+                          <Input
+                            type="date"
+                            value={newChangelog.release_date}
+                            onChange={(e) => setNewChangelog({ ...newChangelog, release_date: e.target.value })}
+                            className="bg-blue-800 border-blue-600 text-white"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-white mb-2 block">Titre</label>
+                        <Input
+                          placeholder="Nouvelle fonctionnalité"
+                          value={newChangelog.title}
+                          onChange={(e) => setNewChangelog({ ...newChangelog, title: e.target.value })}
+                          className="bg-blue-800 border-blue-600 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-white mb-2 block">Description</label>
+                        <textarea
+                          placeholder="Décrivez les changements de cette version..."
+                          value={newChangelog.description}
+                          onChange={(e) => setNewChangelog({ ...newChangelog, description: e.target.value })}
+                          className="w-full min-h-[200px] bg-blue-800 border-blue-600 text-white rounded-md p-3"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)} className="border-blue-600">
+                        Annuler
+                      </Button>
+                      <Button onClick={handleCreateChangelog} className="bg-blue-600 hover:bg-blue-700">
+                        Créer
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-blue-800">
+                      <TableHead className="text-blue-300">Version</TableHead>
+                      <TableHead className="text-blue-300">Titre</TableHead>
+                      <TableHead className="text-blue-300">Date</TableHead>
+                      <TableHead className="text-blue-300 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {changelogs.map((changelog) => (
+                      <TableRow key={changelog.id} className="border-blue-800">
+                        <TableCell className="font-medium text-white">{changelog.version}</TableCell>
+                        <TableCell className="text-blue-200">{changelog.title}</TableCell>
+                        <TableCell className="text-blue-300">
+                          {new Date(changelog.release_date).toLocaleDateString("fr-FR")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteChangelog(changelog.id)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-950"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {changelogs.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="w-12 h-12 mx-auto mb-2 text-blue-600" />
+                    <p>Aucun changelog pour le moment</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }
