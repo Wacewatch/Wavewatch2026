@@ -12,6 +12,7 @@ import { useState } from "react"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { useAuth } from "@/components/auth-provider"
 import { AddToPlaylistButton } from "@/components/add-to-playlist-button"
+import { useToast } from "@/hooks/use-toast"
 
 interface MovieCardProps {
   movie: {
@@ -27,6 +28,7 @@ interface MovieCardProps {
 
 export function MovieCard({ movie, showBadges = true }: MovieCardProps) {
   const { user } = useAuth()
+  const { toast } = useToast()
   const [isHovered, setIsHovered] = useState(false)
   const [showPlaylistMenu, setShowPlaylistMenu] = useState(false)
 
@@ -37,9 +39,24 @@ export function MovieCard({ movie, showBadges = true }: MovieCardProps) {
   const handleMarkAsWatched = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    WatchTracker.markAsWatched("movie", movie.id, movie.title, 120, {
-      posterPath: movie.poster_path,
-    })
+
+    const isWatched = WatchTracker.isWatched("movie", movie.id)
+
+    if (isWatched) {
+      WatchTracker.removeFromWatched(movie.id, "movie")
+      toast({
+        title: "Retiré des vus",
+        description: `"${movie.title}" a été retiré de votre historique`,
+      })
+    } else {
+      WatchTracker.markAsWatched("movie", movie.id, movie.title, 120, {
+        posterPath: movie.poster_path,
+      })
+      toast({
+        title: "Marqué comme vu",
+        description: `"${movie.title}" a été ajouté à votre historique`,
+      })
+    }
   }
 
   return (

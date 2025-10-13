@@ -24,6 +24,8 @@ import {
   MessageSquare,
   Film,
   List,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react"
 import { WatchTracker, type WatchStats } from "@/lib/watch-tracking"
 import { VIPSystem, type VIPLevel } from "@/lib/vip-system"
@@ -31,17 +33,9 @@ import Image from "next/image"
 import Link from "next/link"
 import { IframeModal } from "@/components/iframe-modal"
 import { AchievementsDashboard } from "@/components/achievements-dashboard"
+import { useMobile } from "@/hooks/use-mobile"
 
 export default function DashboardPage() {
-  const calculateRecentWatchTime = (days: number): number => {
-    const cutoffDate = new Date()
-    cutoffDate.setDate(cutoffDate.getDate() - days)
-
-    return WatchTracker.getWatchedItems()
-      .filter((item) => item.watchedAt >= cutoffDate)
-      .reduce((sum, item) => sum + (item.duration || 0), 0)
-  }
-
   const { user } = useAuth()
   const [stats, setStats] = useState<WatchStats>({
     totalWatchTime: 0,
@@ -85,6 +79,18 @@ export default function DashboardPage() {
     }
     return 10
   })
+
+  const isMobile = useMobile()
+  const [isAchievementsOpen, setIsAchievementsOpen] = useState(false)
+
+  const calculateRecentWatchTime = (days: number): number => {
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - days)
+
+    return WatchTracker.getWatchedItems()
+      .filter((item) => item.watchedAt >= cutoffDate)
+      .reduce((sum, item) => sum + (item.duration || 0), 0)
+  }
 
   const refreshStats = () => {
     const userStats = WatchTracker.getStats()
@@ -244,9 +250,6 @@ export default function DashboardPage() {
             </Button>
           </div>
         </div>
-
-        {/* Achievements Dashboard */}
-        <AchievementsDashboard />
 
         {/* Stats Cards principales */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
@@ -502,6 +505,31 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         )}
+
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader
+            className={isMobile ? "cursor-pointer" : ""}
+            onClick={() => isMobile && setIsAchievementsOpen(!isAchievementsOpen)}
+          >
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-white">
+                <Trophy className="h-5 w-5 text-yellow-400" />
+                Succès et Badges
+              </CardTitle>
+              {isMobile && (
+                <Button variant="ghost" size="sm" className="text-gray-400">
+                  {isAchievementsOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </Button>
+              )}
+            </div>
+            <CardDescription className="text-gray-400">Débloquez des badges en explorant la plateforme</CardDescription>
+          </CardHeader>
+          {(!isMobile || isAchievementsOpen) && (
+            <CardContent>
+              <AchievementsDashboard />
+            </CardContent>
+          )}
+        </Card>
 
         {/* Tabs */}
         <Tabs defaultValue="history" className="space-y-6">

@@ -12,6 +12,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export default function PlaylistContentPage() {
   const { user } = useAuth()
@@ -23,6 +24,7 @@ export default function PlaylistContentPage() {
   const [mounted, setMounted] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
   const supabase = createClient()
+  const [contentFilter, setContentFilter] = useState<"all" | "movie" | "tv">("all")
 
   useEffect(() => {
     setMounted(true)
@@ -130,6 +132,12 @@ export default function PlaylistContentPage() {
       })
     }
   }
+
+  const filteredPlaylistItems = playlistItems.filter((item) => {
+    if (contentFilter === "all") return true
+    const itemType = item.media_type || item.content_type
+    return itemType === contentFilter
+  })
 
   if (!mounted) {
     return (
@@ -276,23 +284,46 @@ export default function PlaylistContentPage() {
           style={{ backgroundColor: `${playlist.theme_color}15`, borderColor: playlist.theme_color }}
         >
           <CardHeader>
-            <CardTitle className="text-white">Contenu de la playlist</CardTitle>
-            <CardDescription className="text-gray-400">Films et séries dans cette playlist</CardDescription>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <CardTitle className="text-white">Contenu de la playlist</CardTitle>
+                <CardDescription className="text-gray-400">Films et séries dans cette playlist</CardDescription>
+              </div>
+              <Tabs value={contentFilter} onValueChange={(value) => setContentFilter(value as any)}>
+                <TabsList className="bg-gray-800 border-gray-700">
+                  <TabsTrigger value="all" className="data-[state=active]:bg-gray-700 text-gray-300">
+                    Tout
+                  </TabsTrigger>
+                  <TabsTrigger value="movie" className="data-[state=active]:bg-gray-700 text-gray-300">
+                    Films
+                  </TabsTrigger>
+                  <TabsTrigger value="tv" className="data-[state=active]:bg-gray-700 text-gray-300">
+                    Séries
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </CardHeader>
           <CardContent>
-            {playlistItems.length === 0 ? (
+            {filteredPlaylistItems.length === 0 ? (
               <div className="text-center py-12">
                 <Film className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 text-lg mb-2">Cette playlist est vide</p>
+                <p className="text-gray-400 text-lg mb-2">
+                  {playlistItems.length === 0
+                    ? "Cette playlist est vide"
+                    : `Aucun ${contentFilter === "movie" ? "film" : "série"} dans cette playlist`}
+                </p>
                 <p className="text-gray-500 text-sm">
-                  {isOwner
+                  {isOwner && playlistItems.length === 0
                     ? "Ajoutez des films et séries depuis leurs pages de détails."
-                    : "Cette playlist ne contient aucun élément pour le moment."}
+                    : contentFilter !== "all"
+                      ? "Essayez un autre filtre pour voir plus de contenu."
+                      : "Cette playlist ne contient aucun élément pour le moment."}
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-                {playlistItems.map((item) => {
+                {filteredPlaylistItems.map((item) => {
                   let imageUrl = "/placeholder.svg?height=300&width=200"
 
                   if (item.poster_path) {
