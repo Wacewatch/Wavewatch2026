@@ -479,32 +479,23 @@ export default function AdminPage() {
     try {
       console.log("🔄 Calcul des statistiques...")
 
-      let dbStats = null
-      let actualUserCount = 0
+      // Get actual user count directly from database
+      const { count: actualUserCount, error: countError } = await supabase
+        .from("user_profiles")
+        .select("*", { count: "exact", head: true })
 
+      console.log("📊 Nombre d'utilisateurs réel:", actualUserCount)
+
+      // Try to get stats from RPC function
+      let dbStats: any = null
       try {
-        // First, get the actual user count directly
-        const { count: userCount, error: countError } = await supabase
-          .from("user_profiles")
-          .select("*", { count: "exact", head: true })
-
-        if (!countError && userCount !== null) {
-          actualUserCount = userCount
-          console.log("✅ Nombre réel d'utilisateurs depuis la base:", actualUserCount)
-        }
-
-        // Then try to get other stats from the RPC function
         const { data: statsData, error: statsError } = await supabase.rpc("get_admin_stats")
         if (!statsError && statsData) {
           dbStats = statsData
-          // Override the users count with the actual count
-          dbStats.users = actualUserCount
           console.log("✅ Statistiques depuis la base de données:", dbStats)
         }
       } catch (error) {
         console.warn("⚠️ Impossible d'utiliser get_admin_stats, calcul manuel:", error)
-        // Use the actual user count we got
-        actualUserCount = users.length
       }
 
       // Utiliser les données déjà chargées en état local ou les stats de la DB
@@ -512,6 +503,8 @@ export default function AdminPage() {
       const totalRadio = dbStats?.radio_stations || radioStations.length
       const totalRetrogaming = dbStats?.retrogaming_sources || retrogamingSources.length
       const totalUsers = actualUserCount || users.length
+      // </CHANGE>
+
       const vipUsers = users.filter((u) => u.is_vip || u.is_vip_plus).length
       const activeUsers = users.filter((u) => u.status === "active").length
 

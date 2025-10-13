@@ -112,14 +112,24 @@ export default function DashboardPage() {
       e.preventDefault()
 
       if (item.type === "radio") {
+        // For radio, play audio directly
         if (audioPlayer) {
           audioPlayer.pause()
         }
-        const audio = new Audio(item.logoUrl)
+        const audio = new Audio(item.streamUrl || item.logoUrl)
         audio.crossOrigin = "anonymous"
         audio.play().catch(console.error)
         setAudioPlayer(audio)
+      } else if (item.type === "tv-channel") {
+        // For TV channels, open modal with stream URL
+        setSelectedMedia({
+          url: item.streamUrl || item.logoUrl,
+          title: item.title,
+          type: item.type,
+        })
+        setIsModalOpen(true)
       } else {
+        // For games, use logoUrl as before
         setSelectedMedia({
           url: item.logoUrl,
           title: item.title,

@@ -152,9 +152,11 @@ export function Navigation() {
                     </Link>
                   </DropdownMenuItem>
                   {!user.isVip && (
-                    <DropdownMenuItem disabled className="text-gray-500 cursor-not-allowed">
-                      <Crown className="w-4 h-4 mr-2" />
-                      Devenir VIP (Bientôt)
+                    <DropdownMenuItem asChild>
+                      <Link href="/subscription" className="text-white hover:text-blue-300">
+                        <Crown className="w-4 h-4 mr-2" />
+                        Devenir VIP
+                      </Link>
                     </DropdownMenuItem>
                   )}
                   {user.isAdmin && (
@@ -281,12 +283,14 @@ export function Navigation() {
                   </Button>
                   {!user.isVip && (
                     <Button
+                      asChild
                       variant="ghost"
-                      disabled
-                      className="justify-start text-gray-500 cursor-not-allowed hover:bg-blue-900"
+                      className="justify-start text-white hover:text-blue-300 hover:bg-blue-900"
                     >
-                      <Crown className="w-4 h-4 mr-2" />
-                      Devenir VIP (Bientôt)
+                      <Link href="/subscription" onClick={() => setIsMenuOpen(false)}>
+                        <Crown className="w-4 h-4 mr-2" />
+                        Devenir VIP
+                      </Link>
                     </Button>
                   )}
                   {user.isAdmin && (
