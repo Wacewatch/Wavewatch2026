@@ -1,5 +1,7 @@
 "use client"
 
+import { DialogDescription } from "@/components/ui/dialog"
+
 import { useState, useEffect } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -52,6 +54,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import { createBrowserClient } from "@supabase/ssr" // Import for Supabase client
 
 export default function AdminPage() {
   const { user } = useAuth()
@@ -157,6 +160,14 @@ export default function AdminPage() {
     is_vip_plus: false,
     is_beta: false,
     is_admin: false,
+  })
+
+  const [changelogs, setChangelogs] = useState<any[]>([])
+  const [newChangelog, setNewChangelog] = useState({
+    version: "",
+    title: "",
+    description: "",
+    release_date: new Date().toISOString().split("T")[0],
   })
 
   useEffect(() => {
@@ -1298,6 +1309,118 @@ export default function AdminPage() {
     }
   }
 
+  const handleCreateChangelog = async () => {
+    if (!newChangelog.version || !newChangelog.title || !newChangelog.description) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+
+    const { error } = await supabase.from("changelogs").insert([
+      {
+        ...newChangelog,
+        created_by: user?.id,
+      },
+    ])
+
+    if (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer le changelog",
+        variant: "destructive",
+      })
+    } else {
+      toast({
+        title: "Succès",
+        description: "Changelog créé avec succès",
+      })
+      setNewChangelog({
+        version: "",
+        title: "",
+        description: "",
+        release_date: new Date().toISOString().split("T")[0],
+      })
+      fetchAllData()
+      setActiveModal(null)
+    }
+  }
+
+  const handleDeleteChangelog = async (id: string) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+
+    const { error } = await supabase.from("changelogs").delete().eq("id", id)
+
+    if (error) {
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le changelog",
+        variant: "destructive",
+      })
+    } else {
+      toast({
+        title: "Succès",
+        description: "Changelog supprimé",
+      })
+      fetchAllData()
+    }
+  }
+
+  // Modified useEffect to call fetchAllData
+  useEffect(() => {
+    if (user?.isAdmin) {
+      fetchAllData()
+    }
+  }, [user])
+
+  // Replaced loadAllData with fetchAllData to include changelogs
+  const fetchAllData = async () => {
+    setLoading(true)
+    try {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      )
+
+      const [tvData, radioData, retroData, usersData, changelogsData] = await Promise.all([
+        supabase.from("tv_channels").select("*").order("name"),
+        supabase.from("radio_stations").select("*").order("name"),
+        supabase.from("retrogaming_sources").select("*").order("name"),
+        supabase.from("user_profiles").select("*", { count: "exact" }),
+        supabase.from("changelogs").select("*").order("release_date", { ascending: false }),
+      ])
+
+      if (tvData.data) setTvChannels(tvData.data)
+      if (radioData.data) setRadioStations(radioData.data)
+      if (retroData.data) setRetrogamingSources(retroData.data)
+      if (usersData.data) setUsers(usersData.data)
+      if (changelogsData.data) setChangelogs(changelogsData.data)
+
+      // Load statistics and activities after fetching all data
+      await loadStatistics()
+      await loadRecentActivities()
+    } catch (error) {
+      console.error("❌ Erreur lors du chargement des données admin:", error)
+      toast({
+        title: "Erreur de chargement",
+        description: "Impossible de charger les données d'administration",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   if (!user?.isAdmin) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -1329,7 +1452,7 @@ export default function AdminPage() {
       </div>
 
       <Tabs defaultValue="dashboard" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="dashboard" className="flex items-center gap-1">
             <BarChart3 className="w-4 h-4" />
             <span className="hidden sm:inline">Dashboard</span>
@@ -1349,6 +1472,10 @@ export default function AdminPage() {
           <TabsTrigger value="users" className="flex items-center gap-1">
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">Users ({users.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="changelogs" className="flex items-center gap-1">
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">Logs ({changelogs.length})</span>
           </TabsTrigger>
         </TabsList>
 
@@ -2587,6 +2714,121 @@ export default function AdminPage() {
                   <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>Aucun utilisateur trouvé</p>
                   <p className="text-sm">Les utilisateurs apparaîtront ici une fois inscrits</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="changelogs" className="space-y-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Gestion des Changelogs</CardTitle>
+                <CardDescription>Gérez l'historique des versions et mises à jour</CardDescription>
+              </div>
+              <Dialog open={activeModal === "changelog"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => setActiveModal("changelog")} className="bg-blue-600 hover:bg-blue-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Nouveau Changelog
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-blue-900 border-blue-700 max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="text-white">Créer un Changelog</DialogTitle>
+                    <DialogDescription className="text-blue-300">
+                      Ajoutez une nouvelle version avec ses changements
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-white mb-2 block">Version</label>
+                        <Input
+                          placeholder="1.0.0"
+                          value={newChangelog.version}
+                          onChange={(e) => setNewChangelog({ ...newChangelog, version: e.target.value })}
+                          className="bg-blue-800 border-blue-600 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-white mb-2 block">Date de sortie</label>
+                        <Input
+                          type="date"
+                          value={newChangelog.release_date}
+                          onChange={(e) => setNewChangelog({ ...newChangelog, release_date: e.target.value })}
+                          className="bg-blue-800 border-blue-600 text-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-white mb-2 block">Titre</label>
+                      <Input
+                        placeholder="Nouvelle fonctionnalité"
+                        value={newChangelog.title}
+                        onChange={(e) => setNewChangelog({ ...newChangelog, title: e.target.value })}
+                        className="bg-blue-800 border-blue-600 text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-white mb-2 block">Description</label>
+                      <textarea
+                        placeholder="Décrivez les changements de cette version..."
+                        value={newChangelog.description}
+                        onChange={(e) => setNewChangelog({ ...newChangelog, description: e.target.value })}
+                        className="w-full min-h-[200px] bg-blue-800 border-blue-600 text-white rounded-md p-3"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setActiveModal(null)} className="border-blue-600">
+                      Annuler
+                    </Button>
+                    <Button onClick={handleCreateChangelog} className="bg-blue-600 hover:bg-blue-700">
+                      Créer
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-blue-800">
+                    <TableHead className="text-blue-300">Version</TableHead>
+                    <TableHead className="text-blue-300">Titre</TableHead>
+                    <TableHead className="text-blue-300">Date</TableHead>
+                    <TableHead className="text-blue-300 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {changelogs.map((changelog) => (
+                    <TableRow key={changelog.id} className="border-blue-800">
+                      <TableCell className="font-medium text-white">{changelog.version}</TableCell>
+                      <TableCell className="text-blue-200">{changelog.title}</TableCell>
+                      <TableCell className="text-blue-300">
+                        {new Date(changelog.release_date).toLocaleDateString("fr-FR")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteChangelog(changelog.id)}
+                          className="text-red-400 hover:text-red-300 hover:bg-red-950"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              {changelogs.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="w-12 h-12 mx-auto mb-2 text-blue-600" />
+                  <p>Aucun changelog pour le moment</p>
                 </div>
               )}
             </CardContent>

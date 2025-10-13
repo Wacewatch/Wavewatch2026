@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
 import { useMobile } from "@/hooks/use-mobile"
 
@@ -52,27 +58,44 @@ export function Navigation() {
 
           {/* Desktop Navigation */}
           <div className="hidden lg:flex items-center space-x-6">
-            <Link
-              href="/movies"
-              className="text-white hover:text-blue-300 transition-all duration-300 font-medium relative group"
-            >
-              Films
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 transition-all group-hover:w-full"></span>
-            </Link>
-            <Link
-              href="/tv-shows"
-              className="text-white hover:text-blue-300 transition-all duration-300 font-medium relative group"
-            >
-              Séries
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 transition-all group-hover:w-full"></span>
-            </Link>
-            <Link
-              href="/anime"
-              className="text-white hover:text-blue-300 transition-all duration-300 font-medium relative group"
-            >
-              Animés
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 transition-all group-hover:w-full"></span>
-            </Link>
+            {/* Content Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger className="text-white hover:text-blue-300 transition-all duration-300 font-medium relative group flex items-center">
+                Contenu
+                <ChevronDown className="w-4 h-4 ml-1" />
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-500 transition-all group-hover:w-full"></span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-blue-900 border-blue-700">
+                <DropdownMenuItem asChild>
+                  <Link href="/movies" className="text-white hover:text-blue-300">
+                    Films
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/tv-shows" className="text-white hover:text-blue-300">
+                    Séries
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/anime" className="text-white hover:text-blue-300">
+                    Animés
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-blue-700" />
+                <DropdownMenuItem disabled className="text-blue-400 opacity-60">
+                  Musiques <span className="ml-auto text-xs">Bientôt</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled className="text-blue-400 opacity-60">
+                  Logiciels <span className="ml-auto text-xs">Bientôt</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled className="text-blue-400 opacity-60">
+                  Jeux <span className="ml-auto text-xs">Bientôt</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled className="text-blue-400 opacity-60">
+                  Ebooks <span className="ml-auto text-xs">Bientôt</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Media Dropdown */}
             <DropdownMenu>
@@ -345,6 +368,38 @@ export function Navigation() {
                     <Link href="/anime" onClick={() => setIsMenuOpen(false)}>
                       Animés
                     </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start text-blue-400 opacity-60 hover:text-blue-300 hover:bg-blue-900"
+                    disabled
+                  >
+                    Musiques <span className="ml-auto text-xs">Bientôt</span>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start text-blue-400 opacity-60 hover:text-blue-300 hover:bg-blue-900"
+                    disabled
+                  >
+                    Logiciels <span className="ml-auto text-xs">Bientôt</span>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start text-blue-400 opacity-60 hover:text-blue-300 hover:bg-blue-900"
+                    disabled
+                  >
+                    Jeux <span className="ml-auto text-xs">Bientôt</span>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start text-blue-400 opacity-60 hover:text-blue-300 hover:bg-blue-900"
+                    disabled
+                  >
+                    Ebooks <span className="ml-auto text-xs">Bientôt</span>
                   </Button>
                 </div>
               </div>
