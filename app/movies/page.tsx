@@ -22,7 +22,6 @@ export default function MoviesPage() {
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
-    // Restore page state from sessionStorage on mount
     const savedPage = sessionStorage.getItem("moviesPage")
     const savedGenre = sessionStorage.getItem("moviesGenre")
     const savedSort = sessionStorage.getItem("moviesSort")
@@ -67,7 +66,6 @@ export default function MoviesPage() {
         } else if (selectedGenre !== "all") {
           data = await getMoviesByGenre(Number.parseInt(selectedGenre), currentPage)
         } else {
-          // Utiliser la nouvelle API qui utilise le cache
           const response = await fetch(`/api/content/movies?page=${currentPage}&cache=true`)
           if (!response.ok) throw new Error("Failed to fetch movies")
           data = await response.json()
@@ -95,6 +93,7 @@ export default function MoviesPage() {
           })
         }
 
+        console.log("[v0] Loaded movies for page", currentPage, ":", data.results?.length)
         setMovies(data.results || [])
         setTotalPages(data.total_pages || 1)
       } catch (error) {

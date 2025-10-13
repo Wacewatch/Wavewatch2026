@@ -309,19 +309,40 @@ export function useMessaging() {
     try {
       console.log("[v0] Attempting to delete message:", messageId, "for user:", user.id)
 
-      const { error, data } = await supabase
+      const { data: messageCheck, error: checkError } = await supabase
+        .from("user_messages")
+        .select("id, recipient_id")
+        .eq("id", messageId)
+        .eq("recipient_id", user.id)
+        .maybeSingle()
+
+      if (checkError) {
+        console.error("[v0] Error checking message:", checkError)
+        throw checkError
+      }
+
+      if (!messageCheck) {
+        console.log("[v0] Message not found or not owned by user")
+        toast({
+          title: "Erreur",
+          description: "Message introuvable ou vous n'avez pas les permissions",
+          variant: "destructive",
+        })
+        return false
+      }
+
+      const { error: deleteError } = await supabase
         .from("user_messages")
         .delete()
         .eq("id", messageId)
         .eq("recipient_id", user.id)
-        .select()
 
-      if (error) {
-        console.error("[v0] Supabase error deleting message:", error)
-        throw error
+      if (deleteError) {
+        console.error("[v0] Supabase error deleting message:", deleteError)
+        throw deleteError
       }
 
-      console.log("[v0] Delete response:", data)
+      console.log("[v0] Message deleted successfully")
 
       setMessages((prev) => {
         const filtered = prev.filter((msg) => msg.id !== messageId)

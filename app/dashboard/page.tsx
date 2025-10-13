@@ -118,8 +118,11 @@ export default function DashboardPage() {
     }
 
     if (playUrl) {
+      console.log("[v0] Opening player for:", item.title, "URL:", playUrl)
       setSelectedItem({ ...item, url: playUrl })
       setIsModalOpen(true)
+    } else {
+      console.log("[v0] No playable URL found for item:", item)
     }
   }
 
