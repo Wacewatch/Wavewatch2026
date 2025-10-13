@@ -69,7 +69,7 @@ export function useUserPreferences() {
       const { data, error } = await supabase
         .from("user_profiles")
         .select("hide_adult_content, auto_mark_watched, theme_preference")
-        .eq("id", user.id)
+        .eq("user_id", user.id)
         .single()
 
       if (error && error.code !== "PGRST116") {
@@ -89,6 +89,7 @@ export function useUserPreferences() {
         setPreferences(newPreferences)
 
         if (typeof window !== "undefined") {
+          localStorage.setItem("wavewatch_adult_content", newPreferences.showAdultContent.toString())
           const { updateAdultContentPreference } = await import("@/lib/tmdb")
           updateAdultContentPreference(newPreferences.showAdultContent)
         }
@@ -103,6 +104,7 @@ export function useUserPreferences() {
         setPreferences(defaultPreferences)
 
         if (typeof window !== "undefined") {
+          localStorage.setItem("wavewatch_adult_content", "false")
           const { updateAdultContentPreference } = await import("@/lib/tmdb")
           updateAdultContentPreference(false)
         }
@@ -128,6 +130,10 @@ export function useUserPreferences() {
 
     setPreferences(updatedPreferences)
 
+    if (typeof window !== "undefined") {
+      localStorage.setItem("wavewatch_adult_content", updatedPreferences.showAdultContent.toString())
+    }
+
     try {
       const { error } = await supabase
         .from("user_profiles")
@@ -136,26 +142,36 @@ export function useUserPreferences() {
           auto_mark_watched: updatedPreferences.autoMarkWatched,
           theme_preference: updatedPreferences.themePreference,
         })
-        .eq("id", user.id)
+        .eq("user_id", user.id)
 
       if (error) {
         console.error("Error updating preferences:", error)
         setPreferences(preferences)
-      } else {
         if (typeof window !== "undefined") {
-          const { updateAdultContentPreference } = await import("@/lib/tmdb")
-          updateAdultContentPreference(updatedPreferences.showAdultContent)
+          localStorage.setItem("wavewatch_adult_content", preferences.showAdultContent.toString())
         }
-
-        window.dispatchEvent(
-          new CustomEvent("preferences-updated", {
-            detail: updatedPreferences,
-          }),
-        )
+        return false
       }
+
+      if (typeof window !== "undefined") {
+        const { updateAdultContentPreference } = await import("@/lib/tmdb")
+        updateAdultContentPreference(updatedPreferences.showAdultContent)
+      }
+
+      window.dispatchEvent(
+        new CustomEvent("preferences-updated", {
+          detail: updatedPreferences,
+        }),
+      )
+
+      return true
     } catch (error) {
       console.error("Error updating preferences:", error)
       setPreferences(preferences)
+      if (typeof window !== "undefined") {
+        localStorage.setItem("wavewatch_adult_content", preferences.showAdultContent.toString())
+      }
+      return false
     }
   }
 

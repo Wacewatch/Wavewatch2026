@@ -7,7 +7,11 @@ const getUserAdultContentPreference = async (): Promise<boolean> => {
   if (typeof window === "undefined") return false
 
   try {
-    // Dispatch event to get user preferences from the hook
+    const storedPreference = localStorage.getItem("wavewatch_adult_content")
+    if (storedPreference !== null) {
+      return storedPreference === "true"
+    }
+
     const event = new CustomEvent("get-user-preferences")
     let preferences = null
 
@@ -18,19 +22,13 @@ const getUserAdultContentPreference = async (): Promise<boolean> => {
     window.addEventListener("user-preferences-response", handlePreferencesResponse)
     window.dispatchEvent(event)
 
-    // Wait a bit for the response
-    await new Promise((resolve) => setTimeout(resolve, 50)) // Augmenté le délai
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
     window.removeEventListener("user-preferences-response", handlePreferencesResponse)
 
     if (preferences && typeof preferences.showAdultContent === "boolean") {
+      localStorage.setItem("wavewatch_adult_content", preferences.showAdultContent.toString())
       return preferences.showAdultContent
-    }
-
-    // Fallback to localStorage for backward compatibility
-    const storedPreference = localStorage.getItem("wavewatch_adult_content")
-    if (storedPreference !== null) {
-      return storedPreference === "true"
     }
 
     return false
@@ -809,7 +807,6 @@ export async function getTVShowEpisode(tvId: number, seasonNumber: number, episo
 
 export function updateAdultContentPreference(showAdultContent: boolean) {
   if (typeof window !== "undefined") {
-    // Keep localStorage for backward compatibility
     localStorage.setItem("wavewatch_adult_content", showAdultContent.toString())
 
     // Dispatch custom event for database update

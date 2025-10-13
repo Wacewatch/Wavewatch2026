@@ -369,44 +369,68 @@ export default function ProfilePage() {
     }
   }
 
-  const handleAdultContentToggle = (enabled: boolean) => {
-    updatePreferences({
+  const handleAdultContentToggle = async (enabled: boolean) => {
+    const success = await updatePreferences({
       showAdultContent: enabled,
       hideAdultContent: !enabled,
     })
 
-    toast({
-      title: enabled ? "Contenu adulte activé" : "Contenu adulte désactivé",
-      description: enabled
-        ? "Le contenu réservé aux adultes sera maintenant affiché dans les résultats"
-        : "Le contenu réservé aux adultes sera filtré des résultats",
-    })
+    if (success) {
+      toast({
+        title: enabled ? "Contenu adulte activé" : "Contenu adulte désactivé",
+        description: enabled
+          ? "Le contenu réservé aux adultes sera maintenant affiché dans les résultats"
+          : "Le contenu réservé aux adultes sera filtré des résultats",
+      })
+    } else {
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder les préférences",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleHideWatchedToggle = (enabled: boolean) => {
-    updatePreferences({
+  const handleHideWatchedToggle = async (enabled: boolean) => {
+    const success = await updatePreferences({
       showWatchedContent: !enabled,
     })
 
-    toast({
-      title: enabled ? "Masquage du contenu vu activé" : "Masquage du contenu vu désactivé",
-      description: enabled
-        ? "Les films et séries déjà vus seront masqués des listes de contenu"
-        : "Tous les contenus seront affichés, même ceux déjà vus",
-    })
+    if (success) {
+      toast({
+        title: enabled ? "Masquage du contenu vu activé" : "Masquage du contenu vu désactivé",
+        description: enabled
+          ? "Les films et séries déjà vus seront masqués des listes de contenu"
+          : "Tous les contenus seront affichés, même ceux déjà vus",
+      })
+    } else {
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder les préférences",
+        variant: "destructive",
+      })
+    }
   }
 
-  const handleAutoMarkWatchedToggle = (enabled: boolean) => {
-    updatePreferences({
+  const handleAutoMarkWatchedToggle = async (enabled: boolean) => {
+    const success = await updatePreferences({
       autoMarkWatched: enabled,
     })
 
-    toast({
-      title: enabled ? "Marquage automatique activé" : "Marquage automatique désactivé",
-      description: enabled
-        ? "Le contenu sera automatiquement marqué comme vu quand vous cliquez sur 'Regarder'"
-        : "Vous devrez marquer manuellement le contenu comme vu",
-    })
+    if (success) {
+      toast({
+        title: enabled ? "Marquage automatique activé" : "Marquage automatique désactivé",
+        description: enabled
+          ? "Le contenu sera automatiquement marqué comme vu quand vous cliquez sur 'Regarder'"
+          : "Vous devrez marquer manuellement le contenu comme vu",
+      })
+    } else {
+      toast({
+        title: "Erreur",
+        description: "Impossible de sauvegarder les préférences",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleMessagePreferencesToggle = async (enabled: boolean) => {

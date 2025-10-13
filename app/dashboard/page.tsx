@@ -107,7 +107,6 @@ export default function DashboardPage() {
   }
 
   const handlePlayItem = (item: any) => {
-    // Determine the URL based on item type
     let playUrl = ""
 
     if (item.type === "tv-channel" && item.streamUrl) {

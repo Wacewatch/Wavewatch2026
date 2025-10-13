@@ -4,19 +4,20 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Shuffle, Film, Tv, Zap, Clock, Star, Sparkles, ChevronDown, ChevronUp } from "lucide-react"
+import { Shuffle, Film, Tv, Zap, Clock, Star, Sparkles, ChevronDown, ChevronUp, Wand2 } from "lucide-react"
 import { getTrendingMovies, getTrendingTVShows, getTrendingAnime } from "@/lib/tmdb"
 import { useRouter } from "next/navigation"
 import { useMobile } from "@/hooks/use-mobile"
+import { WatchTracker } from "@/lib/watch-tracking"
+import { generateText } from "ai"
 
 export function RandomContent() {
   const [isExpanded, setIsExpanded] = useState(false)
   const isMobile = useMobile()
 
-  // Ajouter un useEffect pour gérer l'état initial selon le device
   useEffect(() => {
     if (isMobile !== undefined) {
-      setIsExpanded(!isMobile) // Ouvert sur desktop, fermé sur mobile
+      setIsExpanded(!isMobile)
     }
   }, [isMobile])
 
@@ -28,6 +29,7 @@ export function RandomContent() {
     rating: "",
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [isAILoading, setIsAILoading] = useState(false)
   const [error, setError] = useState("")
   const [contentCache, setContentCache] = useState<{
     movies: any[]
@@ -83,14 +85,13 @@ export function RandomContent() {
 
   const fetchContentData = async (forceRefresh = false) => {
     const now = Date.now()
-    const cacheExpiry = 5 * 60 * 1000 // 5 minutes
+    const cacheExpiry = 5 * 60 * 1000
 
     if (!forceRefresh && contentCache.lastFetch && now - contentCache.lastFetch < cacheExpiry) {
       return contentCache
     }
 
     try {
-      console.log("[v0] Fetching fresh content data...")
       const [moviesData, tvShowsData, animeData] = await Promise.all([
         getTrendingMovies(),
         getTrendingTVShows(),
@@ -105,15 +106,9 @@ export function RandomContent() {
       }
 
       setContentCache(newCache)
-      console.log("[v0] Content cache updated:", {
-        movies: newCache.movies.length,
-        tvShows: newCache.tvShows.length,
-        anime: newCache.anime.length,
-      })
-
       return newCache
     } catch (error) {
-      console.error("[v0] Error fetching content data:", error)
+      console.error("Error fetching content data:", error)
       return contentCache
     }
   }
@@ -121,14 +116,12 @@ export function RandomContent() {
   const getRandomContent = (contentArray: any[]) => {
     if (!contentArray || contentArray.length === 0) return null
 
-    // Use crypto.getRandomValues for better randomness if available
     let randomIndex
     if (typeof window !== "undefined" && window.crypto && window.crypto.getRandomValues) {
       const array = new Uint32Array(1)
       window.crypto.getRandomValues(array)
       randomIndex = array[0] % contentArray.length
     } else {
-      // Fallback to Math.random with additional entropy
       const entropy = Date.now() + Math.random() * 1000000
       randomIndex = Math.floor(((entropy % 1000) / 1000) * contentArray.length)
     }
@@ -136,14 +129,76 @@ export function RandomContent() {
     return contentArray[randomIndex]
   }
 
+  const handleAIRecommendation = async () => {
+    setIsAILoading(true)
+    setError("")
+
+    try {
+      const watchedItems = WatchTracker.getWatchedItems()
+      const favoriteItems = WatchTracker.getFavoriteItems()
+
+      const watchedTitles = watchedItems.slice(0, 20).map((item) => item.title)
+      const favoriteTitles = favoriteItems.slice(0, 10).map((item) => item.title)
+
+      const cache = await fetchContentData()
+      const allContent = [
+        ...cache.movies.map((item) => ({ ...item, type: "movie", title: item.title })),
+        ...cache.tvShows.map((item) => ({ ...item, type: "tv", title: item.name })),
+        ...cache.anime.map((item) => ({ ...item, type: "anime", title: item.name })),
+      ]
+
+      const { text } = await generateText({
+        model: "openai/gpt-4o-mini",
+        prompt: `Tu es un expert en recommandation de films et séries. 
+        
+Historique de visionnage de l'utilisateur: ${watchedTitles.join(", ")}
+Favoris de l'utilisateur: ${favoriteTitles.join(", ")}
+
+Contenu disponible (format: titre|type|id):
+${allContent.map((c) => `${c.title}|${c.type}|${c.id}`).join("\n")}
+
+Analyse les préférences de l'utilisateur et recommande UN SEUL contenu parmi la liste disponible qui correspondrait le mieux à ses goûts.
+Réponds UNIQUEMENT avec l'ID du contenu recommandé et son type, au format: ID|TYPE
+Exemple: 12345|movie`,
+      })
+
+      const [recommendedId, recommendedType] = text.trim().split("|")
+
+      if (recommendedId && recommendedType) {
+        const id = Number.parseInt(recommendedId)
+        if (recommendedType === "movie") {
+          router.push(`/movies/${id}`)
+        } else if (recommendedType === "anime") {
+          router.push(`/anime/${id}`)
+        } else {
+          router.push(`/tv-shows/${id}`)
+        }
+      } else {
+        const content = getRandomContent(allContent)
+        if (content) {
+          if (content.type === "movie") {
+            router.push(`/movies/${content.id}`)
+          } else if (content.type === "anime") {
+            router.push(`/anime/${content.id}`)
+          } else {
+            router.push(`/tv-shows/${content.id}`)
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error getting AI recommendation:", error)
+      setError("Erreur lors de la recommandation IA. Essayez la surprise aléatoire.")
+    } finally {
+      setIsAILoading(false)
+    }
+  }
+
   const handleSurpriseMe = async () => {
     setIsLoading(true)
     setError("")
     try {
-      console.log("[v0] Getting surprise content...")
-      const cache = await fetchContentData(true) // Force refresh for surprise
+      const cache = await fetchContentData(true)
 
-      // Combine all content types for true randomness
       const allContent = [
         ...cache.movies.map((item) => ({ ...item, type: "movie" })),
         ...cache.tvShows.map((item) => ({ ...item, type: "tv" })),
@@ -158,8 +213,6 @@ export function RandomContent() {
       const content = getRandomContent(allContent)
 
       if (content && content.id) {
-        console.log("[v0] Selected random content:", content.title || content.name, "Type:", content.type)
-
         if (content.type === "movie") {
           router.push(`/movies/${content.id}`)
         } else if (content.type === "anime") {
@@ -183,7 +236,6 @@ export function RandomContent() {
     setIsLoading(true)
     setError("")
     try {
-      console.log("[v0] Getting recommendation for type:", preferences.type)
       const cache = await fetchContentData()
       let contentArray: any[] = []
 
@@ -203,8 +255,6 @@ export function RandomContent() {
       const content = getRandomContent(contentArray)
 
       if (content && content.id) {
-        console.log("[v0] Selected recommendation:", content.title || content.name)
-
         if (preferences.type === "movie") {
           router.push(`/movies/${content.id}`)
         } else if (preferences.type === "anime") {
@@ -232,7 +282,6 @@ export function RandomContent() {
 
   return (
     <Card className="bg-gradient-to-br from-slate-900/50 to-blue-900/30 border-slate-700">
-      {/* Header avec bouton toggle */}
       <div className="p-4 border-b border-slate-600">
         <div
           className={`flex items-center justify-center relative ${isMobile ? "cursor-pointer" : ""}`}
@@ -296,7 +345,22 @@ export function RandomContent() {
                   )
                 })}
               </div>
-              <div className="flex justify-center pt-4">
+              <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
+                <Button
+                  onClick={handleAIRecommendation}
+                  disabled={isAILoading}
+                  size="lg"
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3 text-base md:text-lg shadow-lg"
+                >
+                  <Wand2 className="h-5 w-5 mr-2" />
+                  {isAILoading ? (
+                    <>
+                      <span className="animate-pulse">Analyse IA...</span>
+                    </>
+                  ) : (
+                    "Recommandation IA"
+                  )}
+                </Button>
                 <Button
                   onClick={handleSurpriseMe}
                   disabled={isLoading}
