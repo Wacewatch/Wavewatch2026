@@ -12,7 +12,6 @@ import { WatchTracker } from "@/lib/watch-tracking"
 import Image from "next/image"
 import Link from "next/link"
 import { IframeModal } from "@/components/iframe-modal"
-import { AudioPlayerModal } from "@/components/audio-player-modal"
 
 export default function FavoritesPage() {
   const { user } = useAuth()
@@ -65,6 +64,7 @@ export default function FavoritesPage() {
       return
     }
 
+    // Handle radio stations - play audio
     if (item.type === "radio") {
       const streamUrl = item.streamUrl || item.stream_url || item.url
       console.log("[v0] Radio stream URL:", streamUrl)
@@ -75,10 +75,40 @@ export default function FavoritesPage() {
         return
       }
 
-      // Open modal with radio player
-      setModalTitle(item.title)
-      setModalUrl(streamUrl)
-      setIsModalOpen(true)
+      // Stop current radio if playing the same one
+      if (audio) {
+        audio.pause()
+      }
+
+      if (currentRadio?.tmdbId === item.tmdbId && isPlaying) {
+        setIsPlaying(false)
+        setCurrentRadio(null)
+        return
+      }
+
+      // Create new audio element
+      const newAudio = new Audio(streamUrl)
+      newAudio.crossOrigin = "anonymous"
+
+      newAudio.addEventListener("canplay", () => {
+        newAudio
+          .play()
+          .then(() => {
+            setIsPlaying(true)
+            setCurrentRadio(item)
+          })
+          .catch((error) => {
+            console.error("[v0] Radio playback error:", error)
+            alert("Impossible de lire cette station radio. Veuillez réessayer.")
+          })
+      })
+
+      newAudio.addEventListener("error", (e) => {
+        console.error("[v0] Radio audio error:", e)
+        alert("Erreur lors du chargement de la station radio.")
+      })
+
+      setAudio(newAudio)
       return
     }
 
@@ -271,10 +301,10 @@ export default function FavoritesPage() {
                       const needsCustomPlaceholder = item.type === "game" || item.type === "playlist"
                       const getPlaceholderGradient = () => {
                         if (item.type === "game") {
-                          return "bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600"
+                          return "bg-gradient-to-br from-orange-600 via-red-600 to-purple-700"
                         }
                         if (item.type === "playlist") {
-                          return "bg-gradient-to-br from-cyan-500 via-blue-600 to-purple-700"
+                          return "bg-gradient-to-br from-pink-600 via-purple-600 to-indigo-700"
                         }
                         return "bg-gray-700"
                       }
@@ -284,7 +314,7 @@ export default function FavoritesPage() {
                           return "🎮"
                         }
                         if (item.type === "playlist") {
-                          return "🎬"
+                          return "🎵"
                         }
                         return ""
                       }
@@ -390,21 +420,7 @@ export default function FavoritesPage() {
         )}
       </div>
 
-      {isModalOpen && (
-        <>
-          {modalUrl.includes("http") && (
-            <IframeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalTitle} src={modalUrl} />
-          )}
-          {!modalUrl.includes("http") && (
-            <AudioPlayerModal
-              isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
-              title={modalTitle}
-              src={modalUrl}
-            />
-          )}
-        </>
-      )}
+      <IframeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalTitle} src={modalUrl} />
     </div>
   )
 }

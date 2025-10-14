@@ -270,7 +270,7 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
           <div className="lg:col-span-1">
             <Card className="overflow-hidden border-gray-800 bg-gray-900/80 backdrop-blur-sm">
               <CardContent className="p-0">
-                <div className="relative aspect-video w-2/3 sm:w-1/2 md:w-full mx-auto">
+                <div className="relative aspect-video w-1/3 md:w-full mx-auto">
                   <Image
                     src={
                       stillPath
@@ -290,17 +290,17 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
           <div className="lg:col-span-3 space-y-8">
             <div className="space-y-6">
               <div className="flex justify-between items-start">
-                <div className="space-y-2 flex-1">
+                <div className="space-y-2">
                   <Badge variant="secondary" className="bg-gray-800 text-gray-300 border-gray-700">
                     {isAnime ? "Animé" : "Série"} • Saison {seasonNumber} • Épisode {episodeNumber}
                   </Badge>
-                  <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left">
+                  <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-tight text-center md:text-left">
                     {episodeName}
                   </h1>
                   {showData?.name && (
                     <Link
                       href={showUrl}
-                      className="text-lg md:text-xl text-blue-400 hover:text-blue-300 block text-center md:text-left"
+                      className="text-xl text-blue-400 hover:text-blue-300 block text-center md:text-left"
                     >
                       {showData.name}
                     </Link>
@@ -309,7 +309,7 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
                 <Button
                   variant="outline"
                   size="icon"
-                  className="border-red-600 text-red-500 hover:bg-red-900/20 bg-transparent flex-shrink-0 ml-2"
+                  className="border-red-600 text-red-500 hover:bg-red-900/20 bg-transparent flex-shrink-0"
                   onClick={() => setShowBugReportDialog(true)}
                 >
                   <AlertTriangle className="w-5 h-5" />
@@ -317,20 +317,20 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
               </div>
 
               {/* Info Bar */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-6 text-gray-300 text-sm md:text-base">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6 text-gray-300">
                 {voteAverage > 0 && (
                   <div className="flex items-center gap-2">
-                    <Star className="w-4 h-4 md:w-5 md:h-5 fill-yellow-400 text-yellow-400" />
-                    <span className="font-medium">{voteAverage.toFixed(1)}/10</span>
+                    <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
+                    <span className="text-lg font-medium">{voteAverage.toFixed(1)}/10</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 md:w-5 md:h-5" />
+                  <Calendar className="w-5 h-5" />
                   <span>{formatDate(airDate)}</span>
                 </div>
                 {runtime && (
                   <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 md:w-5 md:h-5" />
+                    <Clock className="w-5 h-5" />
                     <span>{runtime} min</span>
                   </div>
                 )}
@@ -369,7 +369,7 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
               </div>
 
               {/* Synopsis */}
-              <p className="text-base md:text-lg lg:text-xl text-gray-200 leading-relaxed text-center md:text-left">
+              <p className="text-lg md:text-xl text-gray-200 leading-relaxed text-center md:text-left">
                 {episodeOverview}
               </p>
 
