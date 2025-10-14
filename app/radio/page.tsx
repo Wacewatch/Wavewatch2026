@@ -369,26 +369,26 @@ export default function RadioPage() {
                       <Play className="w-4 h-4 mr-2" />
                       {isCurrentlyPlaying ? "Arrêter" : "Écouter"}
                     </Button>
-                    {station.website && station.website.trim() !== "" && (
-                      <Button
-                        asChild
-                        variant="outline"
-                        size="sm"
-                        className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white bg-transparent"
-                      >
-                        <a href={station.website} target="_blank" rel="noopener noreferrer">
-                          Site
-                        </a>
-                      </Button>
-                    )}
+                    <AddToPlaylistButton
+                      tmdbId={station.id}
+                      mediaType="radio"
+                      title={station.name}
+                      posterPath={station.logo_url}
+                    />
                   </div>
-                  <AddToPlaylistButton
-                    tmdbId={station.id}
-                    mediaType="radio"
-                    title={station.name}
-                    posterPath={station.logo_url}
-                    className="w-full"
-                  />
+
+                  {station.website && station.website.trim() !== "" && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white bg-transparent"
+                    >
+                      <a href={station.website} target="_blank" rel="noopener noreferrer">
+                        Site Web
+                      </a>
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             )

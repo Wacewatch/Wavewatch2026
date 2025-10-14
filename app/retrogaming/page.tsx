@@ -184,20 +184,19 @@ export default function RetrogamingPage() {
                       </span>
                     </div>
 
-                    <button
-                      className={`w-full ${source.color} hover:opacity-90 text-white py-2 px-4 rounded-lg font-medium`}
-                      onClick={() => handlePlayGame(source)}
-                    >
-                      🎮 Jouer maintenant
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        className={`flex-1 ${source.color} hover:opacity-90 text-white py-2 px-4 rounded-lg font-medium flex items-center justify-center`}
+                        onClick={() => handlePlayGame(source)}
+                      >
+                        🎮 Jouer
+                      </button>
 
-                    <div className="mt-2">
                       <AddToPlaylistButton
                         tmdbId={source.id}
                         mediaType="game"
                         title={source.name}
                         posterPath={source.url}
-                        className="w-full bg-gray-700 hover:bg-gray-600 border-gray-600"
                       />
                     </div>
                   </div>

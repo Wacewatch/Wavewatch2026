@@ -43,20 +43,19 @@ export function AddToPlaylistButton({ tmdbId, mediaType, title, posterPath, clas
   }
 
   if (!user) {
-    return (
-      <Button variant="outline" size="sm" className={`border-gray-600 text-gray-400 ${className}`} disabled>
-        <Plus className="w-4 h-4 mr-1" />
-        Playlist
-      </Button>
-    )
+    return null
   }
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className={`border-gray-600 text-white hover:bg-gray-700 ${className}`}>
-          <Plus className="w-4 h-4 mr-1" />
-          Playlist
+        <Button
+          variant="outline"
+          size="icon"
+          className={`border-gray-600 text-white hover:bg-gray-700 bg-transparent ${className}`}
+          title="Ajouter à une playlist"
+        >
+          <Plus className="w-4 h-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="bg-gray-800 border-gray-700 text-white">

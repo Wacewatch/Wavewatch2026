@@ -12,7 +12,6 @@ import { WatchTracker } from "@/lib/watch-tracking"
 import Image from "next/image"
 import Link from "next/link"
 import { IframeModal } from "@/components/iframe-modal"
-import { AudioPlayerModal } from "@/components/audio-player-modal"
 
 export default function FavoritesPage() {
   const { user } = useAuth()
@@ -49,7 +48,6 @@ export default function FavoritesPage() {
   const handlePlayItem = (item: any) => {
     console.log("[v0] Playing item:", item)
 
-    // Handle TV channels - open modal with stream
     if (item.type === "tv-channel") {
       const streamUrl = item.streamUrl || item.stream_url || item.url
       console.log("[v0] TV Channel stream URL:", streamUrl)
@@ -75,14 +73,12 @@ export default function FavoritesPage() {
         return
       }
 
-      // Open modal with radio player
       setModalTitle(item.title)
       setModalUrl(streamUrl)
       setIsModalOpen(true)
       return
     }
 
-    // Handle retrogaming - open modal with game
     if (item.type === "game") {
       const gameUrl = item.url || item.game_url || item.gameUrl
       console.log("[v0] Game URL:", gameUrl)
@@ -391,19 +387,7 @@ export default function FavoritesPage() {
       </div>
 
       {isModalOpen && (
-        <>
-          {modalUrl.includes("http") && (
-            <IframeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalTitle} src={modalUrl} />
-          )}
-          {!modalUrl.includes("http") && (
-            <AudioPlayerModal
-              isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
-              title={modalTitle}
-              src={modalUrl}
-            />
-          )}
-        </>
+        <IframeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalTitle} src={modalUrl} />
       )}
     </div>
   )

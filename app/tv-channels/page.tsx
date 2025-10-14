@@ -304,22 +304,23 @@ export default function TVChannelsPage() {
                     </span>
                   </div>
 
-                  <Button
-                    onClick={() => handleWatch(channel)}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-medium"
-                    size="sm"
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Regarder
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleWatch(channel)}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium"
+                      size="sm"
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Regarder
+                    </Button>
 
-                  <AddToPlaylistButton
-                    tmdbId={channel.id}
-                    mediaType="tv-channel"
-                    title={channel.name}
-                    posterPath={channel.logo_url}
-                    className="w-full"
-                  />
+                    <AddToPlaylistButton
+                      tmdbId={channel.id}
+                      mediaType="tv-channel"
+                      title={channel.name}
+                      posterPath={channel.logo_url}
+                    />
+                  </div>
                 </CardContent>
               </Card>
             )
