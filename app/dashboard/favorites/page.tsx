@@ -47,9 +47,11 @@ export default function FavoritesPage() {
   const handlePlayItem = (item: any) => {
     console.log("[v0] Playing item from favorites:", item)
 
-    // For TV channels
     if (item.type === "tv-channel") {
+      // Try multiple possible field names for the stream URL
       const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
+      console.log("[v0] TV Channel stream URL:", streamUrl)
+
       if (streamUrl) {
         setSelectedItem({
           title: item.title,
@@ -64,9 +66,11 @@ export default function FavoritesPage() {
       return
     }
 
-    // For radio stations
     if (item.type === "radio") {
+      // Try multiple possible field names for the stream URL
       const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
+      console.log("[v0] Radio stream URL:", streamUrl)
+
       if (!streamUrl) {
         console.error("[v0] No stream URL found for radio:", JSON.stringify(item))
         alert(`Impossible de lire "${item.title}". URL de streaming non disponible.`)
@@ -108,9 +112,11 @@ export default function FavoritesPage() {
       return
     }
 
-    // For retrogaming
     if (item.type === "game") {
-      const gameUrl = item.url || item.game_url || item.gameUrl
+      // Try multiple possible field names for the game URL
+      const gameUrl = item.url || item.game_url || item.gameUrl || item.streamUrl
+      console.log("[v0] Game URL:", gameUrl)
+
       if (gameUrl) {
         setSelectedItem({
           title: item.title,

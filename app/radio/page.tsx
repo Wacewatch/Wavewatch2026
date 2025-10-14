@@ -362,7 +362,7 @@ export default function RadioPage() {
                   <div className="flex gap-2">
                     <Button
                       onClick={() => handlePlay(station)}
-                      className={`flex-1 ${isCurrentlyPlaying ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"}`}
+                      className={`flex-1 ${isCurrentlyPlaying ? "bg-red-600 hover:bg-red-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"} font-medium`}
                       size="sm"
                     >
                       <Play className="w-4 h-4 mr-2" />
@@ -373,7 +373,7 @@ export default function RadioPage() {
                         asChild
                         variant="outline"
                         size="sm"
-                        className="border-gray-600 text-gray-300 hover:bg-gray-700 bg-transparent"
+                        className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white bg-transparent"
                       >
                         <a href={station.website} target="_blank" rel="noopener noreferrer">
                           Site

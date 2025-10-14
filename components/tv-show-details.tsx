@@ -10,6 +10,7 @@ import { IframeModal } from "@/components/iframe-modal"
 import { BugReportDialog } from "@/components/bug-report-dialog"
 import { TrailerModal } from "@/components/trailer-modal"
 import { AddToListSelector } from "@/components/add-to-list-selector"
+import { ClassificationBadge } from "@/components/classification-badge"
 import {
   Star,
   Calendar,
@@ -466,11 +467,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                 <div>
                   <span>{show.number_of_episodes} épisodes</span>
                 </div>
-                {certification && (
-                  <Badge variant="outline" className="border-orange-500 text-orange-400 font-semibold">
-                    {certification}
-                  </Badge>
-                )}
+                <ClassificationBadge certification={certification} />
                 {/* Votes compacts */}
                 <div className="flex items-center gap-2 bg-gray-800/50 rounded-lg px-3 py-1">
                   <Button

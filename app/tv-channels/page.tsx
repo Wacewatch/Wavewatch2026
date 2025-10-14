@@ -305,7 +305,7 @@ export default function TVChannelsPage() {
 
                   <Button
                     onClick={() => handleWatch(channel)}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-medium"
                     size="sm"
                   >
                     <Play className="w-4 h-4 mr-2" />
