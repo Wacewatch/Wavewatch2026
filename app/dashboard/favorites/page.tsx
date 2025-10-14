@@ -47,8 +47,8 @@ export default function FavoritesPage() {
   const handlePlayItem = (item: any) => {
     console.log("[v0] Playing item from favorites:", item)
 
+    // TV Channel - Open modal with IframeModal like TV channels page
     if (item.type === "tv-channel") {
-      // Try multiple possible field names for the stream URL
       const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
       console.log("[v0] TV Channel stream URL:", streamUrl)
 
@@ -66,8 +66,8 @@ export default function FavoritesPage() {
       return
     }
 
+    // Radio - Use HTML5 Audio like radio page (not modal)
     if (item.type === "radio") {
-      // Try multiple possible field names for the stream URL
       const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
       console.log("[v0] Radio stream URL:", streamUrl)
 
@@ -77,16 +77,18 @@ export default function FavoritesPage() {
         return
       }
 
+      // Stop current radio if playing the same one
       if (audio) {
         audio.pause()
       }
 
-      if (currentRadio?.id === item.id && isPlaying) {
+      if (currentRadio?.tmdbId === item.tmdbId && isPlaying) {
         setIsPlaying(false)
         setCurrentRadio(null)
         return
       }
 
+      // Create new audio element
       const newAudio = new Audio(streamUrl)
       newAudio.crossOrigin = "anonymous"
 
@@ -112,8 +114,8 @@ export default function FavoritesPage() {
       return
     }
 
+    // Retrogaming - Open modal with IframeModal like retrogaming page
     if (item.type === "game") {
-      // Try multiple possible field names for the game URL
       const gameUrl = item.url || item.game_url || item.gameUrl || item.streamUrl
       console.log("[v0] Game URL:", gameUrl)
 
@@ -226,7 +228,7 @@ export default function FavoritesPage() {
         </div>
 
         {currentRadio && isPlaying && (
-          <Card className="bg-gradient-to-r from-green-900/50 to-emerald-900/50 border-green-700">
+          <Card className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border-blue-700">
             <CardContent className="flex items-center justify-between p-4">
               <div className="flex items-center space-x-4">
                 <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-md">
@@ -238,21 +240,21 @@ export default function FavoritesPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-white">{currentRadio.title}</h3>
-                  <p className="text-sm text-green-300">En cours de lecture...</p>
+                  <p className="text-sm text-blue-300">En cours de lecture...</p>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="flex space-x-1">
-                  <div className="w-1 h-4 bg-green-400 animate-pulse"></div>
-                  <div className="w-1 h-6 bg-green-400 animate-pulse" style={{ animationDelay: "0.1s" }}></div>
-                  <div className="w-1 h-3 bg-green-400 animate-pulse" style={{ animationDelay: "0.2s" }}></div>
-                  <div className="w-1 h-5 bg-green-400 animate-pulse" style={{ animationDelay: "0.3s" }}></div>
+                  <div className="w-1 h-4 bg-blue-500 animate-pulse"></div>
+                  <div className="w-1 h-6 bg-blue-500 animate-pulse" style={{ animationDelay: "0.1s" }}></div>
+                  <div className="w-1 h-3 bg-blue-500 animate-pulse" style={{ animationDelay: "0.2s" }}></div>
+                  <div className="w-1 h-5 bg-blue-500 animate-pulse" style={{ animationDelay: "0.3s" }}></div>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handlePlayItem(currentRadio)}
-                  className="border-green-500 text-green-300 hover:bg-green-900"
+                  className="border-blue-600 text-blue-300 hover:bg-blue-800"
                 >
                   Arrêter
                 </Button>

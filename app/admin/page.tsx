@@ -1581,7 +1581,13 @@ export default function AdminPage() {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center gap-4">
-          <Image src="/images/logo.png" alt="WaveWatch Logo" width={120} height={40} className="logo-glow" />
+          <Image
+            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo_1-CEQks3F61mJGM9U4L9zAAXO24dWeve.png"
+            alt="WaveWatch Logo"
+            width={120}
+            height={40}
+            className="logo-glow"
+          />
           <div className="space-y-2">
             <h1 className="text-3xl font-bold">Administration WaveWatch</h1>
             <p className="text-muted-foreground">Tableau de bord complet pour gérer votre plateforme de streaming</p>
@@ -1797,7 +1803,7 @@ export default function AdminPage() {
             </div>
 
             {/* Module Contenu par Type - Design amélioré */}
-            <Card className="bg-card border-border">
+            <Card className="col-span-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5" />
