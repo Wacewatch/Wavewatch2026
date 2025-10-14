@@ -5,6 +5,7 @@ import { WatchTracker } from "@/lib/watch-tracking"
 import { useToast } from "@/hooks/use-toast"
 import { IframeModal } from "@/components/iframe-modal"
 import { useRetrogamingSources } from "@/hooks/use-retrogaming-sources"
+import { AddToPlaylistButton } from "@/components/add-to-playlist-button"
 
 interface RetrogamingSource {
   id: number
@@ -189,6 +190,16 @@ export default function RetrogamingPage() {
                     >
                       🎮 Jouer maintenant
                     </button>
+
+                    <div className="mt-2">
+                      <AddToPlaylistButton
+                        tmdbId={source.id}
+                        mediaType="game"
+                        title={source.name}
+                        posterPath={source.url}
+                        className="w-full bg-gray-700 hover:bg-gray-600 border-gray-600"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

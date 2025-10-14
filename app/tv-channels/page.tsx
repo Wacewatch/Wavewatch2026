@@ -13,6 +13,7 @@ import { IframeModal } from "@/components/iframe-modal"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { useToast } from "@/hooks/use-toast"
 import { useTVChannels } from "@/hooks/use-tv-channels"
+import { AddToPlaylistButton } from "@/components/add-to-playlist-button"
 
 interface TVChannel {
   id: number
@@ -311,6 +312,14 @@ export default function TVChannelsPage() {
                     <Play className="w-4 h-4 mr-2" />
                     Regarder
                   </Button>
+
+                  <AddToPlaylistButton
+                    tmdbId={channel.id}
+                    mediaType="tv-channel"
+                    title={channel.name}
+                    posterPath={channel.logo_url}
+                    className="w-full"
+                  />
                 </CardContent>
               </Card>
             )

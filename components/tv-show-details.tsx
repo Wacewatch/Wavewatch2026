@@ -425,13 +425,9 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8 mobile-grid">
           {/* Poster */}
           <div className="lg:col-span-1">
-            <Card className="overflow-hidden border-gray-800 bg-gray-900/80 backdrop-blur-sm">
-              <CardContent className="p-0">
-                <div className="relative aspect-[2/3] w-2/3 sm:w-1/2 md:w-full mx-auto">
-                  <Image src={posterUrl || "/placeholder.svg"} alt={show.name} fill className="object-cover" />
-                </div>
-              </CardContent>
-            </Card>
+            <div className="relative aspect-[2/3] w-2/3 sm:w-1/2 md:w-full mx-auto rounded-lg overflow-hidden">
+              <Image src={posterUrl || "/placeholder.svg"} alt={show.name} fill className="object-cover" />
+            </div>
           </div>
 
           {/* Details */}

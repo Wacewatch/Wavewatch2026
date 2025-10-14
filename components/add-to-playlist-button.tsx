@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast"
 
 interface AddToPlaylistButtonProps {
   tmdbId: number
-  mediaType: "movie" | "tv"
+  mediaType: "movie" | "tv" | "tv-channel" | "radio" | "game"
   title: string
   posterPath?: string
   className?: string

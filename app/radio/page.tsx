@@ -10,6 +10,7 @@ import { Play, Search, Heart, Radio, ThumbsUp, ThumbsDown } from "lucide-react"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { useToast } from "@/hooks/use-toast"
 import { useRadioStations } from "@/hooks/use-radio-stations"
+import { AddToPlaylistButton } from "@/components/add-to-playlist-button"
 
 interface RadioStation {
   id: number
@@ -381,6 +382,13 @@ export default function RadioPage() {
                       </Button>
                     )}
                   </div>
+                  <AddToPlaylistButton
+                    tmdbId={station.id}
+                    mediaType="radio"
+                    title={station.name}
+                    posterPath={station.logo_url}
+                    className="w-full"
+                  />
                 </CardContent>
               </Card>
             )
