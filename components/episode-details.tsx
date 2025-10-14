@@ -5,24 +5,10 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
 import { IframeModal } from "@/components/iframe-modal"
-import { BugReportDialog } from "@/components/bug-report-dialog"
 import { TrailerModal } from "@/components/trailer-modal"
 import { AddToListSelector } from "@/components/add-to-list-selector"
-import {
-  Play,
-  Download,
-  Star,
-  Clock,
-  Calendar,
-  Check,
-  ArrowLeft,
-  AlertTriangle,
-  Youtube,
-  ThumbsUp,
-  ThumbsDown,
-} from "lucide-react"
+import { Play, Download, Star, Clock, Calendar, Check, ArrowLeft, Youtube, ThumbsUp, ThumbsDown } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
@@ -56,7 +42,6 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
   const [isInWishlist, setIsInWishlist] = useState(false)
   const [isWatched, setIsWatched] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
-  const [showBugReportDialog, setShowBugReportDialog] = useState(false)
   const [userRating, setUserRating] = useState<"like" | "dislike" | null>(null)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const { user } = useAuth()
@@ -268,52 +253,36 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mobile-grid">
           {/* Still Image */}
           <div className="lg:col-span-1">
-            <Card className="overflow-hidden border-gray-800 bg-gray-900/80 backdrop-blur-sm">
-              <CardContent className="p-0">
-                <div className="relative aspect-video w-1/3 md:w-full mx-auto">
-                  <Image
-                    src={
-                      stillPath
-                        ? `https://image.tmdb.org/t/p/w500${stillPath}`
-                        : "/placeholder.svg?height=300&width=500"
-                    }
-                    alt={episodeName}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-              </CardContent>
-            </Card>
+            <div className="relative aspect-video w-full mx-auto rounded-lg overflow-hidden">
+              <Image
+                src={
+                  stillPath ? `https://image.tmdb.org/t/p/w500${stillPath}` : "/placeholder.svg?height=300&width=500"
+                }
+                alt={episodeName}
+                fill
+                className="object-cover"
+              />
+            </div>
           </div>
 
           {/* Details */}
           <div className="lg:col-span-3 space-y-8">
             <div className="space-y-6">
-              <div className="flex justify-between items-start">
-                <div className="space-y-2">
-                  <Badge variant="secondary" className="bg-gray-800 text-gray-300 border-gray-700">
-                    {isAnime ? "Animé" : "Série"} • Saison {seasonNumber} • Épisode {episodeNumber}
-                  </Badge>
-                  <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-tight text-center md:text-left">
-                    {episodeName}
-                  </h1>
-                  {showData?.name && (
-                    <Link
-                      href={showUrl}
-                      className="text-xl text-blue-400 hover:text-blue-300 block text-center md:text-left"
-                    >
-                      {showData.name}
-                    </Link>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="border-red-600 text-red-500 hover:bg-red-900/20 bg-transparent flex-shrink-0"
-                  onClick={() => setShowBugReportDialog(true)}
-                >
-                  <AlertTriangle className="w-5 h-5" />
-                </Button>
+              <div className="space-y-2">
+                <Badge variant="secondary" className="bg-gray-800 text-gray-300 border-gray-700">
+                  {isAnime ? "Animé" : "Série"} • Saison {seasonNumber} • Épisode {episodeNumber}
+                </Badge>
+                <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white leading-tight text-center md:text-left">
+                  {episodeName}
+                </h1>
+                {showData?.name && (
+                  <Link
+                    href={showUrl}
+                    className="text-xl text-blue-400 hover:text-blue-300 block text-center md:text-left"
+                  >
+                    {showData.name}
+                  </Link>
+                )}
               </div>
 
               {/* Info Bar */}
@@ -508,14 +477,6 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
         onClose={() => setShowTrailerModal(false)}
         title={`${episodeName} - ${showData?.name}`}
         trailerUrl={trailerUrl}
-      />
-
-      <BugReportDialog
-        isOpen={showBugReportDialog}
-        onClose={() => setShowBugReportDialog(false)}
-        contentType="episode"
-        contentId={`${showId}-${seasonNumber}-${episodeNumber}`}
-        contentTitle={episodeName}
       />
     </div>
   )

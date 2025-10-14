@@ -68,7 +68,7 @@ export function SeasonDetails({ season, showId, showData, isAnime = false }: Sea
         <div className="md:col-span-1">
           <Card>
             <CardContent className="p-6">
-              <div className="relative aspect-[2/3] mb-4 w-1/3 md:w-full mx-auto">
+              <div className="relative aspect-[2/3] mb-4 w-full mx-auto">
                 <Image
                   src={
                     season.poster_path
