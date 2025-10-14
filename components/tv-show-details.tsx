@@ -427,7 +427,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
           <div className="lg:col-span-1">
             <Card className="overflow-hidden border-gray-800 bg-gray-900/80 backdrop-blur-sm">
               <CardContent className="p-0">
-                <div className="relative aspect-[2/3]">
+                <div className="relative aspect-[2/3] w-2/3 sm:w-1/2 md:w-full mx-auto">
                   <Image src={posterUrl || "/placeholder.svg"} alt={show.name} fill className="object-cover" />
                 </div>
               </CardContent>
@@ -438,11 +438,13 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
           <div className="lg:col-span-3 space-y-8">
             <div className="space-y-6">
               <div className="flex justify-between items-start">
-                <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold text-white leading-tight">{show.name}</h1>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left w-full md:w-auto">
+                  {show.name}
+                </h1>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="border-red-600 text-red-500 hover:bg-red-900/20 bg-transparent"
+                  className="border-red-600 text-red-500 hover:bg-red-900/20 bg-transparent flex-shrink-0 ml-2"
                   onClick={() => setShowBugReportDialog(true)}
                 >
                   <AlertTriangle className="w-5 h-5" />
@@ -450,13 +452,13 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
               </div>
 
               {/* Info Bar */}
-              <div className="flex flex-wrap items-center gap-4 md:gap-6 text-gray-300">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-6 text-gray-300 text-sm md:text-base">
                 <div className="flex items-center gap-2">
-                  <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                  <span className="text-lg font-medium">{show.vote_average.toFixed(1)}/10</span>
+                  <Star className="w-4 h-4 md:w-5 md:h-5 fill-yellow-400 text-yellow-400" />
+                  <span className="font-medium">{show.vote_average.toFixed(1)}/10</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
+                  <Calendar className="w-4 h-4 md:w-5 md:h-5" />
                   <span>{new Date(show.first_air_date).getFullYear()}</span>
                 </div>
                 <div>
@@ -503,7 +505,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
               </div>
 
               {/* Genres */}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-center md:justify-start gap-2">
                 {show.genres.map((genre: any) => (
                   <Badge key={genre.id} variant="secondary" className="bg-gray-800 text-gray-300 border-gray-700">
                     {genre.name}
@@ -511,7 +513,9 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                 ))}
               </div>
 
-              <p className="text-lg md:text-xl text-gray-200 leading-relaxed">{show.overview}</p>
+              <p className="text-base md:text-lg lg:text-xl text-gray-200 leading-relaxed text-center md:text-left">
+                {show.overview}
+              </p>
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4">

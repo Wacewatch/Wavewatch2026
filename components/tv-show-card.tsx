@@ -76,7 +76,7 @@ export function TVShowCard({ show, isAnime = false, showBadges = true }: TVShowC
         onMouseLeave={() => setIsHovered(false)}
       >
         <CardContent className="p-0">
-          <div className="relative aspect-[2/3]">
+          <div className="relative aspect-[3/4] md:aspect-[2/3]">
             <Image
               src={posterUrl || "/placeholder.svg"}
               alt={show.name}

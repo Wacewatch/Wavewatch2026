@@ -53,7 +53,7 @@ export function SeasonDetails({ season, showId, showData, isAnime = false }: Sea
             Retour
           </Button>
         </Link>
-        <div>
+        <div className="text-center md:text-left w-full md:w-auto">
           <h1 className="text-3xl font-bold">{season.name}</h1>
           {showData && (
             <p className="text-muted-foreground">
@@ -68,7 +68,7 @@ export function SeasonDetails({ season, showId, showData, isAnime = false }: Sea
         <div className="md:col-span-1">
           <Card>
             <CardContent className="p-6">
-              <div className="relative aspect-[2/3] mb-4">
+              <div className="relative aspect-[2/3] mb-4 w-1/3 md:w-full mx-auto">
                 <Image
                   src={
                     season.poster_path
@@ -81,8 +81,8 @@ export function SeasonDetails({ season, showId, showData, isAnime = false }: Sea
                   sizes="(max-width: 768px) 100vw, 300px"
                 />
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
+              <div className="space-y-2 text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-2">
                   <Calendar className="h-4 w-4" />
                   <span className="text-sm">
                     {season.air_date
@@ -94,7 +94,9 @@ export function SeasonDetails({ season, showId, showData, isAnime = false }: Sea
                       : "Date inconnue"}
                   </span>
                 </div>
-                <Badge variant="secondary">{season.episode_count} épisodes</Badge>
+                <div className="flex justify-center md:justify-start">
+                  <Badge variant="secondary">{season.episode_count} épisodes</Badge>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -103,10 +105,10 @@ export function SeasonDetails({ season, showId, showData, isAnime = false }: Sea
         <div className="md:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Synopsis</CardTitle>
+              <CardTitle className="text-center md:text-left">Synopsis</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground leading-relaxed">
+              <p className="text-muted-foreground leading-relaxed text-center md:text-left">
                 {season.overview || "Aucun synopsis disponible pour cette saison."}
               </p>
             </CardContent>

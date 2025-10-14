@@ -12,13 +12,15 @@ import { WatchTracker } from "@/lib/watch-tracking"
 import Image from "next/image"
 import Link from "next/link"
 import { IframeModal } from "@/components/iframe-modal"
+import { AudioPlayerModal } from "@/components/audio-player-modal"
 
 export default function FavoritesPage() {
   const { user } = useAuth()
   const [favoriteItems, setFavoriteItems] = useState<any[]>([])
   const [mounted, setMounted] = useState(false)
-  const [selectedItem, setSelectedItem] = useState<any | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [modalTitle, setModalTitle] = useState("")
+  const [modalUrl, setModalUrl] = useState("")
   const [currentRadio, setCurrentRadio] = useState<any | null>(null)
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -45,105 +47,53 @@ export default function FavoritesPage() {
   }, [audio])
 
   const handlePlayItem = (item: any) => {
-    console.log("[v0] Playing item from favorites:", {
-      type: item.type,
-      title: item.title,
-      streamUrl: item.streamUrl,
-      stream_url: item.stream_url,
-      url: item.url,
-      streamingUrl: item.streamingUrl,
-      fullItem: item,
-    })
+    console.log("[v0] Playing item:", item)
 
+    // Handle TV channels - open modal with stream
     if (item.type === "tv-channel") {
-      const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
-      console.log("[v0] TV Channel - Final stream URL:", streamUrl)
+      const streamUrl = item.streamUrl || item.stream_url || item.url
+      console.log("[v0] TV Channel stream URL:", streamUrl)
 
       if (streamUrl) {
-        setSelectedItem({
-          title: item.title,
-          url: streamUrl,
-          type: "tv-channel",
-        })
+        setModalTitle(item.title)
+        setModalUrl(streamUrl)
         setIsModalOpen(true)
-        console.log("[v0] TV Channel modal opened successfully")
       } else {
-        console.error("[v0] No stream URL found for TV channel. Item data:", JSON.stringify(item, null, 2))
-        alert(
-          `Impossible de lire "${item.title}". URL de streaming non disponible. Veuillez réessayer d'ajouter cette chaîne à vos favoris.`,
-        )
+        console.error("[v0] No stream URL found for TV channel")
+        alert(`Impossible de lire "${item.title}". URL de streaming non disponible.`)
       }
       return
     }
 
     if (item.type === "radio") {
-      const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
-      console.log("[v0] Radio - Final stream URL:", streamUrl)
+      const streamUrl = item.streamUrl || item.stream_url || item.url
+      console.log("[v0] Radio stream URL:", streamUrl)
 
       if (!streamUrl) {
-        console.error("[v0] No stream URL found for radio. Item data:", JSON.stringify(item, null, 2))
-        alert(
-          `Impossible de lire "${item.title}". URL de streaming non disponible. Veuillez réessayer d'ajouter cette radio à vos favoris.`,
-        )
+        console.error("[v0] No stream URL found for radio")
+        alert(`Impossible de lire "${item.title}". URL de streaming non disponible.`)
         return
       }
 
-      // Stop current radio if playing the same one
-      if (audio) {
-        audio.pause()
-      }
-
-      if (currentRadio?.tmdbId === item.tmdbId && isPlaying) {
-        setIsPlaying(false)
-        setCurrentRadio(null)
-        console.log("[v0] Radio stopped")
-        return
-      }
-
-      // Create new audio element
-      const newAudio = new Audio(streamUrl)
-      newAudio.crossOrigin = "anonymous"
-
-      newAudio.addEventListener("canplay", () => {
-        newAudio
-          .play()
-          .then(() => {
-            console.log("[v0] Radio playing successfully")
-            setIsPlaying(true)
-            setCurrentRadio(item)
-          })
-          .catch((error) => {
-            console.error("[v0] Radio playback error:", error)
-            alert("Impossible de lire cette station radio. Veuillez réessayer.")
-          })
-      })
-
-      newAudio.addEventListener("error", (e) => {
-        console.error("[v0] Radio audio error:", e)
-        alert("Erreur lors du chargement de la station radio.")
-      })
-
-      setAudio(newAudio)
+      // Open modal with radio player
+      setModalTitle(item.title)
+      setModalUrl(streamUrl)
+      setIsModalOpen(true)
       return
     }
 
+    // Handle retrogaming - open modal with game
     if (item.type === "game") {
-      const gameUrl = item.url || item.game_url || item.gameUrl || item.streamUrl
-      console.log("[v0] Game - Final URL:", gameUrl)
+      const gameUrl = item.url || item.game_url || item.gameUrl
+      console.log("[v0] Game URL:", gameUrl)
 
       if (gameUrl) {
-        setSelectedItem({
-          title: item.title,
-          url: gameUrl,
-          type: "game",
-        })
+        setModalTitle(item.title)
+        setModalUrl(gameUrl)
         setIsModalOpen(true)
-        console.log("[v0] Game modal opened successfully")
       } else {
-        console.error("[v0] No game URL found. Item data:", JSON.stringify(item, null, 2))
-        alert(
-          `Impossible de lire "${item.title}". URL de jeu non disponible. Veuillez réessayer d'ajouter ce jeu à vos favoris.`,
-        )
+        console.error("[v0] No game URL found")
+        alert(`Impossible de lire "${item.title}". URL de jeu non disponible.`)
       }
       return
     }
@@ -318,6 +268,27 @@ export default function FavoritesPage() {
                         imageUrl = item.logoUrl
                       }
 
+                      const needsCustomPlaceholder = item.type === "game" || item.type === "playlist"
+                      const getPlaceholderGradient = () => {
+                        if (item.type === "game") {
+                          return "bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600"
+                        }
+                        if (item.type === "playlist") {
+                          return "bg-gradient-to-br from-cyan-500 via-blue-600 to-purple-700"
+                        }
+                        return "bg-gray-700"
+                      }
+
+                      const getPlaceholderIcon = () => {
+                        if (item.type === "game") {
+                          return "🎮"
+                        }
+                        if (item.type === "playlist") {
+                          return "🎬"
+                        }
+                        return ""
+                      }
+
                       const getItemUrl = () => {
                         switch (item.type) {
                           case "movie":
@@ -345,6 +316,7 @@ export default function FavoritesPage() {
                       const handleItemClick = (e: React.MouseEvent) => {
                         if (isPlayableItem) {
                           e.preventDefault()
+                          e.stopPropagation()
                           handlePlayItem(item)
                         }
                       }
@@ -352,17 +324,28 @@ export default function FavoritesPage() {
                       const content = (
                         <div className="space-y-2 group cursor-pointer" key={item.id}>
                           <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
-                            <Image
-                              src={imageUrl || "/placeholder.svg"}
-                              alt={item.title}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform"
-                              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 12.5vw"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement
-                                target.src = "/placeholder.svg?height=300&width=200"
-                              }}
-                            />
+                            {needsCustomPlaceholder && !item.posterPath && !item.logoUrl ? (
+                              <div
+                                className={`w-full h-full ${getPlaceholderGradient()} flex flex-col items-center justify-center p-4 group-hover:scale-105 transition-transform`}
+                              >
+                                <span className="text-6xl mb-3 drop-shadow-lg">{getPlaceholderIcon()}</span>
+                                <p className="text-white text-center font-bold text-sm line-clamp-3 drop-shadow-md px-2">
+                                  {item.title}
+                                </p>
+                              </div>
+                            ) : (
+                              <Image
+                                src={imageUrl || "/placeholder.svg"}
+                                alt={item.title}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform"
+                                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 12.5vw"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement
+                                  target.src = "/placeholder.svg?height=300&width=200"
+                                }}
+                              />
+                            )}
                             <div className="absolute top-2 right-2">
                               <Badge variant="secondary" className="bg-yellow-600 text-white text-xs">
                                 <Star className="w-3 h-3" />
@@ -385,9 +368,9 @@ export default function FavoritesPage() {
 
                       if (isPlayableItem) {
                         return (
-                          <div key={item.id} onClick={handleItemClick}>
+                          <button key={item.id} onClick={handleItemClick} className="text-left w-full" type="button">
                             {content}
-                          </div>
+                          </button>
                         )
                       } else if (itemUrl) {
                         return (
@@ -407,15 +390,21 @@ export default function FavoritesPage() {
         )}
       </div>
 
-      <IframeModal
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false)
-          setSelectedItem(null)
-        }}
-        title={selectedItem?.title || ""}
-        src={selectedItem?.url || ""}
-      />
+      {isModalOpen && (
+        <>
+          {modalUrl.includes("http") && (
+            <IframeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalTitle} src={modalUrl} />
+          )}
+          {!modalUrl.includes("http") && (
+            <AudioPlayerModal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              title={modalTitle}
+              src={modalUrl}
+            />
+          )}
+        </>
+      )}
     </div>
   )
 }

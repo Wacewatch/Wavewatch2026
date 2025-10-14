@@ -1,4 +1,4 @@
-import Link from "next/link"
+import Link from "next/image"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -22,7 +22,7 @@ export function ActorCard({ actor }: ActorCardProps) {
     <Link href={`/actors/${actor.id}`}>
       <Card className="group overflow-hidden hover:scale-105 transition-transform duration-200">
         <CardContent className="p-0">
-          <div className="relative aspect-[2/3]">
+          <div className="relative aspect-[3/4] md:aspect-[2/3]">
             <Image
               src={profileUrl || "/placeholder.svg"}
               alt={actor.name}
