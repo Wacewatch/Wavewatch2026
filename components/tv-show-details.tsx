@@ -7,22 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { IframeModal } from "@/components/iframe-modal"
-import { BugReportDialog } from "@/components/bug-report-dialog"
 import { TrailerModal } from "@/components/trailer-modal"
 import { AddToListSelector } from "@/components/add-to-list-selector"
 import { ClassificationBadge } from "@/components/classification-badge"
-import {
-  Star,
-  Calendar,
-  Check,
-  Play,
-  Download,
-  AlertTriangle,
-  Youtube,
-  ThumbsUp,
-  ThumbsDown,
-  Shuffle,
-} from "lucide-react"
+import { Star, Calendar, Check, Play, Download, Youtube, ThumbsUp, ThumbsDown, Shuffle } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
@@ -43,7 +31,6 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
   const [isInWishlist, setIsInWishlist] = useState(false)
   const [isWatched, setIsWatched] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
-  const [showBugReportDialog, setShowBugReportDialog] = useState(false)
   const [similarShows, setSimilarShows] = useState<any[]>([])
   const [isMarkingWatched, setIsMarkingWatched] = useState(false)
   const [userRating, setUserRating] = useState<"like" | "dislike" | null>(null)
@@ -425,32 +412,20 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8 mobile-grid">
           {/* Poster */}
           <div className="lg:col-span-1">
-            <Card className="overflow-hidden border-gray-800 bg-gray-900/80 backdrop-blur-sm">
-              <CardContent className="p-0">
-                <div className="relative aspect-[2/3]">
-                  <Image src={posterUrl || "/placeholder.svg"} alt={show.name} fill className="object-cover" />
-                </div>
-              </CardContent>
-            </Card>
+            <div className="relative aspect-[2/3] w-full max-w-[200px] mx-auto lg:max-w-none rounded-lg overflow-hidden">
+              <Image src={posterUrl || "/placeholder.svg"} alt={show.name} fill className="object-cover" />
+            </div>
           </div>
 
           {/* Details */}
           <div className="lg:col-span-3 space-y-8">
             <div className="space-y-6">
-              <div className="flex justify-between items-start">
-                <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold text-white leading-tight">{show.name}</h1>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="border-red-600 text-red-500 hover:bg-red-900/20 bg-transparent"
-                  onClick={() => setShowBugReportDialog(true)}
-                >
-                  <AlertTriangle className="w-5 h-5" />
-                </Button>
-              </div>
+              <h1 className="text-xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left">
+                {show.name}
+              </h1>
 
               {/* Info Bar */}
-              <div className="flex flex-wrap items-center gap-4 md:gap-6 text-gray-300">
+              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6 text-gray-300">
                 <div className="flex items-center gap-2">
                   <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                   <span className="text-lg font-medium">{show.vote_average.toFixed(1)}/10</span>
@@ -503,7 +478,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
               </div>
 
               {/* Genres */}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap justify-center md:justify-start gap-2">
                 {show.genres.map((genre: any) => (
                   <Badge key={genre.id} variant="secondary" className="bg-gray-800 text-gray-300 border-gray-700">
                     {genre.name}
@@ -511,10 +486,12 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                 ))}
               </div>
 
-              <p className="text-lg md:text-xl text-gray-200 leading-relaxed">{show.overview}</p>
+              <p className="text-base md:text-xl text-gray-200 leading-relaxed text-center md:text-left">
+                {show.overview}
+              </p>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4">
                 <Button
                   size="lg"
                   variant="outline"
@@ -555,7 +532,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
               </div>
 
               {/* Secondary Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4">
                 <AddToListSelector
                   content={{
                     id: show.id,
@@ -712,14 +689,6 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
         onClose={() => setShowTrailerModal(false)}
         title={show.name}
         trailerUrl={trailerUrl}
-      />
-
-      <BugReportDialog
-        isOpen={showBugReportDialog}
-        onClose={() => setShowBugReportDialog(false)}
-        contentType={isAnime ? "anime" : "tv"}
-        contentId={show.id}
-        contentTitle={show.name}
       />
     </div>
   )

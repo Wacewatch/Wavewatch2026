@@ -13,6 +13,7 @@ import { IframeModal } from "@/components/iframe-modal"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { useToast } from "@/hooks/use-toast"
 import { useTVChannels } from "@/hooks/use-tv-channels"
+import { AddToPlaylistButtonGeneric } from "@/components/add-to-playlist-button-generic"
 
 interface TVChannel {
   id: number
@@ -303,14 +304,25 @@ export default function TVChannelsPage() {
                     </span>
                   </div>
 
-                  <Button
-                    onClick={() => handleWatch(channel)}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-medium"
-                    size="sm"
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Regarder
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => handleWatch(channel)}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white font-medium"
+                      size="sm"
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Regarder
+                    </Button>
+                    <AddToPlaylistButtonGeneric
+                      itemId={channel.id}
+                      mediaType="tv-channel"
+                      title={channel.name}
+                      posterPath={channel.logo_url}
+                      variant="outline"
+                      size="sm"
+                      className="bg-transparent"
+                    />
+                  </div>
                 </CardContent>
               </Card>
             )

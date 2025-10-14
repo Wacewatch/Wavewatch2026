@@ -5,31 +5,15 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { IframeModal } from "@/components/iframe-modal"
-import { BugReportDialog } from "@/components/bug-report-dialog"
-import { TrailerModal } from "@/components/trailer-modal"
-import { AddToListSelector } from "@/components/add-to-list-selector"
 import { ClassificationBadge } from "@/components/classification-badge"
-import {
-  Star,
-  Calendar,
-  Clock,
-  Check,
-  Play,
-  Download,
-  AlertTriangle,
-  Youtube,
-  ThumbsUp,
-  ThumbsDown,
-  Film,
-  User,
-} from "lucide-react"
+import { CastList } from "@/components/cast-list"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
-import { CastList } from "@/components/cast-list"
-import { useUserPreferences } from "@/hooks/use-user-preferences"
+import { IframeModal } from "@/components/iframe-modal"
+import { TrailerModal } from "@/components/trailer-modal"
+import { AddToListSelector } from "@/components/add-to-list-selector"
+import { Star, Calendar, Clock, Check, Play, Download, Youtube, ThumbsUp, ThumbsDown, Film, User } from "lucide-react"
 
 interface MovieDetailsProps {
   movie: any
@@ -43,7 +27,6 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
   const [isInWishlist, setIsInWishlist] = useState(false)
   const [isWatched, setIsWatched] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
-  const [showBugReportDialog, setShowBugReportDialog] = useState(false)
   const [similarMovies, setSimilarMovies] = useState<any[]>([])
   const [collection, setCollection] = useState<any>(null)
   const [userRating, setUserRating] = useState<"like" | "dislike" | null>(null)
@@ -51,7 +34,6 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
   const [certification, setCertification] = useState<string | null>(null)
   const { user } = useAuth()
   const { toast } = useToast()
-  const { preferences } = useUserPreferences()
 
   // Get director from credits
   const director = credits?.crew?.find((person: any) => person.job === "Director")
@@ -145,11 +127,6 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
           rating: Math.round(movie.vote_average),
           posterPath: movie.poster_path,
         })
-
-        // Only update the UI state if auto-mark is enabled
-        if (preferences.autoMarkWatched) {
-          setIsWatched(true)
-        }
 
         toast({
           title: "Ajouté à l'historique",
@@ -342,31 +319,17 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8 mobile-grid">
           {/* Poster */}
           <div className="lg:col-span-1">
-            <Card className="overflow-hidden border-gray-800 bg-gray-900/80 backdrop-blur-sm">
-              <CardContent className="p-0">
-                <div className="relative aspect-[2/3] md:aspect-[2/3] w-1/2 md:w-full mx-auto">
-                  <Image src={posterUrl || "/placeholder.svg"} alt={movie.title} fill className="object-cover" />
-                </div>
-              </CardContent>
-            </Card>
+            <div className="relative aspect-[2/3] w-full max-w-[200px] mx-auto lg:max-w-none rounded-lg overflow-hidden">
+              <Image src={posterUrl || "/placeholder.svg"} alt={movie.title} fill className="object-cover" />
+            </div>
           </div>
 
           {/* Details */}
           <div className="lg:col-span-3 space-y-8">
             <div className="space-y-6">
-              <div className="flex justify-between items-start">
-                <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left w-full md:w-auto">
-                  {movie.title}
-                </h1>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="border-red-600 text-red-500 hover:bg-red-900/20 bg-transparent flex-shrink-0"
-                  onClick={() => setShowBugReportDialog(true)}
-                >
-                  <AlertTriangle className="w-5 h-5" />
-                </Button>
-              </div>
+              <h1 className="text-xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left">
+                {movie.title}
+              </h1>
 
               {/* Info Bar */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6 text-gray-300">
@@ -448,7 +411,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
               </div>
 
               {/* Synopsis */}
-              <p className="text-lg md:text-xl text-gray-200 leading-relaxed text-center md:text-left">
+              <p className="text-base md:text-xl text-gray-200 leading-relaxed text-center md:text-left">
                 {movie.overview}
               </p>
 
@@ -633,14 +596,6 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
         onClose={() => setShowTrailerModal(false)}
         title={movie.title}
         trailerUrl={trailerUrl}
-      />
-
-      <BugReportDialog
-        isOpen={showBugReportDialog}
-        onClose={() => setShowBugReportDialog(false)}
-        contentType="movie"
-        contentId={movie.id}
-        contentTitle={movie.title}
       />
     </div>
   )
