@@ -50,7 +50,7 @@ export function Navigation() {
           <Link href="/" className="flex items-center space-x-3 group">
             <div className="relative w-32 h-10 sm:w-40 sm:h-12 md:w-48 md:h-14 transition-transform group-hover:scale-105">
               <Image
-                src="/images/logo_wavewatch.png"
+                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo_1-CEQks3F61mJGM9U4L9zAAXO24dWeve.png"
                 alt="WaveWatch - Plateforme de Streaming Premium"
                 fill
                 className="object-contain drop-shadow-lg logo-glow"
@@ -241,7 +241,7 @@ export function Navigation() {
               <Link href="/" className="flex items-center space-x-3" onClick={() => setIsMenuOpen(false)}>
                 <div className="relative w-32 h-10">
                   <Image
-                    src="/images/logo_wavewatch.png"
+                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo_1-CEQks3F61mJGM9U4L9zAAXO24dWeve.png"
                     alt="WaveWatch - Plateforme de Streaming Premium"
                     fill
                     className="object-contain logo-glow"

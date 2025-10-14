@@ -45,12 +45,20 @@ export default function FavoritesPage() {
   }, [audio])
 
   const handlePlayItem = (item: any) => {
-    console.log("[v0] Playing item from favorites:", item)
+    console.log("[v0] Playing item from favorites:", {
+      type: item.type,
+      title: item.title,
+      streamUrl: item.streamUrl,
+      stream_url: item.stream_url,
+      url: item.url,
+      streamingUrl: item.streamingUrl,
+      fullItem: item,
+    })
 
     // TV Channel - Open modal with IframeModal like TV channels page
     if (item.type === "tv-channel") {
       const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
-      console.log("[v0] TV Channel stream URL:", streamUrl)
+      console.log("[v0] TV Channel - Final stream URL:", streamUrl)
 
       if (streamUrl) {
         setSelectedItem({
@@ -60,8 +68,10 @@ export default function FavoritesPage() {
         })
         setIsModalOpen(true)
       } else {
-        console.error("[v0] No stream URL found for TV channel:", JSON.stringify(item))
-        alert(`Impossible de lire "${item.title}". URL de streaming non disponible.`)
+        console.error("[v0] No stream URL found for TV channel. Item data:", JSON.stringify(item, null, 2))
+        alert(
+          `Impossible de lire "${item.title}". URL de streaming non disponible. Veuillez réessayer d'ajouter cette chaîne à vos favoris.`,
+        )
       }
       return
     }
@@ -69,11 +79,13 @@ export default function FavoritesPage() {
     // Radio - Use HTML5 Audio like radio page (not modal)
     if (item.type === "radio") {
       const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
-      console.log("[v0] Radio stream URL:", streamUrl)
+      console.log("[v0] Radio - Final stream URL:", streamUrl)
 
       if (!streamUrl) {
-        console.error("[v0] No stream URL found for radio:", JSON.stringify(item))
-        alert(`Impossible de lire "${item.title}". URL de streaming non disponible.`)
+        console.error("[v0] No stream URL found for radio. Item data:", JSON.stringify(item, null, 2))
+        alert(
+          `Impossible de lire "${item.title}". URL de streaming non disponible. Veuillez réessayer d'ajouter cette radio à vos favoris.`,
+        )
         return
       }
 
@@ -96,17 +108,18 @@ export default function FavoritesPage() {
         newAudio
           .play()
           .then(() => {
+            console.log("[v0] Radio playing successfully")
             setIsPlaying(true)
             setCurrentRadio(item)
           })
           .catch((error) => {
-            console.error("Erreur de lecture:", error)
+            console.error("[v0] Radio playback error:", error)
             alert("Impossible de lire cette station radio. Veuillez réessayer.")
           })
       })
 
       newAudio.addEventListener("error", (e) => {
-        console.error("Erreur audio:", e)
+        console.error("[v0] Radio audio error:", e)
         alert("Erreur lors du chargement de la station radio.")
       })
 
@@ -117,7 +130,7 @@ export default function FavoritesPage() {
     // Retrogaming - Open modal with IframeModal like retrogaming page
     if (item.type === "game") {
       const gameUrl = item.url || item.game_url || item.gameUrl || item.streamUrl
-      console.log("[v0] Game URL:", gameUrl)
+      console.log("[v0] Game - Final URL:", gameUrl)
 
       if (gameUrl) {
         setSelectedItem({
@@ -127,8 +140,10 @@ export default function FavoritesPage() {
         })
         setIsModalOpen(true)
       } else {
-        console.error("[v0] No game URL found:", JSON.stringify(item))
-        alert(`Impossible de lire "${item.title}". URL de jeu non disponible.`)
+        console.error("[v0] No game URL found. Item data:", JSON.stringify(item, null, 2))
+        alert(
+          `Impossible de lire "${item.title}". URL de jeu non disponible. Veuillez réessayer d'ajouter ce jeu à vos favoris.`,
+        )
       }
       return
     }
