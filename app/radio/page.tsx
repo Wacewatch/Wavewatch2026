@@ -10,7 +10,6 @@ import { Play, Search, Heart, Radio, ThumbsUp, ThumbsDown } from "lucide-react"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { useToast } from "@/hooks/use-toast"
 import { useRadioStations } from "@/hooks/use-radio-stations"
-import { AddToPlaylistButton } from "@/components/add-to-playlist-button"
 
 interface RadioStation {
   id: number
@@ -369,26 +368,19 @@ export default function RadioPage() {
                       <Play className="w-4 h-4 mr-2" />
                       {isCurrentlyPlaying ? "Arrêter" : "Écouter"}
                     </Button>
-                    <AddToPlaylistButton
-                      tmdbId={station.id}
-                      mediaType="radio"
-                      title={station.name}
-                      posterPath={station.logo_url}
-                    />
+                    {station.website && station.website.trim() !== "" && (
+                      <Button
+                        asChild
+                        variant="outline"
+                        size="sm"
+                        className="border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white bg-transparent"
+                      >
+                        <a href={station.website} target="_blank" rel="noopener noreferrer">
+                          Site
+                        </a>
+                      </Button>
+                    )}
                   </div>
-
-                  {station.website && station.website.trim() !== "" && (
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="w-full border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white bg-transparent"
-                    >
-                      <a href={station.website} target="_blank" rel="noopener noreferrer">
-                        Site Web
-                      </a>
-                    </Button>
-                  )}
                 </CardContent>
               </Card>
             )

@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import { IframeModal } from "@/components/iframe-modal"
 import { BugReportDialog } from "@/components/bug-report-dialog"
 import { TrailerModal } from "@/components/trailer-modal"
@@ -267,16 +268,22 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mobile-grid">
           {/* Still Image */}
           <div className="lg:col-span-1">
-            <div className="relative aspect-video w-2/3 sm:w-1/2 md:w-full mx-auto rounded-lg overflow-hidden">
-              <Image
-                src={
-                  stillPath ? `https://image.tmdb.org/t/p/w500${stillPath}` : "/placeholder.svg?height=300&width=500"
-                }
-                alt={episodeName}
-                fill
-                className="object-cover"
-              />
-            </div>
+            <Card className="overflow-hidden border-gray-800 bg-gray-900/80 backdrop-blur-sm">
+              <CardContent className="p-0">
+                <div className="relative aspect-video w-2/3 sm:w-1/2 md:w-full mx-auto">
+                  <Image
+                    src={
+                      stillPath
+                        ? `https://image.tmdb.org/t/p/w500${stillPath}`
+                        : "/placeholder.svg?height=300&width=500"
+                    }
+                    alt={episodeName}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Details */}

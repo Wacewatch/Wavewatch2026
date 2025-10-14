@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import { IframeModal } from "@/components/iframe-modal"
 import { BugReportDialog } from "@/components/bug-report-dialog"
 import { TrailerModal } from "@/components/trailer-modal"
@@ -341,9 +342,13 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8 mobile-grid">
           {/* Poster */}
           <div className="lg:col-span-1">
-            <div className="relative aspect-[2/3] w-2/3 sm:w-1/2 md:w-full mx-auto rounded-lg overflow-hidden">
-              <Image src={posterUrl || "/placeholder.svg"} alt={movie.title} fill className="object-cover" />
-            </div>
+            <Card className="overflow-hidden border-gray-800 bg-gray-900/80 backdrop-blur-sm">
+              <CardContent className="p-0">
+                <div className="relative aspect-[2/3] w-2/3 sm:w-1/2 md:w-full mx-auto">
+                  <Image src={posterUrl || "/placeholder.svg"} alt={movie.title} fill className="object-cover" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Details */}
