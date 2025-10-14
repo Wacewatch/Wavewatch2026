@@ -55,7 +55,6 @@ export default function FavoritesPage() {
       fullItem: item,
     })
 
-    // TV Channel - Open modal with IframeModal like TV channels page
     if (item.type === "tv-channel") {
       const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
       console.log("[v0] TV Channel - Final stream URL:", streamUrl)
@@ -67,6 +66,7 @@ export default function FavoritesPage() {
           type: "tv-channel",
         })
         setIsModalOpen(true)
+        console.log("[v0] TV Channel modal opened successfully")
       } else {
         console.error("[v0] No stream URL found for TV channel. Item data:", JSON.stringify(item, null, 2))
         alert(
@@ -76,7 +76,6 @@ export default function FavoritesPage() {
       return
     }
 
-    // Radio - Use HTML5 Audio like radio page (not modal)
     if (item.type === "radio") {
       const streamUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl
       console.log("[v0] Radio - Final stream URL:", streamUrl)
@@ -97,6 +96,7 @@ export default function FavoritesPage() {
       if (currentRadio?.tmdbId === item.tmdbId && isPlaying) {
         setIsPlaying(false)
         setCurrentRadio(null)
+        console.log("[v0] Radio stopped")
         return
       }
 
@@ -127,7 +127,6 @@ export default function FavoritesPage() {
       return
     }
 
-    // Retrogaming - Open modal with IframeModal like retrogaming page
     if (item.type === "game") {
       const gameUrl = item.url || item.game_url || item.gameUrl || item.streamUrl
       console.log("[v0] Game - Final URL:", gameUrl)
@@ -139,6 +138,7 @@ export default function FavoritesPage() {
           type: "game",
         })
         setIsModalOpen(true)
+        console.log("[v0] Game modal opened successfully")
       } else {
         console.error("[v0] No game URL found. Item data:", JSON.stringify(item, null, 2))
         alert(

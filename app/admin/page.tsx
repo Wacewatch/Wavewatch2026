@@ -59,7 +59,6 @@ import {
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { createBrowserClient } from "@supabase/ssr" // Import for Supabase client
-import Image from "next/image"
 
 export default function AdminPage() {
   const { user } = useAuth()
@@ -1578,56 +1577,74 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-900 text-white">
       <div className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center gap-4">
-          <Image
-            src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo_1-CEQks3F61mJGM9U4L9zAAXO24dWeve.png"
-            alt="WaveWatch Logo"
-            width={120}
-            height={40}
-            className="logo-glow"
-          />
+          {/* Removed logo */}
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold">Administration WaveWatch</h1>
-            <p className="text-muted-foreground">Tableau de bord complet pour gérer votre plateforme de streaming</p>
+            <h1 className="text-3xl font-bold text-white">Administration WaveWatch</h1>
+            <p className="text-gray-400">Tableau de bord complet pour gérer votre plateforme de streaming</p>
           </div>
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 bg-card">
-            <TabsTrigger value="dashboard" className="flex items-center gap-1">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10 bg-gray-800 border-gray-700">
+            <TabsTrigger
+              value="dashboard"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
-            <TabsTrigger value="tvchannels" className="flex items-center gap-1">
+            <TabsTrigger
+              value="tvchannels"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
               <Zap className="w-4 h-4" />
               <span className="hidden sm:inline">TV ({tvChannels.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="radio" className="flex items-center gap-1">
+            <TabsTrigger
+              value="radio"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
               <Radio className="w-4 h-4" />
               <span className="hidden sm:inline">Radio ({radioStations.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="retrogaming" className="flex items-center gap-1">
+            <TabsTrigger
+              value="retrogaming"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
               <Trophy className="w-4 h-4" />
               <span className="hidden sm:inline">Rétro ({retrogamingSources.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="users" className="flex items-center gap-1">
+            <TabsTrigger
+              value="users"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Users ({users.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="requests" className="flex items-center gap-1">
+            <TabsTrigger
+              value="requests"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
               <MessageSquare className="w-4 h-4" />
               <span className="hidden sm:inline">Demandes ({requests.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="bugs" className="flex items-center gap-1">
+            <TabsTrigger value="bugs" className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300">
               <Bug className="w-4 h-4" />
               <span className="hidden sm:inline">Bugs ({bugReports.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="changelogs" className="flex items-center gap-1">
+            <TabsTrigger
+              value="changelogs"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
               <FileText className="w-4 h-4" />
               <span className="hidden sm:inline">Logs ({changelogs.length})</span>
             </TabsTrigger>
+            {/* Added placeholder triggers to fill up space for lg:grid-cols-10 */}
+            <TabsTrigger disabled className="pointer-events-none opacity-0"></TabsTrigger>
+            <TabsTrigger disabled className="pointer-events-none opacity-0"></TabsTrigger>
           </TabsList>
 
           {/* Dashboard avec Statistiques */}
