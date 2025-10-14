@@ -5,8 +5,26 @@ import Link from "next/link"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
+import { IframeModal } from "@/components/iframe-modal"
+import { BugReportDialog } from "@/components/bug-report-dialog"
+import { TrailerModal } from "@/components/trailer-modal"
+import { AddToListSelector } from "@/components/add-to-list-selector"
 import { ClassificationBadge } from "@/components/classification-badge"
-import { Star, Calendar, Clock, Check, Play, Download, Youtube, ThumbsUp, ThumbsDown, Film, User } from "lucide-react"
+import {
+  Star,
+  Calendar,
+  Clock,
+  Check,
+  Play,
+  Download,
+  AlertTriangle,
+  Youtube,
+  ThumbsUp,
+  ThumbsDown,
+  Film,
+  User,
+} from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
@@ -324,17 +342,31 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8 mobile-grid">
           {/* Poster */}
           <div className="lg:col-span-1">
-            <div className="relative aspect-[2/3] w-full mx-auto rounded-lg overflow-hidden">
-              <Image src={posterUrl || "/placeholder.svg"} alt={movie.title} fill className="object-cover" />
-            </div>
+            <Card className="overflow-hidden border-gray-800 bg-gray-900/80 backdrop-blur-sm">
+              <CardContent className="p-0">
+                <div className="relative aspect-[2/3] md:aspect-[2/3] w-1/2 md:w-full mx-auto">
+                  <Image src={posterUrl || "/placeholder.svg"} alt={movie.title} fill className="object-cover" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Details */}
           <div className="lg:col-span-3 space-y-8">
             <div className="space-y-6">
-              <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left">
-                {movie.title}
-              </h1>
+              <div className="flex justify-between items-start">
+                <h1 className="text-2xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left w-full md:w-auto">
+                  {movie.title}
+                </h1>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="border-red-600 text-red-500 hover:bg-red-900/20 bg-transparent flex-shrink-0"
+                  onClick={() => setShowBugReportDialog(true)}
+                >
+                  <AlertTriangle className="w-5 h-5" />
+                </Button>
+              </div>
 
               {/* Info Bar */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6 text-gray-300">
@@ -449,6 +481,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
                   <Youtube className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                   Bande-annonce
                 </Button>
+                <AddToListSelector content={movie} contentType="movie" className="w-full sm:w-auto" />
                 <Button
                   size="lg"
                   variant="outline"
@@ -581,28 +614,28 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
       </div>
 
       {/* Modals */}
-      <div
+      <IframeModal
         isOpen={showStreamingModal}
         onClose={() => setShowStreamingModal(false)}
         src={streamingUrl}
         title={`Streaming - ${movie.title}`}
       />
 
-      <div
+      <IframeModal
         isOpen={showDownloadModal}
         onClose={() => setShowDownloadModal(false)}
         src={downloadUrl}
         title={`Téléchargement - ${movie.title}`}
       />
 
-      <div
+      <TrailerModal
         isOpen={showTrailerModal}
         onClose={() => setShowTrailerModal(false)}
         title={movie.title}
         trailerUrl={trailerUrl}
       />
 
-      <div
+      <BugReportDialog
         isOpen={showBugReportDialog}
         onClose={() => setShowBugReportDialog(false)}
         contentType="movie"
