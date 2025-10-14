@@ -50,10 +50,16 @@ import {
   Clapperboard,
   Sparkles,
   LogIn,
+  MessageSquare,
+  Bug,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { createBrowserClient } from "@supabase/ssr" // Import for Supabase client
+import Image from "next/image"
 
 export default function AdminPage() {
   const { user } = useAuth()
@@ -65,6 +71,8 @@ export default function AdminPage() {
   const [radioStations, setRadioStations] = useState([])
   const [retrogamingSources, setRetrogamingSources] = useState([])
   const [users, setUsers] = useState([])
+  const [requests, setRequests] = useState([])
+  const [bugReports, setBugReports] = useState([])
 
   // States pour les modals
   const [activeModal, setActiveModal] = useState(null)
@@ -169,6 +177,59 @@ export default function AdminPage() {
     release_date: new Date().toISOString().split("T")[0],
   })
 
+  // Added handlers for requests and bug reports
+  const handleUpdateRequestStatus = async (id: string, status: string) => {
+    try {
+      const { error } = await supabase.from("requests").update({ status }).eq("id", id)
+      if (error) throw error
+      setRequests((prev) => prev.map((req) => (req.id === id ? { ...req, status } : req)))
+      toast({ title: "Statut mis à jour", description: `La demande #${id} est maintenant ${status}.` })
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du statut de la demande:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le statut de la demande.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteRequest = async (id: string) => {
+    try {
+      const { error } = await supabase.from("requests").delete().eq("id", id)
+      if (error) throw error
+      setRequests((prev) => prev.filter((req) => req.id !== id))
+      toast({ title: "Demande supprimée", description: `La demande #${id} a été supprimée.` })
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la demande:", error)
+      toast({ title: "Erreur", description: "Impossible de supprimer la demande.", variant: "destructive" })
+    }
+  }
+
+  const handleUpdateBugStatus = async (id: string, status: string) => {
+    try {
+      const { error } = await supabase.from("bug_reports").update({ status }).eq("id", id)
+      if (error) throw error
+      setBugReports((prev) => prev.map((bug) => (bug.id === id ? { ...bug, status } : bug)))
+      toast({ title: "Statut mis à jour", description: `Le rapport de bug #${id} est maintenant ${status}.` })
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du statut du bug:", error)
+      toast({ title: "Erreur", description: "Impossible de mettre à jour le statut du bug.", variant: "destructive" })
+    }
+  }
+
+  const handleDeleteBug = async (id: string) => {
+    try {
+      const { error } = await supabase.from("bug_reports").delete().eq("id", id)
+      if (error) throw error
+      setBugReports((prev) => prev.filter((bug) => bug.id !== id))
+      toast({ title: "Bug supprimé", description: `Le rapport de bug #${id} a été supprimé.` })
+    } catch (error) {
+      console.error("Erreur lors de la suppression du bug:", error)
+      toast({ title: "Erreur", description: "Impossible de supprimer le rapport de bug.", variant: "destructive" })
+    }
+  }
+
   useEffect(() => {
     if (!user?.isAdmin) {
       router.push("/")
@@ -208,10 +269,12 @@ export default function AdminPage() {
         loadRealRadioStations(),
         loadRealRetrogamingSources(),
         loadRealUsers(),
+        loadRequests(), // Added
+        loadBugReports(), // Added
       ])
 
       results.forEach((result, index) => {
-        const names = ["TV Channels", "Radio Stations", "Retrogaming Sources", "Users"]
+        const names = ["TV Channels", "Radio Stations", "Retrogaming Sources", "Users", "Requests", "Bug Reports"]
         if (result.status === "rejected") {
           console.error(`❌ Erreur lors du chargement de ${names[index]}:`, result.reason)
         } else {
@@ -327,6 +390,67 @@ export default function AdminPage() {
     } catch (error) {
       console.error("❌ Erreur lors du chargement des utilisateurs:", error)
       setUsers([]) // Ensure users state is empty on error
+      throw error
+    }
+  }
+
+  // Added functions to fetch requests and bug reports
+  const loadRequests = async () => {
+    try {
+      console.log("🔄 Chargement des demandes...")
+      const { data, error } = await supabase
+        .from("requests")
+        .select(`
+          *,
+          user_profiles(username, email)
+        `)
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("❌ Erreur Supabase requests:", error)
+        throw error
+      }
+
+      const requestsWithUserInfo = (data || []).map((req) => ({
+        ...req,
+        username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
+      }))
+      console.log(`✅ ${requestsWithUserInfo.length} demandes chargées:`, requestsWithUserInfo)
+      setRequests(requestsWithUserInfo)
+      return requestsWithUserInfo
+    } catch (error) {
+      console.error("❌ Erreur lors du chargement des demandes:", error)
+      setRequests([])
+      throw error
+    }
+  }
+
+  const loadBugReports = async () => {
+    try {
+      console.log("🔄 Chargement des rapports de bug...")
+      const { data, error } = await supabase
+        .from("bug_reports")
+        .select(`
+          *,
+          user_profiles(username, email)
+        `)
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("❌ Erreur Supabase bug reports:", error)
+        throw error
+      }
+
+      const bugReportsWithUserInfo = (data || []).map((bug) => ({
+        ...bug,
+        username: bug.user_profiles?.username || bug.user_profiles?.email || "Utilisateur inconnu",
+      }))
+      console.log(`✅ ${bugReportsWithUserInfo.length} rapports de bug chargés:`, bugReportsWithUserInfo)
+      setBugReports(bugReportsWithUserInfo)
+      return bugReportsWithUserInfo
+    } catch (error) {
+      console.error("❌ Erreur lors du chargement des rapports de bug:", error)
+      setBugReports([])
       throw error
     }
   }
@@ -1430,7 +1554,7 @@ export default function AdminPage() {
     }
   }
 
-  if (!user?.isAdmin) {
+  if (!user || !user.isAdmin) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
@@ -1454,15 +1578,18 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8 space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Administration WaveWatch</h1>
-          <p className="text-muted-foreground">Tableau de bord complet pour gérer votre plateforme de streaming</p>
+        <div className="flex items-center gap-4">
+          <Image src="/images/logo.png" alt="WaveWatch Logo" width={120} height={40} className="logo-glow" />
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold">Administration WaveWatch</h1>
+            <p className="text-muted-foreground">Tableau de bord complet pour gérer votre plateforme de streaming</p>
+          </div>
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 bg-card">
             <TabsTrigger value="dashboard" className="flex items-center gap-1">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Dashboard</span>
@@ -1483,6 +1610,14 @@ export default function AdminPage() {
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">Users ({users.length})</span>
             </TabsTrigger>
+            <TabsTrigger value="requests" className="flex items-center gap-1">
+              <MessageSquare className="w-4 h-4" />
+              <span className="hidden sm:inline">Demandes ({requests.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="bugs" className="flex items-center gap-1">
+              <Bug className="w-4 h-4" />
+              <span className="hidden sm:inline">Bugs ({bugReports.length})</span>
+            </TabsTrigger>
             <TabsTrigger value="changelogs" className="flex items-center gap-1">
               <FileText className="w-4 h-4" />
               <span className="hidden sm:inline">Logs ({changelogs.length})</span>
@@ -1493,25 +1628,25 @@ export default function AdminPage() {
           <TabsContent value="dashboard" className="space-y-6">
             {/* Stats Cards - Only showing Total Content and Total Users */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="bg-gradient-to-br from-blue-50 to-cyan-100 border-blue-200">
+              <Card className="bg-card border-border">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-blue-800">Contenu Total</CardTitle>
-                  <Film className="h-4 w-4 text-blue-600" />
+                  <CardTitle className="text-sm font-medium">Contenu Total</CardTitle>
+                  <Film className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-blue-900">{stats.totalContent.toLocaleString()}</div>
-                  <p className="text-xs text-blue-600">Films, séries, chaînes TV, radios, jeux</p>
+                  <div className="text-2xl font-bold">{stats.totalContent.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">Films, séries, chaînes TV, radios, jeux</p>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-green-50 to-emerald-100 border-green-200">
+              <Card className="bg-card border-border">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-green-800">Utilisateurs</CardTitle>
-                  <Users className="h-4 w-4 text-green-600" />
+                  <CardTitle className="text-sm font-medium">Utilisateurs</CardTitle>
+                  <Users className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-900">{stats.totalUsers.toLocaleString()}</div>
-                  <p className="text-xs text-green-600">+{stats.vipUsers} VIP</p>
+                  <div className="text-2xl font-bold">{stats.totalUsers.toLocaleString()}</div>
+                  <p className="text-xs text-muted-foreground">+{stats.vipUsers} VIP</p>
                 </CardContent>
               </Card>
             </div>
@@ -1519,22 +1654,20 @@ export default function AdminPage() {
             {/* Modules de mise à jour TMDB et état du système */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Module de mise à jour TMDB */}
-              <Card className="bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 border-slate-700">
+              <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-white">
-                    <Activity className="w-5 h-5 text-cyan-400" />
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5 text-primary" />
                     Mise à jour TMDB
                   </CardTitle>
-                  <CardDescription className="text-slate-300">
-                    Forcer la mise à jour du contenu depuis l'API TMDB
-                  </CardDescription>
+                  <CardDescription>Forcer la mise à jour du contenu depuis l'API TMDB</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <Button
                       onClick={() => handleContentUpdate("movies")}
                       disabled={isUpdating}
-                      className="bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white border-0 shadow-lg"
+                      variant="secondary"
                       size="sm"
                     >
                       <Tv className="w-4 h-4 mr-2" />
@@ -1544,7 +1677,7 @@ export default function AdminPage() {
                     <Button
                       onClick={() => handleContentUpdate("tvshows")}
                       disabled={isUpdating}
-                      className="bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-600 hover:to-cyan-700 text-white border-0 shadow-lg"
+                      variant="secondary"
                       size="sm"
                     >
                       <Tv className="w-4 h-4 mr-2" />
@@ -1554,7 +1687,7 @@ export default function AdminPage() {
                     <Button
                       onClick={() => handleContentUpdate("anime")}
                       disabled={isUpdating}
-                      className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white border-0 shadow-lg"
+                      variant="secondary"
                       size="sm"
                     >
                       <Tv className="w-4 h-4 mr-2" />
@@ -1564,7 +1697,7 @@ export default function AdminPage() {
                     <Button
                       onClick={() => handleContentUpdate("calendar")}
                       disabled={isUpdating}
-                      className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white border-0 shadow-lg"
+                      variant="secondary"
                       size="sm"
                     >
                       <Calendar className="w-4 h-4 mr-2" />
@@ -1572,18 +1705,13 @@ export default function AdminPage() {
                     </Button>
                   </div>
 
-                  <Button
-                    onClick={() => handleContentUpdate("all")}
-                    disabled={isUpdating}
-                    className="w-full bg-gradient-to-r from-orange-500 via-red-500 to-pink-600 hover:from-orange-600 hover:via-red-600 hover:to-pink-700 text-white shadow-xl"
-                    size="sm"
-                  >
+                  <Button onClick={() => handleContentUpdate("all")} disabled={isUpdating} className="w-full" size="sm">
                     <Zap className="w-4 h-4 mr-2" />
                     {isUpdating ? "Mise à jour en cours..." : "Tout mettre à jour"}
                   </Button>
 
                   {lastUpdate && (
-                    <div className="flex items-center gap-2 text-sm text-slate-400 mt-3">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-3">
                       <Clock className="w-4 h-4" />
                       Dernière mise à jour : {lastUpdate}
                     </div>
@@ -1592,57 +1720,57 @@ export default function AdminPage() {
               </Card>
 
               {/* Module d'état du système amélioré */}
-              <Card className="bg-gradient-to-br from-emerald-50 to-teal-100 border-emerald-200">
+              <Card className="bg-card border-border">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-emerald-800">
-                    <Shield className="w-5 h-5 text-emerald-600" />
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="w-5 h-5 text-primary" />
                     État du système
                   </CardTitle>
-                  <CardDescription className="text-emerald-700">Surveillance en temps réel</CardDescription>
+                  <CardDescription>Surveillance en temps réel</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-emerald-200 shadow-sm">
-                      <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                    <div className="flex items-center gap-3 p-4 bg-secondary rounded-lg border border-border">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
                       <div className="flex-1">
-                        <p className="text-emerald-800 font-medium">API TMDB</p>
-                        <p className="text-sm text-emerald-600">
+                        <p className="font-medium">API TMDB</p>
+                        <p className="text-sm text-muted-foreground">
                           {systemCheck.results.tmdb.status === "operational" ? "Opérationnel" : "Hors ligne"}
                         </p>
                       </div>
-                      <div className="text-xs text-emerald-600 font-mono">{systemCheck.results.tmdb.responseTime}</div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {systemCheck.results.tmdb.responseTime}
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-blue-200 shadow-sm">
+                    <div className="flex items-center gap-3 p-4 bg-secondary rounded-lg border border-border">
                       <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
                       <div className="flex-1">
-                        <p className="text-blue-800 font-medium">Base de données</p>
-                        <p className="text-sm text-blue-600">
+                        <p className="font-medium">Base de données</p>
+                        <p className="text-sm text-muted-foreground">
                           {systemCheck.results.database.status === "connected" ? "Connectée" : "Déconnectée"}
                         </p>
                       </div>
-                      <div className="text-xs text-blue-600 font-mono">{systemCheck.results.database.responseTime}</div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {systemCheck.results.database.responseTime}
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-3 p-4 bg-white rounded-lg border border-purple-200 shadow-sm">
+                    <div className="flex items-center gap-3 p-4 bg-secondary rounded-lg border border-border">
                       <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
                       <div className="flex-1">
-                        <p className="text-purple-800 font-medium">Serveurs</p>
-                        <p className="text-sm text-purple-600">
+                        <p className="font-medium">Serveurs</p>
+                        <p className="text-sm text-muted-foreground">
                           {systemCheck.results.servers.status === "online" ? "En ligne" : "Hors ligne"}
                         </p>
                       </div>
-                      <div className="text-xs text-purple-600 font-mono">
+                      <div className="text-xs text-muted-foreground font-mono">
                         {systemCheck.results.servers.responseTime}
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-emerald-200">
-                      <Button
-                        onClick={handleSystemCheck}
-                        disabled={systemCheck.checking}
-                        className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-lg"
-                      >
+                    <div className="pt-4 border-t border-border">
+                      <Button onClick={handleSystemCheck} disabled={systemCheck.checking} className="w-full">
                         {systemCheck.checking ? (
                           <>
                             <Clock className="w-4 h-4 mr-2 animate-spin" />
@@ -1657,7 +1785,7 @@ export default function AdminPage() {
                       </Button>
 
                       {systemCheck.lastCheck && (
-                        <div className="flex items-center gap-2 text-xs text-emerald-600 mt-3 justify-center">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3 justify-center">
                           <Clock className="w-3 h-3" />
                           Dernière vérification : {systemCheck.lastCheck}
                         </div>
@@ -1669,10 +1797,10 @@ export default function AdminPage() {
             </div>
 
             {/* Module Contenu par Type - Design amélioré */}
-            <Card className="bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200">
+            <Card className="bg-card border-border">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-gray-700" />
+                  <TrendingUp className="w-5 h-5" />
                   Contenu par Type
                 </CardTitle>
                 <CardDescription>Répartition du contenu disponible sur la plateforme</CardDescription>
@@ -1748,18 +1876,18 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 p-4 bg-white rounded-lg border border-gray-200">
-                  <div className="flex items-center justify-between text-sm text-gray-600">
+                <div className="mt-6 p-4 bg-secondary rounded-lg border border-border">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>Total du contenu disponible</span>
-                    <span className="font-bold text-lg text-gray-900">{stats.totalContent.toLocaleString()}</span>
+                    <span className="font-bold text-lg text-foreground">{stats.totalContent.toLocaleString()}</span>
                   </div>
-                  <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                  <div className="mt-2 w-full bg-border rounded-full h-2">
                     <div
                       className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-1000"
                       style={{ width: "85%" }}
                     ></div>
                   </div>
-                  <div className="mt-2 text-xs text-gray-500">
+                  <div className="mt-2 text-xs text-muted-foreground">
                     Croissance de +12% ce mois • Mise à jour automatique via TMDB
                   </div>
                 </div>
@@ -2730,6 +2858,210 @@ export default function AdminPage() {
                     <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>Aucun utilisateur trouvé</p>
                     <p className="text-sm">Les utilisateurs apparaîtront ici une fois inscrits</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="requests" className="space-y-6">
+            <Card className="bg-card border-border">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Demandes</CardTitle>
+                  <CardDescription>Gérez les demandes de contenu des utilisateurs</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher une demande..."
+                      value={searchTerms.requests || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, requests: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Utilisateur</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Titre demandé</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(requests, "requests").map((request) => (
+                      <TableRow key={request.id}>
+                        <TableCell className="font-medium">{request.username}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{request.type}</Badge>
+                        </TableCell>
+                        <TableCell>{request.title}</TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(request.created_at).toLocaleDateString("fr-FR")}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              request.status === "completed"
+                                ? "default"
+                                : request.status === "pending"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
+                            {request.status === "completed"
+                              ? "Complété"
+                              : request.status === "pending"
+                                ? "En attente"
+                                : "Rejeté"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUpdateRequestStatus(request.id, "completed")}
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUpdateRequestStatus(request.id, "rejected")}
+                            >
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteRequest(request.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {requests.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucune demande trouvée</p>
+                    <p className="text-sm">Les demandes des utilisateurs apparaîtront ici</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="bugs" className="space-y-6">
+            <Card className="bg-card border-border">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Rapports de Bug</CardTitle>
+                  <CardDescription>Gérez les rapports de bug soumis par les utilisateurs</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher un bug..."
+                      value={searchTerms.bugs || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, bugs: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Utilisateur</TableHead>
+                      <TableHead>Titre</TableHead>
+                      <TableHead>Priorité</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(bugReports, "bugs").map((bug) => (
+                      <TableRow key={bug.id}>
+                        <TableCell className="font-medium">{bug.username}</TableCell>
+                        <TableCell>{bug.title}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              bug.priority === "high"
+                                ? "destructive"
+                                : bug.priority === "medium"
+                                  ? "default"
+                                  : "secondary"
+                            }
+                          >
+                            {bug.priority === "high" ? "Haute" : bug.priority === "medium" ? "Moyenne" : "Basse"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {new Date(bug.created_at).toLocaleDateString("fr-FR")}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              bug.status === "resolved"
+                                ? "default"
+                                : bug.status === "in_progress"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
+                            {bug.status === "resolved"
+                              ? "Résolu"
+                              : bug.status === "in_progress"
+                                ? "En cours"
+                                : "Ouvert"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUpdateBugStatus(bug.id, "in_progress")}
+                            >
+                              <AlertCircle className="w-4 h-4 text-yellow-500" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUpdateBugStatus(bug.id, "resolved")}
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteBug(bug.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {bugReports.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Bug className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun rapport de bug trouvé</p>
+                    <p className="text-sm">Les rapports de bug des utilisateurs apparaîtront ici</p>
                   </div>
                 )}
               </CardContent>
