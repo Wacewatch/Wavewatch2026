@@ -437,7 +437,7 @@ export class WatchTracker {
     if (existingIndex === -1) {
       items.push(item)
       localStorage.setItem(this.STORAGE_KEY_FAVORITES, JSON.stringify(items))
-      window.dispatchEvent(new Event("watchlist-updated"))
+      window.dispatchEvent(new Event("favorites-updated"))
     }
   }
 
@@ -448,7 +448,7 @@ export class WatchTracker {
     const filteredItems = items.filter((item) => !(item.id === id && item.type === type))
 
     localStorage.setItem(this.STORAGE_KEY_FAVORITES, JSON.stringify(filteredItems))
-    window.dispatchEvent(new Event("watchlist-updated"))
+    window.dispatchEvent(new Event("favorites-updated"))
   }
 
   static toggleFavorite(
@@ -471,7 +471,7 @@ export class WatchTracker {
     if (existingIndex >= 0) {
       items.splice(existingIndex, 1)
       localStorage.setItem(this.STORAGE_KEY_FAVORITES, JSON.stringify(items))
-      window.dispatchEvent(new Event("watchlist-updated"))
+      window.dispatchEvent(new Event("favorites-updated"))
       return false
     } else {
       const newItem: FavoriteItem = {
@@ -484,7 +484,7 @@ export class WatchTracker {
       }
       items.push(newItem)
       localStorage.setItem(this.STORAGE_KEY_FAVORITES, JSON.stringify(items))
-      window.dispatchEvent(new Event("watchlist-updated"))
+      window.dispatchEvent(new Event("favorites-updated"))
       return true
     }
   }

@@ -34,6 +34,7 @@ import Link from "next/link"
 import { IframeModal } from "@/components/iframe-modal"
 import { AchievementsDashboard } from "@/components/achievements-dashboard"
 import { useMobile } from "@/hooks/use-mobile"
+import { useMessaging } from "@/hooks/use-messaging"
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -82,6 +83,7 @@ export default function DashboardPage() {
 
   const isMobile = useMobile()
   const [isAchievementsOpen, setIsAchievementsOpen] = useState(false)
+  const { unreadCount } = useMessaging()
 
   const calculateRecentWatchTime = (days: number): number => {
     const cutoffDate = new Date()
@@ -234,11 +236,16 @@ export default function DashboardPage() {
               asChild
               variant="outline"
               size="sm"
-              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent flex-1 sm:flex-none min-w-[120px]"
+              className="border-gray-600 text-white hover:bg-gray-800 bg-transparent flex-1 sm:flex-none min-w-[120px] relative"
             >
               <Link href="/dashboard/messages">
                 <MessageSquare className="h-4 w-4 mr-2" />
                 <span className="text-sm">Messagerie</span>
+                {unreadCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 text-white border-2 border-gray-900">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </Badge>
+                )}
               </Link>
             </Button>
             <Button
