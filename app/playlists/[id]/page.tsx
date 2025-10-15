@@ -5,7 +5,7 @@ import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Globe, Lock, Calendar, Film, Trash2 } from "lucide-react"
+import { ArrowLeft, Globe, Lock, Calendar, Film, X } from "lucide-react"
 import { usePlaylists } from "@/hooks/use-playlists"
 import { createClient } from "@/lib/supabase"
 import Image from "next/image"
@@ -322,7 +322,7 @@ export default function PlaylistContentPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {filteredPlaylistItems.map((item) => {
                   let imageUrl = "/placeholder.svg?height=300&width=200"
 
@@ -330,68 +330,66 @@ export default function PlaylistContentPage() {
                     if (item.poster_path.startsWith("http")) {
                       imageUrl = item.poster_path
                     } else {
-                      imageUrl = `https://image.tmdb.org/t/p/w300${item.poster_path}`
+                      imageUrl = `https://image.tmdb.org/t/p/w500${item.poster_path}`
                     }
                   }
 
                   const getItemUrl = () => {
-                    if (item.media_type === "movie" || item.content_type === "movie") {
-                      return `/movies/${item.tmdb_id || item.content_id}`
-                    } else if (item.media_type === "tv" || item.content_type === "tv") {
-                      return `/tv-shows/${item.tmdb_id || item.content_id}`
+                    if (item.content_type === "movie") {
+                      return `/movies/${item.content_id}`
+                    } else if (item.content_type === "tv") {
+                      return `/tv-shows/${item.content_id}`
                     }
-                    return `/movies/${item.tmdb_id || item.content_id}`
+                    return `/movies/${item.content_id}`
                   }
 
                   return (
-                    <div key={item.id} className="space-y-2 group">
-                      <Link href={getItemUrl()}>
-                        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700 cursor-pointer">
+                    <div key={item.id} className="group relative">
+                      <Link
+                        href={getItemUrl()}
+                        className="block relative aspect-[2/3] rounded-lg overflow-hidden bg-muted"
+                      >
+                        {item.poster_path ? (
                           <Image
                             src={imageUrl || "/placeholder.svg"}
                             alt={item.title}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform"
+                            className="object-cover transition-transform group-hover:scale-105"
                             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 12.5vw"
                             onError={(e) => {
                               const target = e.target as HTMLImageElement
                               target.src = "/placeholder.svg?height=300&width=200"
                             }}
                           />
-                          {isOwner && (
-                            <div className="absolute top-2 right-2">
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  handleRemoveItem(item.id)
-                                }}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          )}
-                          <div className="absolute bottom-2 left-2">
-                            <Badge
-                              variant="secondary"
-                              className="text-xs"
-                              style={{ backgroundColor: `${playlist.theme_color}20`, color: playlist.theme_color }}
-                            >
-                              {item.media_type === "movie" || item.content_type === "movie" ? "Film" : "Série"}
-                            </Badge>
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Film className="w-12 h-12 text-muted-foreground" />
                           </div>
-                        </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                       </Link>
-                      <div>
+
+                      {/* Remove Button */}
+                      {isOwner && (
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleRemoveItem(item.id)}
+                        >
+                          <X className="w-4 h-4" />
+                        </Button>
+                      )}
+
+                      <div className="mt-2">
                         <Link href={getItemUrl()}>
                           <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white cursor-pointer">
                             {item.title}
                           </p>
                         </Link>
-                        <p className="text-xs text-gray-400">{new Date(item.created_at).toLocaleDateString()}</p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {item.content_type === "movie" ? "Film" : "Série"}
+                        </p>
                       </div>
                     </div>
                   )
