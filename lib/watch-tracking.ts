@@ -268,30 +268,60 @@ export class WatchTracker {
     const items = this.getWatchedItems()
 
     if (type === "tv") {
-      // When marking a TV series as watched, only mark the first episode of season 1
-      const episodeId = `${tmdbId}-1-1`
-      const existingEpisodeIndex = items.findIndex(
-        (item) => item.type === "episode" && item.id === `episode_${episodeId}_${Date.now()}`,
-      )
+      console.log("[v0] Marking entire series as watched:", title)
 
-      if (existingEpisodeIndex === -1) {
-        // Add only the first episode
-        const firstEpisodeItem: WatchedItem = {
-          id: `episode_${episodeId}_${Date.now()}`,
-          type: "episode",
+      if (options?.seasons && options.seasons.length > 0) {
+        // Mark all episodes from all seasons
+        options.seasons.forEach((season: any) => {
+          if (season.episodes && season.episodes.length > 0) {
+            season.episodes.forEach((episode: any) => {
+              const episodeId = `${tmdbId}-${season.season_number}-${episode.episode_number}`
+              const existingEpisodeIndex = items.findIndex(
+                (item) =>
+                  item.type === "episode" &&
+                  item.showId === (typeof tmdbId === "string" ? Number.parseInt(tmdbId) : tmdbId) &&
+                  item.season === season.season_number &&
+                  item.episode === episode.episode_number,
+              )
+
+              if (existingEpisodeIndex === -1) {
+                const episodeItem: WatchedItem = {
+                  id: `episode_${episodeId}_${Date.now()}_${Math.random()}`,
+                  type: "episode",
+                  tmdbId: typeof tmdbId === "string" ? Number.parseInt(tmdbId) : tmdbId,
+                  title: `${title} - S${season.season_number}E${episode.episode_number}`,
+                  duration: episode.runtime || 45,
+                  watchedAt: new Date(),
+                  posterPath: options?.posterPath,
+                  season: season.season_number,
+                  episode: episode.episode_number,
+                  genre: options?.genre,
+                  rating: options?.rating,
+                  showId: typeof tmdbId === "string" ? Number.parseInt(tmdbId) : tmdbId,
+                }
+                items.push(episodeItem)
+              }
+            })
+          }
+        })
+        console.log("[v0] Marked all episodes as watched")
+      }
+
+      // Also mark the series itself
+      const existingSeriesIndex = items.findIndex((item) => item.type === "tv" && item.tmdbId === tmdbId)
+      if (existingSeriesIndex === -1) {
+        const seriesItem: WatchedItem = {
+          id: `tv_${tmdbId}_${Date.now()}`,
+          type: "tv",
           tmdbId: typeof tmdbId === "string" ? Number.parseInt(tmdbId) : tmdbId,
-          title: `${title} - S1E1`,
+          title,
           duration: duration,
           watchedAt: new Date(),
           posterPath: options?.posterPath,
-          season: 1,
-          episode: 1,
           genre: options?.genre,
           rating: options?.rating,
-          showId: typeof tmdbId === "string" ? Number.parseInt(tmdbId) : tmdbId,
         }
-        items.push(firstEpisodeItem)
-        console.log("Added first episode only:", firstEpisodeItem.title)
+        items.push(seriesItem)
       }
     } else if (type === "episode") {
       // For individual episodes, use the provided ID format

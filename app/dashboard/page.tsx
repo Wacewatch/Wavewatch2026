@@ -569,7 +569,19 @@ export default function DashboardPage() {
                         let imageUrl = ""
 
                         // Handle different item types with proper image URLs
-                        if (item.type === "tv-channel" || item.type === "radio") {
+                        if (item.type === "episode" && item.showId) {
+                          // Use the series poster for episodes
+                          if (item.posterPath) {
+                            if (item.posterPath.startsWith("http")) {
+                              imageUrl = item.posterPath
+                            } else {
+                              imageUrl = `https://image.tmdb.org/t/p/w300${item.posterPath}`
+                            }
+                          } else {
+                            // If no posterPath stored, we'll use a fallback
+                            imageUrl = ""
+                          }
+                        } else if (item.type === "tv-channel" || item.type === "radio") {
                           // For TV channels and radio, use logoUrl if available
                           imageUrl = item.logoUrl || ""
                         } else if (item.type === "game") {
@@ -600,7 +612,9 @@ export default function DashboardPage() {
                                 ? "/placeholder.svg?height=300&width=200&text=Game"
                                 : item.type === "playlist"
                                   ? "/placeholder.svg?height=300&width=200&text=Playlist"
-                                  : "/placeholder.svg?height=300&width=200&text=No+Image"
+                                  : item.type === "episode"
+                                    ? "/placeholder.svg?height=300&width=200&text=Episode"
+                                    : "/placeholder.svg?height=300&width=200&text=No+Image"
 
                         const getItemUrl = () => {
                           if (item.type === "movie") {

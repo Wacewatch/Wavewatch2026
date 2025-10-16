@@ -278,36 +278,51 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
       console.log("Début du marquage de la série:", show.name)
       console.log("Saisons disponibles:", show.seasons)
 
-      // Utiliser les données déjà disponibles pour éviter les appels API
       const validSeasons = show.seasons.filter((season: any) => season.season_number > 0)
       console.log("Saisons valides:", validSeasons)
 
-      // Créer une structure d'épisodes basée sur episode_count de chaque saison
-      const seasonsWithEpisodes = validSeasons.map((season: any) => {
-        const episodeCount = season.episode_count || 10 // Fallback à 10 épisodes
-        const episodes = Array.from({ length: episodeCount }, (_, index) => ({
-          id: season.id * 1000 + index + 1,
-          episode_number: index + 1,
-          name: `Episode ${index + 1}`,
-          runtime: 45, // Durée moyenne d'un épisode
-          still_path: null,
-        }))
+      // Fetch episode details for each season
+      const seasonsWithEpisodes = await Promise.all(
+        validSeasons.map(async (season: any) => {
+          try {
+            const response = await fetch(
+              `https://api.themoviedb.org/3/tv/${show.id}/season/${season.season_number}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`,
+            )
+            if (response.ok) {
+              const seasonData = await response.json()
+              console.log(`Saison ${season.season_number}: ${seasonData.episodes?.length || 0} épisodes récupérés`)
+              return {
+                ...season,
+                episodes: seasonData.episodes || [],
+              }
+            }
+          } catch (error) {
+            console.error(`Erreur lors de la récupération de la saison ${season.season_number}:`, error)
+          }
 
-        console.log(`Saison ${season.season_number}: ${episodes.length} épisodes créés`)
+          // Fallback: create episodes based on episode_count
+          const episodeCount = season.episode_count || 10
+          const episodes = Array.from({ length: episodeCount }, (_, index) => ({
+            id: season.id * 1000 + index + 1,
+            episode_number: index + 1,
+            name: `Episode ${index + 1}`,
+            runtime: 45,
+            still_path: null,
+          }))
+          console.log(`Saison ${season.season_number}: ${episodes.length} épisodes créés (fallback)`)
+          return {
+            ...season,
+            episodes,
+          }
+        }),
+      )
 
-        return {
-          ...season,
-          episodes,
-        }
-      })
-
-      // Calculer le nombre total d'épisodes et la durée
+      // Calculate total episodes and duration
       const totalEpisodes = seasonsWithEpisodes.reduce((sum, season) => sum + season.episodes.length, 0)
-      const totalDuration = totalEpisodes * 45 // 45 minutes par épisode
+      const totalDuration = totalEpisodes * 45
 
       console.log(`Total épisodes calculé: ${totalEpisodes}, Durée totale: ${totalDuration} minutes`)
 
-      // Marquer la série et tous ses épisodes comme vus
       WatchTracker.markAsWatched("tv", show.id, show.name, totalDuration, {
         genre: show.genres[0]?.name,
         rating: Math.round(show.vote_average),
@@ -318,7 +333,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
       const newState = WatchTracker.isWatched("tv", show.id)
       setIsWatched(newState)
 
-      // Compter les épisodes marqués pour vérification
+      // Count marked episodes for verification
       const watchedItems = WatchTracker.getWatchedItems()
       const episodesMarked = watchedItems.filter((item) => item.type === "episode" && item.showId === show.id).length
 
@@ -331,7 +346,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
           : `${show.name} et tous ses épisodes ont été marqués comme non vus.`,
       })
 
-      // Forcer la mise à jour des statistiques
+      // Force update of statistics
       window.dispatchEvent(new Event("watchlist-updated"))
     } catch (error) {
       console.error("Error marking as watched:", error)
