@@ -24,7 +24,6 @@ import {
   X,
   Flag as Flask,
   MessageSquare,
-  AlertCircle,
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { VIPSystem } from "@/lib/vip-system"
@@ -43,18 +42,8 @@ interface UserProfile {
   allow_messages: boolean
 }
 
-interface BugReport {
-  id: string
-  title: string
-  description: string
-  status: string
-  contentTitle?: string
-  createdAt: string
-}
-
 export default function ProfilePage() {
   const { user, signOut } = useAuth()
-  const [bugReports, setBugReports] = useState<BugReport[]>([])
   const [mounted, setMounted] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [profile, setProfile] = useState<UserProfile>({
@@ -76,7 +65,6 @@ export default function ProfilePage() {
     setMounted(true)
     if (user?.id) {
       loadProfile()
-      loadBugReports()
       loadMessagePreferences()
     }
   }, [user?.id])
@@ -104,38 +92,6 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Error loading profile:", error)
-    }
-  }
-
-  const loadBugReports = async () => {
-    if (!user?.id) return
-
-    try {
-      const { data, error } = await supabase
-        .from("bug_reports")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-
-      if (error) {
-        console.error("Error loading bug reports:", error)
-        setBugReports([])
-        return
-      }
-
-      setBugReports(
-        data?.map((report) => ({
-          id: report.id,
-          title: report.title,
-          description: report.description,
-          status: report.status,
-          contentTitle: report.content_title,
-          createdAt: report.created_at,
-        })) || [],
-      )
-    } catch (error) {
-      console.error("Error loading bug reports:", error)
-      setBugReports([])
     }
   }
 
@@ -349,7 +305,6 @@ export default function ProfilePage() {
       try {
         await supabase.from("user_profiles").delete().eq("id", user.id)
         await supabase.from("user_profiles_extended").delete().eq("user_id", user.id)
-        await supabase.from("bug_reports").delete().eq("user_id", user.id)
       } catch (error) {
         console.log("Supabase deletion failed, continuing with local deletion")
       }
@@ -453,6 +408,36 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("[v0] Error toggling auto mark watched:", error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la sauvegarde",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleHideSpoilersToggle = async (enabled: boolean) => {
+    try {
+      const success = await updatePreferences({
+        hideSpoilers: enabled,
+      })
+
+      if (success) {
+        toast({
+          title: enabled ? "Mode anti-spoiler activé" : "Mode anti-spoiler désactivé",
+          description: enabled
+            ? "Les synopsis et descriptions seront masqués pour éviter les spoilers"
+            : "Les synopsis et descriptions seront affichés normalement",
+        })
+      } else {
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder les préférences. Veuillez réessayer.",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error toggling hide spoilers:", error)
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la sauvegarde",
@@ -789,6 +774,27 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label htmlFor="hide-spoilers" className="text-sm font-medium text-gray-300">
+                      Mode anti-spoiler
+                    </Label>
+                    <p className="text-xs text-gray-400">
+                      Masquer les synopsis et descriptions pour éviter les spoilers
+                    </p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      id="hide-spoilers"
+                      type="checkbox"
+                      checked={preferences.hideSpoilers}
+                      onChange={(e) => handleHideSpoilersToggle(e.target.checked)}
+                      disabled={preferencesLoading}
+                      className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
+                    />
+                  </div>
+                </div>
+
                 <div className="text-xs text-gray-500 bg-gray-700/50 p-3 rounded-lg">
                   <strong>Note :</strong> Ces options affectent l'affichage du contenu dans toutes les sections du site.
                   Les préférences sont sauvegardées dans votre profil et synchronisées sur tous vos appareils.
@@ -843,56 +849,6 @@ export default function ProfilePage() {
                     </Link>
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-white">
-                  <AlertCircle className="h-5 w-5 text-orange-400" />
-                  Mes rapports de bug
-                </CardTitle>
-                <CardDescription className="text-gray-400">Suivez vos signalements de problèmes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {bugReports.length === 0 ? (
-                  <p className="text-center text-gray-400 py-4 text-sm">Aucun rapport de bug pour le moment.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {bugReports.slice(0, 5).map((report) => (
-                      <div key={report.id} className="border border-gray-700 rounded-lg p-3 space-y-1 bg-gray-700/50">
-                        <div className="flex items-start justify-between gap-2">
-                          <h4 className="font-medium text-white text-sm line-clamp-1">{report.title}</h4>
-                          <Badge
-                            variant={
-                              report.status === "resolved"
-                                ? "default"
-                                : report.status === "in_progress"
-                                  ? "secondary"
-                                  : "outline"
-                            }
-                            className="text-xs flex-shrink-0"
-                          >
-                            {report.status === "open"
-                              ? "Ouvert"
-                              : report.status === "in_progress"
-                                ? "En cours"
-                                : "Résolu"}
-                          </Badge>
-                        </div>
-                        {report.contentTitle && <p className="text-xs text-gray-400">Contenu: {report.contentTitle}</p>}
-                        <p className="text-xs text-gray-500">
-                          {new Date(report.createdAt).toLocaleDateString("fr-FR")}
-                        </p>
-                      </div>
-                    ))}
-                    {bugReports.length > 5 && (
-                      <p className="text-xs text-gray-400 text-center pt-2">
-                        Et {bugReports.length - 5} autre(s) rapport(s)
-                      </p>
-                    )}
-                  </div>
-                )}
               </CardContent>
             </Card>
 

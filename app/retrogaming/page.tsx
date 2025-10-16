@@ -6,6 +6,9 @@ import { useToast } from "@/hooks/use-toast"
 import { IframeModal } from "@/components/iframe-modal"
 import { useRetrogamingSources } from "@/hooks/use-retrogaming-sources"
 import { AddToPlaylistButtonGeneric } from "@/components/add-to-playlist-button-generic"
+import { Search } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface RetrogamingSource {
   id: number
@@ -24,8 +27,12 @@ export default function RetrogamingPage() {
   const [userRatings, setUserRatings] = useState<Record<number, "like" | "dislike" | null>>({})
   const { toast } = useToast()
   const [showIframe, setShowIframe] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState<string>("all")
+  const [filteredSources, setFilteredSources] = useState<RetrogamingSource[]>([])
 
-  // Simuler les votes totaux basés sur l'ID
+  const categories = ["all", ...Array.from(new Set(gamingSources.map((source) => source.category).filter(Boolean)))]
+
   const getTotalVotes = (id: number, type: "like" | "dislike") => {
     if (!id || typeof id !== "number") return 0
     const seed = id * (type === "like" ? 29 : 31)
@@ -34,18 +41,34 @@ export default function RetrogamingPage() {
   }
 
   useEffect(() => {
-    // Charger les favoris et ratings
     const favoriteItems = WatchTracker.getFavoriteItems()
     const gameFavorites = favoriteItems.filter((item) => item.type === "game").map((item) => item.tmdbId)
     setFavorites(gameFavorites)
 
-    // Charger les ratings
     const ratings: Record<number, "like" | "dislike" | null> = {}
     gamingSources.forEach((source) => {
       ratings[source.id] = WatchTracker.getRating("game", source.id)
     })
     setUserRatings(ratings)
   }, [gamingSources])
+
+  useEffect(() => {
+    let filtered = gamingSources
+
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (source) =>
+          (source.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (source.description || "").toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    }
+
+    if (selectedCategory !== "all") {
+      filtered = filtered.filter((source) => source.category && source.category === selectedCategory)
+    }
+
+    setFilteredSources(filtered)
+  }, [searchQuery, selectedCategory, gamingSources])
 
   const handlePlayGame = (source: RetrogamingSource) => {
     setSelectedSource(source)
@@ -59,7 +82,6 @@ export default function RetrogamingPage() {
       url: source.url,
     })
 
-    // Mettre à jour l'état local
     if (isCurrentlyFavorite) {
       setFavorites((prev) => prev.filter((id) => id !== source.id))
     } else {
@@ -117,8 +139,35 @@ export default function RetrogamingPage() {
           <p className="text-gray-400">Redécouvrez les jeux classiques directement dans votre navigateur</p>
         </div>
 
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Input
+              placeholder="Rechercher un jeu..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-400"
+            />
+          </div>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="w-full sm:w-48 bg-gray-800 border-gray-700 text-white">
+              <SelectValue placeholder="Catégorie" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="all" className="text-white">
+                Toutes les catégories
+              </SelectItem>
+              {categories.slice(1).map((category) => (
+                <SelectItem key={category} value={category} className="text-white">
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {gamingSources.map((source) => {
+          {filteredSources.map((source) => {
             const isFavorite = favorites.includes(source.id)
             const userRating = userRatings[source.id]
             const totalLikes = getTotalVotes(source.id, "like")
@@ -153,7 +202,6 @@ export default function RetrogamingPage() {
                       </div>
                     </div>
 
-                    {/* Votes compacts */}
                     <div className="flex items-center justify-center gap-2 bg-gray-700/50 rounded-lg px-3 py-2 mb-4">
                       <button
                         className={`p-1 h-auto ${
@@ -208,9 +256,9 @@ export default function RetrogamingPage() {
           })}
         </div>
 
-        {gamingSources.length === 0 && (
+        {filteredSources.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-400">Aucun jeu trouvé.</p>
+            <p className="text-gray-400">Aucun jeu trouvé pour votre recherche.</p>
           </div>
         )}
         {selectedSource && (

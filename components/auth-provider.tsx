@@ -61,11 +61,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (event === "SIGNED_OUT") {
         setUser(null)
         updateAdultContentPreference(false)
+      } else if (event === "TOKEN_REFRESHED" && session?.user) {
+        await loadUserProfile(session.user)
       }
       setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    const sessionCheckInterval = setInterval(async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        if (session?.user && user) {
+          // Session exists, ensure user profile is current
+          const { data: profile } = await supabase
+            .from("user_profiles")
+            .select("*")
+            .eq("id", session.user.id)
+            .maybeSingle()
+
+          if (profile) {
+            const userData: User = {
+              id: session.user.id,
+              username: profile.username || session.user.email?.split("@")[0] || "User",
+              email: session.user.email || "",
+              isVip: Boolean(profile.is_vip || profile.is_vip_plus),
+              isAdmin: Boolean(profile.is_admin),
+              vipExpiresAt: profile.vip_expires_at,
+              showAdultContent: Boolean(profile.show_adult_content),
+            }
+            setUser(userData)
+          }
+        } else if (!session && user) {
+          // Session lost, clear user
+          setUser(null)
+          updateAdultContentPreference(false)
+        }
+      } catch (error) {
+        console.error("Session check error:", error)
+      }
+    }, 60000) // Check every minute
+
+    return () => {
+      subscription.unsubscribe()
+      clearInterval(sessionCheckInterval)
+    }
   }, [])
 
   const loadUserProfile = async (supabaseUser: SupabaseUser) => {

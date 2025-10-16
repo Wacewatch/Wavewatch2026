@@ -7,6 +7,8 @@ export function createClient() {
       autoRefreshToken: true,
       detectSessionInUrl: true,
       flowType: "pkce",
+      storageKey: "wavewatch-auth",
+      storage: typeof window !== "undefined" ? window.localStorage : undefined,
     },
   })
 }

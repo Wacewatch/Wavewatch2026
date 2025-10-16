@@ -38,6 +38,13 @@ export function usePublicPlaylists() {
     try {
       console.log("[v0] Loading public playlists...")
 
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.warn("[v0] Supabase not configured properly")
+        setPlaylists([])
+        setLoading(false)
+        return
+      }
+
       const { data: playlistsData, error: playlistsError } = await supabase
         .from("playlists")
         .select(`
@@ -54,11 +61,14 @@ export function usePublicPlaylists() {
 
       if (playlistsError) {
         console.error("Error loading public playlists:", playlistsError)
+        setPlaylists([])
+        setLoading(false)
         return
       }
 
       if (!playlistsData) {
         setPlaylists([])
+        setLoading(false)
         return
       }
 
@@ -141,6 +151,7 @@ export function usePublicPlaylists() {
       setPlaylists(processedPlaylists)
     } catch (error) {
       console.error("Error loading public playlists:", error)
+      setPlaylists([])
     } finally {
       setLoading(false)
     }

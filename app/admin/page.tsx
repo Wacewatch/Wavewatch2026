@@ -51,10 +51,8 @@ import {
   Sparkles,
   LogIn,
   MessageSquare,
-  Bug,
   CheckCircle,
   XCircle,
-  AlertCircle,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -71,7 +69,6 @@ export default function AdminPage() {
   const [retrogamingSources, setRetrogamingSources] = useState([])
   const [users, setUsers] = useState([])
   const [requests, setRequests] = useState([])
-  const [bugReports, setBugReports] = useState([])
 
   // States pour les modals
   const [activeModal, setActiveModal] = useState(null)
@@ -176,7 +173,6 @@ export default function AdminPage() {
     release_date: new Date().toISOString().split("T")[0],
   })
 
-  // Added handlers for requests and bug reports
   const handleUpdateRequestStatus = async (id: string, status: string) => {
     try {
       const { error } = await supabase.from("requests").update({ status }).eq("id", id)
@@ -202,30 +198,6 @@ export default function AdminPage() {
     } catch (error) {
       console.error("Erreur lors de la suppression de la demande:", error)
       toast({ title: "Erreur", description: "Impossible de supprimer la demande.", variant: "destructive" })
-    }
-  }
-
-  const handleUpdateBugStatus = async (id: string, status: string) => {
-    try {
-      const { error } = await supabase.from("bug_reports").update({ status }).eq("id", id)
-      if (error) throw error
-      setBugReports((prev) => prev.map((bug) => (bug.id === id ? { ...bug, status } : bug)))
-      toast({ title: "Statut mis à jour", description: `Le rapport de bug #${id} est maintenant ${status}.` })
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour du statut du bug:", error)
-      toast({ title: "Erreur", description: "Impossible de mettre à jour le statut du bug.", variant: "destructive" })
-    }
-  }
-
-  const handleDeleteBug = async (id: string) => {
-    try {
-      const { error } = await supabase.from("bug_reports").delete().eq("id", id)
-      if (error) throw error
-      setBugReports((prev) => prev.filter((bug) => bug.id !== id))
-      toast({ title: "Bug supprimé", description: `Le rapport de bug #${id} a été supprimé.` })
-    } catch (error) {
-      console.error("Erreur lors de la suppression du bug:", error)
-      toast({ title: "Erreur", description: "Impossible de supprimer le rapport de bug.", variant: "destructive" })
     }
   }
 
@@ -268,12 +240,11 @@ export default function AdminPage() {
         loadRealRadioStations(),
         loadRealRetrogamingSources(),
         loadRealUsers(),
-        loadRequests(), // Added
-        loadBugReports(), // Added
+        loadRequests(),
       ])
 
       results.forEach((result, index) => {
-        const names = ["TV Channels", "Radio Stations", "Retrogaming Sources", "Users", "Requests", "Bug Reports"]
+        const names = ["TV Channels", "Radio Stations", "Retrogaming Sources", "Users", "Requests"]
         if (result.status === "rejected") {
           console.error(`❌ Erreur lors du chargement de ${names[index]}:`, result.reason)
         } else {
@@ -393,7 +364,6 @@ export default function AdminPage() {
     }
   }
 
-  // Added functions to fetch requests and bug reports
   const loadRequests = async () => {
     try {
       console.log("🔄 Chargement des demandes...")
@@ -420,36 +390,6 @@ export default function AdminPage() {
     } catch (error) {
       console.error("❌ Erreur lors du chargement des demandes:", error)
       setRequests([])
-      throw error
-    }
-  }
-
-  const loadBugReports = async () => {
-    try {
-      console.log("🔄 Chargement des rapports de bug...")
-      const { data, error } = await supabase
-        .from("bug_reports")
-        .select(`
-          *,
-          user_profiles(username, email)
-        `)
-        .order("created_at", { ascending: false })
-
-      if (error) {
-        console.error("❌ Erreur Supabase bug reports:", error)
-        throw error
-      }
-
-      const bugReportsWithUserInfo = (data || []).map((bug) => ({
-        ...bug,
-        username: bug.user_profiles?.username || bug.user_profiles?.email || "Utilisateur inconnu",
-      }))
-      console.log(`✅ ${bugReportsWithUserInfo.length} rapports de bug chargés:`, bugReportsWithUserInfo)
-      setBugReports(bugReportsWithUserInfo)
-      return bugReportsWithUserInfo
-    } catch (error) {
-      console.error("❌ Erreur lors du chargement des rapports de bug:", error)
-      setBugReports([])
       throw error
     }
   }
@@ -1631,10 +1571,6 @@ export default function AdminPage() {
               <MessageSquare className="w-4 h-4" />
               <span className="hidden sm:inline">Demandes ({requests.length})</span>
             </TabsTrigger>
-            <TabsTrigger value="bugs" className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300">
-              <Bug className="w-4 h-4" />
-              <span className="hidden sm:inline">Bugs ({bugReports.length})</span>
-            </TabsTrigger>
             <TabsTrigger
               value="changelogs"
               className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
@@ -1643,6 +1579,7 @@ export default function AdminPage() {
               <span className="hidden sm:inline">Logs ({changelogs.length})</span>
             </TabsTrigger>
             {/* Added placeholder triggers to fill up space for lg:grid-cols-10 */}
+            <TabsTrigger disabled className="pointer-events-none opacity-0"></TabsTrigger>
             <TabsTrigger disabled className="pointer-events-none opacity-0"></TabsTrigger>
             <TabsTrigger disabled className="pointer-events-none opacity-0"></TabsTrigger>
           </TabsList>
@@ -2984,112 +2921,7 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="bugs" className="space-y-6">
-            <Card className="bg-card border-border">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Rapports de Bug</CardTitle>
-                  <CardDescription>Gérez les rapports de bug soumis par les utilisateurs</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      placeholder="Rechercher un bug..."
-                      value={searchTerms.bugs || ""}
-                      onChange={(e) => setSearchTerms({ ...searchTerms, bugs: e.target.value })}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Utilisateur</TableHead>
-                      <TableHead>Titre</TableHead>
-                      <TableHead>Priorité</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {getFilteredData(bugReports, "bugs").map((bug) => (
-                      <TableRow key={bug.id}>
-                        <TableCell className="font-medium">{bug.username}</TableCell>
-                        <TableCell>{bug.title}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              bug.priority === "high"
-                                ? "destructive"
-                                : bug.priority === "medium"
-                                  ? "default"
-                                  : "secondary"
-                            }
-                          >
-                            {bug.priority === "high" ? "Haute" : bug.priority === "medium" ? "Moyenne" : "Basse"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(bug.created_at).toLocaleDateString("fr-FR")}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              bug.status === "resolved"
-                                ? "default"
-                                : bug.status === "in_progress"
-                                  ? "secondary"
-                                  : "outline"
-                            }
-                          >
-                            {bug.status === "resolved"
-                              ? "Résolu"
-                              : bug.status === "in_progress"
-                                ? "En cours"
-                                : "Ouvert"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleUpdateBugStatus(bug.id, "in_progress")}
-                            >
-                              <AlertCircle className="w-4 h-4 text-yellow-500" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleUpdateBugStatus(bug.id, "resolved")}
-                            >
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDeleteBug(bug.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-
-                {bugReports.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Bug className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun rapport de bug trouvé</p>
-                    <p className="text-sm">Les rapports de bug des utilisateurs apparaîtront ici</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+          {/* Removed bugs TabsContent section */}
 
           <TabsContent value="changelogs" className="space-y-6">
             <Card>

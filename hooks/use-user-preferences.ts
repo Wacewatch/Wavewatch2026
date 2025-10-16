@@ -10,6 +10,7 @@ interface UserPreferences {
   hideAdultContent: boolean
   autoMarkWatched: boolean
   themePreference: string
+  hideSpoilers: boolean
 }
 
 export function useUserPreferences() {
@@ -20,6 +21,7 @@ export function useUserPreferences() {
     hideAdultContent: true,
     autoMarkWatched: false,
     themePreference: "system",
+    hideSpoilers: false,
   })
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
@@ -34,6 +36,7 @@ export function useUserPreferences() {
         hideAdultContent: true,
         autoMarkWatched: false,
         themePreference: "system",
+        hideSpoilers: false,
       })
       setLoading(false)
     }
@@ -68,7 +71,7 @@ export function useUserPreferences() {
     try {
       const { data, error } = await supabase
         .from("user_profiles")
-        .select("hide_adult_content, auto_mark_watched, theme_preference")
+        .select("hide_adult_content, auto_mark_watched, theme_preference, hide_spoilers")
         .or(`id.eq.${user.id},user_id.eq.${user.id}`)
         .maybeSingle()
 
@@ -84,12 +87,14 @@ export function useUserPreferences() {
           hideAdultContent: data.hide_adult_content !== false,
           autoMarkWatched: data.auto_mark_watched || false,
           themePreference: data.theme_preference || "system",
+          hideSpoilers: data.hide_spoilers || false,
         }
 
         setPreferences(newPreferences)
 
         if (typeof window !== "undefined") {
           localStorage.setItem("wavewatch_adult_content", newPreferences.showAdultContent.toString())
+          localStorage.setItem("wavewatch_hide_spoilers", newPreferences.hideSpoilers.toString())
           const { updateAdultContentPreference } = await import("@/lib/tmdb")
           updateAdultContentPreference(newPreferences.showAdultContent)
         }
@@ -100,11 +105,13 @@ export function useUserPreferences() {
           hideAdultContent: true,
           autoMarkWatched: false,
           themePreference: "system",
+          hideSpoilers: false,
         }
         setPreferences(defaultPreferences)
 
         if (typeof window !== "undefined") {
           localStorage.setItem("wavewatch_adult_content", "false")
+          localStorage.setItem("wavewatch_hide_spoilers", "false")
           const { updateAdultContentPreference } = await import("@/lib/tmdb")
           updateAdultContentPreference(false)
         }
@@ -135,6 +142,7 @@ export function useUserPreferences() {
 
     if (typeof window !== "undefined") {
       localStorage.setItem("wavewatch_adult_content", updatedPreferences.showAdultContent.toString())
+      localStorage.setItem("wavewatch_hide_spoilers", updatedPreferences.hideSpoilers.toString())
     }
 
     try {
@@ -158,6 +166,7 @@ export function useUserPreferences() {
           hide_adult_content: updatedPreferences.hideAdultContent,
           auto_mark_watched: updatedPreferences.autoMarkWatched,
           theme_preference: updatedPreferences.themePreference,
+          hide_spoilers: updatedPreferences.hideSpoilers,
           updated_at: new Date().toISOString(),
         })
         .eq("id", user.id)
@@ -167,6 +176,7 @@ export function useUserPreferences() {
         setPreferences(preferences)
         if (typeof window !== "undefined") {
           localStorage.setItem("wavewatch_adult_content", preferences.showAdultContent.toString())
+          localStorage.setItem("wavewatch_hide_spoilers", preferences.hideSpoilers.toString())
         }
         return false
       }
@@ -190,6 +200,7 @@ export function useUserPreferences() {
       setPreferences(preferences)
       if (typeof window !== "undefined") {
         localStorage.setItem("wavewatch_adult_content", preferences.showAdultContent.toString())
+        localStorage.setItem("wavewatch_hide_spoilers", preferences.hideSpoilers.toString())
       }
       return false
     }
