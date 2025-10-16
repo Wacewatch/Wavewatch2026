@@ -121,6 +121,8 @@ export default function ProfilePage() {
       const { error } = await supabase.from("user_profiles").upsert(
         {
           id: user.id,
+          username: user.username,
+          email: user.email,
           birth_date: profile.birthDate,
           location: profile.location,
           bio: profile.bio,
