@@ -9,6 +9,7 @@ import { CalendarWidget } from "@/components/calendar-widget"
 import { RandomContent } from "@/components/random-content"
 import { SubscriptionOffer } from "@/components/subscription-offer"
 import { PublicPlaylistsRow } from "@/components/public-playlists-row"
+import { VIPGamePromo } from "@/components/vip-game-promo"
 
 function LoadingSection() {
   return (
@@ -37,6 +38,7 @@ export default function HomePage() {
         <Suspense fallback={<LoadingSection />}>
           <PopularAnime />
         </Suspense>
+        <VIPGamePromo />
         <Suspense fallback={<LoadingSection />}>
           <PublicPlaylistsRow />
         </Suspense>

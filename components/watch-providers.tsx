@@ -1,5 +1,6 @@
 "use client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import Image from "next/image"
 import { Tv } from "lucide-react"
 
 interface WatchProvider {
@@ -54,27 +55,22 @@ export function WatchProviders({ providers }: WatchProvidersProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 items-center">
           {uniqueProviders.slice(0, 8).map((provider) => (
-            <div key={provider.provider_id} className="flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-lg overflow-hidden bg-white shadow-md">
-                <img
-                  src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
-                  alt={provider.provider_name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <span className="text-xs text-gray-300 text-center max-w-[60px] line-clamp-2">
-                {provider.provider_name}
-              </span>
+            <div
+              key={provider.provider_id}
+              className="w-12 h-12 rounded-lg overflow-hidden bg-white shadow-md flex-shrink-0"
+            >
+              <Image
+                src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
+                alt={provider.provider_name}
+                width={48}
+                height={48}
+                className="w-full h-full object-cover"
+              />
             </div>
           ))}
         </div>
-        {streamingProviders.length > 0 && (
-          <p className="text-xs text-gray-400 mt-4">
-            Disponible en streaming sur {streamingProviders.map((p) => p.provider_name).join(", ")}
-          </p>
-        )}
       </CardContent>
     </Card>
   )

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Star, MessageSquare } from "lucide-react"
+import { Star, MessageSquare, Mail } from "lucide-react"
 
 interface FeedbackStats {
   content: number
@@ -34,7 +34,7 @@ export function Footer() {
     if (messages.length > 0) {
       const interval = setInterval(() => {
         setCurrentMessageIndex((prev) => (prev + 1) % messages.length)
-      }, 5000) // Change message every 5 seconds
+      }, 5000)
 
       return () => clearInterval(interval)
     }
@@ -128,7 +128,6 @@ export function Footer() {
         )}
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          {/* Logo/Brand */}
           <div>
             <h3 className="font-bold text-lg" style={{ color: "hsl(var(--nav-text))" }}>
               WaveWatch
@@ -139,6 +138,14 @@ export function Footer() {
           </div>
 
           <div className="flex items-center gap-6">
+            <Link
+              href="/contact-staff"
+              className="transition-colors text-sm flex items-center gap-2"
+              style={{ color: "hsl(var(--nav-text-secondary))" }}
+            >
+              <Mail className="w-4 h-4" />
+              Écrire au staff
+            </Link>
             <Link
               href="/changelogs"
               className="transition-colors text-sm"

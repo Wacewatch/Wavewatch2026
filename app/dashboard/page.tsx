@@ -83,7 +83,12 @@ export default function DashboardPage() {
   })
 
   const isMobile = useMobile()
-  const [isAchievementsOpen, setIsAchievementsOpen] = useState(false)
+  const [isStatsOpen, setIsStatsOpen] = useState(true)
+  const [isLikesOpen, setIsLikesOpen] = useState(true)
+  const [isDetailedStatsOpen, setIsDetailedStatsOpen] = useState(true)
+  const [isFactsOpen, setIsFactsOpen] = useState(true)
+  const [isAchievementsOpen, setIsAchievementsOpen] = useState(true)
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(true)
   const { unreadCount } = useMessaging()
 
   const calculateRecentWatchTime = (days: number): number => {
@@ -264,281 +269,343 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Cards principales */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-300">Temps total</CardTitle>
-              <Clock className="h-4 w-4 text-gray-400" />
-            </CardHeader>
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader className="cursor-pointer" onClick={() => setIsStatsOpen(!isStatsOpen)}>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-white">Statistiques principales</CardTitle>
+              <Button variant="ghost" size="sm" className="text-gray-400">
+                {isStatsOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+              </Button>
+            </div>
+          </CardHeader>
+          {isStatsOpen && (
             <CardContent>
-              <div className="text-lg sm:text-2xl font-bold text-white">
-                {totalHours}h {stats.totalWatchTime % 60}m
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-300">Temps total</CardTitle>
+                    <Clock className="h-4 w-4 text-gray-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl font-bold text-white">
+                      {totalHours}h {stats.totalWatchTime % 60}m
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      {totalDays > 0 ? `${totalDays} jour${totalDays > 1 ? "s" : ""}` : "de visionnage"}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-300">Likes</CardTitle>
+                    <ThumbsUp className="h-4 w-4 text-green-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl font-bold text-green-400">{stats.totalLikes}</div>
+                    <p className="text-xs text-gray-400">contenus likés</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-300">Dislikes</CardTitle>
+                    <ThumbsDown className="h-4 w-4 text-red-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl font-bold text-red-400">{stats.totalDislikes}</div>
+                    <p className="text-xs text-gray-400">contenus dislikés</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium text-gray-300">Favoris</CardTitle>
+                    <Star className="h-4 w-4 text-gray-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-lg sm:text-2xl font-bold text-white">{favoritesCount}</div>
+                    <p className="text-xs text-gray-400">favoris</p>
+                  </CardContent>
+                </Card>
               </div>
-              <p className="text-xs text-gray-400">
-                {totalDays > 0 ? `${totalDays} jour${totalDays > 1 ? "s" : ""}` : "de visionnage"}
-              </p>
             </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-300">Likes</CardTitle>
-              <ThumbsUp className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-2xl font-bold text-green-400">{stats.totalLikes}</div>
-              <p className="text-xs text-gray-400">contenus likés</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-300">Dislikes</CardTitle>
-              <ThumbsDown className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-2xl font-bold text-red-400">{stats.totalDislikes}</div>
-              <p className="text-xs text-gray-400">contenus dislikés</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-xs sm:text-sm font-medium text-gray-300">Favoris</CardTitle>
-              <Star className="h-4 w-4 text-gray-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-lg sm:text-2xl font-bold text-white">{favoritesCount}</div>
-              <p className="text-xs text-gray-400">favoris</p>
-            </CardContent>
-          </Card>
-        </div>
+          )}
+        </Card>
 
         {/* Statistiques Like/Dislike détaillées */}
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-white">
-              <ThumbsUp className="h-5 w-5 text-green-500" />
-              Statistiques d'évaluation
-            </CardTitle>
-            <CardDescription className="text-gray-400">Vos likes et dislikes par catégorie</CardDescription>
+          <CardHeader className="cursor-pointer" onClick={() => setIsLikesOpen(!isLikesOpen)}>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <ThumbsUp className="h-5 w-5 text-green-500" />
+                  Statistiques d'évaluation
+                </CardTitle>
+                <CardDescription className="text-gray-400">Vos likes et dislikes par catégorie</CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" className="text-gray-400">
+                {isLikesOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+              </Button>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              <div className="text-center p-3 bg-green-900/20 rounded-lg border border-green-800">
-                <div className="text-xl font-bold text-green-400">{stats.likesMovies}</div>
-                <p className="text-xs text-green-400">Films likés</p>
+          {isLikesOpen && (
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="text-center p-3 bg-green-900/20 rounded-lg border border-green-800">
+                  <div className="text-xl font-bold text-green-400">{stats.likesMovies}</div>
+                  <p className="text-xs text-green-400">Films likés</p>
+                </div>
+                <div className="text-center p-3 bg-red-900/20 rounded-lg border border-red-800">
+                  <div className="text-xl font-bold text-red-400">{stats.dislikesMovies}</div>
+                  <p className="text-xs text-red-400">Films dislikés</p>
+                </div>
+                <div className="text-center p-3 bg-green-900/20 rounded-lg border border-green-800">
+                  <div className="text-xl font-bold text-green-400">{stats.likesTVShows}</div>
+                  <p className="text-xs text-green-400">Séries likées</p>
+                </div>
+                <div className="text-center p-3 bg-red-900/20 rounded-lg border border-red-800">
+                  <div className="text-xl font-bold text-red-400">{stats.dislikesTVShows}</div>
+                  <p className="text-xs text-red-400">Séries dislikées</p>
+                </div>
+                <div className="text-center p-3 bg-green-900/20 rounded-lg border border-green-800">
+                  <div className="text-xl font-bold text-green-400">{stats.likesEpisodes}</div>
+                  <p className="text-xs text-green-400">Épisodes likés</p>
+                </div>
+                <div className="text-center p-3 bg-red-900/20 rounded-lg border border-red-800">
+                  <div className="text-xl font-bold text-red-400">{stats.dislikesEpisodes}</div>
+                  <p className="text-xs text-red-400">Épisodes dislikés</p>
+                </div>
               </div>
-              <div className="text-center p-3 bg-red-900/20 rounded-lg border border-red-800">
-                <div className="text-xl font-bold text-red-400">{stats.dislikesMovies}</div>
-                <p className="text-xs text-red-400">Films dislikés</p>
-              </div>
-              <div className="text-center p-3 bg-green-900/20 rounded-lg border border-green-800">
-                <div className="text-xl font-bold text-green-400">{stats.likesTVShows}</div>
-                <p className="text-xs text-green-400">Séries likées</p>
-              </div>
-              <div className="text-center p-3 bg-red-900/20 rounded-lg border border-red-800">
-                <div className="text-xl font-bold text-red-400">{stats.dislikesTVShows}</div>
-                <p className="text-xs text-red-400">Séries dislikées</p>
-              </div>
-              <div className="text-center p-3 bg-green-900/20 rounded-lg border border-green-800">
-                <div className="text-xl font-bold text-green-400">{stats.likesEpisodes}</div>
-                <p className="text-xs text-green-400">Épisodes likés</p>
-              </div>
-              <div className="text-center p-3 bg-red-900/20 rounded-lg border border-red-800">
-                <div className="text-xl font-bold text-red-400">{stats.dislikesEpisodes}</div>
-                <p className="text-xs text-red-400">Épisodes dislikés</p>
-              </div>
-            </div>
 
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-4">
-              <div className="text-center p-3 bg-blue-900/20 rounded-lg border border-blue-800">
-                <div className="text-xl font-bold text-blue-400">
-                  {stats.likesTVChannels + stats.dislikesTVChannels}
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="text-center p-3 bg-blue-900/20 rounded-lg border border-blue-800">
+                  <div className="text-xl font-bold text-blue-400">
+                    {stats.likesTVChannels + stats.dislikesTVChannels}
+                  </div>
+                  <p className="text-xs text-blue-400">Chaînes TV évaluées</p>
                 </div>
-                <p className="text-xs text-blue-400">Chaînes TV évaluées</p>
-              </div>
-              <div className="text-center p-3 bg-purple-900/20 rounded-lg border border-purple-800">
-                <div className="text-xl font-bold text-purple-400">{stats.likesRadio + stats.dislikesRadio}</div>
-                <p className="text-xs text-purple-400">Radios évaluées</p>
-              </div>
-              <div className="text-center p-3 bg-orange-900/20 rounded-lg border border-orange-800">
-                <div className="text-xl font-bold text-orange-400">{stats.likesGames + stats.dislikesGames}</div>
-                <p className="text-xs text-orange-400">Jeux évalués</p>
-              </div>
-              <div className="text-center p-3 bg-indigo-900/20 rounded-lg border border-indigo-800">
-                <div className="text-xl font-bold text-indigo-400">
-                  {stats.likesPlaylists + stats.dislikesPlaylists}
+                <div className="text-center p-3 bg-purple-900/20 rounded-lg border border-purple-800">
+                  <div className="text-xl font-bold text-purple-400">{stats.likesRadio + stats.dislikesRadio}</div>
+                  <p className="text-xs text-purple-400">Radios évaluées</p>
                 </div>
-                <p className="text-xs text-indigo-400">Playlists évaluées</p>
+                <div className="text-center p-3 bg-orange-900/20 rounded-lg border border-orange-800">
+                  <div className="text-xl font-bold text-orange-400">{stats.likesGames + stats.dislikesGames}</div>
+                  <p className="text-xs text-orange-400">Jeux évalués</p>
+                </div>
+                <div className="text-center p-3 bg-indigo-900/20 rounded-lg border border-indigo-800">
+                  <div className="text-xl font-bold text-indigo-400">
+                    {stats.likesPlaylists + stats.dislikesPlaylists}
+                  </div>
+                  <p className="text-xs text-indigo-400">Playlists évaluées</p>
+                </div>
+                <div className="text-center p-3 bg-gray-700 rounded-lg border border-gray-600">
+                  <div className="text-xl font-bold text-gray-300">{stats.totalLikes + stats.totalDislikes}</div>
+                  <p className="text-xs text-gray-400">Total évaluations</p>
+                </div>
               </div>
-              <div className="text-center p-3 bg-gray-700 rounded-lg border border-gray-600">
-                <div className="text-xl font-bold text-gray-300">{stats.totalLikes + stats.totalDislikes}</div>
-                <p className="text-xs text-gray-400">Total évaluations</p>
-              </div>
-            </div>
 
-            {(stats.likesPlaylists > 0 || stats.dislikesPlaylists > 0) && (
-              <div className="mt-4 p-4 bg-indigo-900/10 rounded-lg border border-indigo-800">
-                <div className="flex items-center gap-2 mb-3">
-                  <List className="h-4 w-4 text-indigo-400" />
-                  <h4 className="text-sm font-medium text-indigo-400">Évaluations de Playlists</h4>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-2 bg-green-900/20 rounded border border-green-800">
-                    <div className="text-lg font-bold text-green-400">{stats.likesPlaylists}</div>
-                    <p className="text-xs text-green-400">Playlists likées</p>
+              {(stats.likesPlaylists > 0 || stats.dislikesPlaylists > 0) && (
+                <div className="mt-4 p-4 bg-indigo-900/10 rounded-lg border border-indigo-800">
+                  <div className="flex items-center gap-2 mb-3">
+                    <List className="h-4 w-4 text-indigo-400" />
+                    <h4 className="text-sm font-medium text-indigo-400">Évaluations de Playlists</h4>
                   </div>
-                  <div className="text-center p-2 bg-red-900/20 rounded border border-red-800">
-                    <div className="text-lg font-bold text-red-400">{stats.dislikesPlaylists}</div>
-                    <p className="text-xs text-red-400">Playlists dislikées</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center p-2 bg-green-900/20 rounded border border-green-800">
+                      <div className="text-lg font-bold text-green-400">{stats.likesPlaylists}</div>
+                      <p className="text-xs text-green-400">Playlists likées</p>
+                    </div>
+                    <div className="text-center p-2 bg-red-900/20 rounded border border-red-800">
+                      <div className="text-lg font-bold text-red-400">{stats.dislikesPlaylists}</div>
+                      <p className="text-xs text-red-400">Playlists dislikées</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </CardContent>
+              )}
+            </CardContent>
+          )}
         </Card>
 
         {/* Stats détaillées */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-white">
-                <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
-                Note moyenne
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-bold text-white">{stats.averageRating.toFixed(1)}/10</div>
-              <Progress value={stats.averageRating * 10} className="mt-2" />
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-white">
-                <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
-                Genre favori
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Badge variant="secondary" className="text-sm sm:text-lg px-2 sm:px-3 py-1 bg-gray-700 text-gray-300">
-                {stats.favoriteGenre}
-              </Badge>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-white">
-                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />7 derniers jours
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-bold text-white">
-                {Math.floor(calculateRecentWatchTime(7) / 60)}h {calculateRecentWatchTime(7) % 60}m
-              </div>
-              <p className="text-xs text-gray-400 mt-1">temps de visionnage</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-gray-800 border-gray-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-white">
-                <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
-                30 derniers jours
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl sm:text-3xl font-bold text-white">
-                {Math.floor(calculateRecentWatchTime(30) / 60)}h {calculateRecentWatchTime(30) % 60}m
-              </div>
-              <p className="text-xs text-gray-400 mt-1">temps de visionnage</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Contenu regardé détaillé */}
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-white">
-              <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
-              Statistiques de visionnage
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-red-900/20 rounded-lg border border-red-800">
-                <div className="text-2xl font-bold text-red-400">{stats.moviesWatched}</div>
-                <p className="text-sm text-red-400">Films</p>
-              </div>
-              <div className="text-center p-4 bg-blue-900/20 rounded-lg border border-blue-800">
-                <div className="text-2xl font-bold text-blue-400">{stats.showsWatched}</div>
-                <p className="text-sm text-blue-400">Séries</p>
-              </div>
-              <div className="text-center p-4 bg-green-900/20 rounded-lg border border-green-800">
-                <div className="text-2xl font-bold text-green-400">{stats.episodesWatched}</div>
-                <p className="text-sm text-green-400">Épisodes</p>
-              </div>
-              <div className="text-center p-4 bg-purple-900/20 rounded-lg border border-purple-800">
-                <div className="text-2xl font-bold text-purple-400">{stats.tvChannelsFavorites}</div>
-                <p className="text-sm text-purple-400">Chaînes TV</p>
-              </div>
+          <CardHeader className="cursor-pointer" onClick={() => setIsDetailedStatsOpen(!isDetailedStatsOpen)}>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-white">Statistiques détaillées</CardTitle>
+              <Button variant="ghost" size="sm" className="text-gray-400">
+                {isDetailedStatsOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+              </Button>
             </div>
-          </CardContent>
+          </CardHeader>
+          {isDetailedStatsOpen && (
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-white">
+                      <Star className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
+                      Note moyenne
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl sm:text-3xl font-bold text-white">{stats.averageRating.toFixed(1)}/10</div>
+                    <Progress value={stats.averageRating * 10} className="mt-2" />
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-white">
+                      <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-400" />
+                      Genre favori
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Badge
+                      variant="secondary"
+                      className="text-sm sm:text-lg px-2 sm:px-3 py-1 bg-gray-700 text-gray-300"
+                    >
+                      {stats.favoriteGenre}
+                    </Badge>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-white">
+                      <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />7 derniers jours
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl sm:text-3xl font-bold text-white">
+                      {Math.floor(calculateRecentWatchTime(7) / 60)}h {calculateRecentWatchTime(7) % 60}m
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">temps de visionnage</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-white">
+                      <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
+                      30 derniers jours
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl sm:text-3xl font-bold text-white">
+                      {Math.floor(calculateRecentWatchTime(30) / 60)}h {calculateRecentWatchTime(30) % 60}m
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">temps de visionnage</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Contenu regardé détaillé */}
+              <Card className="bg-gray-800 border-gray-700 mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg text-white">
+                    <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-green-400" />
+                    Statistiques de visionnage
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-red-900/20 rounded-lg border border-red-800">
+                      <div className="text-2xl font-bold text-red-400">{stats.moviesWatched}</div>
+                      <p className="text-sm text-red-400">Films</p>
+                    </div>
+                    <div className="text-center p-4 bg-blue-900/20 rounded-lg border border-blue-800">
+                      <div className="text-2xl font-bold text-blue-400">{stats.showsWatched}</div>
+                      <p className="text-sm text-blue-400">Séries</p>
+                    </div>
+                    <div className="text-center p-4 bg-green-900/20 rounded-lg border border-green-800">
+                      <div className="text-2xl font-bold text-green-400">{stats.episodesWatched}</div>
+                      <p className="text-sm text-green-400">Épisodes</p>
+                    </div>
+                    <div className="text-center p-4 bg-purple-900/20 rounded-lg border border-purple-800">
+                      <div className="text-2xl font-bold text-purple-400">{stats.tvChannelsFavorites}</div>
+                      <p className="text-sm text-purple-400">Chaînes TV</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </CardContent>
+          )}
         </Card>
 
-        <UserFeedbackSection />
+        <Card className="bg-gray-800 border-gray-700">
+          <CardHeader className="cursor-pointer" onClick={() => setIsFeedbackOpen(!isFeedbackOpen)}>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-white">Votre avis compte</CardTitle>
+              <Button variant="ghost" size="sm" className="text-gray-400">
+                {isFeedbackOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+              </Button>
+            </div>
+          </CardHeader>
+          {isFeedbackOpen && (
+            <CardContent>
+              <UserFeedbackSection />
+            </CardContent>
+          )}
+        </Card>
 
         {/* Interesting Facts - Section améliorée */}
         {interestingFacts.length > 0 && (
           <Card className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border-blue-700">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-blue-300">
-                <Zap className="h-5 w-5 text-yellow-400" />
-                Le saviez-vous ?
-              </CardTitle>
-              <CardDescription className="text-blue-400">
-                Quelques statistiques amusantes sur votre visionnage et vos évaluations
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 gap-4">
-                {interestingFacts.map((fact, index) => (
-                  <div
-                    key={index}
-                    className="bg-gray-800/80 backdrop-blur-sm p-4 rounded-lg border border-gray-700 shadow-sm"
-                  >
-                    <p className="text-sm font-medium text-gray-200 flex items-center gap-2">
-                      <span className="text-blue-400 font-bold">•</span>
-                      {fact}
-                    </p>
-                  </div>
-                ))}
+            <CardHeader className="cursor-pointer" onClick={() => setIsFactsOpen(!isFactsOpen)}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-blue-300">
+                    <Zap className="h-5 w-5 text-yellow-400" />
+                    Le saviez-vous ?
+                  </CardTitle>
+                  <CardDescription className="text-blue-400">
+                    Quelques statistiques amusantes sur votre visionnage et vos évaluations
+                  </CardDescription>
+                </div>
+                <Button variant="ghost" size="sm" className="text-blue-400">
+                  {isFactsOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                </Button>
               </div>
-            </CardContent>
+            </CardHeader>
+            {isFactsOpen && (
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4">
+                  {interestingFacts.map((fact, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-800/80 backdrop-blur-sm p-4 rounded-lg border border-gray-700 shadow-sm"
+                    >
+                      <p className="text-sm font-medium text-gray-200 flex items-center gap-2">
+                        <span className="text-blue-400 font-bold">•</span>
+                        {fact}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            )}
           </Card>
         )}
 
         <Card className="bg-gray-800 border-gray-700">
-          <CardHeader
-            className={isMobile ? "cursor-pointer" : ""}
-            onClick={() => isMobile && setIsAchievementsOpen(!isAchievementsOpen)}
-          >
+          <CardHeader className="cursor-pointer" onClick={() => setIsAchievementsOpen(!isAchievementsOpen)}>
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-white">
-                <Trophy className="h-5 w-5 text-yellow-400" />
-                Succès et Badges
-              </CardTitle>
-              {isMobile && (
-                <Button variant="ghost" size="sm" className="text-gray-400">
-                  {isAchievementsOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                </Button>
-              )}
+              <div>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Trophy className="h-5 w-5 text-yellow-400" />
+                  Succès et Badges
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Débloquez des badges en explorant la plateforme
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" className="text-gray-400">
+                {isAchievementsOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+              </Button>
             </div>
-            <CardDescription className="text-gray-400">Débloquez des badges en explorant la plateforme</CardDescription>
           </CardHeader>
-          {(!isMobile || isAchievementsOpen) && (
+          {isAchievementsOpen && (
             <CardContent>
               <AchievementsDashboard />
             </CardContent>
