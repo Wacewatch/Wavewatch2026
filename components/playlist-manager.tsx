@@ -27,19 +27,38 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Plus, Edit, Trash2, Lock, Globe, Calendar, Film } from "lucide-react"
+import { Plus, Edit, Trash2, Lock, Globe, Calendar, Film, Crown } from "lucide-react"
 import { usePlaylists } from "@/hooks/use-playlists"
+import { useAuth } from "@/components/auth-provider"
+import { VIPSystem } from "@/lib/vip-system"
 import Link from "next/link"
 
-const THEME_COLORS = [
-  { name: "Bleu", value: "#3B82F6" },
-  { name: "Rouge", value: "#EF4444" },
-  { name: "Vert", value: "#10B981" },
-  { name: "Violet", value: "#8B5CF6" },
-  { name: "Rose", value: "#EC4899" },
-  { name: "Orange", value: "#F59E0B" },
-  { name: "Cyan", value: "#06B6D4" },
-  { name: "Indigo", value: "#6366F1" },
+const STANDARD_COLORS = [
+  { name: "Bleu", value: "#3B82F6", premium: false },
+  { name: "Rouge", value: "#EF4444", premium: false },
+  { name: "Vert", value: "#10B981", premium: false },
+  { name: "Violet", value: "#8B5CF6", premium: false },
+  { name: "Rose", value: "#EC4899", premium: false },
+]
+
+const PREMIUM_COLORS = [
+  { name: "Or", value: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)", premium: true, animated: true },
+  { name: "Émeraude", value: "linear-gradient(135deg, #10B981 0%, #059669 100%)", premium: true, animated: true },
+  { name: "Saphir", value: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)", premium: true, animated: true },
+  { name: "Rubis", value: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)", premium: true, animated: true },
+  { name: "Améthyste", value: "linear-gradient(135deg, #A855F7 0%, #7C3AED 100%)", premium: true, animated: true },
+  {
+    name: "Arc-en-ciel",
+    value: "linear-gradient(135deg, #FF0080 0%, #FF8C00 25%, #40E0D0 50%, #FF0080 100%)",
+    premium: true,
+    animated: true,
+  },
+  {
+    name: "Galaxie",
+    value: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)",
+    premium: true,
+    animated: true,
+  },
 ]
 
 interface PlaylistFormData {
@@ -50,6 +69,7 @@ interface PlaylistFormData {
 }
 
 export function PlaylistManager() {
+  const { user } = useAuth()
   const { playlists, loading, createPlaylist, updatePlaylist, deletePlaylist } = usePlaylists()
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [editingPlaylist, setEditingPlaylist] = useState<string | null>(null)
@@ -59,6 +79,9 @@ export function PlaylistManager() {
     isPublic: true,
     themeColor: "#3B82F6",
   })
+
+  const userVIPLevel = user ? VIPSystem.getUserVIPStatus(user.id) : "free"
+  const hasPremiumAccess = user?.isAdmin || userVIPLevel === "vip" || userVIPLevel === "vip_plus"
 
   const handleCreatePlaylist = async () => {
     if (!formData.title.trim()) return
@@ -115,6 +138,68 @@ export function PlaylistManager() {
     await deletePlaylist(playlistId)
   }
 
+  const ColorSelector = ({ value, onChange }: { value: string; onChange: (color: string) => void }) => {
+    return (
+      <div className="space-y-4">
+        <div>
+          <Label className="text-gray-300 mb-2 block">Couleurs standard</Label>
+          <div className="flex flex-wrap gap-2">
+            {STANDARD_COLORS.map((color) => (
+              <button
+                key={color.value}
+                onClick={() => onChange(color.value)}
+                className={`w-10 h-10 rounded-full border-2 transition-all ${
+                  value === color.value ? "border-white scale-110" : "border-gray-600 hover:border-gray-400"
+                }`}
+                style={{ backgroundColor: color.value }}
+                title={color.name}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label className="text-gray-300 mb-2 flex items-center gap-2">
+            Couleurs premium
+            <Crown className="w-4 h-4 text-yellow-400" />
+          </Label>
+          <div className="flex flex-wrap gap-2">
+            {PREMIUM_COLORS.map((color) => (
+              <div key={color.value} className="relative">
+                <button
+                  onClick={() => {
+                    if (hasPremiumAccess) {
+                      onChange(color.value)
+                    }
+                  }}
+                  disabled={!hasPremiumAccess}
+                  className={`w-10 h-10 rounded-full border-2 transition-all ${
+                    value === color.value ? "border-white scale-110" : "border-gray-600"
+                  } ${!hasPremiumAccess ? "opacity-50 cursor-not-allowed" : "hover:border-gray-400"} ${
+                    color.animated ? "animate-gradient" : ""
+                  }`}
+                  style={{ background: color.value }}
+                  title={color.name}
+                />
+                {!hasPremiumAccess && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Lock className="w-4 h-4 text-white drop-shadow-lg" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          {!hasPremiumAccess && (
+            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+              <Lock className="w-3 h-3" />
+              Ces couleurs sont réservées aux membres VIP et VIP+
+            </p>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -141,7 +226,7 @@ export function PlaylistManager() {
               Nouvelle Playlist
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-gray-800 border-gray-700 text-white">
+          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
             <DialogHeader>
               <DialogTitle>Créer une nouvelle playlist</DialogTitle>
               <DialogDescription className="text-gray-400">
@@ -173,22 +258,10 @@ export function PlaylistManager() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Couleur du thème</Label>
-                <div className="flex flex-wrap gap-2">
-                  {THEME_COLORS.map((color) => (
-                    <button
-                      key={color.value}
-                      onClick={() => setFormData((prev) => ({ ...prev, themeColor: color.value }))}
-                      className={`w-8 h-8 rounded-full border-2 ${
-                        formData.themeColor === color.value ? "border-white" : "border-gray-600"
-                      }`}
-                      style={{ backgroundColor: color.value }}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
-              </div>
+              <ColorSelector
+                value={formData.themeColor}
+                onChange={(color) => setFormData((prev) => ({ ...prev, themeColor: color }))}
+              />
 
               <div className="flex items-center space-x-2">
                 <input
@@ -255,7 +328,12 @@ export function PlaylistManager() {
                         {playlist.title}
                       </CardTitle>
                       <div className="flex items-center gap-2 mt-1">
-                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: playlist.theme_color }} />
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{
+                            background: playlist.theme_color,
+                          }}
+                        />
                         {playlist.is_public ? (
                           <Badge variant="secondary" className="text-xs">
                             <Globe className="w-3 h-3 mr-1" />
@@ -287,7 +365,7 @@ export function PlaylistManager() {
                             <Edit className="w-4 h-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="bg-gray-800 border-gray-700 text-white">
+                        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
                           <DialogHeader>
                             <DialogTitle>Modifier la playlist</DialogTitle>
                             <DialogDescription className="text-gray-400">
@@ -317,22 +395,10 @@ export function PlaylistManager() {
                               />
                             </div>
 
-                            <div className="space-y-2">
-                              <Label>Couleur du thème</Label>
-                              <div className="flex flex-wrap gap-2">
-                                {THEME_COLORS.map((color) => (
-                                  <button
-                                    key={color.value}
-                                    onClick={() => setFormData((prev) => ({ ...prev, themeColor: color.value }))}
-                                    className={`w-8 h-8 rounded-full border-2 ${
-                                      formData.themeColor === color.value ? "border-white" : "border-gray-600"
-                                    }`}
-                                    style={{ backgroundColor: color.value }}
-                                    title={color.name}
-                                  />
-                                ))}
-                              </div>
-                            </div>
+                            <ColorSelector
+                              value={formData.themeColor}
+                              onChange={(color) => setFormData((prev) => ({ ...prev, themeColor: color }))}
+                            />
 
                             <div className="flex items-center space-x-2">
                               <input

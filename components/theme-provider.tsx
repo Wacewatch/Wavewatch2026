@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-type Theme = "dark" | "light" | "system"
+type Theme = "dark" | "light" | "system" | "ocean" | "sunset" | "forest"
 
 interface ThemeProviderProps {
   children: React.ReactNode
@@ -28,8 +28,15 @@ export function ThemeProvider({ children, defaultTheme = "dark", ...props }: The
   const [theme, setTheme] = React.useState<Theme>(defaultTheme)
 
   React.useEffect(() => {
+    const savedTheme = localStorage.getItem("wavewatch_theme") as Theme
+    if (savedTheme) {
+      setTheme(savedTheme)
+    }
+  }, [])
+
+  React.useEffect(() => {
     const root = window.document.documentElement
-    root.classList.remove("light", "dark")
+    root.classList.remove("light", "dark", "ocean", "sunset", "forest")
 
     if (theme === "system") {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
@@ -37,6 +44,8 @@ export function ThemeProvider({ children, defaultTheme = "dark", ...props }: The
     } else {
       root.classList.add(theme)
     }
+
+    localStorage.setItem("wavewatch_theme", theme)
   }, [theme])
 
   const value = {

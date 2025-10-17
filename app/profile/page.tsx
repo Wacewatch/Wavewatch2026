@@ -24,6 +24,7 @@ import {
   X,
   Flag as Flask,
   MessageSquare,
+  Palette,
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { VIPSystem } from "@/lib/vip-system"
@@ -32,6 +33,7 @@ import { useToast } from "@/hooks/use-toast"
 import { useRouter } from "next/navigation"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
 import { useMessaging } from "@/hooks/use-messaging"
+import { useTheme } from "@/components/theme-provider"
 
 interface UserProfile {
   birthDate?: string
@@ -57,6 +59,7 @@ export default function ProfilePage() {
   const { updateMessagePreferences } = useMessaging()
   const { toast } = useToast()
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
 
   const [showActivationCode, setShowActivationCode] = useState(false)
   const [allowMessages, setAllowMessages] = useState(true)
@@ -455,6 +458,25 @@ export default function ProfilePage() {
     }
   }
 
+  const handleThemeChange = (newTheme: "dark" | "light" | "ocean" | "sunset" | "forest") => {
+    setTheme(newTheme)
+    toast({
+      title: "Thème modifié",
+      description: `Le thème ${getThemeName(newTheme)} a été appliqué`,
+    })
+  }
+
+  const getThemeName = (themeValue: string) => {
+    const themeNames: Record<string, string> = {
+      dark: "Sombre",
+      light: "Clair",
+      ocean: "Océan",
+      sunset: "Coucher de soleil",
+      forest: "Forêt",
+    }
+    return themeNames[themeValue] || themeValue
+  }
+
   if (!mounted) {
     return (
       <div className="min-h-screen bg-gray-900 text-white">
@@ -702,6 +724,96 @@ export default function ProfilePage() {
                       <Link href="/subscription">Devenir VIP</Link>
                     </Button>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Palette className="h-5 w-5 text-purple-400" />
+                  Thème du site
+                </CardTitle>
+                <CardDescription className="text-gray-400">Personnalisez l'apparence de WaveWatch</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 gap-3">
+                  <button
+                    onClick={() => handleThemeChange("dark")}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                      theme === "dark"
+                        ? "border-blue-500 bg-gray-700"
+                        : "border-gray-600 bg-gray-750 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-gray-900 to-gray-700 border border-gray-600" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Sombre</div>
+                        <div className="text-xs text-gray-400">Thème par défaut</div>
+                      </div>
+                    </div>
+                    {theme === "dark" && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                  </button>
+
+                  <button
+                    onClick={() => handleThemeChange("ocean")}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                      theme === "ocean"
+                        ? "border-cyan-500 bg-gray-700"
+                        : "border-gray-600 bg-gray-750 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-900 via-cyan-800 to-teal-700 border border-cyan-600" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Océan</div>
+                        <div className="text-xs text-gray-400">Bleu profond apaisant</div>
+                      </div>
+                    </div>
+                    {theme === "ocean" && <div className="w-2 h-2 rounded-full bg-cyan-500" />}
+                  </button>
+
+                  <button
+                    onClick={() => handleThemeChange("sunset")}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                      theme === "sunset"
+                        ? "border-orange-500 bg-gray-700"
+                        : "border-gray-600 bg-gray-750 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-orange-600 via-pink-600 to-purple-700 border border-orange-500" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Coucher de soleil</div>
+                        <div className="text-xs text-gray-400">Orange et violet chaleureux</div>
+                      </div>
+                    </div>
+                    {theme === "sunset" && <div className="w-2 h-2 rounded-full bg-orange-500" />}
+                  </button>
+
+                  <button
+                    onClick={() => handleThemeChange("forest")}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                      theme === "forest"
+                        ? "border-green-500 bg-gray-700"
+                        : "border-gray-600 bg-gray-750 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-green-900 via-emerald-800 to-lime-700 border border-green-600" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Forêt</div>
+                        <div className="text-xs text-gray-400">Vert naturel reposant</div>
+                      </div>
+                    </div>
+                    {theme === "forest" && <div className="w-2 h-2 rounded-full bg-green-500" />}
+                  </button>
+                </div>
+
+                <div className="text-xs text-gray-500 bg-gray-700/50 p-3 rounded-lg mt-3">
+                  <strong>Astuce :</strong> Le thème sélectionné sera appliqué sur toutes les pages et sauvegardé
+                  automatiquement.
                 </div>
               </CardContent>
             </Card>

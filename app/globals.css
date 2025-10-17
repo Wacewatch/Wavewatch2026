@@ -74,6 +74,114 @@
   --sidebar-ring: 217.2 91.2% 59.8%;
 }
 
+/* Added Ocean theme - Deep blue ocean vibes */
+.ocean {
+  --background: 200 50% 8%;
+  --foreground: 180 20% 95%;
+  --card: 200 45% 12%;
+  --card-foreground: 180 20% 95%;
+  --popover: 200 45% 12%;
+  --popover-foreground: 180 20% 95%;
+  --primary: 190 80% 50%;
+  --primary-foreground: 200 50% 10%;
+  --secondary: 200 30% 20%;
+  --secondary-foreground: 180 20% 95%;
+  --muted: 200 30% 20%;
+  --muted-foreground: 180 15% 65%;
+  --accent: 175 70% 45%;
+  --accent-foreground: 180 20% 95%;
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 200 30% 25%;
+  --input: 200 30% 25%;
+  --ring: 190 80% 50%;
+  --chart-1: 190 80% 50%;
+  --chart-2: 175 70% 45%;
+  --chart-3: 200 60% 40%;
+  --chart-4: 210 50% 50%;
+  --chart-5: 185 75% 55%;
+  --sidebar: 200 45% 12%;
+  --sidebar-foreground: 180 20% 90%;
+  --sidebar-primary: 190 80% 50%;
+  --sidebar-primary-foreground: 200 50% 10%;
+  --sidebar-accent: 200 35% 18%;
+  --sidebar-accent-foreground: 180 20% 95%;
+  --sidebar-border: 200 30% 25%;
+  --sidebar-ring: 190 80% 50%;
+}
+
+/* Added Sunset theme - Warm orange and purple sunset */
+.sunset {
+  --background: 20 30% 10%;
+  --foreground: 30 15% 95%;
+  --card: 20 25% 15%;
+  --card-foreground: 30 15% 95%;
+  --popover: 20 25% 15%;
+  --popover-foreground: 30 15% 95%;
+  --primary: 25 90% 55%;
+  --primary-foreground: 20 30% 10%;
+  --secondary: 280 40% 30%;
+  --secondary-foreground: 30 15% 95%;
+  --muted: 20 20% 22%;
+  --muted-foreground: 30 10% 65%;
+  --accent: 340 80% 60%;
+  --accent-foreground: 30 15% 95%;
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 20 20% 25%;
+  --input: 20 20% 25%;
+  --ring: 25 90% 55%;
+  --chart-1: 25 90% 55%;
+  --chart-2: 340 80% 60%;
+  --chart-3: 280 60% 50%;
+  --chart-4: 15 85% 50%;
+  --chart-5: 300 70% 55%;
+  --sidebar: 20 25% 15%;
+  --sidebar-foreground: 30 15% 90%;
+  --sidebar-primary: 25 90% 55%;
+  --sidebar-primary-foreground: 20 30% 10%;
+  --sidebar-accent: 20 30% 20%;
+  --sidebar-accent-foreground: 30 15% 95%;
+  --sidebar-border: 20 20% 25%;
+  --sidebar-ring: 25 90% 55%;
+}
+
+/* Added Forest theme - Natural green forest atmosphere */
+.forest {
+  --background: 140 30% 8%;
+  --foreground: 120 15% 95%;
+  --card: 140 25% 12%;
+  --card-foreground: 120 15% 95%;
+  --popover: 140 25% 12%;
+  --popover-foreground: 120 15% 95%;
+  --primary: 145 70% 45%;
+  --primary-foreground: 140 30% 10%;
+  --secondary: 140 20% 20%;
+  --secondary-foreground: 120 15% 95%;
+  --muted: 140 20% 20%;
+  --muted-foreground: 120 10% 65%;
+  --accent: 85 60% 50%;
+  --accent-foreground: 120 15% 95%;
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 140 20% 25%;
+  --input: 140 20% 25%;
+  --ring: 145 70% 45%;
+  --chart-1: 145 70% 45%;
+  --chart-2: 85 60% 50%;
+  --chart-3: 160 55% 40%;
+  --chart-4: 120 65% 45%;
+  --chart-5: 100 70% 50%;
+  --sidebar: 140 25% 12%;
+  --sidebar-foreground: 120 15% 90%;
+  --sidebar-primary: 145 70% 45%;
+  --sidebar-primary-foreground: 140 30% 10%;
+  --sidebar-accent: 140 25% 18%;
+  --sidebar-accent-foreground: 120 15% 95%;
+  --sidebar-border: 140 20% 25%;
+  --sidebar-ring: 145 70% 45%;
+}
+
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -173,6 +281,22 @@
 
   .mobile-slider::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Added animated gradient for premium playlist colors */
+  @keyframes gradient-shift {
+    0%,
+    100% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+  }
+
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient-shift 3s ease infinite;
   }
 
   @media (max-width: 768px) {
