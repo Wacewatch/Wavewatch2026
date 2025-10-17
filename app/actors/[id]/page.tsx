@@ -5,6 +5,7 @@ import { Calendar, MapPin, Star, Film, Tv } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { ActorFavoriteButton } from "@/components/actor-favorite-button"
+import { AddToPlaylistButton } from "@/components/add-to-playlist-button"
 
 interface Actor {
   id: number
@@ -136,7 +137,7 @@ export default async function ActorDetailPage({ params }: { params: { id: string
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="w-full lg:w-80">
           <div className="sticky top-8">
-            <div className="aspect-[2/3] relative rounded-lg overflow-hidden bg-gray-200 mb-4">
+            <div className="aspect-[2/3] relative rounded-lg overflow-hidden bg-gray-800 mb-4">
               <Image
                 src={
                   actor.profile_path
@@ -149,15 +150,30 @@ export default async function ActorDetailPage({ params }: { params: { id: string
                 sizes="(max-width: 1024px) 100vw, 320px"
               />
             </div>
-            <ActorFavoriteButton actor={actor} />
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <ActorFavoriteButton actor={actor} />
+              </div>
+              <div className="flex-1">
+                <AddToPlaylistButton
+                  tmdbId={actor.id}
+                  mediaType="movie"
+                  title={actor.name}
+                  posterPath={actor.profile_path}
+                  className="w-full"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="flex-1 space-y-6">
           <div>
-            <h1 className="text-4xl font-bold mb-2">{actor.name}</h1>
-            <div className="flex flex-wrap items-center gap-4 text-muted-foreground mb-4">
-              <Badge variant="secondary">{actor.known_for_department}</Badge>
+            <h1 className="text-4xl font-bold mb-2 text-white">{actor.name}</h1>
+            <div className="flex flex-wrap items-center gap-4 text-gray-300 mb-4">
+              <Badge variant="secondary" className="bg-blue-900 text-blue-300 border-blue-700">
+                {actor.known_for_department}
+              </Badge>
               <div className="flex items-center gap-1">
                 <Star className="w-4 h-4 text-yellow-500" />
                 <span>Popularité: {actor.popularity.toFixed(1)}</span>
@@ -166,14 +182,14 @@ export default async function ActorDetailPage({ params }: { params: { id: string
           </div>
 
           {/* Informations personnelles */}
-          <Card>
+          <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
-              <CardTitle>Informations personnelles</CardTitle>
+              <CardTitle className="text-white">Informations personnelles</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {actor.birthday && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-2 text-gray-300">
+                  <Calendar className="w-4 h-4 text-blue-400" />
                   <span>
                     Né{actor.gender === 1 ? "e" : ""} le {formatDate(actor.birthday)}
                     {age && ` (${age} ans${actor.deathday ? " au moment du décès" : ""})`}
@@ -182,8 +198,8 @@ export default async function ActorDetailPage({ params }: { params: { id: string
               )}
 
               {actor.deathday && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-2 text-gray-300">
+                  <Calendar className="w-4 h-4 text-blue-400" />
                   <span>
                     Décédé{actor.gender === 1 ? "e" : ""} le {formatDate(actor.deathday)}
                   </span>
@@ -191,18 +207,18 @@ export default async function ActorDetailPage({ params }: { params: { id: string
               )}
 
               {actor.place_of_birth && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-2 text-gray-300">
+                  <MapPin className="w-4 h-4 text-blue-400" />
                   <span>{actor.place_of_birth}</span>
                 </div>
               )}
 
               {actor.also_known_as.length > 0 && (
                 <div>
-                  <h4 className="font-semibold mb-2">Aussi connu sous le nom de:</h4>
+                  <h4 className="font-semibold mb-2 text-white">Aussi connu sous le nom de:</h4>
                   <div className="flex flex-wrap gap-2">
                     {actor.also_known_as.slice(0, 5).map((name, index) => (
-                      <Badge key={index} variant="outline">
+                      <Badge key={index} variant="outline" className="border-gray-600 text-gray-300">
                         {name}
                       </Badge>
                     ))}
@@ -214,12 +230,12 @@ export default async function ActorDetailPage({ params }: { params: { id: string
 
           {/* Biographie */}
           {actor.biography && (
-            <Card>
+            <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <CardTitle>Biographie</CardTitle>
+                <CardTitle className="text-white">Biographie</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-muted-foreground leading-relaxed whitespace-pre-line">{actor.biography}</p>
+                <p className="text-gray-300 leading-relaxed whitespace-pre-line">{actor.biography}</p>
               </CardContent>
             </Card>
           )}
@@ -228,32 +244,38 @@ export default async function ActorDetailPage({ params }: { params: { id: string
 
       {/* Filmographie */}
       <Tabs defaultValue="movies" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="movies" className="flex items-center gap-2">
+        <TabsList className="grid w-full grid-cols-2 bg-gray-800 border border-gray-700">
+          <TabsTrigger
+            value="movies"
+            className="flex items-center gap-2 data-[state=active]:bg-blue-900 data-[state=active]:text-white"
+          >
             <Film className="w-4 h-4" />
             Films ({movieCredits.length})
           </TabsTrigger>
-          <TabsTrigger value="tv" className="flex items-center gap-2">
+          <TabsTrigger
+            value="tv"
+            className="flex items-center gap-2 data-[state=active]:bg-blue-900 data-[state=active]:text-white"
+          >
             <Tv className="w-4 h-4" />
             Séries ({tvCredits.length})
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="movies" className="space-y-6">
-          <Card>
+          <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
-              <CardTitle>Filmographie</CardTitle>
-              <CardDescription>Films dans lesquels {actor.name} a joué</CardDescription>
+              <CardTitle className="text-white">Filmographie</CardTitle>
+              <CardDescription className="text-gray-400">Films dans lesquels {actor.name} a joué</CardDescription>
             </CardHeader>
             <CardContent>
               {movieCredits.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Aucun film trouvé pour cet acteur.</p>
+                <p className="text-center text-gray-400 py-8">Aucun film trouvé pour cet acteur.</p>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {movieCredits.map((movie) => (
                     <Link key={movie.id} href={`/movies/${movie.id}`}>
                       <div className="space-y-2 group cursor-pointer">
-                        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-200">
+                        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
                           <Image
                             src={
                               movie.poster_path
@@ -274,9 +296,11 @@ export default async function ActorDetailPage({ params }: { params: { id: string
                           )}
                         </div>
                         <div>
-                          <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-600">{movie.title}</p>
-                          <p className="text-xs text-muted-foreground">{movie.character}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white">
+                            {movie.title}
+                          </p>
+                          <p className="text-xs text-gray-400">{movie.character}</p>
+                          <p className="text-xs text-gray-500">
                             {movie.release_date ? new Date(movie.release_date).getFullYear() : "N/A"}
                           </p>
                         </div>
@@ -290,20 +314,20 @@ export default async function ActorDetailPage({ params }: { params: { id: string
         </TabsContent>
 
         <TabsContent value="tv" className="space-y-6">
-          <Card>
+          <Card className="bg-gray-800 border-gray-700">
             <CardHeader>
-              <CardTitle>Séries TV</CardTitle>
-              <CardDescription>Séries dans lesquelles {actor.name} a joué</CardDescription>
+              <CardTitle className="text-white">Séries TV</CardTitle>
+              <CardDescription className="text-gray-400">Séries dans lesquelles {actor.name} a joué</CardDescription>
             </CardHeader>
             <CardContent>
               {tvCredits.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Aucune série trouvée pour cet acteur.</p>
+                <p className="text-center text-gray-400 py-8">Aucune série trouvée pour cet acteur.</p>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                   {tvCredits.map((show) => (
                     <Link key={show.id} href={`/tv-shows/${show.id}`}>
                       <div className="space-y-2 group cursor-pointer">
-                        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-200">
+                        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
                           <Image
                             src={
                               show.poster_path
@@ -324,9 +348,11 @@ export default async function ActorDetailPage({ params }: { params: { id: string
                           )}
                         </div>
                         <div>
-                          <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-600">{show.name}</p>
-                          <p className="text-xs text-muted-foreground">{show.character}</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white">
+                            {show.name}
+                          </p>
+                          <p className="text-xs text-gray-400">{show.character}</p>
+                          <p className="text-xs text-gray-500">
                             {show.first_air_date ? new Date(show.first_air_date).getFullYear() : "N/A"}
                           </p>
                         </div>

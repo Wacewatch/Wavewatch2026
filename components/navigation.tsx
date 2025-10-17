@@ -174,7 +174,13 @@ export function Navigation() {
                   <div className="px-3 py-2 border-b border-blue-700">
                     <p className="text-sm font-medium text-white">{user.username || "Utilisateur"}</p>
                     <p className="text-xs text-blue-300">
-                      {user.isVipPlus ? "Membre VIP Plus" : user.isVip ? "Membre VIP" : "Membre Standard"}
+                      {user.isAdmin
+                        ? "Administrateur"
+                        : user.isVipPlus
+                          ? "Membre VIP Plus"
+                          : user.isVip
+                            ? "Membre VIP"
+                            : "Membre Standard"}
                     </p>
                   </div>
                   <DropdownMenuItem asChild>
@@ -304,7 +310,13 @@ export function Navigation() {
                     <div>
                       <p className="font-medium text-white">{user.username || "Utilisateur"}</p>
                       <p className="text-xs text-blue-300">
-                        {user.isVipPlus ? "Membre VIP Plus" : user.isVip ? "Membre VIP" : "Membre Standard"}
+                        {user.isAdmin
+                          ? "Administrateur"
+                          : user.isVipPlus
+                            ? "Membre VIP Plus"
+                            : user.isVip
+                              ? "Membre VIP"
+                              : "Membre Standard"}
                       </p>
                     </div>
                   </div>
@@ -390,6 +402,34 @@ export function Navigation() {
                     <Link href="/anime" onClick={() => setIsMenuOpen(false)}>
                       Animés
                     </Link>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled
+                    className="w-full justify-start text-blue-400 opacity-60 cursor-not-allowed"
+                  >
+                    Musiques <span className="ml-auto text-xs">Bientôt</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled
+                    className="w-full justify-start text-blue-400 opacity-60 cursor-not-allowed"
+                  >
+                    Logiciels <span className="ml-auto text-xs">Bientôt</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled
+                    className="w-full justify-start text-blue-400 opacity-60 cursor-not-allowed"
+                  >
+                    Jeux <span className="ml-auto text-xs">Bientôt</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    disabled
+                    className="w-full justify-start text-blue-400 opacity-60 cursor-not-allowed"
+                  >
+                    Ebooks <span className="ml-auto text-xs">Bientôt</span>
                   </Button>
                 </div>
               </div>

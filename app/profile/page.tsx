@@ -707,7 +707,12 @@ export default function ProfilePage() {
               </CardHeader>
               <CardContent>
                 <div className="text-center space-y-3">
-                  {getVIPBadge(userVIPLevel) ? (
+                  {user.isAdmin ? (
+                    <Badge variant="secondary" className="text-lg px-4 py-2 bg-red-900 text-red-300 border-red-700">
+                      <Shield className="w-4 h-4 mr-1" />
+                      Administrateur
+                    </Badge>
+                  ) : getVIPBadge(userVIPLevel) ? (
                     getVIPBadge(userVIPLevel)
                   ) : (
                     <Badge variant="outline" className="text-lg px-4 py-2 border-gray-600 text-gray-400">
@@ -715,11 +720,13 @@ export default function ProfilePage() {
                     </Badge>
                   )}
                   <p className="text-sm text-gray-400">
-                    {userVIPLevel === "free"
-                      ? "Soutenez-nous pour obtenir un badge VIP !"
-                      : "Merci de votre soutien ! 💙"}
+                    {user.isAdmin
+                      ? "Vous avez tous les privilèges administrateur"
+                      : userVIPLevel === "free"
+                        ? "Soutenez-nous pour obtenir un badge VIP !"
+                        : "Merci de votre soutien ! 💙"}
                   </p>
-                  {userVIPLevel === "free" && (
+                  {userVIPLevel === "free" && !user.isAdmin && (
                     <Button asChild size="sm" className="bg-blue-600 hover:bg-blue-700">
                       <Link href="/subscription">Devenir VIP</Link>
                     </Button>

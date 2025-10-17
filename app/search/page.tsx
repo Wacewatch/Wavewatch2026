@@ -64,45 +64,74 @@ export default function SearchPage() {
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       <div className="space-y-4">
-        <h1 className="text-3xl font-bold">Recherche</h1>
+        <h1 className="text-3xl font-bold text-white">Recherche</h1>
 
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               type="text"
               placeholder="Films, séries, acteurs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-gray-800 border-gray-700 text-white placeholder-gray-400"
             />
           </div>
-          <Button type="submit">Rechercher</Button>
+          <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+            Rechercher
+          </Button>
         </form>
       </div>
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-12">
           <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
-          <p className="text-muted-foreground">Recherche en cours...</p>
+          <p className="text-gray-400">Recherche en cours...</p>
         </div>
       ) : (
         <>
           {results.length > 0 ? (
             <div className="space-y-6">
               <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-                <TabsList>
-                  <TabsTrigger value="all">Tous ({results.length})</TabsTrigger>
-                  <TabsTrigger value="movies">Films ({movieResults.length})</TabsTrigger>
-                  <TabsTrigger value="tvshows">Séries ({tvShowResults.length})</TabsTrigger>
-                  <TabsTrigger value="anime">Animés ({animeResults.length})</TabsTrigger>
-                  <TabsTrigger value="people">Personnes ({peopleResults.length})</TabsTrigger>
-                </TabsList>
+                <div className="overflow-x-auto -mx-4 px-4 pb-2">
+                  <TabsList className="inline-flex w-auto min-w-full bg-gray-800 border border-gray-700">
+                    <TabsTrigger
+                      value="all"
+                      className="data-[state=active]:bg-blue-900 data-[state=active]:text-white whitespace-nowrap"
+                    >
+                      Tous ({results.length})
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="movies"
+                      className="data-[state=active]:bg-blue-900 data-[state=active]:text-white whitespace-nowrap"
+                    >
+                      Films ({movieResults.length})
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="tvshows"
+                      className="data-[state=active]:bg-blue-900 data-[state=active]:text-white whitespace-nowrap"
+                    >
+                      Séries ({tvShowResults.length})
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="anime"
+                      className="data-[state=active]:bg-blue-900 data-[state=active]:text-white whitespace-nowrap"
+                    >
+                      Animés ({animeResults.length})
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="people"
+                      className="data-[state=active]:bg-blue-900 data-[state=active]:text-white whitespace-nowrap"
+                    >
+                      Personnes ({peopleResults.length})
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
 
                 <TabsContent value="all" className="space-y-8">
                   {movieResults.length > 0 && (
                     <div className="space-y-4">
-                      <h2 className="text-xl font-semibold">Films</h2>
+                      <h2 className="text-xl font-semibold text-white">Films</h2>
                       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                         {movieResults.slice(0, 6).map((movie) => (
                           <MovieCard key={movie.id} movie={movie} />
@@ -113,7 +142,7 @@ export default function SearchPage() {
 
                   {tvShowResults.length > 0 && (
                     <div className="space-y-4">
-                      <h2 className="text-xl font-semibold">Séries TV</h2>
+                      <h2 className="text-xl font-semibold text-white">Séries TV</h2>
                       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                         {tvShowResults.slice(0, 6).map((show) => (
                           <TVShowCard key={show.id} show={show} />
@@ -124,7 +153,7 @@ export default function SearchPage() {
 
                   {animeResults.length > 0 && (
                     <div className="space-y-4">
-                      <h2 className="text-xl font-semibold">Animés</h2>
+                      <h2 className="text-xl font-semibold text-white">Animés</h2>
                       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                         {animeResults.slice(0, 6).map((anime) => (
                           <TVShowCard key={anime.id} show={anime} isAnime />
@@ -135,7 +164,7 @@ export default function SearchPage() {
 
                   {peopleResults.length > 0 && (
                     <div className="space-y-4">
-                      <h2 className="text-xl font-semibold">Personnes</h2>
+                      <h2 className="text-xl font-semibold text-white">Personnes</h2>
                       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
                         {peopleResults.slice(0, 6).map((person) => (
                           <ActorCard key={person.id} actor={person} />
@@ -181,7 +210,7 @@ export default function SearchPage() {
           ) : (
             initialQuery && (
               <div className="text-center py-12">
-                <p className="text-muted-foreground">Aucun résultat trouvé pour "{initialQuery}"</p>
+                <p className="text-gray-400">Aucun résultat trouvé pour "{initialQuery}"</p>
               </div>
             )
           )}
