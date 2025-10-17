@@ -7,7 +7,7 @@ import { MovieCard } from "@/components/movie-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getGenres, getMoviesByGenre, searchMulti } from "@/lib/tmdb"
+import { getGenres, searchMulti } from "@/lib/tmdb"
 import { Search, Filter, RefreshCw } from "lucide-react"
 
 export default function MoviesPage() {
@@ -16,19 +16,32 @@ export default function MoviesPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedGenre, setSelectedGenre] = useState<string>("all")
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("popularity.desc")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [refreshing, setRefreshing] = useState(false)
 
+  const platforms = [
+    { id: 8, name: "Netflix" },
+    { id: 9, name: "Amazon Prime Video" },
+    { id: 337, name: "Disney+" },
+    { id: 531, name: "Paramount+" },
+    { id: 350, name: "Apple TV+" },
+    { id: 1899, name: "Max" },
+    { id: 2, name: "Apple iTunes" },
+  ]
+
   useEffect(() => {
     const savedPage = sessionStorage.getItem("moviesPage")
     const savedGenre = sessionStorage.getItem("moviesGenre")
+    const savedPlatform = sessionStorage.getItem("moviesPlatform")
     const savedSort = sessionStorage.getItem("moviesSort")
     const savedSearch = sessionStorage.getItem("moviesSearch")
 
     if (savedPage) setCurrentPage(Number.parseInt(savedPage))
     if (savedGenre) setSelectedGenre(savedGenre)
+    if (savedPlatform) setSelectedPlatform(savedPlatform)
     if (savedSort) setSortBy(savedSort)
     if (savedSearch) setSearchQuery(savedSearch)
   }, [])
@@ -36,9 +49,10 @@ export default function MoviesPage() {
   useEffect(() => {
     sessionStorage.setItem("moviesPage", currentPage.toString())
     sessionStorage.setItem("moviesGenre", selectedGenre)
+    sessionStorage.setItem("moviesPlatform", selectedPlatform)
     sessionStorage.setItem("moviesSort", sortBy)
     sessionStorage.setItem("moviesSearch", searchQuery)
-  }, [currentPage, selectedGenre, sortBy, searchQuery])
+  }, [currentPage, selectedGenre, selectedPlatform, sortBy, searchQuery])
 
   useEffect(() => {
     const fetchGenres = async () => {
@@ -61,36 +75,25 @@ export default function MoviesPage() {
 
         if (searchQuery) {
           data = await searchMulti(searchQuery, currentPage)
-          // Filter only movies from search results
           data.results = data.results.filter((item: any) => item.media_type === "movie")
-        } else if (selectedGenre !== "all") {
-          data = await getMoviesByGenre(Number.parseInt(selectedGenre), currentPage)
         } else {
-          const response = await fetch(`/api/content/movies?page=${currentPage}&cache=true`)
+          const params = new URLSearchParams({
+            page: currentPage.toString(),
+            sort_by: sortBy,
+          })
+
+          if (selectedGenre !== "all") {
+            params.append("with_genres", selectedGenre)
+          }
+
+          if (selectedPlatform !== "all") {
+            params.append("with_watch_providers", selectedPlatform)
+            params.append("watch_region", "FR")
+          }
+
+          const response = await fetch(`/api/content/movies?${params.toString()}`)
           if (!response.ok) throw new Error("Failed to fetch movies")
           data = await response.json()
-        }
-
-        // Apply sorting if not searching
-        if (!searchQuery && data.results) {
-          data.results.sort((a: any, b: any) => {
-            switch (sortBy) {
-              case "release_date.desc":
-                return new Date(b.release_date || 0).getTime() - new Date(a.release_date || 0).getTime()
-              case "release_date.asc":
-                return new Date(a.release_date || 0).getTime() - new Date(b.release_date || 0).getTime()
-              case "vote_average.desc":
-                return (b.vote_average || 0) - (a.vote_average || 0)
-              case "vote_average.asc":
-                return (a.vote_average || 0) - (b.vote_average || 0)
-              case "title.asc":
-                return (a.title || "").localeCompare(b.title || "")
-              case "title.desc":
-                return (b.title || "").localeCompare(a.title || "")
-              default: // popularity.desc
-                return (b.popularity || 0) - (a.popularity || 0)
-            }
-          })
         }
 
         console.log("[v0] Loaded movies for page", currentPage, ":", data.results?.length)
@@ -105,16 +108,21 @@ export default function MoviesPage() {
     }
 
     fetchMovies()
-  }, [searchQuery, selectedGenre, sortBy, currentPage])
+  }, [searchQuery, selectedGenre, selectedPlatform, sortBy, currentPage])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setCurrentPage(1)
-    // The search will be triggered by the useEffect when searchQuery changes
   }
 
   const handleGenreChange = (value: string) => {
     setSelectedGenre(value)
+    setCurrentPage(1)
+    setSearchQuery("")
+  }
+
+  const handlePlatformChange = (value: string) => {
+    setSelectedPlatform(value)
     setCurrentPage(1)
     setSearchQuery("")
   }
@@ -132,32 +140,24 @@ export default function MoviesPage() {
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      // Forcer la mise à jour du cache
-      const response = await fetch(`/api/content/movies?page=${currentPage}&cache=false`)
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        cache: "false",
+        sort_by: sortBy,
+      })
+
+      if (selectedGenre !== "all") {
+        params.append("with_genres", selectedGenre)
+      }
+
+      if (selectedPlatform !== "all") {
+        params.append("with_watch_providers", selectedPlatform)
+        params.append("watch_region", "FR")
+      }
+
+      const response = await fetch(`/api/content/movies?${params.toString()}`)
       if (!response.ok) throw new Error("Failed to refresh movies")
       const data = await response.json()
-
-      // Apply current sorting
-      if (data.results) {
-        data.results.sort((a: any, b: any) => {
-          switch (sortBy) {
-            case "release_date.desc":
-              return new Date(b.release_date || 0).getTime() - new Date(a.release_date || 0).getTime()
-            case "release_date.asc":
-              return new Date(a.release_date || 0).getTime() - new Date(b.release_date || 0).getTime()
-            case "vote_average.desc":
-              return (b.vote_average || 0) - (a.vote_average || 0)
-            case "vote_average.asc":
-              return (a.vote_average || 0) - (b.vote_average || 0)
-            case "title.asc":
-              return (a.title || "").localeCompare(b.title || "")
-            case "title.desc":
-              return (b.title || "").localeCompare(a.title || "")
-            default: // popularity.desc
-              return (b.popularity || 0) - (a.popularity || 0)
-          }
-        })
-      }
 
       setMovies(data.results || [])
       setTotalPages(data.total_pages || 1)
@@ -210,6 +210,23 @@ export default function MoviesPage() {
                     {genre.name}
                   </SelectItem>
                 ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedPlatform} onValueChange={handlePlatformChange}>
+            <SelectTrigger className="w-full md:w-48 bg-gray-800 border-gray-700 text-white">
+              <Filter className="w-4 h-4 mr-2 text-purple-500" />
+              <SelectValue placeholder="Toutes les plateformes" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="all" className="text-white hover:bg-gray-700">
+                Toutes les plateformes
+              </SelectItem>
+              {platforms.map((platform) => (
+                <SelectItem key={platform.id} value={platform.id.toString()} className="text-white hover:bg-gray-700">
+                  {platform.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

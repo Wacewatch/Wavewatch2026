@@ -7,7 +7,7 @@ import { TVShowCard } from "@/components/tv-show-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getGenres, getTVShowsByGenre, searchMulti } from "@/lib/tmdb"
+import { getGenres, searchMulti } from "@/lib/tmdb"
 import { Search, Filter, RefreshCw } from "lucide-react"
 
 export default function TVShowsPage() {
@@ -16,19 +16,32 @@ export default function TVShowsPage() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedGenre, setSelectedGenre] = useState<string>("all")
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("popularity.desc")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [refreshing, setRefreshing] = useState(false)
 
+  const platforms = [
+    { id: 8, name: "Netflix" },
+    { id: 9, name: "Amazon Prime Video" },
+    { id: 337, name: "Disney+" },
+    { id: 531, name: "Paramount+" },
+    { id: 350, name: "Apple TV+" },
+    { id: 1899, name: "Max" },
+    { id: 2, name: "Apple iTunes" },
+  ]
+
   useEffect(() => {
     const savedPage = sessionStorage.getItem("tvShowsPage")
     const savedGenre = sessionStorage.getItem("tvShowsGenre")
+    const savedPlatform = sessionStorage.getItem("tvShowsPlatform")
     const savedSort = sessionStorage.getItem("tvShowsSort")
     const savedSearch = sessionStorage.getItem("tvShowsSearch")
 
     if (savedPage) setCurrentPage(Number.parseInt(savedPage))
     if (savedGenre) setSelectedGenre(savedGenre)
+    if (savedPlatform) setSelectedPlatform(savedPlatform)
     if (savedSort) setSortBy(savedSort)
     if (savedSearch) setSearchQuery(savedSearch)
   }, [])
@@ -36,9 +49,10 @@ export default function TVShowsPage() {
   useEffect(() => {
     sessionStorage.setItem("tvShowsPage", currentPage.toString())
     sessionStorage.setItem("tvShowsGenre", selectedGenre)
+    sessionStorage.setItem("tvShowsPlatform", selectedPlatform)
     sessionStorage.setItem("tvShowsSort", sortBy)
     sessionStorage.setItem("tvShowsSearch", searchQuery)
-  }, [currentPage, selectedGenre, sortBy, searchQuery])
+  }, [currentPage, selectedGenre, selectedPlatform, sortBy, searchQuery])
 
   useEffect(() => {
     const fetchGenres = async () => {
@@ -61,48 +75,28 @@ export default function TVShowsPage() {
 
         if (searchQuery) {
           data = await searchMulti(searchQuery, currentPage)
-          // Filter only TV shows from search results (excluding anime and talk shows)
           data.results = data.results.filter(
             (item: any) =>
-              item.media_type === "tv" &&
-              !item.genre_ids?.includes(16) && // Exclude anime
-              !item.genre_ids?.includes(10767), // Exclude talk shows
-          )
-        } else if (selectedGenre !== "all") {
-          data = await getTVShowsByGenre(Number.parseInt(selectedGenre), currentPage)
-          // Exclude anime and talk shows
-          data.results = data.results.filter(
-            (show: any) =>
-              !show.genre_ids?.includes(16) && // Exclude anime
-              !show.genre_ids?.includes(10767), // Exclude talk shows
+              item.media_type === "tv" && !item.genre_ids?.includes(16) && !item.genre_ids?.includes(10767),
           )
         } else {
-          // Utiliser la nouvelle API qui utilise le cache
-          const response = await fetch(`/api/content/tv-shows?page=${currentPage}&cache=true`)
+          const params = new URLSearchParams({
+            page: currentPage.toString(),
+            sort_by: sortBy,
+          })
+
+          if (selectedGenre !== "all") {
+            params.append("with_genres", selectedGenre)
+          }
+
+          if (selectedPlatform !== "all") {
+            params.append("with_watch_providers", selectedPlatform)
+            params.append("watch_region", "FR")
+          }
+
+          const response = await fetch(`/api/content/tv-shows?${params.toString()}`)
           if (!response.ok) throw new Error("Failed to fetch TV shows")
           data = await response.json()
-        }
-
-        // Apply sorting if not searching
-        if (!searchQuery && data.results) {
-          data.results.sort((a: any, b: any) => {
-            switch (sortBy) {
-              case "first_air_date.desc":
-                return new Date(b.first_air_date || 0).getTime() - new Date(a.first_air_date || 0).getTime()
-              case "first_air_date.asc":
-                return new Date(a.first_air_date || 0).getTime() - new Date(b.first_air_date || 0).getTime()
-              case "vote_average.desc":
-                return (b.vote_average || 0) - (a.vote_average || 0)
-              case "vote_average.asc":
-                return (a.vote_average || 0) - (b.vote_average || 0)
-              case "name.asc":
-                return (a.name || "").localeCompare(b.name || "")
-              case "name.desc":
-                return (b.name || "").localeCompare(a.name || "")
-              default: // popularity.desc
-                return (b.popularity || 0) - (a.popularity || 0)
-            }
-          })
         }
 
         setShows(data.results || [])
@@ -116,16 +110,21 @@ export default function TVShowsPage() {
     }
 
     fetchShows()
-  }, [searchQuery, selectedGenre, sortBy, currentPage])
+  }, [searchQuery, selectedGenre, selectedPlatform, sortBy, currentPage])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setCurrentPage(1)
-    // The search will be triggered by the useEffect when searchQuery changes
   }
 
   const handleGenreChange = (value: string) => {
     setSelectedGenre(value)
+    setCurrentPage(1)
+    setSearchQuery("")
+  }
+
+  const handlePlatformChange = (value: string) => {
+    setSelectedPlatform(value)
     setCurrentPage(1)
     setSearchQuery("")
   }
@@ -143,32 +142,24 @@ export default function TVShowsPage() {
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      // Forcer la mise à jour du cache
-      const response = await fetch(`/api/content/tv-shows?page=${currentPage}&cache=false`)
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        cache: "false",
+        sort_by: sortBy,
+      })
+
+      if (selectedGenre !== "all") {
+        params.append("with_genres", selectedGenre)
+      }
+
+      if (selectedPlatform !== "all") {
+        params.append("with_watch_providers", selectedPlatform)
+        params.append("watch_region", "FR")
+      }
+
+      const response = await fetch(`/api/content/tv-shows?${params.toString()}`)
       if (!response.ok) throw new Error("Failed to refresh TV shows")
       const data = await response.json()
-
-      // Apply current sorting
-      if (data.results) {
-        data.results.sort((a: any, b: any) => {
-          switch (sortBy) {
-            case "first_air_date.desc":
-              return new Date(b.first_air_date || 0).getTime() - new Date(a.first_air_date || 0).getTime()
-            case "first_air_date.asc":
-              return new Date(a.first_air_date || 0).getTime() - new Date(b.first_air_date || 0).getTime()
-            case "vote_average.desc":
-              return (b.vote_average || 0) - (a.vote_average || 0)
-            case "vote_average.asc":
-              return (a.vote_average || 0) - (b.vote_average || 0)
-            case "name.asc":
-              return (a.name || "").localeCompare(b.name || "")
-            case "name.desc":
-              return (b.name || "").localeCompare(a.name || "")
-            default: // popularity.desc
-              return (b.popularity || 0) - (a.popularity || 0)
-          }
-        })
-      }
 
       setShows(data.results || [])
       setTotalPages(data.total_pages || 1)
@@ -221,6 +212,23 @@ export default function TVShowsPage() {
                     {genre.name}
                   </SelectItem>
                 ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={selectedPlatform} onValueChange={handlePlatformChange}>
+            <SelectTrigger className="w-full md:w-48 bg-gray-800 border-gray-700 text-white">
+              <Filter className="w-4 h-4 mr-2 text-purple-500" />
+              <SelectValue placeholder="Toutes les plateformes" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="all" className="text-white hover:bg-gray-700">
+                Toutes les plateformes
+              </SelectItem>
+              {platforms.map((platform) => (
+                <SelectItem key={platform.id} value={platform.id.toString()} className="text-white hover:bg-gray-700">
+                  {platform.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

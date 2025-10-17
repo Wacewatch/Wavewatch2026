@@ -445,7 +445,7 @@ export async function getUpcomingTVShows(page = 1) {
 
 export async function getMovieDetails(id: number) {
   const url = await buildApiUrl(`/movie/${id}`, {
-    append_to_response: "credits,videos,similar,reviews",
+    append_to_response: "credits,videos,similar,reviews,watch/providers",
   })
   const response = await fetchWithFallback(url, createMockResponse("movie"))
   if (!response.ok) throw new Error("Failed to fetch movie details")
@@ -454,7 +454,7 @@ export async function getMovieDetails(id: number) {
 
 export async function getTVShowDetails(id: number) {
   const url = await buildApiUrl(`/tv/${id}`, {
-    append_to_response: "credits,videos,similar,reviews",
+    append_to_response: "credits,videos,similar,reviews,watch/providers",
   })
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch TV show details")
@@ -826,3 +826,18 @@ export const getActorMovieCredits = getActorCredits
 export const getActorTVCredits = getActorCredits
 export const getPopularPeople = getPopularActors
 export const searchPerson = searchActors
+
+// New functions to get watch providers for movies and TV shows
+export async function getMovieWatchProviders(id: number) {
+  const url = await buildApiUrl(`/movie/${id}/watch/providers`)
+  const response = await fetchWithFallback(url, { results: {} })
+  if (!response.ok) throw new Error("Failed to fetch movie watch providers")
+  return response.json()
+}
+
+export async function getTVShowWatchProviders(id: number) {
+  const url = await buildApiUrl(`/tv/${id}/watch/providers`)
+  const response = await fetchWithFallback(url, { results: {} })
+  if (!response.ok) throw new Error("Failed to fetch TV show watch providers")
+  return response.json()
+}

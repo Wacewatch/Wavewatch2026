@@ -17,6 +17,7 @@ import { WatchTracker } from "@/lib/watch-tracking"
 import { CastList } from "@/components/cast-list"
 import { useRouter } from "next/navigation"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
+import { WatchProviders } from "@/components/watch-providers"
 
 interface TVShowDetailsProps {
   show: any
@@ -585,6 +586,9 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                   {isMarkingWatched ? "Marquage..." : isWatched ? "Série vue" : "Marquer série vue"}
                 </Button>
               </div>
+
+              {/* Watch Providers Section */}
+              {show["watch/providers"] && <WatchProviders providers={show["watch/providers"]} />}
             </div>
 
             {/* Seasons */}

@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useState } from "react"
 import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,6 +15,7 @@ import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { IframeModal } from "@/components/iframe-modal"
 
 export default function PlaylistContentPage() {
   const { user } = useAuth()
@@ -25,6 +28,12 @@ export default function PlaylistContentPage() {
   const [isOwner, setIsOwner] = useState(false)
   const supabase = createClient()
   const [contentFilter, setContentFilter] = useState<"all" | "movie" | "tv">("all")
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [modalTitle, setModalTitle] = useState("")
+  const [modalUrl, setModalUrl] = useState("")
+  const [currentRadio, setCurrentRadio] = useState<any | null>(null)
+  const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
 
   useEffect(() => {
     setMounted(true)
@@ -35,6 +44,15 @@ export default function PlaylistContentPage() {
       loadPlaylistData(id as string)
     }
   }, [mounted, id, user?.id])
+
+  useEffect(() => {
+    return () => {
+      if (audio) {
+        audio.pause()
+        audio.src = ""
+      }
+    }
+  }, [audio])
 
   const loadPlaylistData = async (playlistId: string) => {
     try {
@@ -133,6 +151,110 @@ export default function PlaylistContentPage() {
     }
   }
 
+  const handlePlayItem = (item: any) => {
+    console.log("[v0] Playing playlist item:", item)
+
+    // Handle TV channels - open modal with stream
+    if (item.media_type === "tv-channel" || item.content_type === "live") {
+      const streamUrl = item.streamUrl || item.stream_url || item.url
+      console.log("[v0] TV Channel stream URL:", streamUrl)
+
+      if (streamUrl) {
+        setModalTitle(item.title)
+        setModalUrl(streamUrl)
+        setIsModalOpen(true)
+      } else {
+        console.error("[v0] No stream URL found for TV channel")
+        toast({
+          title: "Erreur",
+          description: `Impossible de lire "${item.title}". URL de streaming non disponible.`,
+          variant: "destructive",
+        })
+      }
+      return
+    }
+
+    // Handle radio stations - play audio
+    if (item.media_type === "radio" || item.content_type === "radio") {
+      const streamUrl = item.streamUrl || item.stream_url || item.url
+      console.log("[v0] Radio stream URL:", streamUrl)
+
+      if (!streamUrl) {
+        console.error("[v0] No stream URL found for radio")
+        toast({
+          title: "Erreur",
+          description: `Impossible de lire "${item.title}". URL de streaming non disponible.`,
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Stop current radio if playing the same one
+      if (audio) {
+        audio.pause()
+      }
+
+      if (currentRadio?.id === item.id && isPlaying) {
+        setIsPlaying(false)
+        setCurrentRadio(null)
+        return
+      }
+
+      // Create new audio element
+      const newAudio = new Audio(streamUrl)
+      newAudio.crossOrigin = "anonymous"
+
+      newAudio.addEventListener("canplay", () => {
+        newAudio
+          .play()
+          .then(() => {
+            setIsPlaying(true)
+            setCurrentRadio(item)
+          })
+          .catch((error) => {
+            console.error("[v0] Radio playback error:", error)
+            toast({
+              title: "Erreur",
+              description: "Impossible de lire cette station radio. Veuillez réessayer.",
+              variant: "destructive",
+            })
+          })
+      })
+
+      newAudio.addEventListener("error", (e) => {
+        console.error("[v0] Radio audio error:", e)
+        toast({
+          title: "Erreur",
+          description: "Erreur lors du chargement de la station radio.",
+          variant: "destructive",
+        })
+      })
+
+      setAudio(newAudio)
+      return
+    }
+
+    // Handle retrogaming - open modal with game
+    if (item.media_type === "game" || item.content_type === "gaming") {
+      const gameUrl = item.url || item.game_url || item.gameUrl
+      console.log("[v0] Game URL:", gameUrl)
+
+      if (gameUrl) {
+        setModalTitle(item.title)
+        setModalUrl(gameUrl)
+        setIsModalOpen(true)
+      } else {
+        console.error("[v0] No game URL found")
+        toast({
+          title: "Erreur",
+          description: `Impossible de lire "${item.title}". URL de jeu non disponible.`,
+          variant: "destructive",
+        })
+      }
+      return
+    }
+  }
+
   const filteredPlaylistItems = playlistItems.filter((item) => {
     if (contentFilter === "all") return true
     const itemType = item.media_type || item.content_type
@@ -178,6 +300,42 @@ export default function PlaylistContentPage() {
             </Link>
           </Button>
         </div>
+
+        {currentRadio && isPlaying && (
+          <Card className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border-blue-700">
+            <CardContent className="flex items-center justify-between p-4">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-white shadow-md">
+                  <img
+                    src={currentRadio.logoUrl || currentRadio.poster_path || "/placeholder.svg"}
+                    alt={currentRadio.title}
+                    className="w-full h-full object-contain p-1"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">{currentRadio.title}</h3>
+                  <p className="text-sm text-blue-300">En cours de lecture...</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="flex space-x-1">
+                  <div className="w-1 h-4 bg-blue-500 animate-pulse"></div>
+                  <div className="w-1 h-6 bg-blue-500 animate-pulse" style={{ animationDelay: "0.1s" }}></div>
+                  <div className="w-1 h-3 bg-blue-500 animate-pulse" style={{ animationDelay: "0.2s" }}></div>
+                  <div className="w-1 h-5 bg-blue-500 animate-pulse" style={{ animationDelay: "0.3s" }}></div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePlayItem(currentRadio)}
+                  className="border-blue-600 text-blue-300 hover:bg-blue-800"
+                >
+                  Arrêter
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Playlist Info */}
         <Card
@@ -335,72 +493,121 @@ export default function PlaylistContentPage() {
                   }
 
                   const getItemUrl = () => {
-                    if (item.media_type === "movie" || item.content_type === "movie") {
+                    const mediaType = item.media_type || item.content_type
+
+                    // TV channels, radio, and retrogaming should not have URLs (they open modals)
+                    if (mediaType === "tv-channel" || mediaType === "live") return null
+                    if (mediaType === "radio") return null
+                    if (mediaType === "game" || mediaType === "gaming") return null
+
+                    // Movies and TV shows link to their detail pages
+                    if (mediaType === "movie") {
                       return `/movies/${item.tmdb_id || item.content_id}`
-                    } else if (item.media_type === "tv" || item.content_type === "tv") {
+                    } else if (mediaType === "tv") {
                       return `/tv-shows/${item.tmdb_id || item.content_id}`
                     }
                     return `/movies/${item.tmdb_id || item.content_id}`
                   }
 
-                  return (
+                  const itemUrl = getItemUrl()
+                  const mediaType = item.media_type || item.content_type
+                  const isPlayableItem =
+                    mediaType === "tv-channel" ||
+                    mediaType === "live" ||
+                    mediaType === "radio" ||
+                    mediaType === "game" ||
+                    mediaType === "gaming"
+
+                  const handleItemClick = (e: React.MouseEvent) => {
+                    if (isPlayableItem) {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handlePlayItem(item)
+                    }
+                  }
+
+                  const content = (
                     <div key={item.id} className="space-y-2 group">
-                      <Link href={getItemUrl()}>
-                        <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700 cursor-pointer">
-                          <Image
-                            src={imageUrl || "/placeholder.svg"}
-                            alt={item.title}
-                            fill
-                            className="object-cover group-hover:scale-105 transition-transform"
-                            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 12.5vw"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.src = "/placeholder.svg?height=300&width=200"
-                            }}
-                          />
-                          {isOwner && (
-                            <div className="absolute top-2 right-2">
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  handleRemoveItem(item.id)
-                                }}
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </Button>
-                            </div>
-                          )}
-                          <div className="absolute bottom-2 left-2">
-                            <Badge
-                              variant="secondary"
-                              className="text-xs"
-                              style={{ backgroundColor: `${playlist.theme_color}20`, color: playlist.theme_color }}
+                      <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700 cursor-pointer">
+                        <Image
+                          src={imageUrl || "/placeholder.svg"}
+                          alt={item.title}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform"
+                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 12.5vw"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement
+                            target.src = "/placeholder.svg?height=300&width=200"
+                          }}
+                        />
+                        {isOwner && (
+                          <div className="absolute top-2 right-2">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleRemoveItem(item.id)
+                              }}
                             >
-                              {item.media_type === "movie" || item.content_type === "movie" ? "Film" : "Série"}
-                            </Badge>
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
                           </div>
+                        )}
+                        <div className="absolute bottom-2 left-2">
+                          <Badge
+                            variant="secondary"
+                            className="text-xs"
+                            style={{ backgroundColor: `${playlist.theme_color}20`, color: playlist.theme_color }}
+                          >
+                            {mediaType === "movie"
+                              ? "Film"
+                              : mediaType === "tv"
+                                ? "Série"
+                                : mediaType === "tv-channel" || mediaType === "live"
+                                  ? "Chaîne TV"
+                                  : mediaType === "radio"
+                                    ? "Radio"
+                                    : mediaType === "game" || mediaType === "gaming"
+                                      ? "Jeu"
+                                      : "Série"}
+                          </Badge>
                         </div>
-                      </Link>
+                      </div>
                       <div>
-                        <Link href={getItemUrl()}>
-                          <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white cursor-pointer">
-                            {item.title}
-                          </p>
-                        </Link>
+                        <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white cursor-pointer">
+                          {item.title}
+                        </p>
                         <p className="text-xs text-gray-400">{new Date(item.created_at).toLocaleDateString()}</p>
                       </div>
                     </div>
                   )
+
+                  if (isPlayableItem) {
+                    return (
+                      <button key={item.id} onClick={handleItemClick} className="text-left w-full" type="button">
+                        {content}
+                      </button>
+                    )
+                  } else if (itemUrl) {
+                    return (
+                      <Link key={item.id} href={itemUrl}>
+                        {content}
+                      </Link>
+                    )
+                  } else {
+                    return <div key={item.id}>{content}</div>
+                  }
                 })}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      <IframeModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={modalTitle} src={modalUrl} />
     </div>
   )
 }

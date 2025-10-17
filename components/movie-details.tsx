@@ -14,6 +14,7 @@ import { IframeModal } from "@/components/iframe-modal"
 import { TrailerModal } from "@/components/trailer-modal"
 import { AddToListSelector } from "@/components/add-to-list-selector"
 import { Star, Calendar, Clock, Check, Play, Download, Youtube, ThumbsUp, ThumbsDown, Film, User } from "lucide-react"
+import { WatchProviders } from "@/components/watch-providers"
 
 interface MovieDetailsProps {
   movie: any
@@ -414,6 +415,9 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
               <p className="text-base md:text-xl text-gray-200 leading-relaxed text-center md:text-left">
                 {movie.overview}
               </p>
+
+              {/* Watch Providers Section */}
+              {movie["watch/providers"] && <WatchProviders providers={movie["watch/providers"]} />}
 
               {/* Action Buttons - Responsive Fix */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4">

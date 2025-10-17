@@ -35,6 +35,7 @@ import { IframeModal } from "@/components/iframe-modal"
 import { AchievementsDashboard } from "@/components/achievements-dashboard"
 import { useMobile } from "@/hooks/use-mobile"
 import { useMessaging } from "@/hooks/use-messaging"
+import { UserFeedbackSection } from "@/components/user-feedback-section"
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -487,6 +488,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
+        <UserFeedbackSection />
+
         {/* Interesting Facts - Section améliorée */}
         {interestingFacts.length > 0 && (
           <Card className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border-blue-700">
@@ -568,18 +571,13 @@ export default function DashboardPage() {
                       {watchedItems.map((item) => {
                         let imageUrl = ""
 
-                        // Handle different item types with proper image URLs
                         if (item.type === "episode" && item.showId) {
-                          // Use the series poster for episodes
                           if (item.posterPath) {
                             if (item.posterPath.startsWith("http")) {
                               imageUrl = item.posterPath
                             } else {
                               imageUrl = `https://image.tmdb.org/t/p/w300${item.posterPath}`
                             }
-                          } else {
-                            // If no posterPath stored, we'll use a fallback
-                            imageUrl = ""
                           }
                         } else if (item.type === "tv-channel" || item.type === "radio") {
                           // For TV channels and radio, use logoUrl if available

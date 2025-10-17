@@ -8,16 +8,27 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { searchMulti } from "@/lib/tmdb"
-import { Search, RefreshCw } from "lucide-react"
+import { Search, RefreshCw, Filter } from "lucide-react"
 
 export default function AnimePage() {
   const [anime, setAnime] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedPlatform, setSelectedPlatform] = useState<string>("all")
   const [sortBy, setSortBy] = useState<string>("popularity.desc")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [refreshing, setRefreshing] = useState(false)
+
+  const platforms = [
+    { id: 8, name: "Netflix" },
+    { id: 9, name: "Amazon Prime Video" },
+    { id: 337, name: "Disney+" },
+    { id: 531, name: "Paramount+" },
+    { id: 350, name: "Apple TV+" },
+    { id: 1899, name: "Max" },
+    { id: 283, name: "Crunchyroll" },
+  ]
 
   useEffect(() => {
     const fetchAnime = async () => {
@@ -27,35 +38,21 @@ export default function AnimePage() {
 
         if (searchQuery) {
           data = await searchMulti(searchQuery, currentPage)
-          // Filter only anime from search results (TV shows with animation genre)
           data.results = data.results.filter((item: any) => item.media_type === "tv" && item.genre_ids?.includes(16))
         } else {
-          // Utiliser la nouvelle API qui utilise le cache
-          const response = await fetch(`/api/content/anime?page=${currentPage}&cache=true`)
+          const params = new URLSearchParams({
+            page: currentPage.toString(),
+            sort_by: sortBy,
+          })
+
+          if (selectedPlatform !== "all") {
+            params.append("with_watch_providers", selectedPlatform)
+            params.append("watch_region", "FR")
+          }
+
+          const response = await fetch(`/api/content/anime?${params.toString()}`)
           if (!response.ok) throw new Error("Failed to fetch anime")
           data = await response.json()
-        }
-
-        // Apply sorting if not searching
-        if (!searchQuery && data.results) {
-          data.results.sort((a: any, b: any) => {
-            switch (sortBy) {
-              case "first_air_date.desc":
-                return new Date(b.first_air_date || 0).getTime() - new Date(a.first_air_date || 0).getTime()
-              case "first_air_date.asc":
-                return new Date(a.first_air_date || 0).getTime() - new Date(b.first_air_date || 0).getTime()
-              case "vote_average.desc":
-                return (b.vote_average || 0) - (a.vote_average || 0)
-              case "vote_average.asc":
-                return (a.vote_average || 0) - (b.vote_average || 0)
-              case "name.asc":
-                return (a.name || "").localeCompare(b.name || "")
-              case "name.desc":
-                return (b.name || "").localeCompare(a.name || "")
-              default: // popularity.desc
-                return (b.popularity || 0) - (a.popularity || 0)
-            }
-          })
         }
 
         setAnime(data.results || [])
@@ -69,12 +66,17 @@ export default function AnimePage() {
     }
 
     fetchAnime()
-  }, [searchQuery, sortBy, currentPage])
+  }, [searchQuery, selectedPlatform, sortBy, currentPage])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     setCurrentPage(1)
-    // The search will be triggered by the useEffect when searchQuery changes
+  }
+
+  const handlePlatformChange = (value: string) => {
+    setSelectedPlatform(value)
+    setCurrentPage(1)
+    setSearchQuery("")
   }
 
   const handleSortChange = (value: string) => {
@@ -90,32 +92,20 @@ export default function AnimePage() {
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
-      // Forcer la mise à jour du cache
-      const response = await fetch(`/api/content/anime?page=${currentPage}&cache=false`)
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        cache: "false",
+        sort_by: sortBy,
+      })
+
+      if (selectedPlatform !== "all") {
+        params.append("with_watch_providers", selectedPlatform)
+        params.append("watch_region", "FR")
+      }
+
+      const response = await fetch(`/api/content/anime?${params.toString()}`)
       if (!response.ok) throw new Error("Failed to refresh anime")
       const data = await response.json()
-
-      // Apply current sorting
-      if (data.results) {
-        data.results.sort((a: any, b: any) => {
-          switch (sortBy) {
-            case "first_air_date.desc":
-              return new Date(b.first_air_date || 0).getTime() - new Date(a.first_air_date || 0).getTime()
-            case "first_air_date.asc":
-              return new Date(a.first_air_date || 0).getTime() - new Date(b.first_air_date || 0).getTime()
-            case "vote_average.desc":
-              return (b.vote_average || 0) - (a.vote_average || 0)
-            case "vote_average.asc":
-              return (a.vote_average || 0) - (b.vote_average || 0)
-            case "name.asc":
-              return (a.name || "").localeCompare(b.name || "")
-            case "name.desc":
-              return (b.name || "").localeCompare(a.name || "")
-            default: // popularity.desc
-              return (b.popularity || 0) - (a.popularity || 0)
-          }
-        })
-      }
 
       setAnime(data.results || [])
       setTotalPages(data.total_pages || 1)
@@ -151,6 +141,23 @@ export default function AnimePage() {
               />
             </div>
           </form>
+
+          <Select value={selectedPlatform} onValueChange={handlePlatformChange}>
+            <SelectTrigger className="w-full md:w-48 bg-gray-800 border-gray-700 text-white">
+              <Filter className="w-4 h-4 mr-2 text-purple-500" />
+              <SelectValue placeholder="Toutes les plateformes" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-700">
+              <SelectItem value="all" className="text-white hover:bg-gray-700">
+                Toutes les plateformes
+              </SelectItem>
+              {platforms.map((platform) => (
+                <SelectItem key={platform.id} value={platform.id.toString()} className="text-white hover:bg-gray-700">
+                  {platform.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <Select value={sortBy} onValueChange={handleSortChange}>
             <SelectTrigger className="w-full md:w-48">
