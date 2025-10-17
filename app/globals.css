@@ -37,6 +37,13 @@
   --sidebar-accent-foreground: 240 5.9% 10%;
   --sidebar-border: 220 13% 91%;
   --sidebar-ring: 217.2 91.2% 59.8%;
+  /* Added navigation and footer color variables */
+  --nav-bg: 217 91% 15%;
+  --nav-border: 217 91% 25%;
+  --nav-text: 0 0% 100%;
+  --nav-text-secondary: 217 91% 70%;
+  --nav-hover: 217 91% 25%;
+  --nav-dropdown-bg: 217 91% 20%;
 }
 
 .dark {
@@ -72,9 +79,16 @@
   --sidebar-accent-foreground: 240 4.8% 95.9%;
   --sidebar-border: 240 3.7% 15.9%;
   --sidebar-ring: 217.2 91.2% 59.8%;
+  /* Added navigation and footer color variables for dark theme */
+  --nav-bg: 217 91% 15%;
+  --nav-border: 217 91% 25%;
+  --nav-text: 0 0% 100%;
+  --nav-text-secondary: 217 91% 70%;
+  --nav-hover: 217 91% 25%;
+  --nav-dropdown-bg: 217 91% 20%;
 }
 
-/* Added Ocean theme - Deep blue ocean vibes */
+/* Updated Ocean theme with navigation and footer colors */
 .ocean {
   --background: 200 50% 8%;
   --foreground: 180 20% 95%;
@@ -108,9 +122,15 @@
   --sidebar-accent-foreground: 180 20% 95%;
   --sidebar-border: 200 30% 25%;
   --sidebar-ring: 190 80% 50%;
+  --nav-bg: 200 60% 10%;
+  --nav-border: 190 50% 30%;
+  --nav-text: 180 30% 95%;
+  --nav-text-secondary: 190 60% 70%;
+  --nav-hover: 190 50% 20%;
+  --nav-dropdown-bg: 200 55% 15%;
 }
 
-/* Added Sunset theme - Warm orange and purple sunset */
+/* Updated Sunset theme with navigation and footer colors */
 .sunset {
   --background: 20 30% 10%;
   --foreground: 30 15% 95%;
@@ -144,9 +164,15 @@
   --sidebar-accent-foreground: 30 15% 95%;
   --sidebar-border: 20 20% 25%;
   --sidebar-ring: 25 90% 55%;
+  --nav-bg: 15 40% 12%;
+  --nav-border: 25 60% 35%;
+  --nav-text: 30 20% 95%;
+  --nav-text-secondary: 25 70% 70%;
+  --nav-hover: 20 50% 20%;
+  --nav-dropdown-bg: 280 45% 18%;
 }
 
-/* Added Forest theme - Natural green forest atmosphere */
+/* Updated Forest theme with navigation and footer colors */
 .forest {
   --background: 140 30% 8%;
   --foreground: 120 15% 95%;
@@ -180,64 +206,93 @@
   --sidebar-accent-foreground: 120 15% 95%;
   --sidebar-border: 140 20% 25%;
   --sidebar-ring: 145 70% 45%;
+  --nav-bg: 140 40% 10%;
+  --nav-border: 145 50% 30%;
+  --nav-text: 120 20% 95%;
+  --nav-text-secondary: 145 60% 70%;
+  --nav-hover: 140 45% 18%;
+  --nav-dropdown-bg: 140 35% 15%;
 }
 
-/* Added Premium theme - Exclusive luxury theme for VIP/Admin users */
+/* Dramatically enhanced Premium theme with gold/purple luxury colors throughout */
 .premium {
-  --background: 280 40% 5%;
-  --foreground: 50 100% 95%;
-  --card: 280 35% 10%;
-  --card-foreground: 50 100% 95%;
-  --popover: 280 35% 10%;
-  --popover-foreground: 50 100% 95%;
-  --primary: 45 100% 55%;
-  --primary-foreground: 280 40% 5%;
-  --secondary: 280 50% 20%;
-  --secondary-foreground: 50 100% 95%;
-  --muted: 280 30% 18%;
-  --muted-foreground: 50 20% 70%;
-  --accent: 320 80% 55%;
-  --accent-foreground: 50 100% 95%;
-  --destructive: 0 70% 50%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 280 40% 25%;
-  --input: 280 40% 25%;
-  --ring: 45 100% 55%;
-  --chart-1: 45 100% 55%;
-  --chart-2: 320 80% 55%;
-  --chart-3: 280 70% 50%;
-  --chart-4: 35 95% 50%;
-  --chart-5: 300 75% 55%;
-  --sidebar: 280 35% 10%;
-  --sidebar-foreground: 50 100% 90%;
-  --sidebar-primary: 45 100% 55%;
-  --sidebar-primary-foreground: 280 40% 5%;
-  --sidebar-accent: 280 40% 15%;
-  --sidebar-accent-foreground: 50 100% 95%;
-  --sidebar-border: 280 40% 25%;
-  --sidebar-ring: 45 100% 55%;
+  --background: 280 50% 4%;
+  --foreground: 50 100% 98%;
+  --card: 280 45% 8%;
+  --card-foreground: 50 100% 98%;
+  --popover: 280 45% 8%;
+  --popover-foreground: 50 100% 98%;
+  --primary: 45 100% 60%;
+  --primary-foreground: 280 50% 5%;
+  --secondary: 280 60% 15%;
+  --secondary-foreground: 50 100% 98%;
+  --muted: 280 40% 15%;
+  --muted-foreground: 50 30% 75%;
+  --accent: 320 90% 60%;
+  --accent-foreground: 50 100% 98%;
+  --destructive: 0 80% 55%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 280 50% 30%;
+  --input: 280 50% 30%;
+  --ring: 45 100% 60%;
+  --chart-1: 45 100% 60%;
+  --chart-2: 320 90% 60%;
+  --chart-3: 280 80% 55%;
+  --chart-4: 35 100% 55%;
+  --chart-5: 300 85% 60%;
+  --sidebar: 280 45% 8%;
+  --sidebar-foreground: 50 100% 95%;
+  --sidebar-primary: 45 100% 60%;
+  --sidebar-primary-foreground: 280 50% 5%;
+  --sidebar-accent: 280 50% 12%;
+  --sidebar-accent-foreground: 50 100% 98%;
+  --sidebar-border: 280 50% 30%;
+  --sidebar-ring: 45 100% 60%;
+  --nav-bg: 280 60% 8%;
+  --nav-border: 45 100% 50%;
+  --nav-text: 50 100% 98%;
+  --nav-text-secondary: 45 100% 75%;
+  --nav-hover: 280 55% 15%;
+  --nav-dropdown-bg: 280 55% 12%;
 }
 
-/* Added premium theme glow effects */
+/* Enhanced premium theme visual effects */
 .premium .logo-glow {
-  filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.6));
+  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8)) drop-shadow(0 0 40px rgba(255, 215, 0, 0.4));
 }
 
 .premium .logo-glow:hover {
-  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.9));
+  filter: drop-shadow(0 0 25px rgba(255, 215, 0, 1)) drop-shadow(0 0 50px rgba(255, 215, 0, 0.6));
 }
 
 .premium ::-webkit-scrollbar-track {
-  background: rgb(60, 20, 80);
+  background: linear-gradient(180deg, rgb(60, 20, 80) 0%, rgb(40, 10, 60) 100%);
 }
 
 .premium ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+  background: linear-gradient(135deg, #ffd700 0%, #ff8c00 50%, #ffd700 100%);
   border-radius: 4px;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
 .premium ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #ffa500 0%, #ffd700 100%);
+  background: linear-gradient(135deg, #ff8c00 0%, #ffd700 50%, #ff8c00 100%);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+}
+
+/* Added premium theme glow animation for navigation */
+@keyframes premium-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3), 0 0 40px rgba(255, 215, 0, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 215, 0, 0.5), 0 0 60px rgba(255, 215, 0, 0.2);
+  }
+}
+
+.premium nav {
+  animation: premium-glow 3s ease-in-out infinite;
 }
 
 @theme inline {
@@ -277,6 +332,13 @@
   --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
   --color-sidebar-border: hsl(var(--sidebar-border));
   --color-sidebar-ring: hsl(var(--sidebar-ring));
+  /* Added navigation and footer color utilities */
+  --color-nav-bg: hsl(var(--nav-bg));
+  --color-nav-border: hsl(var(--nav-border));
+  --color-nav-text: hsl(var(--nav-text));
+  --color-nav-text-secondary: hsl(var(--nav-text-secondary));
+  --color-nav-hover: hsl(var(--nav-hover));
+  --color-nav-dropdown-bg: hsl(var(--nav-dropdown-bg));
 }
 
 @layer base {
