@@ -25,6 +25,7 @@ import {
   Flag as Flask,
   MessageSquare,
   Palette,
+  Lock,
 } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { VIPSystem } from "@/lib/vip-system"
@@ -466,6 +467,14 @@ export default function ProfilePage() {
     })
   }
 
+  const handlePremiumThemeChange = (newTheme: "dark" | "light" | "ocean" | "sunset" | "forest" | "premium") => {
+    setTheme(newTheme)
+    toast({
+      title: "Thème modifié",
+      description: `Le thème ${getThemeName(newTheme)} a été appliqué`,
+    })
+  }
+
   const getThemeName = (themeValue: string) => {
     const themeNames: Record<string, string> = {
       dark: "Sombre",
@@ -473,6 +482,7 @@ export default function ProfilePage() {
       ocean: "Océan",
       sunset: "Coucher de soleil",
       forest: "Forêt",
+      premium: "Premium", // Added premium theme name
     }
     return themeNames[themeValue] || themeValue
   }
@@ -501,6 +511,7 @@ export default function ProfilePage() {
   const userVIPLevel = VIPSystem.getUserVIPStatus(user.id)
   const vipBadge = VIPSystem.getVIPBadge(userVIPLevel)
   const usernameColor = VIPSystem.getUsernameColor(userVIPLevel)
+  const hasPremiumAccess = user?.isAdmin || userVIPLevel === "vip" || userVIPLevel === "vip_plus"
 
   const getVIPBadge = (level: string) => {
     if (level === "vip") {
@@ -816,11 +827,49 @@ export default function ProfilePage() {
                     </div>
                     {theme === "forest" && <div className="w-2 h-2 rounded-full bg-green-500" />}
                   </button>
+
+                  <button
+                    onClick={() => {
+                      if (hasPremiumAccess) {
+                        handlePremiumThemeChange("premium")
+                      }
+                    }}
+                    disabled={!hasPremiumAccess}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all relative ${
+                      theme === "premium"
+                        ? "border-yellow-500 bg-gray-700"
+                        : hasPremiumAccess
+                          ? "border-gray-600 bg-gray-750 hover:border-gray-500"
+                          : "border-gray-700 bg-gray-800 opacity-60 cursor-not-allowed"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-purple-900 via-yellow-600 to-pink-700 border border-yellow-500 animate-gradient" />
+                      <div className="text-left">
+                        <div className="font-medium text-white flex items-center gap-2">
+                          Premium
+                          <Crown className="w-3 h-3 text-yellow-400" />
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {hasPremiumAccess ? "Luxe et élégance" : "Réservé VIP/VIP+/Admin"}
+                        </div>
+                      </div>
+                    </div>
+                    {!hasPremiumAccess && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 rounded-lg">
+                        <Lock className="w-5 h-5 text-yellow-400" />
+                      </div>
+                    )}
+                    {theme === "premium" && <div className="w-2 h-2 rounded-full bg-yellow-500" />}
+                  </button>
                 </div>
 
                 <div className="text-xs text-gray-500 bg-gray-700/50 p-3 rounded-lg mt-3">
                   <strong>Astuce :</strong> Le thème sélectionné sera appliqué sur toutes les pages et sauvegardé
                   automatiquement.
+                  {hasPremiumAccess && (
+                    <span className="block mt-1 text-yellow-400">✨ Vous avez accès au thème Premium exclusif !</span>
+                  )}
                 </div>
               </CardContent>
             </Card>

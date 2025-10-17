@@ -182,6 +182,64 @@
   --sidebar-ring: 145 70% 45%;
 }
 
+/* Added Premium theme - Exclusive luxury theme for VIP/Admin users */
+.premium {
+  --background: 280 40% 5%;
+  --foreground: 50 100% 95%;
+  --card: 280 35% 10%;
+  --card-foreground: 50 100% 95%;
+  --popover: 280 35% 10%;
+  --popover-foreground: 50 100% 95%;
+  --primary: 45 100% 55%;
+  --primary-foreground: 280 40% 5%;
+  --secondary: 280 50% 20%;
+  --secondary-foreground: 50 100% 95%;
+  --muted: 280 30% 18%;
+  --muted-foreground: 50 20% 70%;
+  --accent: 320 80% 55%;
+  --accent-foreground: 50 100% 95%;
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 280 40% 25%;
+  --input: 280 40% 25%;
+  --ring: 45 100% 55%;
+  --chart-1: 45 100% 55%;
+  --chart-2: 320 80% 55%;
+  --chart-3: 280 70% 50%;
+  --chart-4: 35 95% 50%;
+  --chart-5: 300 75% 55%;
+  --sidebar: 280 35% 10%;
+  --sidebar-foreground: 50 100% 90%;
+  --sidebar-primary: 45 100% 55%;
+  --sidebar-primary-foreground: 280 40% 5%;
+  --sidebar-accent: 280 40% 15%;
+  --sidebar-accent-foreground: 50 100% 95%;
+  --sidebar-border: 280 40% 25%;
+  --sidebar-ring: 45 100% 55%;
+}
+
+/* Added premium theme glow effects */
+.premium .logo-glow {
+  filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.6));
+}
+
+.premium .logo-glow:hover {
+  filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.9));
+}
+
+.premium ::-webkit-scrollbar-track {
+  background: rgb(60, 20, 80);
+}
+
+.premium ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #ffd700 0%, #ffa500 100%);
+  border-radius: 4px;
+}
+
+.premium ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #ffa500 0%, #ffd700 100%);
+}
+
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));

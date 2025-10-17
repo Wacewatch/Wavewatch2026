@@ -322,9 +322,10 @@ export function usePublicPlaylists() {
 
   const filteredPlaylists = playlists.filter(
     (playlist) =>
-      playlist.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      playlist.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      playlist.username.toLowerCase().includes(searchQuery.toLowerCase()),
+      playlist.items_count > 0 &&
+      (playlist.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        playlist.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        playlist.username.toLowerCase().includes(searchQuery.toLowerCase())),
   )
 
   return {
