@@ -506,6 +506,12 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                 {show.overview}
               </p>
 
+              {show["watch/providers"] && (
+                <div className="md:hidden">
+                  <WatchProviders providers={show["watch/providers"]} />
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4">
                 <Button
@@ -547,6 +553,12 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                 </Button>
               </div>
 
+              {show["watch/providers"] && (
+                <div className="hidden md:block">
+                  <WatchProviders providers={show["watch/providers"]} />
+                </div>
+              )}
+
               {/* Secondary Action Buttons */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4">
                 <AddToListSelector
@@ -587,103 +599,102 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                 </Button>
               </div>
 
-              {/* Watch Providers Section */}
-              {show["watch/providers"] && <WatchProviders providers={show["watch/providers"]} />}
-            </div>
-
-            {/* Seasons */}
-            <div className="space-y-6">
-              <h2 className="text-2xl md:text-3xl font-bold text-white">Saisons</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {show.seasons
-                  .filter((season: any) => season.season_number > 0)
-                  .map((season: any) => (
-                    <Link
-                      key={season.id}
-                      href={`/${isAnime ? "anime" : "tv-shows"}/${show.id}/season/${season.season_number}`}
-                    >
-                      <Card className="group overflow-hidden hover:scale-105 transition-transform duration-200 border-gray-800 bg-gray-900/50">
-                        <CardContent className="p-4">
-                          <div className="flex items-center space-x-4">
-                            <div className="relative w-16 h-24 flex-shrink-0">
-                              <Image
-                                src={
-                                  season.poster_path
-                                    ? `https://image.tmdb.org/t/p/w200${season.poster_path}`
-                                    : "/placeholder.svg?height=120&width=80"
-                                }
-                                alt={season.name}
-                                fill
-                                className="object-cover rounded"
-                              />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors">
-                                {season.name}
-                              </h3>
-                              <p className="text-sm text-gray-400 mt-1">{season.episode_count} épisodes</p>
-                              {season.air_date && (
-                                <p className="text-sm text-gray-400">{new Date(season.air_date).getFullYear()}</p>
-                              )}
-                              <div className="flex items-center mt-2">
-                                <Play className="w-4 h-4 mr-1 text-blue-400" />
-                                <span className="text-sm text-blue-400">Voir les épisodes</span>
+              {/* Seasons */}
+              <div className="space-y-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-white">Saisons</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {show.seasons
+                    .filter((season: any) => season.season_number > 0)
+                    .map((season: any) => (
+                      <Link
+                        key={season.id}
+                        href={`/${isAnime ? "anime" : "tv-shows"}/${show.id}/season/${season.season_number}`}
+                      >
+                        <Card className="group overflow-hidden hover:scale-105 transition-transform duration-200 border-gray-800 bg-gray-900/50">
+                          <CardContent className="p-4">
+                            <div className="flex items-center space-x-4">
+                              <div className="relative w-16 h-24 flex-shrink-0">
+                                <Image
+                                  src={
+                                    season.poster_path
+                                      ? `https://image.tmdb.org/t/p/w200${season.poster_path}`
+                                      : "/placeholder.svg?height=120&width=80"
+                                  }
+                                  alt={season.name}
+                                  fill
+                                  className="object-cover rounded"
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors">
+                                  {season.name}
+                                </h3>
+                                <p className="text-sm text-gray-400 mt-1">{season.episode_count} épisodes</p>
+                                {season.air_date && (
+                                  <p className="text-sm text-gray-400">{new Date(season.air_date).getFullYear()}</p>
+                                )}
+                                <div className="flex items-center mt-2">
+                                  <Play className="w-4 h-4 mr-1 text-blue-400" />
+                                  <span className="text-sm text-blue-400">Voir les épisodes</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-              </div>
-            </div>
-
-            {/* Cast */}
-            {credits.cast && credits.cast.length > 0 && (
-              <div className="space-y-6">
-                <h2 className="text-2xl md:text-3xl font-bold text-white">Casting</h2>
-                <CastList cast={credits.cast} />
-              </div>
-            )}
-
-            {/* Similar Shows Section */}
-            {similarShows.length > 0 && (
-              <div className="space-y-6">
-                <h2 className="text-2xl md:text-3xl font-bold text-white">Séries similaires</h2>
-
-                <div className="mobile-slider">
-                  <div className="flex gap-3 md:gap-4 pb-4 overflow-x-auto md:grid md:grid-cols-4 lg:grid-cols-6 md:overflow-visible">
-                    {similarShows.map((similarShow: any) => (
-                      <Link key={similarShow.id} href={`/${isAnime ? "anime" : "tv-shows"}/${similarShow.id}`}>
-                        <div className="space-y-2 group cursor-pointer w-40 md:w-auto flex-shrink-0">
-                          <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-800">
-                            <Image
-                              src={
-                                similarShow.poster_path
-                                  ? `https://image.tmdb.org/t/p/w300${similarShow.poster_path}`
-                                  : "/placeholder.svg?height=450&width=300"
-                              }
-                              alt={similarShow.name}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform"
-                              sizes="(max-width: 768px) 160px, (max-width: 1200px) 25vw, 16vw"
-                            />
-                          </div>
-                          <div className="px-1">
-                            <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white">
-                              {similarShow.name}
-                            </p>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {similarShow.first_air_date ? new Date(similarShow.first_air_date).getFullYear() : "N/A"}
-                            </p>
-                          </div>
-                        </div>
+                          </CardContent>
+                        </Card>
                       </Link>
                     ))}
-                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Cast */}
+              {credits.cast && credits.cast.length > 0 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">Casting</h2>
+                  <CastList cast={credits.cast} />
+                </div>
+              )}
+
+              {/* Similar Shows Section */}
+              {similarShows.length > 0 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">Séries similaires</h2>
+
+                  <div className="mobile-slider">
+                    <div className="flex gap-3 md:gap-4 pb-4 overflow-x-auto md:grid md:grid-cols-4 lg:grid-cols-6 md:overflow-visible">
+                      {similarShows.map((similarShow: any) => (
+                        <Link key={similarShow.id} href={`/${isAnime ? "anime" : "tv-shows"}/${similarShow.id}`}>
+                          <div className="space-y-2 group cursor-pointer w-40 md:w-auto flex-shrink-0">
+                            <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-800">
+                              <Image
+                                src={
+                                  similarShow.poster_path
+                                    ? `https://image.tmdb.org/t/p/w300${similarShow.poster_path}`
+                                    : "/placeholder.svg?height=450&width=300"
+                                }
+                                alt={similarShow.name}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform"
+                                sizes="(max-width: 768px) 160px, (max-width: 1200px) 25vw, 16vw"
+                              />
+                            </div>
+                            <div className="px-1">
+                              <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white">
+                                {similarShow.name}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {similarShow.first_air_date
+                                  ? new Date(similarShow.first_air_date).getFullYear()
+                                  : "N/A"}
+                              </p>
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

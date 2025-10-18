@@ -459,7 +459,7 @@ export default function ProfilePage() {
     }
   }
 
-  const handleThemeChange = (newTheme: "dark" | "light" | "ocean" | "sunset" | "forest") => {
+  const handleThemeChange = (newTheme: "dark" | "light" | "ocean" | "sunset" | "forest" | "midnight" | "aurora") => {
     setTheme(newTheme)
     toast({
       title: "Thème modifié",
@@ -467,7 +467,9 @@ export default function ProfilePage() {
     })
   }
 
-  const handlePremiumThemeChange = (newTheme: "dark" | "light" | "ocean" | "sunset" | "forest" | "premium") => {
+  const handlePremiumThemeChange = (
+    newTheme: "dark" | "light" | "ocean" | "sunset" | "forest" | "midnight" | "aurora" | "premium" | "royal",
+  ) => {
     setTheme(newTheme)
     toast({
       title: "Thème modifié",
@@ -482,7 +484,10 @@ export default function ProfilePage() {
       ocean: "Océan",
       sunset: "Coucher de soleil",
       forest: "Forêt",
-      premium: "Premium", // Added premium theme name
+      midnight: "Minuit",
+      aurora: "Aurore",
+      premium: "Premium",
+      royal: "Royal",
     }
     return themeNames[themeValue] || themeValue
   }
@@ -829,6 +834,42 @@ export default function ProfilePage() {
                   </button>
 
                   <button
+                    onClick={() => handleThemeChange("midnight")}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                      theme === "midnight"
+                        ? "border-indigo-500 bg-gray-700"
+                        : "border-gray-600 bg-gray-750 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-indigo-950 via-blue-900 to-slate-800 border border-indigo-600" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Minuit</div>
+                        <div className="text-xs text-gray-400">Bleu nuit mystérieux</div>
+                      </div>
+                    </div>
+                    {theme === "midnight" && <div className="w-2 h-2 rounded-full bg-indigo-500" />}
+                  </button>
+
+                  <button
+                    onClick={() => handleThemeChange("aurora")}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                      theme === "aurora"
+                        ? "border-teal-500 bg-gray-700"
+                        : "border-gray-600 bg-gray-750 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-teal-700 via-emerald-600 to-cyan-700 border border-teal-500" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Aurore</div>
+                        <div className="text-xs text-gray-400">Vert aurore boréale</div>
+                      </div>
+                    </div>
+                    {theme === "aurora" && <div className="w-2 h-2 rounded-full bg-teal-500" />}
+                  </button>
+
+                  <button
                     onClick={() => {
                       if (hasPremiumAccess) {
                         handlePremiumThemeChange("premium")
@@ -862,13 +903,50 @@ export default function ProfilePage() {
                     )}
                     {theme === "premium" && <div className="w-2 h-2 rounded-full bg-yellow-500" />}
                   </button>
+
+                  <button
+                    onClick={() => {
+                      if (hasPremiumAccess) {
+                        handlePremiumThemeChange("royal")
+                      }
+                    }}
+                    disabled={!hasPremiumAccess}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all relative ${
+                      theme === "royal"
+                        ? "border-purple-500 bg-gray-700"
+                        : hasPremiumAccess
+                          ? "border-gray-600 bg-gray-750 hover:border-gray-500"
+                          : "border-gray-700 bg-gray-800 opacity-60 cursor-not-allowed"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-purple-800 via-indigo-700 to-blue-800 border border-purple-500 animate-gradient" />
+                      <div className="text-left">
+                        <div className="font-medium text-white flex items-center gap-2">
+                          Royal
+                          <Crown className="w-3 h-3 text-purple-400" />
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {hasPremiumAccess ? "Majesté royale" : "Réservé VIP/VIP+/Admin"}
+                        </div>
+                      </div>
+                    </div>
+                    {!hasPremiumAccess && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 rounded-lg">
+                        <Lock className="w-5 h-5 text-purple-400" />
+                      </div>
+                    )}
+                    {theme === "royal" && <div className="w-2 h-2 rounded-full bg-purple-500" />}
+                  </button>
                 </div>
 
                 <div className="text-xs text-gray-500 bg-gray-700/50 p-3 rounded-lg mt-3">
                   <strong>Astuce :</strong> Le thème sélectionné sera appliqué sur toutes les pages et sauvegardé
                   automatiquement.
                   {hasPremiumAccess && (
-                    <span className="block mt-1 text-yellow-400">✨ Vous avez accès au thème Premium exclusif !</span>
+                    <span className="block mt-1 text-yellow-400">
+                      ✨ Vous avez accès aux thèmes Premium exclusifs !
+                    </span>
                   )}
                 </div>
               </CardContent>

@@ -104,11 +104,17 @@ export function PublicPlaylistsDiscovery() {
           {sortedPlaylists.map((playlist) => (
             <Link key={playlist.id} href={`/playlists/${playlist.id}`}>
               <Card
-                className="border-gray-700 hover:border-opacity-80 transition-all duration-300 cursor-pointer transform hover:scale-105"
+                className={`border-gray-700 hover:border-opacity-80 transition-all duration-300 cursor-pointer transform hover:scale-105 ${
+                  playlist.theme_color.includes("gradient") ? "animate-gradient" : ""
+                }`}
                 style={{
                   backgroundColor: `${playlist.theme_color}15`,
                   borderColor: playlist.theme_color,
                   boxShadow: `0 4px 20px ${playlist.theme_color}20`,
+                  ...(playlist.theme_color.includes("gradient") && {
+                    background: playlist.theme_color,
+                    backgroundSize: "200% 200%",
+                  }),
                 }}
               >
                 <CardHeader className="pb-3">

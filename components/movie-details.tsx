@@ -417,7 +417,11 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
               </p>
 
               {/* Watch Providers Section */}
-              {movie["watch/providers"] && <WatchProviders providers={movie["watch/providers"]} />}
+              {movie["watch/providers"] && (
+                <div className="md:hidden">
+                  <WatchProviders providers={movie["watch/providers"]} />
+                </div>
+              )}
 
               {/* Action Buttons - Responsive Fix */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4">
@@ -474,6 +478,13 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
                   {isWatched ? "Film vu" : "Marquer comme vu"}
                 </Button>
               </div>
+
+              {/* Watch Providers Section for desktop */}
+              {movie["watch/providers"] && (
+                <div className="hidden md:block">
+                  <WatchProviders providers={movie["watch/providers"]} />
+                </div>
+              )}
             </div>
 
             {/* Cast */}
