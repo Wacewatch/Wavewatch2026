@@ -506,6 +506,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                 {show.overview}
               </p>
 
+              {/* Watch Providers for mobile */}
               {show["watch/providers"] && (
                 <div className="md:hidden">
                   <WatchProviders providers={show["watch/providers"]} />
@@ -553,6 +554,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                 </Button>
               </div>
 
+              {/* Watch Providers for desktop */}
               {show["watch/providers"] && (
                 <div className="hidden md:block">
                   <WatchProviders providers={show["watch/providers"]} />

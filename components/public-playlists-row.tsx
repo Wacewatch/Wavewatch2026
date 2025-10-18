@@ -127,9 +127,7 @@ export function PublicPlaylistsRow() {
                         playlist.theme_color.includes("gradient") ? "animate-gradient" : ""
                       }`}
                       style={{
-                        background: playlist.theme_color.includes("gradient")
-                          ? playlist.theme_color
-                          : `linear-gradient(135deg, ${playlist.theme_color}40 0%, ${playlist.theme_color}20 100%)`,
+                        background: playlist.theme_color,
                         backgroundSize: playlist.theme_color.includes("gradient") ? "200% 200%" : "auto",
                       }}
                     >

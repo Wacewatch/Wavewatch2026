@@ -468,7 +468,7 @@ export default function ProfilePage() {
   }
 
   const handlePremiumThemeChange = (
-    newTheme: "dark" | "light" | "ocean" | "sunset" | "forest" | "midnight" | "aurora" | "premium" | "royal",
+    newTheme: "dark" | "light" | "ocean" | "sunset" | "forest" | "midnight" | "aurora" | "premium" | "royal" | "neon",
   ) => {
     setTheme(newTheme)
     toast({
@@ -488,6 +488,7 @@ export default function ProfilePage() {
       aurora: "Aurore",
       premium: "Premium",
       royal: "Royal",
+      neon: "Neon",
     }
     return themeNames[themeValue] || themeValue
   }
@@ -937,6 +938,41 @@ export default function ProfilePage() {
                       </div>
                     )}
                     {theme === "royal" && <div className="w-2 h-2 rounded-full bg-purple-500" />}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (hasPremiumAccess) {
+                        handlePremiumThemeChange("neon")
+                      }
+                    }}
+                    disabled={!hasPremiumAccess}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all relative ${
+                      theme === "neon"
+                        ? "border-cyan-500 bg-gray-700"
+                        : hasPremiumAccess
+                          ? "border-gray-600 bg-gray-750 hover:border-gray-500"
+                          : "border-gray-700 bg-gray-800 opacity-60 cursor-not-allowed"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-cyan-500 via-pink-500 to-purple-600 border border-cyan-400 animate-gradient" />
+                      <div className="text-left">
+                        <div className="font-medium text-white flex items-center gap-2">
+                          Neon
+                          <Crown className="w-3 h-3 text-cyan-400" />
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {hasPremiumAccess ? "Cyberpunk futuriste" : "Réservé VIP/VIP+/Admin"}
+                        </div>
+                      </div>
+                    </div>
+                    {!hasPremiumAccess && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 rounded-lg">
+                        <Lock className="w-5 h-5 text-cyan-400" />
+                      </div>
+                    )}
+                    {theme === "neon" && <div className="w-2 h-2 rounded-full bg-cyan-500" />}
                   </button>
                 </div>
 

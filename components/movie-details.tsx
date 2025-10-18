@@ -416,7 +416,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
                 {movie.overview}
               </p>
 
-              {/* Watch Providers Section */}
+              {/* Watch Providers Section - Mobile */}
               {movie["watch/providers"] && (
                 <div className="md:hidden">
                   <WatchProviders providers={movie["watch/providers"]} />
