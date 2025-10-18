@@ -1,7 +1,5 @@
 "use client"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import Image from "next/image"
-import { Tv } from "lucide-react"
 
 interface WatchProvider {
   logo_path: string
@@ -47,31 +45,22 @@ export function WatchProviders({ providers }: WatchProvidersProps) {
   if (uniqueProviders.length === 0) return null
 
   return (
-    <Card className="bg-gray-800 border-gray-700">
-      <CardHeader>
-        <CardTitle className="text-white flex items-center gap-2">
-          <Tv className="w-5 h-5" />
-          Disponible sur
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap gap-3 items-center">
-          {uniqueProviders.slice(0, 8).map((provider) => (
-            <div
-              key={provider.provider_id}
-              className="w-12 h-12 rounded-lg overflow-hidden bg-white shadow-md flex-shrink-0"
-            >
-              <Image
-                src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
-                alt={provider.provider_name}
-                width={48}
-                height={48}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ))}
+    <div className="flex flex-wrap gap-3 items-center">
+      {uniqueProviders.slice(0, 8).map((provider) => (
+        <div
+          key={provider.provider_id}
+          className="w-12 h-12 rounded-lg overflow-hidden bg-white shadow-md flex-shrink-0"
+          title={provider.provider_name}
+        >
+          <Image
+            src={`https://image.tmdb.org/t/p/original${provider.logo_path}`}
+            alt={provider.provider_name}
+            width={48}
+            height={48}
+            className="w-full h-full object-cover"
+          />
         </div>
-      </CardContent>
-    </Card>
+      ))}
+    </div>
   )
 }

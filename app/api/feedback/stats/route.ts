@@ -27,11 +27,26 @@ export async function GET() {
       totalFeedback > 0 ? data.reduce((sum, f) => sum + (f.functionality_rating || 0), 0) / totalFeedback : 0
     const designAvg = totalFeedback > 0 ? data.reduce((sum, f) => sum + (f.design_rating || 0), 0) / totalFeedback : 0
 
-    // Get recent guestbook messages
-    const guestbookMessages = data
+    const { data: feedbackWithUsers, error: feedbackError } = await supabase
+      .from("user_feedback")
+      .select(`
+        guestbook_message,
+        created_at,
+        user_id,
+        user_profiles!inner(username)
+      `)
+      .not("guestbook_message", "is", null)
+      .neq("guestbook_message", "")
+
+    if (feedbackError) {
+      console.error("Error fetching feedback with users:", feedbackError)
+    }
+
+    const guestbookMessages = (feedbackWithUsers || [])
       .filter((f) => f.guestbook_message && f.guestbook_message.trim() !== "")
       .map((f) => ({
         message: f.guestbook_message,
+        username: f.user_profiles?.username || "Utilisateur",
         created_at: f.created_at,
       }))
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())

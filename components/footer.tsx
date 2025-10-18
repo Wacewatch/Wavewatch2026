@@ -13,6 +13,7 @@ interface FeedbackStats {
 
 interface GuestbookMessage {
   message: string
+  username: string
   created_at: string
 }
 
@@ -105,7 +106,11 @@ export function Footer() {
                   >
                     {messages.map((msg, index) => (
                       <div key={index} className="h-20 flex items-center">
-                        <p className="text-gray-300 italic line-clamp-3">"{msg.message}"</p>
+                        <p className="text-gray-300 line-clamp-3">
+                          <span className="font-semibold text-blue-400">{msg.username}</span>
+                          <span className="text-gray-500 mx-2">•</span>
+                          <span className="italic">"{msg.message}"</span>
+                        </p>
                       </div>
                     ))}
                   </div>

@@ -183,7 +183,7 @@ export default function PlaylistContentPage() {
         console.error("[v0] No stream URL found for radio")
         toast({
           title: "Erreur",
-          description: `Impossible de lire "${item.title}". URL de streaming non disponible.`,
+          description: "Impossible de lire cette station radio. Veuillez réessayer.",
           variant: "destructive",
         })
         return
@@ -283,7 +283,14 @@ export default function PlaylistContentPage() {
   }
 
   return (
-    <div className="min-h-screen text-white" style={{ backgroundColor: `${playlist.theme_color}10` }}>
+    <div
+      className="min-h-screen text-white"
+      style={{
+        background: playlist.theme_color.includes("gradient") ? playlist.theme_color : `${playlist.theme_color}10`,
+        backgroundSize: playlist.theme_color.includes("gradient") ? "200% 200%" : "auto",
+        animation: playlist.theme_color.includes("gradient") ? "gradient-shift 3s ease infinite" : "none",
+      }}
+    >
       <div className="container mx-auto px-4 py-8 space-y-8">
         {/* Header */}
         <div className="flex items-center gap-4">
@@ -431,7 +438,7 @@ export default function PlaylistContentPage() {
               )}
             </div>
             {playlist.description && (
-              <CardDescription className="text-gray-300 mt-3">{playlist.description}</CardDescription>
+              <CardDescription className="text-gray-400 mt-3">{playlist.description}</CardDescription>
             )}
           </CardHeader>
         </Card>

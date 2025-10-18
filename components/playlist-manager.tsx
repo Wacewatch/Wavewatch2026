@@ -39,6 +39,11 @@ const STANDARD_COLORS = [
   { name: "Vert", value: "#10B981", premium: false },
   { name: "Violet", value: "#8B5CF6", premium: false },
   { name: "Rose", value: "#EC4899", premium: false },
+  { name: "Orange", value: "#F97316", premium: false },
+  { name: "Jaune", value: "#EAB308", premium: false },
+  { name: "Cyan", value: "#06B6D4", premium: false },
+  { name: "Indigo", value: "#6366F1", premium: false },
+  { name: "Lime", value: "#84CC16", premium: false },
 ]
 
 const PREMIUM_COLORS = [
