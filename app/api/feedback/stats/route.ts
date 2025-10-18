@@ -33,10 +33,12 @@ export async function GET() {
         guestbook_message,
         created_at,
         user_id,
-        user_profiles!inner(username)
+        user_profiles!user_feedback_user_id_fkey(username)
       `)
       .not("guestbook_message", "is", null)
       .neq("guestbook_message", "")
+      .order("created_at", { ascending: false })
+      .limit(20)
 
     if (feedbackError) {
       console.error("Error fetching feedback with users:", feedbackError)
@@ -46,10 +48,9 @@ export async function GET() {
       .filter((f) => f.guestbook_message && f.guestbook_message.trim() !== "")
       .map((f) => ({
         message: f.guestbook_message,
-        username: f.user_profiles?.username || "Utilisateur",
+        username: (f.user_profiles as any)?.username || "Utilisateur",
         created_at: f.created_at,
       }))
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
     return NextResponse.json({
       stats: {

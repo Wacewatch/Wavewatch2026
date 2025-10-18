@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/lib/supabase"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
@@ -30,11 +30,7 @@ export function usePublicPlaylists() {
   const [searchQuery, setSearchQuery] = useState("")
   const supabase = createClient()
 
-  useEffect(() => {
-    loadPublicPlaylists()
-  }, [user?.id])
-
-  const loadPublicPlaylists = async () => {
+  const loadPublicPlaylists = useCallback(async () => {
     try {
       console.log("[v0] Loading public playlists...")
 
@@ -54,10 +50,12 @@ export function usePublicPlaylists() {
           description,
           theme_color,
           created_at,
-          updated_at
+          updated_at,
+          user_profiles!playlists_user_id_fkey(username, email)
         `)
         .eq("is_public", true)
         .order("updated_at", { ascending: false })
+        .limit(50)
 
       if (playlistsError) {
         console.error("Error loading public playlists:", playlistsError)
@@ -66,77 +64,53 @@ export function usePublicPlaylists() {
         return
       }
 
-      if (!playlistsData) {
+      if (!playlistsData || playlistsData.length === 0) {
         setPlaylists([])
         setLoading(false)
         return
       }
 
-      const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
-      const { data: userProfilesData } = await supabase
-        .from("user_profiles")
-        .select("id, username, email")
-        .in("id", userIds)
-
-      // Create a map for quick username lookup with better fallback
-      const usernameMap = new Map()
-      userProfilesData?.forEach((profile) => {
-        const displayName = profile.username || (profile.email ? profile.email.split("@")[0] : null) || "Utilisateur"
-        usernameMap.set(profile.id, displayName)
-      })
-
-      // For users not found in profiles, try to get from auth.users
-      const missingUserIds = userIds.filter((id) => !usernameMap.has(id))
-      if (missingUserIds.length > 0) {
-        console.log("[v0] Some users not found in profiles, checking auth.users...")
-        missingUserIds.forEach((userId) => {
-          usernameMap.set(userId, "Utilisateur anonyme")
-        })
-      }
-
       const playlistIds = playlistsData.map((p) => p.id)
-      const { data: itemsCounts } = await supabase
-        .from("playlist_items")
-        .select("playlist_id")
-        .in("playlist_id", playlistIds)
 
-      const { data: likesData } = await supabase
-        .from("playlist_likes")
-        .select("playlist_id, is_like")
-        .in("playlist_id", playlistIds)
+      const [itemsCountsResult, likesDataResult, userLikesResult, userFavoritesResult] = await Promise.all([
+        supabase.from("playlist_items").select("playlist_id").in("playlist_id", playlistIds),
+        supabase.from("playlist_likes").select("playlist_id, is_like").in("playlist_id", playlistIds),
+        user?.id
+          ? supabase
+              .from("playlist_likes")
+              .select("playlist_id, is_like")
+              .eq("user_id", user.id)
+              .in("playlist_id", playlistIds)
+          : Promise.resolve({ data: [] }),
+        user?.id
+          ? supabase
+              .from("playlist_favorites")
+              .select("playlist_id")
+              .eq("user_id", user.id)
+              .in("playlist_id", playlistIds)
+          : Promise.resolve({ data: [] }),
+      ])
 
-      let userLikes: any[] = []
-      let userFavorites: any[] = []
-
-      if (user?.id) {
-        const { data: userLikesData } = await supabase
-          .from("playlist_likes")
-          .select("playlist_id, is_like")
-          .eq("user_id", user.id)
-          .in("playlist_id", playlistIds)
-
-        const { data: userFavoritesData } = await supabase
-          .from("playlist_favorites")
-          .select("playlist_id")
-          .eq("user_id", user.id)
-          .in("playlist_id", playlistIds)
-
-        userLikes = userLikesData || []
-        userFavorites = userFavoritesData || []
-      }
+      const itemsCounts = itemsCountsResult.data || []
+      const likesData = likesDataResult.data || []
+      const userLikes = userLikesResult.data || []
+      const userFavorites = userFavoritesResult.data || []
 
       const processedPlaylists = playlistsData.map((playlist) => {
-        const itemsCount = itemsCounts?.filter((item) => item.playlist_id === playlist.id).length || 0
-        const playlistLikes = likesData?.filter((like) => like.playlist_id === playlist.id) || []
+        const itemsCount = itemsCounts.filter((item) => item.playlist_id === playlist.id).length
+        const playlistLikes = likesData.filter((like) => like.playlist_id === playlist.id)
         const likesCount = playlistLikes.filter((like) => like.is_like).length
         const dislikesCount = playlistLikes.filter((like) => !like.is_like).length
 
         const userLike = userLikes.find((like) => like.playlist_id === playlist.id)
         const isFavorited = userFavorites.some((fav) => fav.playlist_id === playlist.id)
 
+        const userProfile = playlist.user_profiles as any
+        const username = userProfile?.username || (userProfile?.email ? userProfile.email.split("@")[0] : "Utilisateur")
+
         return {
           ...playlist,
-          username: usernameMap.get(playlist.user_id) || "Utilisateur inconnu",
+          username,
           items_count: itemsCount,
           likes_count: likesCount,
           dislikes_count: dislikesCount,
@@ -147,7 +121,6 @@ export function usePublicPlaylists() {
       })
 
       console.log("[v0] Public playlists loaded successfully:", processedPlaylists.length)
-      console.log("[v0] Username mapping:", Object.fromEntries(usernameMap))
       setPlaylists(processedPlaylists)
     } catch (error) {
       console.error("Error loading public playlists:", error)
@@ -155,7 +128,11 @@ export function usePublicPlaylists() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user?.id, supabase])
+
+  useEffect(() => {
+    loadPublicPlaylists()
+  }, [loadPublicPlaylists])
 
   const toggleLike = async (playlistId: string, isLike: boolean) => {
     if (!user?.id) {

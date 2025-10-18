@@ -123,16 +123,25 @@ export function PublicPlaylistsDiscovery() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <CardTitle
-                        className="text-white text-lg line-clamp-1 hover:text-opacity-80 transition-colors"
+                        className="text-white text-lg line-clamp-1 hover:text-opacity-90 transition-colors font-bold"
                         title={playlist.title}
-                        style={{ color: playlist.theme_color }}
+                        style={{
+                          color: playlist.theme_color.includes("gradient") ? "#ffffff" : playlist.theme_color,
+                          textShadow: playlist.theme_color.includes("gradient")
+                            ? "2px 2px 4px rgba(0,0,0,0.8), 0 0 10px rgba(0,0,0,0.5)"
+                            : "1px 1px 2px rgba(0,0,0,0.5)",
+                        }}
                       >
                         {playlist.title}
                       </CardTitle>
                       <div className="flex items-center gap-2 mt-1">
                         <div
                           className="w-4 h-4 rounded-full shadow-md"
-                          style={{ backgroundColor: playlist.theme_color }}
+                          style={{
+                            backgroundColor: playlist.theme_color.includes("gradient")
+                              ? "#ffffff"
+                              : playlist.theme_color,
+                          }}
                         />
                       </div>
                     </div>
@@ -142,28 +151,73 @@ export function PublicPlaylistsDiscovery() {
                   <div className="flex items-center gap-2 mt-2">
                     <Avatar className="w-6 h-6">
                       <AvatarFallback
-                        className="text-xs"
-                        style={{ backgroundColor: `${playlist.theme_color}30`, color: playlist.theme_color }}
+                        className="text-xs font-semibold"
+                        style={{
+                          backgroundColor: playlist.theme_color.includes("gradient")
+                            ? "rgba(255,255,255,0.3)"
+                            : `${playlist.theme_color}30`,
+                          color: playlist.theme_color.includes("gradient") ? "#ffffff" : playlist.theme_color,
+                        }}
                       >
                         {playlist.username.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm text-gray-300">par {playlist.username}</span>
+                    <span
+                      className="text-sm font-medium"
+                      style={{
+                        color: playlist.theme_color.includes("gradient") ? "#ffffff" : "#d1d5db",
+                        textShadow: playlist.theme_color.includes("gradient") ? "1px 1px 3px rgba(0,0,0,0.8)" : "none",
+                      }}
+                    >
+                      par {playlist.username}
+                    </span>
                   </div>
                 </CardHeader>
 
                 <CardContent className="pt-0 space-y-3">
-                  {playlist.description && <p className="text-gray-300 text-sm line-clamp-2">{playlist.description}</p>}
+                  {playlist.description && (
+                    <p
+                      className="text-sm line-clamp-2 font-medium"
+                      style={{
+                        color: playlist.theme_color.includes("gradient") ? "#ffffff" : "#d1d5db",
+                        textShadow: playlist.theme_color.includes("gradient") ? "1px 1px 3px rgba(0,0,0,0.8)" : "none",
+                      }}
+                    >
+                      {playlist.description}
+                    </p>
+                  )}
 
-                  <div className="flex items-center justify-between text-sm text-gray-300">
+                  <div
+                    className="flex items-center justify-between text-sm font-medium"
+                    style={{
+                      color: playlist.theme_color.includes("gradient") ? "#ffffff" : "#d1d5db",
+                      textShadow: playlist.theme_color.includes("gradient") ? "1px 1px 3px rgba(0,0,0,0.8)" : "none",
+                    }}
+                  >
                     <div className="flex items-center gap-4">
                       <div className="flex items-center gap-1">
-                        <Film className="w-3 h-3" style={{ color: playlist.theme_color }} />
+                        <Film
+                          className="w-3 h-3"
+                          style={{
+                            color: playlist.theme_color.includes("gradient") ? "#ffffff" : playlist.theme_color,
+                            filter: playlist.theme_color.includes("gradient")
+                              ? "drop-shadow(1px 1px 2px rgba(0,0,0,0.8))"
+                              : "none",
+                          }}
+                        />
                         <span>{playlist.items_count} éléments</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Calendar className="w-3 h-3" style={{ color: playlist.theme_color }} />
+                      <Calendar
+                        className="w-3 h-3"
+                        style={{
+                          color: playlist.theme_color.includes("gradient") ? "#ffffff" : playlist.theme_color,
+                          filter: playlist.theme_color.includes("gradient")
+                            ? "drop-shadow(1px 1px 2px rgba(0,0,0,0.8))"
+                            : "none",
+                        }}
+                      />
                       <span>{new Date(playlist.updated_at).toLocaleDateString()}</span>
                     </div>
                   </div>
@@ -171,7 +225,13 @@ export function PublicPlaylistsDiscovery() {
                   {/* Actions */}
                   <div
                     className="flex items-center justify-between pt-2"
-                    style={{ borderTopColor: playlist.theme_color, borderTopWidth: "1px", borderTopStyle: "solid" }}
+                    style={{
+                      borderTopColor: playlist.theme_color.includes("gradient")
+                        ? "rgba(255,255,255,0.3)"
+                        : playlist.theme_color,
+                      borderTopWidth: "1px",
+                      borderTopStyle: "solid",
+                    }}
                   >
                     <div className="flex items-center gap-2" onClick={(e) => e.preventDefault()}>
                       <Button
@@ -221,7 +281,13 @@ export function PublicPlaylistsDiscovery() {
                   </div>
 
                   {!user && (
-                    <p className="text-xs text-gray-500 text-center">
+                    <p
+                      className="text-xs text-center font-medium"
+                      style={{
+                        color: playlist.theme_color.includes("gradient") ? "rgba(255,255,255,0.7)" : "#9ca3af",
+                        textShadow: playlist.theme_color.includes("gradient") ? "1px 1px 2px rgba(0,0,0,0.8)" : "none",
+                      }}
+                    >
                       Connectez-vous pour interagir avec les playlists
                     </p>
                   )}

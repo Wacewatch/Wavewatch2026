@@ -131,7 +131,10 @@ export function PublicPlaylistsRow() {
                         backgroundSize: playlist.theme_color.includes("gradient") ? "200% 200%" : "auto",
                       }}
                     >
-                      <Film className="w-16 h-16 text-white opacity-50" />
+                      <Film
+                        className="w-16 h-16 text-white opacity-50"
+                        style={{ filter: "drop-shadow(2px 2px 4px rgba(0,0,0,0.5))" }}
+                      />
                     </div>
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200" />
                     <div className="absolute top-2 right-2">
@@ -140,9 +143,17 @@ export function PublicPlaylistsRow() {
                         Public
                       </Badge>
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
-                      <h3 className="font-semibold text-sm line-clamp-2 mb-1 text-white">{playlist.title}</h3>
-                      <div className="flex items-center gap-2 text-xs text-gray-300">
+                    <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent">
+                      <h3
+                        className="font-semibold text-sm line-clamp-2 mb-1 text-white"
+                        style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.9)" }}
+                      >
+                        {playlist.title}
+                      </h3>
+                      <div
+                        className="flex items-center gap-2 text-xs text-gray-200"
+                        style={{ textShadow: "1px 1px 3px rgba(0,0,0,0.9)" }}
+                      >
                         <span className="flex items-center gap-1">
                           <Film className="w-3 h-3" />
                           {playlist.items_count}
@@ -152,7 +163,9 @@ export function PublicPlaylistsRow() {
                           {playlist.likes_count}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-400 mt-1">Par {playlist.username}</p>
+                      <p className="text-xs text-gray-300 mt-1" style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.9)" }}>
+                        Par {playlist.username}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
