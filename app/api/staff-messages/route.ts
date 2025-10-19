@@ -13,8 +13,12 @@ export async function GET() {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
     }
 
-    // Check if user is admin
-    const { data: profile } = await supabase.from("user_profiles").select("is_admin").eq("user_id", user.id).single()
+    // ✅ CORRECTION: Utiliser 'id' au lieu de 'user_id'
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single()
 
     if (profile?.is_admin) {
       // Admin: get all messages
@@ -60,14 +64,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Titre et message requis" }, { status: 400 })
     }
 
-    // Get username
-    const { data: profile } = await supabase.from("user_profiles").select("username").eq("user_id", user.id).single()
+    // ✅ CORRECTION: Utiliser 'id' au lieu de 'user_id'
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("username, email")
+      .eq("id", user.id)
+      .single()
+
+    const username = profile?.username || (profile?.email ? profile.email.split("@")[0] : "Utilisateur")
+
+    console.log("[v0] Creating staff message for user:", user.id, "username:", username)
 
     const { data, error } = await supabase
       .from("staff_messages")
       .insert({
         user_id: user.id,
-        username: profile?.username || "Utilisateur",
+        username: username,
         title,
         message,
       })
@@ -89,7 +101,7 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const {
       data: { user },
@@ -100,7 +112,11 @@ export async function DELETE(request: Request) {
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase.from("user_profiles").select("is_admin").eq("id", user.id).single()
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single()
 
     if (!profile?.is_admin) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 403 })
@@ -122,4 +138,4 @@ export async function DELETE(request: Request) {
     console.error("Error deleting staff message:", error)
     return NextResponse.json({ error: "Erreur lors de la suppression" }, { status: 500 })
   }
-}
+} 
