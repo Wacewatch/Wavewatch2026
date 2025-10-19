@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/server"
 
 export async function GET() {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const {
       data: { user },
@@ -14,7 +14,7 @@ export async function GET() {
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase.from("user_profiles").select("is_admin").eq("id", user.id).single()
+    const { data: profile } = await supabase.from("user_profiles").select("is_admin").eq("user_id", user.id).single()
 
     if (profile?.is_admin) {
       // Admin: get all messages
@@ -37,14 +37,14 @@ export async function GET() {
       return NextResponse.json({ messages: messages || [] })
     }
   } catch (error) {
-    console.error("Error fetching staff messages:", error)
+    console.error("[v0] Error fetching staff messages:", error)
     return NextResponse.json({ error: "Erreur lors de la récupération des messages" }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const {
       data: { user },
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
     }
 
     // Get username
-    const { data: profile } = await supabase.from("user_profiles").select("username").eq("id", user.id).single()
+    const { data: profile } = await supabase.from("user_profiles").select("username").eq("user_id", user.id).single()
 
     const { data, error } = await supabase
       .from("staff_messages")
@@ -74,11 +74,15 @@ export async function POST(request: Request) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      console.error("[v0] Error creating staff message:", error)
+      throw error
+    }
 
+    console.log("[v0] Staff message created successfully")
     return NextResponse.json({ message: data })
   } catch (error) {
-    console.error("Error creating staff message:", error)
+    console.error("[v0] Error in staff message POST:", error)
     return NextResponse.json({ error: "Erreur lors de l'envoi du message" }, { status: 500 })
   }
 }

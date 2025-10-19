@@ -26,6 +26,7 @@ export function Footer() {
   })
   const [messages, setMessages] = useState<GuestbookMessage[]>([])
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     fetchFeedbackStats()
@@ -43,16 +44,27 @@ export function Footer() {
 
   const fetchFeedbackStats = async () => {
     try {
+      setIsLoading(true)
       const response = await fetch("/api/feedback/stats")
+
+      if (!response.ok) {
+        console.error("[v0] Error loading feedback stats:", response.status)
+        setIsLoading(false)
+        return
+      }
+
       const data = await response.json()
       if (data.stats) {
         setStats(data.stats)
       }
-      if (data.guestbookMessages) {
+      if (data.guestbookMessages && data.guestbookMessages.length > 0) {
         setMessages(data.guestbookMessages)
+        console.log("[v0] Loaded guestbook messages:", data.guestbookMessages.length)
       }
     } catch (error) {
-      console.error("Error fetching feedback stats:", error)
+      console.error("[v0] Error fetching feedback stats:", error)
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -91,7 +103,7 @@ export function Footer() {
               </div>
             </div>
 
-            {messages.length > 0 && (
+            {!isLoading && messages.length > 0 && (
               <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
                 <div className="flex items-center gap-2 mb-3">
                   <MessageSquare className="w-5 h-5 text-green-400" />
@@ -127,6 +139,11 @@ export function Footer() {
                     />
                   ))}
                 </div>
+              </div>
+            )}
+            {isLoading && (
+              <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700 text-center">
+                <p className="text-gray-400">Chargement des messages...</p>
               </div>
             )}
           </div>

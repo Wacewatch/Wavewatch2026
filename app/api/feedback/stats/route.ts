@@ -18,7 +18,13 @@ export async function GET() {
 
     const { data, error } = await supabase.from("user_feedback").select("*")
 
-    if (error) throw error
+    if (error) {
+      console.error("[v0] Error fetching feedback:", error)
+      return NextResponse.json({
+        stats: { content: 0, functionality: 0, design: 0, totalFeedback: 0 },
+        guestbookMessages: [],
+      })
+    }
 
     // Calculate averages
     const totalFeedback = data.length
@@ -27,30 +33,32 @@ export async function GET() {
       totalFeedback > 0 ? data.reduce((sum, f) => sum + (f.functionality_rating || 0), 0) / totalFeedback : 0
     const designAvg = totalFeedback > 0 ? data.reduce((sum, f) => sum + (f.design_rating || 0), 0) / totalFeedback : 0
 
-    const { data: feedbackWithUsers, error: feedbackError } = await supabase
+    const { data: feedbackMessages, error: feedbackError } = await supabase
       .from("user_feedback")
-      .select(`
-        guestbook_message,
-        created_at,
-        user_id,
-        user_profiles!user_feedback_user_id_fkey(username)
-      `)
+      .select("guestbook_message, created_at, user_id")
       .not("guestbook_message", "is", null)
       .neq("guestbook_message", "")
       .order("created_at", { ascending: false })
       .limit(20)
 
     if (feedbackError) {
-      console.error("Error fetching feedback with users:", feedbackError)
+      console.error("[v0] Error fetching guestbook messages:", feedbackError)
     }
 
-    const guestbookMessages = (feedbackWithUsers || [])
+    const userIds = (feedbackMessages || []).map((f) => f.user_id).filter(Boolean)
+    const { data: profiles } = await supabase.from("user_profiles").select("user_id, username").in("user_id", userIds)
+
+    const usernameMap = new Map((profiles || []).map((p) => [p.user_id, p.username]))
+
+    const guestbookMessages = (feedbackMessages || [])
       .filter((f) => f.guestbook_message && f.guestbook_message.trim() !== "")
       .map((f) => ({
         message: f.guestbook_message,
-        username: (f.user_profiles as any)?.username || "Utilisateur",
+        username: usernameMap.get(f.user_id) || "Utilisateur",
         created_at: f.created_at,
       }))
+
+    console.log("[v0] Guestbook messages loaded:", guestbookMessages.length)
 
     return NextResponse.json({
       stats: {
@@ -62,7 +70,13 @@ export async function GET() {
       guestbookMessages,
     })
   } catch (error) {
-    console.error("Error fetching feedback stats:", error)
-    return NextResponse.json({ error: "Failed to fetch feedback stats" }, { status: 500 })
+    console.error("[v0] Error in feedback stats route:", error)
+    return NextResponse.json(
+      {
+        stats: { content: 0, functionality: 0, design: 0, totalFeedback: 0 },
+        guestbookMessages: [],
+      },
+      { status: 500 },
+    )
   }
 }

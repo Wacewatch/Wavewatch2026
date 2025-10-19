@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Crown, Info, Sparkles } from "lucide-react"
+import { Crown, Info, Sparkles, Clock } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 
@@ -18,25 +18,60 @@ export function VIPGamePromo() {
   const [result, setResult] = useState<string | null>(null)
   const [winners, setWinners] = useState<any[]>([])
   const [rotation, setRotation] = useState(0)
+  const [timeUntilNextPlay, setTimeUntilNextPlay] = useState<string>("")
 
   useEffect(() => {
     checkPlayStatus()
     fetchWinners()
   }, [user])
 
+  useEffect(() => {
+    if (!canPlay && user) {
+      const interval = setInterval(() => {
+        updateCountdown()
+      }, 1000)
+      return () => clearInterval(interval)
+    }
+  }, [canPlay, user])
+
+  const updateCountdown = () => {
+    const now = new Date()
+    const tomorrow = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1))
+    const diff = tomorrow.getTime() - now.getTime()
+
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+
+    setTimeUntilNextPlay(`${hours}h ${minutes}m ${seconds}s`)
+  }
+
   const checkPlayStatus = async () => {
     try {
       const response = await fetch("/api/vip-game/status")
+      if (!response.ok) {
+        console.error("[v0] VIP game status error:", response.status)
+        setCanPlay(false)
+        return
+      }
       const data = await response.json()
       setCanPlay(data.canPlay)
+      if (!data.canPlay) {
+        updateCountdown()
+      }
     } catch (error) {
       console.error("Error checking play status:", error)
+      setCanPlay(false)
     }
   }
 
   const fetchWinners = async () => {
     try {
       const response = await fetch("/api/vip-game/winners")
+      if (!response.ok) {
+        console.error("[v0] VIP game winners error:", response.status)
+        return
+      }
       const data = await response.json()
       setWinners(data.winners || [])
     } catch (error) {
@@ -236,12 +271,27 @@ export function VIPGamePromo() {
           </div>
         )}
 
+        {!canPlay && user && timeUntilNextPlay && (
+          <div className="flex items-center justify-center gap-2 text-yellow-400">
+            <Clock className="w-5 h-5" />
+            <span className="font-semibold">Prochaine tentative dans : {timeUntilNextPlay}</span>
+          </div>
+        )}
+
         <Button
           onClick={handlePlay}
           disabled={!canPlay || isPlaying || !user}
           className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-lg py-6"
         >
-          {!user ? "Connexion requise" : !canPlay ? "Revenez demain !" : isPlaying ? "En cours..." : "Jouer"}
+          {!user
+            ? "Connexion requise"
+            : !canPlay
+              ? timeUntilNextPlay
+                ? `Revenez dans ${timeUntilNextPlay}`
+                : "Revenez demain !"
+              : isPlaying
+                ? "En cours..."
+                : "Jouer"}
         </Button>
       </CardContent>
     </Card>
