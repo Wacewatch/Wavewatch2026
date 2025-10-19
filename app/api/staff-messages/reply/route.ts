@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/server"
 
 export async function POST(request: Request) {
   try {
-    const supabase = createClient()
+    const supabase = await createClient()
 
     const {
       data: { user },
@@ -30,6 +30,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Données manquantes" }, { status: 400 })
     }
 
+    console.log("[v0] Staff replying to message:", messageId, "for recipient:", recipientId)
+
     // Send reply as a user message
     const { error: messageError } = await supabase.from("user_messages").insert({
       sender_id: user.id,
@@ -38,7 +40,10 @@ export async function POST(request: Request) {
       content: replyContent,
     })
 
-    if (messageError) throw messageError
+    if (messageError) {
+      console.error("[v0] Error sending reply message:", messageError)
+      throw messageError
+    }
 
     // Update staff message status
     const { error: updateError } = await supabase
@@ -46,11 +51,16 @@ export async function POST(request: Request) {
       .update({ status: "replied", updated_at: new Date().toISOString() })
       .eq("id", messageId)
 
-    if (updateError) throw updateError
+    if (updateError) {
+      console.error("[v0] Error updating staff message status:", updateError)
+      throw updateError
+    }
+
+    console.log("[v0] Staff reply sent successfully")
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error sending reply:", error)
+    console.error("[v0] Error sending reply:", error)
     return NextResponse.json({ error: "Erreur lors de l'envoi de la réponse" }, { status: 500 })
   }
 }
