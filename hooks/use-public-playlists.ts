@@ -51,7 +51,7 @@ export function usePublicPlaylists() {
           theme_color,
           created_at,
           updated_at,
-          user_profiles!playlists_user_id_fkey(username, email)
+          user_profiles(username, email)
         `)
         .eq("is_public", true)
         .order("updated_at", { ascending: false })
