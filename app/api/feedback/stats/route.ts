@@ -16,6 +16,7 @@ export async function GET() {
       },
     })
 
+    // Get all feedback data
     const { data, error } = await supabase.from("user_feedback").select("*")
 
     if (error) {
@@ -33,6 +34,7 @@ export async function GET() {
       totalFeedback > 0 ? data.reduce((sum, f) => sum + (f.functionality_rating || 0), 0) / totalFeedback : 0
     const designAvg = totalFeedback > 0 ? data.reduce((sum, f) => sum + (f.design_rating || 0), 0) / totalFeedback : 0
 
+    // Get guestbook messages with user info
     const { data: feedbackMessages, error: feedbackError } = await supabase
       .from("user_feedback")
       .select("guestbook_message, created_at, user_id")
@@ -43,22 +45,60 @@ export async function GET() {
 
     if (feedbackError) {
       console.error("[v0] Error fetching guestbook messages:", feedbackError)
+      return NextResponse.json({
+        stats: {
+          content: contentAvg,
+          functionality: functionalityAvg,
+          design: designAvg,
+          totalFeedback,
+        },
+        guestbookMessages: [],
+      })
     }
 
-    const userIds = (feedbackMessages || []).map((f) => f.user_id).filter(Boolean)
-    const { data: profiles } = await supabase.from("user_profiles").select("user_id, username").in("user_id", userIds)
+    console.log("[v0] Found", feedbackMessages?.length || 0, "guestbook messages")
 
-    const usernameMap = new Map((profiles || []).map((p) => [p.user_id, p.username]))
+    // Get unique user IDs
+    const userIds = [...new Set((feedbackMessages || []).map((f) => f.user_id).filter(Boolean))]
+    
+    console.log("[v0] Loading profiles for", userIds.length, "users")
 
+    // ✅ CORRECTION: Utiliser 'id' au lieu de 'user_id'
+    const { data: profiles, error: profilesError } = await supabase
+      .from("user_profiles")
+      .select("id, username, email")
+      .in("id", userIds)
+
+    if (profilesError) {
+      console.error("[v0] Error loading user profiles:", profilesError)
+    }
+
+    console.log("[v0] Loaded", profiles?.length || 0, "user profiles")
+
+    // ✅ CORRECTION: Mapper sur profile.id au lieu de profile.user_id
+    const usernameMap = new Map(
+      (profiles || []).map((p) => {
+        const displayName = p.username || (p.email ? p.email.split("@")[0] : "Utilisateur")
+        console.log("[v0] Mapping user", p.id, "to", displayName)
+        return [p.id, displayName]
+      })
+    )
+
+    // Map messages with usernames
     const guestbookMessages = (feedbackMessages || [])
       .filter((f) => f.guestbook_message && f.guestbook_message.trim() !== "")
-      .map((f) => ({
-        message: f.guestbook_message,
-        username: usernameMap.get(f.user_id) || "Utilisateur",
-        created_at: f.created_at,
-      }))
+      .map((f) => {
+        const username = usernameMap.get(f.user_id) || "Utilisateur anonyme"
+        console.log("[v0] Message from user_id", f.user_id, "-> username:", username)
+        return {
+          message: f.guestbook_message,
+          username: username,
+          created_at: f.created_at,
+        }
+      })
 
-    console.log("[v0] Guestbook messages loaded:", guestbookMessages.length)
+    console.log("[v0] Guestbook messages processed:", guestbookMessages.length)
+    console.log("[v0] Sample messages:", guestbookMessages.slice(0, 2))
 
     return NextResponse.json({
       stats: {
