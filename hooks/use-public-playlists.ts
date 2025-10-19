@@ -56,6 +56,7 @@ export function usePublicPlaylists() {
       }
 
       if (!playlistsData || playlistsData.length === 0) {
+        console.log("[v0] No public playlists found")
         setPlaylists([])
         setLoading(false)
         return
@@ -64,14 +65,30 @@ export function usePublicPlaylists() {
       const playlistIds = playlistsData.map((p) => p.id)
       const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
 
-      // CORRECTION: Utiliser 'id' au lieu de 'user_id'
-      const { data: userProfilesData } = await supabase
+      console.log("[v0] Loading profiles for", userIds.length, "users")
+
+      // ✅ CORRECTION: Utiliser 'id' au lieu de 'user_id'
+      const { data: userProfilesData, error: profilesError } = await supabase
         .from("user_profiles")
         .select("id, username, email")
         .in("id", userIds)
 
-      // CORRECTION: Mapper sur profile.id au lieu de profile.user_id
-      const userProfilesMap = new Map((userProfilesData || []).map((profile) => [profile.id, profile]))
+      if (profilesError) {
+        console.error("[v0] Error loading user profiles:", profilesError)
+      }
+
+      console.log("[v0] Loaded", userProfilesData?.length || 0, "user profiles")
+
+      // ✅ CORRECTION: Mapper sur profile.id au lieu de profile.user_id
+      const userProfilesMap = new Map(
+        (userProfilesData || []).map((profile) => {
+          const displayName = profile.username || (profile.email ? profile.email.split("@")[0] : "Utilisateur")
+          console.log("[v0] Mapping user", profile.id, "to", displayName)
+          return [profile.id, { ...profile, displayName }]
+        })
+      )
+
+      console.log("[v0] Created username map with", userProfilesMap.size, "entries")
 
       const [itemsCountsResult, likesDataResult, userLikesResult, userFavoritesResult] = await Promise.all([
         supabase.from("playlist_items").select("playlist_id").in("playlist_id", playlistIds),
@@ -106,8 +123,11 @@ export function usePublicPlaylists() {
         const userLike = userLikes.find((like) => like.playlist_id === playlist.id)
         const isFavorited = userFavorites.some((fav) => fav.playlist_id === playlist.id)
 
+        // ✅ Récupération du username depuis le map
         const userProfile = userProfilesMap.get(playlist.user_id)
-        const username = userProfile?.username || (userProfile?.email ? userProfile.email.split("@")[0] : "Utilisateur")
+        const username = userProfile?.displayName || "Utilisateur inconnu"
+
+        console.log("[v0] Playlist", playlist.title, "- user_id:", playlist.user_id, "- username:", username)
 
         return {
           ...playlist,
@@ -122,7 +142,8 @@ export function usePublicPlaylists() {
       })
 
       console.log("[v0] Public playlists loaded successfully:", processedPlaylists.length)
-      console.log("[v0] Username mapping sample:", Array.from(userProfilesMap.entries()).slice(0, 3))
+      console.log("[v0] Sample usernames:", processedPlaylists.slice(0, 3).map(p => ({ title: p.title, username: p.username })))
+      
       setPlaylists(processedPlaylists)
     } catch (error) {
       console.error("Error loading public playlists:", error)
