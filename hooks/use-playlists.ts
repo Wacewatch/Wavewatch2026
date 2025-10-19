@@ -59,7 +59,8 @@ export function usePlaylists() {
         .from("playlists")
         .select(`
           *,
-          playlist_items(count)
+          playlist_items(count),
+          profiles!playlists_user_id_fkey(username)
         `)
         .eq("user_id", user.id)
         .order("updated_at", { ascending: false })
@@ -75,6 +76,7 @@ export function usePlaylists() {
         data?.map((playlist) => ({
           ...playlist,
           items_count: playlist.playlist_items?.[0]?.count || 0,
+          username: playlist.profiles?.username || "Utilisateur",
         })) || []
 
       setPlaylists(playlistsWithCounts)
@@ -108,7 +110,10 @@ export function usePlaylists() {
           is_public: isPublic,
           theme_color: themeColor,
         })
-        .select()
+        .select(`
+          *,
+          profiles!playlists_user_id_fkey(username)
+        `)
         .single()
 
       if (error) {
@@ -126,6 +131,7 @@ export function usePlaylists() {
       const newPlaylist = {
         ...data,
         items_count: 0,
+        username: data.profiles?.username || "Utilisateur",
       }
 
       setPlaylists((prev) => [newPlaylist, ...prev])
