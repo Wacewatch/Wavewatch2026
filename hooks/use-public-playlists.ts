@@ -105,7 +105,15 @@ export function usePublicPlaylists() {
         const isFavorited = userFavorites.some((fav) => fav.playlist_id === playlist.id)
 
         const userProfile = userProfilesMap.get(playlist.user_id)
-        const username = userProfile?.username || (userProfile?.email ? userProfile.email.split("@")[0] : "Utilisateur")
+        let username = "Utilisateur"
+
+        if (userProfile) {
+          if (userProfile.username && userProfile.username.trim()) {
+            username = userProfile.username
+          } else if (userProfile.email) {
+            username = userProfile.email.split("@")[0]
+          }
+        }
 
         return {
           ...playlist,

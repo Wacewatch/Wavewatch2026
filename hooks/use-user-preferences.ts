@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase"
 import { useAuth } from "@/components/auth-provider"
 
@@ -25,6 +25,7 @@ export function useUserPreferences() {
   })
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+  const isUpdatingRef = useRef(false)
 
   useEffect(() => {
     if (user?.id) {
@@ -51,7 +52,7 @@ export function useUserPreferences() {
     }
 
     const handleUpdatePreferences = (e: any) => {
-      if (e.detail) {
+      if (e.detail && !isUpdatingRef.current) {
         updatePreferences(e.detail)
       }
     }
@@ -63,7 +64,7 @@ export function useUserPreferences() {
       window.removeEventListener("get-user-preferences", handleGetPreferences)
       window.removeEventListener("update-user-preferences", handleUpdatePreferences)
     }
-  }, [preferences])
+  }, [])
 
   const loadPreferences = async () => {
     if (!user?.id) return
@@ -128,6 +129,13 @@ export function useUserPreferences() {
       console.error("[v0] No user ID available for updating preferences")
       return false
     }
+
+    if (isUpdatingRef.current) {
+      console.log("[v0] Update already in progress, skipping")
+      return false
+    }
+
+    isUpdatingRef.current = true
 
     const updatedPreferences = { ...preferences, ...newPreferences }
 
@@ -202,6 +210,8 @@ export function useUserPreferences() {
         localStorage.setItem("wavewatch_hide_spoilers", preferences.hideSpoilers.toString())
       }
       return false
+    } finally {
+      isUpdatingRef.current = false
     }
   }
 
