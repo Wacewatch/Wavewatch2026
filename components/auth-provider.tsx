@@ -53,6 +53,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth()
 
+    // 🔁 Rafraîchir le token toutes les 25 secondes
+    const refreshInterval = setInterval(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          await supabase.auth.refreshSession()
+        }
+      } catch (error) {
+        console.error("Erreur lors du rafraîchissement du token :", error)
+      }
+    }, 25000) // 25 secondes
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -73,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: { session },
         } = await supabase.auth.getSession()
         if (session?.user && user) {
-          // Session exists, ensure user profile is current
           const { data: profile } = await supabase
             .from("user_profiles")
             .select("*")
@@ -93,24 +104,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(userData)
           }
         } else if (!session && user) {
-          // Session lost, clear user
           setUser(null)
           updateAdultContentPreference(false)
         }
       } catch (error) {
         console.error("Session check error:", error)
       }
-    }, 60000) // Check every minute
+    }, 60000) // Vérification toutes les minutes
 
     return () => {
       subscription.unsubscribe()
       clearInterval(sessionCheckInterval)
+      clearInterval(refreshInterval) // 🧹 Nettoyage du rafraîchissement du token
     }
   }, [])
 
   const loadUserProfile = async (supabaseUser: SupabaseUser) => {
     try {
-      // Try to get profile from database
       const { data: profile, error } = await supabase
         .from("user_profiles")
         .select("*")
@@ -120,7 +130,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let userData: User
 
       if (profile && !error) {
-        // Use database profile
         userData = {
           id: supabaseUser.id,
           username: profile.username || supabaseUser.email?.split("@")[0] || "User",
@@ -131,7 +140,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           showAdultContent: Boolean(profile.show_adult_content),
         }
       } else {
-        // Create fallback user without database operations
         const username = supabaseUser.user_metadata?.username || supabaseUser.email?.split("@")[0] || "User"
         const isAdmin = username.toLowerCase() === "wwadmin"
 
@@ -144,7 +152,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           showAdultContent: false,
         }
 
-        // Try to create profile in background (non-blocking)
         supabase
           .from("user_profiles")
           .upsert({
@@ -166,7 +173,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       updateAdultContentPreference(userData.showAdultContent || false)
     } catch (error) {
       console.error("Error loading user profile:", error)
-      // Create minimal fallback user
       const username = supabaseUser.email?.split("@")[0] || "User"
       setUser({
         id: supabaseUser.id,
@@ -246,9 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       })
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
 
       if (data.user) {
         toast({
