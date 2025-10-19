@@ -229,7 +229,7 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
       {/* Hero Section */}
       <div className="relative h-[50vh] md:h-[60vh] lg:h-[70vh] overflow-hidden">
         <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          className={`absolute inset-0 bg-cover bg-center bg-no-repeat ${preferences.hideSpoilers ? "blur-xl" : ""}`}
           style={{ backgroundImage: `url(${backdropUrl})` }}
         >
           <div className="absolute inset-0 bg-black/60" />
@@ -253,7 +253,9 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8 mobile-grid">
           {/* Still Image */}
           <div className="lg:col-span-1">
-            <div className="relative aspect-[2/3] w-full max-w-[200px] mx-auto lg:max-w-none rounded-lg overflow-hidden">
+            <div
+              className={`relative aspect-[2/3] w-full max-w-[200px] mx-auto lg:max-w-none rounded-lg overflow-hidden ${preferences.hideSpoilers ? "blur-md" : ""}`}
+            >
               <Image
                 src={
                   stillPath ? `https://image.tmdb.org/t/p/w500${stillPath}` : "/placeholder.svg?height=750&width=500"
@@ -262,6 +264,12 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
                 fill
                 className="object-cover"
               />
+              {/* Spoiler overlay when anti-spoiler mode is enabled */}
+              {preferences.hideSpoilers && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                  <p className="text-white text-center px-4">Mode anti-spoiler activé</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -338,9 +346,11 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
               </div>
 
               {/* Synopsis */}
-              <p className="text-base md:text-xl text-gray-200 leading-relaxed text-center md:text-left">
-                {episodeOverview}
-              </p>
+              <div className={preferences.hideSpoilers ? "blur-md select-none" : ""}>
+                <p className="text-base md:text-xl text-gray-200 leading-relaxed text-center md:text-left">
+                  {episodeOverview}
+                </p>
+              </div>
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 mobile-slider">

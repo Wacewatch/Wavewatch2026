@@ -223,7 +223,15 @@ export function PlaylistContent({ playlist }: PlaylistContentProps) {
                 </div>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  <span>{new Date(playlist.created_at).toLocaleDateString()}</span>
+                  <span>
+                    {playlist.created_at
+                      ? new Date(playlist.created_at).toLocaleDateString("fr-FR", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })
+                      : "Date inconnue"}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1">
                   <Music className="h-4 w-4" />
@@ -334,16 +342,24 @@ export function PlaylistContent({ playlist }: PlaylistContentProps) {
                               {index + 1}
                             </Badge>
                           </div>
-                          <div className="absolute bottom-2 right-2">
-                            <Badge variant="secondary" className="bg-gray-800 text-white text-xs">
-                              {item.media_type === "movie" ? "Film" : "Série"}
-                            </Badge>
-                          </div>
                         </div>
-                        <div>
+                        <div className="space-y-1">
                           <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white">
                             {item.title}
                           </p>
+                          <Badge variant="secondary" className="bg-gray-800 text-white text-xs">
+                            {item.media_type === "movie" ? "Film" : "Série"}
+                          </Badge>
+                          {item.added_at && (
+                            <p className="text-xs text-gray-500">
+                              Ajouté le{" "}
+                              {new Date(item.added_at).toLocaleDateString("fr-FR", {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                              })}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </Link>

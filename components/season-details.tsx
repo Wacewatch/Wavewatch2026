@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Play, Calendar, Clock, Star, ArrowLeft } from "lucide-react"
+import { useUserPreferences } from "@/hooks/use-user-preferences"
 
 interface Episode {
   id: number
@@ -39,6 +40,7 @@ interface SeasonDetailsProps {
 
 export function SeasonDetails({ season, showId, showData, isAnime = false }: SeasonDetailsProps) {
   const [selectedEpisode, setSelectedEpisode] = useState<Episode | null>(null)
+  const { preferences } = useUserPreferences()
 
   const basePath = isAnime ? `/anime/${showId}` : `/tv-shows/${showId}`
   const episodePath = (episodeNumber: number) => `${basePath}/season/${season.season_number}/episode/${episodeNumber}`
@@ -68,7 +70,9 @@ export function SeasonDetails({ season, showId, showData, isAnime = false }: Sea
         <div className="md:col-span-1">
           <Card>
             <CardContent className="p-6">
-              <div className="relative aspect-[2/3] mb-4 w-1/2 md:w-full mx-auto">
+              <div
+                className={`relative aspect-[2/3] mb-4 w-1/2 md:w-full mx-auto ${preferences.hideSpoilers ? "blur-md" : ""}`}
+              >
                 <Image
                   src={
                     season.poster_path
@@ -80,6 +84,11 @@ export function SeasonDetails({ season, showId, showData, isAnime = false }: Sea
                   className="object-cover rounded-lg"
                   sizes="(max-width: 768px) 100vw, 300px"
                 />
+                {preferences.hideSpoilers && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-lg">
+                    <p className="text-white text-center px-4 text-sm">Mode anti-spoiler activé</p>
+                  </div>
+                )}
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
@@ -106,7 +115,9 @@ export function SeasonDetails({ season, showId, showData, isAnime = false }: Sea
               <CardTitle className="text-center md:text-left">Synopsis</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground leading-relaxed text-center md:text-left">
+              <p
+                className={`text-muted-foreground leading-relaxed text-center md:text-left ${preferences.hideSpoilers ? "blur-md select-none" : ""}`}
+              >
                 {season.overview || "Aucun synopsis disponible pour cette saison."}
               </p>
             </CardContent>
@@ -125,7 +136,7 @@ export function SeasonDetails({ season, showId, showData, isAnime = false }: Sea
               {season.episodes.map((episode) => (
                 <Link key={episode.id} href={episodePath(episode.episode_number)} className="block group">
                   <div className="flex gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors">
-                    <div className="relative w-24 h-16 flex-shrink-0">
+                    <div className={`relative w-24 h-16 flex-shrink-0 ${preferences.hideSpoilers ? "blur-md" : ""}`}>
                       <Image
                         src={
                           episode.still_path
@@ -147,7 +158,9 @@ export function SeasonDetails({ season, showId, showData, isAnime = false }: Sea
                           <h3 className="font-semibold group-hover:text-blue-600 transition-colors">
                             {episode.episode_number}. {episode.name}
                           </h3>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
+                          <p
+                            className={`text-sm text-muted-foreground line-clamp-2 mt-1 ${preferences.hideSpoilers ? "blur-sm select-none" : ""}`}
+                          >
                             {episode.overview || "Aucun résumé disponible."}
                           </p>
                         </div>
