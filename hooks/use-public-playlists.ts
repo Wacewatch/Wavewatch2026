@@ -64,12 +64,14 @@ export function usePublicPlaylists() {
       const playlistIds = playlistsData.map((p) => p.id)
       const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
 
+      // CORRECTION: Utiliser 'id' au lieu de 'user_id'
       const { data: userProfilesData } = await supabase
         .from("user_profiles")
-        .select("user_id, username, email")
-        .in("user_id", userIds)
+        .select("id, username, email")
+        .in("id", userIds)
 
-      const userProfilesMap = new Map((userProfilesData || []).map((profile) => [profile.user_id, profile]))
+      // CORRECTION: Mapper sur profile.id au lieu de profile.user_id
+      const userProfilesMap = new Map((userProfilesData || []).map((profile) => [profile.id, profile]))
 
       const [itemsCountsResult, likesDataResult, userLikesResult, userFavoritesResult] = await Promise.all([
         supabase.from("playlist_items").select("playlist_id").in("playlist_id", playlistIds),
@@ -120,6 +122,7 @@ export function usePublicPlaylists() {
       })
 
       console.log("[v0] Public playlists loaded successfully:", processedPlaylists.length)
+      console.log("[v0] Username mapping sample:", Array.from(userProfilesMap.entries()).slice(0, 3))
       setPlaylists(processedPlaylists)
     } catch (error) {
       console.error("Error loading public playlists:", error)
@@ -249,13 +252,12 @@ export function usePublicPlaylists() {
         type: "playlist" as const,
         posterPath: "/placeholder.svg?key=ywpkd",
         addedAt: new Date(),
-        tmdbId: 0, // Not applicable for playlists
+        tmdbId: 0,
       }
 
       if (currentPlaylist.is_favorited) {
         await supabase.from("playlist_favorites").delete().eq("playlist_id", playlistId).eq("user_id", user.id)
 
-        const { WatchTracker } = await import("@/lib/watch-tracking")
         WatchTracker.removeFromFavorites(playlistId, "playlist")
 
         setPlaylists((prev) =>
@@ -272,7 +274,6 @@ export function usePublicPlaylists() {
           user_id: user.id,
         })
 
-        const { WatchTracker } = await import("@/lib/watch-tracking")
         WatchTracker.addToFavorites(playlistData)
 
         setPlaylists((prev) =>
