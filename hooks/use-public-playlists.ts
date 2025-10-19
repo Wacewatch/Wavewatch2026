@@ -43,16 +43,7 @@ export function usePublicPlaylists() {
 
       const { data: playlistsData, error: playlistsError } = await supabase
         .from("playlists")
-        .select(`
-          id,
-          user_id,
-          title,
-          description,
-          theme_color,
-          created_at,
-          updated_at,
-          user_profiles(username, email)
-        `)
+        .select("id, user_id, title, description, theme_color, created_at, updated_at")
         .eq("is_public", true)
         .order("updated_at", { ascending: false })
         .limit(50)
@@ -71,6 +62,14 @@ export function usePublicPlaylists() {
       }
 
       const playlistIds = playlistsData.map((p) => p.id)
+      const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
+
+      const { data: userProfilesData } = await supabase
+        .from("user_profiles")
+        .select("user_id, username, email")
+        .in("user_id", userIds)
+
+      const userProfilesMap = new Map((userProfilesData || []).map((profile) => [profile.user_id, profile]))
 
       const [itemsCountsResult, likesDataResult, userLikesResult, userFavoritesResult] = await Promise.all([
         supabase.from("playlist_items").select("playlist_id").in("playlist_id", playlistIds),
@@ -105,7 +104,7 @@ export function usePublicPlaylists() {
         const userLike = userLikes.find((like) => like.playlist_id === playlist.id)
         const isFavorited = userFavorites.some((fav) => fav.playlist_id === playlist.id)
 
-        const userProfile = playlist.user_profiles as any
+        const userProfile = userProfilesMap.get(playlist.user_id)
         const username = userProfile?.username || (userProfile?.email ? userProfile.email.split("@")[0] : "Utilisateur")
 
         return {
@@ -254,10 +253,9 @@ export function usePublicPlaylists() {
       }
 
       if (currentPlaylist.is_favorited) {
-        // Remove from database favorites
         await supabase.from("playlist_favorites").delete().eq("playlist_id", playlistId).eq("user_id", user.id)
 
-        // Remove from WatchTracker favorites
+        const { WatchTracker } = await import("@/lib/watch-tracking")
         WatchTracker.removeFromFavorites(playlistId, "playlist")
 
         setPlaylists((prev) =>
@@ -269,13 +267,12 @@ export function usePublicPlaylists() {
           description: "La playlist a été retirée de vos favoris",
         })
       } else {
-        // Add to database favorites
         await supabase.from("playlist_favorites").insert({
           playlist_id: playlistId,
           user_id: user.id,
         })
 
-        // Add to WatchTracker favorites
+        const { WatchTracker } = await import("@/lib/watch-tracking")
         WatchTracker.addToFavorites(playlistData)
 
         setPlaylists((prev) =>
