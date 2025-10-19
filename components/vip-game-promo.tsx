@@ -5,36 +5,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Crown, Info, Sparkles, Clock, History } from "lucide-react"
+import { Crown, Info, Sparkles, Clock } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 
 export function VIPGamePromo() {
   const { user } = useAuth()
   const { toast } = useToast()
-  const [attemptsLeft, setAttemptsLeft] = useState(0)
+  const [canPlay, setCanPlay] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isSpinning, setIsSpinning] = useState(false)
   const [result, setResult] = useState<string | null>(null)
   const [winners, setWinners] = useState<any[]>([])
-  const [userHistory, setUserHistory] = useState<any[]>([])
   const [rotation, setRotation] = useState(0)
   const [timeUntilNextPlay, setTimeUntilNextPlay] = useState<string>("")
 
   useEffect(() => {
     checkPlayStatus()
     fetchWinners()
-    fetchUserHistory()
   }, [user])
 
   useEffect(() => {
-    if (attemptsLeft === 0 && user) {
+    if (!canPlay && user) {
       const interval = setInterval(() => {
         updateCountdown()
       }, 1000)
       return () => clearInterval(interval)
     }
-  }, [attemptsLeft, user])
+  }, [canPlay, user])
 
   const updateCountdown = () => {
     const now = new Date()
@@ -53,17 +51,17 @@ export function VIPGamePromo() {
       const response = await fetch("/api/vip-game/status")
       if (!response.ok) {
         console.error("[v0] VIP game status error:", response.status)
-        setAttemptsLeft(0)
+        setCanPlay(false)
         return
       }
       const data = await response.json()
-      setAttemptsLeft(data.attemptsLeft || 0)
-      if (data.attemptsLeft === 0) {
+      setCanPlay(data.canPlay)
+      if (!data.canPlay) {
         updateCountdown()
       }
     } catch (error) {
       console.error("Error checking play status:", error)
-      setAttemptsLeft(0)
+      setCanPlay(false)
     }
   }
 
@@ -81,18 +79,6 @@ export function VIPGamePromo() {
     }
   }
 
-  const fetchUserHistory = async () => {
-    if (!user) return
-    try {
-      const response = await fetch("/api/vip-game/history")
-      if (!response.ok) return
-      const data = await response.json()
-      setUserHistory(data.history || [])
-    } catch (error) {
-      console.error("Error fetching user history:", error)
-    }
-  }
-
   const handlePlay = async () => {
     if (!user) {
       toast({
@@ -107,7 +93,8 @@ export function VIPGamePromo() {
     setIsSpinning(true)
     setResult(null)
 
-    const spins = 5 + Math.random() * 3
+    // Animate wheel spinning
+    const spins = 5 + Math.random() * 3 // 5-8 full rotations
     const finalRotation = rotation + spins * 360
     setRotation(finalRotation)
 
@@ -122,10 +109,11 @@ export function VIPGamePromo() {
         throw new Error(data.error || "Erreur lors du jeu")
       }
 
+      // Wait for animation to complete
       setTimeout(() => {
         setIsSpinning(false)
         setResult(data.prize)
-        setAttemptsLeft((prev) => Math.max(0, prev - 1))
+        setCanPlay(false)
 
         if (data.prize !== "none") {
           const prizeText =
@@ -136,16 +124,16 @@ export function VIPGamePromo() {
             description: `Vous avez gagné ${prizeText} !`,
           })
 
+          // Trigger VIP update event
           window.dispatchEvent(new Event("vip-updated"))
         } else {
           toast({
             title: "Dommage !",
-            description: attemptsLeft > 1 ? "Vous avez encore une tentative !" : "Réessayez demain !",
+            description: "Réessayez demain pour tenter votre chance !",
           })
         }
 
         fetchWinners()
-        fetchUserHistory()
       }, 3000)
     } catch (error: any) {
       setIsSpinning(false)
@@ -186,7 +174,7 @@ export function VIPGamePromo() {
                 <Info className="w-5 h-5" />
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl">
               <DialogHeader>
                 <DialogTitle className="text-white">Informations sur le jeu</DialogTitle>
               </DialogHeader>
@@ -218,47 +206,11 @@ export function VIPGamePromo() {
                 <div>
                   <h3 className="font-semibold mb-2 text-purple-400">Règles</h3>
                   <ul className="list-disc list-inside space-y-1 text-gray-300">
-                    <li>Vous pouvez jouer 2 fois par jour</li>
+                    <li>Vous pouvez jouer une fois par jour</li>
                     <li>Les gains sont activés automatiquement</li>
                     <li>Les gains se désactivent automatiquement à expiration</li>
                   </ul>
                 </div>
-
-                {user && userHistory.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-2 text-purple-400 flex items-center gap-2">
-                      <History className="w-4 h-4" />
-                      Mon historique
-                    </h3>
-                    <div className="max-h-48 overflow-y-auto space-y-1">
-                      {userHistory.map((play, index) => (
-                        <div key={index} className="flex justify-between items-center p-2 bg-gray-800 rounded text-sm">
-                          <span className="text-gray-400">
-                            {new Date(play.played_at).toLocaleDateString("fr-FR", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                            })}
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className={
-                              play.prize === "none"
-                                ? "bg-gray-600"
-                                : play.prize === "vip_1_month"
-                                  ? "bg-purple-600"
-                                  : play.prize === "vip_1_week"
-                                    ? "bg-blue-600"
-                                    : "bg-green-600"
-                            }
-                          >
-                            {getPrizeLabel(play.prize)}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {winners.length > 0 && (
                   <div>
@@ -285,6 +237,7 @@ export function VIPGamePromo() {
           Pour aucune raison, juste pour faire plaisir, tentez de gagner un VIP pour 1 mois, 1 semaine ou 1 jour !
         </p>
 
+        {/* Spinning Wheel */}
         <div className="relative w-64 h-64 mx-auto">
           <div
             className={`w-full h-full rounded-full border-8 border-yellow-400 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-600 flex items-center justify-center transition-transform duration-3000 ease-out ${
@@ -318,31 +271,27 @@ export function VIPGamePromo() {
           </div>
         )}
 
-        {user && attemptsLeft > 0 && (
-          <div className="text-center">
-            <Badge variant="secondary" className="bg-blue-600 text-white">
-              {attemptsLeft} tentative{attemptsLeft > 1 ? "s" : ""} restante{attemptsLeft > 1 ? "s" : ""}
-            </Badge>
+        {!canPlay && user && timeUntilNextPlay && (
+          <div className="flex items-center justify-center gap-2 text-yellow-400">
+            <Clock className="w-5 h-5" />
+            <span className="font-semibold">Prochaine tentative dans : {timeUntilNextPlay}</span>
           </div>
         )}
 
         <Button
           onClick={handlePlay}
-          disabled={attemptsLeft === 0 || isPlaying || !user}
+          disabled={!canPlay || isPlaying || !user}
           className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-lg py-6"
         >
-          {!user ? (
-            "Connexion requise"
-          ) : attemptsLeft === 0 ? (
-            <div className="flex items-center justify-center gap-2">
-              <Clock className="w-5 h-5" />
-              <span>{timeUntilNextPlay}</span>
-            </div>
-          ) : isPlaying ? (
-            "En cours..."
-          ) : (
-            `Jouer (${attemptsLeft}/2)`
-          )}
+          {!user
+            ? "Connexion requise"
+            : !canPlay
+              ? timeUntilNextPlay
+                ? `Revenez dans ${timeUntilNextPlay}`
+                : "Revenez demain !"
+              : isPlaying
+                ? "En cours..."
+                : "Jouer"}
         </Button>
       </CardContent>
     </Card>
