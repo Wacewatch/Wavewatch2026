@@ -35,12 +35,15 @@ export function VIPGamePromo() {
 
   const checkPlayStatus = async () => {
     try {
+      console.log("[v0] VIP Game Client: Checking play status...")
       const response = await fetch("/api/vip-game/status")
       if (!response.ok) {
+        console.log("[v0] VIP Game Client: Status check failed:", response.status)
         setCanPlay(false)
         return
       }
       const data = await response.json()
+      console.log("[v0] VIP Game Client: Status data:", data)
 
       // Si jamais joué, activer immédiatement
       if (!data.playedAt) {
@@ -53,7 +56,7 @@ export function VIPGamePromo() {
         if (!data.canPlay) updateCountdown(data.playedAt)
       }
     } catch (error) {
-      console.error("Error checking play status:", error)
+      console.error("[v0] VIP Game Client: Error checking play status:", error)
       setCanPlay(false)
     }
   }
@@ -83,7 +86,7 @@ export function VIPGamePromo() {
       const data = await response.json()
       setWinners(data.winners || [])
     } catch (error) {
-      console.error("Error fetching winners:", error)
+      console.error("[v0] VIP Game Client: Error fetching winners:", error)
     }
   }
 
@@ -93,6 +96,7 @@ export function VIPGamePromo() {
       return
     }
 
+    console.log("[v0] VIP Game Client: Starting play...")
     setIsPlaying(true)
     setIsSpinning(true)
     setResult(null)
@@ -102,9 +106,16 @@ export function VIPGamePromo() {
     setRotation(finalRotation)
 
     try {
+      console.log("[v0] VIP Game Client: Sending play request...")
       const response = await fetch("/api/vip-game/play", { method: "POST" })
       const data = await response.json()
-      if (!response.ok) throw new Error(data.message || "Erreur lors du jeu")
+
+      console.log("[v0] VIP Game Client: Response status:", response.status)
+      console.log("[v0] VIP Game Client: Response data:", data)
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erreur lors du jeu")
+      }
 
       setTimeout(() => {
         setIsSpinning(false)
@@ -114,8 +125,7 @@ export function VIPGamePromo() {
 
         if (data.prize && data.prize !== "none") {
           const prizeText =
-            data.prize === "vip_1_month" ? "VIP 1 mois" :
-            data.prize === "vip_1_week" ? "VIP 1 semaine" : "VIP 1 jour"
+            data.prize === "vip_1_month" ? "VIP 1 mois" : data.prize === "vip_1_week" ? "VIP 1 semaine" : "VIP 1 jour"
 
           toast({ title: "🎉 Félicitations !", description: `Vous avez gagné ${prizeText} !` })
           window.dispatchEvent(new Event("vip-updated"))
@@ -126,8 +136,13 @@ export function VIPGamePromo() {
         fetchWinners()
       }, 3000)
     } catch (error: any) {
+      console.error("[v0] VIP Game Client: Error during play:", error)
       setIsSpinning(false)
-      toast({ title: "Erreur", description: error.message, variant: "destructive" })
+      toast({
+        title: "Erreur",
+        description: error.message || "Une erreur est survenue lors du jeu",
+        variant: "destructive",
+      })
     } finally {
       setIsPlaying(false)
     }
@@ -135,10 +150,14 @@ export function VIPGamePromo() {
 
   const getPrizeLabel = (prize: string) => {
     switch (prize) {
-      case "vip_1_month": return "VIP 1 mois"
-      case "vip_1_week": return "VIP 1 semaine"
-      case "vip_1_day": return "VIP 1 jour"
-      default: return "Aucun gain"
+      case "vip_1_month":
+        return "VIP 1 mois"
+      case "vip_1_week":
+        return "VIP 1 semaine"
+      case "vip_1_day":
+        return "VIP 1 jour"
+      default:
+        return "Aucun gain"
     }
   }
 
@@ -192,10 +211,10 @@ export function VIPGamePromo() {
                 result === "none"
                   ? "bg-gray-600"
                   : result === "vip_1_month"
-                  ? "bg-purple-600"
-                  : result === "vip_1_week"
-                  ? "bg-blue-600"
-                  : "bg-green-600"
+                    ? "bg-purple-600"
+                    : result === "vip_1_week"
+                      ? "bg-blue-600"
+                      : "bg-green-600"
               }`}
             >
               {getPrizeLabel(result)}

@@ -45,6 +45,7 @@ export default function ContactStaffPage() {
     setSending(true)
 
     try {
+      console.log("[v0] Contact Staff: Sending message...")
       const response = await fetch("/api/staff-messages", {
         method: "POST",
         headers: {
@@ -53,8 +54,12 @@ export default function ContactStaffPage() {
         body: JSON.stringify({ title, message }),
       })
 
+      console.log("[v0] Contact Staff: Response status:", response.status)
+      const data = await response.json()
+      console.log("[v0] Contact Staff: Response data:", data)
+
       if (!response.ok) {
-        throw new Error("Erreur lors de l'envoi")
+        throw new Error(data.error || "Erreur lors de l'envoi")
       }
 
       toast({
@@ -65,10 +70,11 @@ export default function ContactStaffPage() {
       setTitle("")
       setMessage("")
       router.push("/dashboard")
-    } catch (error) {
+    } catch (error: any) {
+      console.error("[v0] Contact Staff: Error:", error)
       toast({
         title: "Erreur",
-        description: "Impossible d'envoyer le message",
+        description: error.message || "Impossible d'envoyer le message",
         variant: "destructive",
       })
     } finally {

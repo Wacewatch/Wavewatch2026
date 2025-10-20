@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server"
 
 export async function GET() {
   try {
+    console.log("[v0] Staff Messages: GET request started")
     const supabase = await createClient()
 
     const {
@@ -10,22 +11,40 @@ export async function GET() {
     } = await supabase.auth.getUser()
 
     if (!user) {
+      console.log("[v0] Staff Messages: User not authenticated")
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
     }
 
+    console.log("[v0] Staff Messages: Fetching messages for user:", user.id)
+
     // ✅ CORRECTION: Utiliser 'id' au lieu de 'user_id'
-    const { data: profile } = await supabase.from("user_profiles").select("is_admin").eq("id", user.id).single()
+    const { data: profile, error: profileError } = await supabase
+      .from("user_profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single()
+
+    if (profileError) {
+      console.error("[v0] Staff Messages: Error fetching profile:", profileError)
+      return NextResponse.json({ error: `Erreur de profil: ${profileError.message}` }, { status: 500 })
+    }
 
     if (profile?.is_admin) {
+      console.log("[v0] Staff Messages: User is admin, fetching all messages")
       // Admin: get all messages
       const { data: messages, error } = await supabase
         .from("staff_messages")
         .select("*")
         .order("created_at", { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error("[v0] Staff Messages: Error fetching admin messages:", error)
+        throw error
+      }
+      console.log("[v0] Staff Messages: Fetched", messages?.length || 0, "messages for admin")
       return NextResponse.json({ messages: messages || [] })
     } else {
+      console.log("[v0] Staff Messages: User is regular user, fetching their messages")
       // Regular user: get only their messages
       const { data: messages, error } = await supabase
         .from("staff_messages")
@@ -33,17 +52,22 @@ export async function GET() {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error("[v0] Staff Messages: Error fetching user messages:", error)
+        throw error
+      }
+      console.log("[v0] Staff Messages: Fetched", messages?.length || 0, "messages for user")
       return NextResponse.json({ messages: messages || [] })
     }
-  } catch (error) {
-    console.error("[v0] Error fetching staff messages:", error)
-    return NextResponse.json({ error: "Erreur lors de la récupération des messages" }, { status: 500 })
+  } catch (error: any) {
+    console.error("[v0] Staff Messages: Error in GET:", error)
+    return NextResponse.json({ error: `Erreur: ${error.message || "Erreur inconnue"}` }, { status: 500 })
   }
 }
 
 export async function POST(request: Request) {
   try {
+    console.log("[v0] Staff Messages: POST request started")
     const supabase = await createClient()
 
     const {
@@ -51,24 +75,35 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser()
 
     if (!user) {
+      console.log("[v0] Staff Messages: User not authenticated")
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
     }
 
+    console.log("[v0] Staff Messages: User authenticated:", user.id)
+
     const { title, message } = await request.json()
+    console.log("[v0] Staff Messages: Received title:", title, "message length:", message?.length)
 
     if (!title || !message) {
+      console.log("[v0] Staff Messages: Missing title or message")
       return NextResponse.json({ error: "Titre et message requis" }, { status: 400 })
     }
 
-    const { data: profile } = await supabase
+    console.log("[v0] Staff Messages: Fetching user profile...")
+    const { data: profile, error: profileError } = await supabase
       .from("user_profiles")
       .select("username, email")
       .eq("id", user.id)
       .maybeSingle()
 
+    if (profileError) {
+      console.error("[v0] Staff Messages: Error fetching profile:", profileError)
+      return NextResponse.json({ error: `Erreur de profil: ${profileError.message}` }, { status: 500 })
+    }
+
     const username = profile?.username || (profile?.email ? profile.email.split("@")[0] : "Utilisateur")
 
-    console.log("[v0] Creating staff message for user:", user.id, "username:", username)
+    console.log("[v0] Staff Messages: Creating message for user:", user.id, "username:", username)
 
     const { data, error } = await supabase
       .from("staff_messages")
@@ -82,15 +117,15 @@ export async function POST(request: Request) {
       .single()
 
     if (error) {
-      console.error("[v0] Error creating staff message:", error)
-      throw error
+      console.error("[v0] Staff Messages: Error creating message:", error)
+      return NextResponse.json({ error: `Erreur de création: ${error.message}` }, { status: 500 })
     }
 
-    console.log("[v0] Staff message created successfully")
+    console.log("[v0] Staff Messages: Message created successfully with id:", data.id)
     return NextResponse.json({ message: data })
-  } catch (error) {
-    console.error("[v0] Error in staff message POST:", error)
-    return NextResponse.json({ error: "Erreur lors de l'envoi du message" }, { status: 500 })
+  } catch (error: any) {
+    console.error("[v0] Staff Messages: Error in POST:", error)
+    return NextResponse.json({ error: `Erreur: ${error.message || "Erreur inconnue"}` }, { status: 500 })
   }
 }
 
