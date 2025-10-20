@@ -1,8 +1,9 @@
+// app/api/vip-game/play/route.ts
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { VIPSystem } from "@/lib/vip-system"
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const supabase = await createClient()
 
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
 
     console.log("[v0] VIP Game: User attempting to play:", user.id)
 
-    // Check if user already played today
+    // Vérifie si l’utilisateur a déjà joué aujourd’hui
     const now = new Date()
     const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
     const tomorrowUTC = new Date(todayUTC)
@@ -35,32 +36,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Vous avez déjà joué aujourd'hui" }, { status: 400 })
     }
 
-    // Determine prize based on probabilities
+    // Détermine le prix selon les probabilités
     const random = Math.random() * 100
     let prize = "none"
     let vipDuration = 0
 
-    console.log("[v0] VIP Game: Random roll:", random)
-
     if (random < 2.5) {
       prize = "vip_1_month"
-      vipDuration = 30 * 24 * 60 * 60 * 1000 // 30 days in ms
+      vipDuration = 30 * 24 * 60 * 60 * 1000
     } else if (random < 9.5) {
-      // 2.5 + 7
       prize = "vip_1_week"
-      vipDuration = 7 * 24 * 60 * 60 * 1000 // 7 days in ms
+      vipDuration = 7 * 24 * 60 * 60 * 1000
     } else if (random < 29.5) {
-      // 9.5 + 20
       prize = "vip_1_day"
-      vipDuration = 24 * 60 * 60 * 1000 // 1 day in ms
+      vipDuration = 24 * 60 * 60 * 1000
     }
 
     console.log("[v0] VIP Game: Prize determined:", prize)
 
-    // Record the play
+    // Enregistre la partie
+    const playedAtDate = new Date().toISOString()
     const { error: playError } = await supabase.from("vip_game_plays").insert({
       user_id: user.id,
       prize,
+      played_at: playedAtDate,
     })
 
     if (playError) {
@@ -70,9 +69,8 @@ export async function POST(request: Request) {
 
     console.log("[v0] VIP Game: Play recorded successfully")
 
-    // If won, activate VIP and record winner
+    // Si gagné, active le VIP et enregistre le gagnant
     if (prize !== "none") {
-      // Get user profile for username
       const { data: profile } = await supabase
         .from("user_profiles")
         .select("username, email")
@@ -83,10 +81,8 @@ export async function POST(request: Request) {
 
       console.log("[v0] VIP Game: User won! Activating VIP for:", username)
 
-      // Activate VIP
       VIPSystem.activateVIP(user.id, "vip", vipDuration)
 
-      // Record winner
       const { error: winnerError } = await supabase.from("vip_game_winners").insert({
         user_id: user.id,
         username: username,
@@ -102,7 +98,8 @@ export async function POST(request: Request) {
       console.log("[v0] VIP Game: No prize won this time")
     }
 
-    return NextResponse.json({ prize })
+    // Renvoie prize ET playedAt pour le front
+    return NextResponse.json({ prize, playedAt: playedAtDate })
   } catch (error) {
     console.error("[v0] VIP Game: Error during play:", error)
     return NextResponse.json({ error: "Erreur lors du jeu" }, { status: 500 })
