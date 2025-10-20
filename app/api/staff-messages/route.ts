@@ -14,11 +14,7 @@ export async function GET() {
     }
 
     // ✅ CORRECTION: Utiliser 'id' au lieu de 'user_id'
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single()
+    const { data: profile } = await supabase.from("user_profiles").select("is_admin").eq("id", user.id).single()
 
     if (profile?.is_admin) {
       // Admin: get all messages
@@ -64,12 +60,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Titre et message requis" }, { status: 400 })
     }
 
-    // ✅ CORRECTION: Utiliser 'id' au lieu de 'user_id'
     const { data: profile } = await supabase
       .from("user_profiles")
       .select("username, email")
       .eq("id", user.id)
-      .single()
+      .maybeSingle()
 
     const username = profile?.username || (profile?.email ? profile.email.split("@")[0] : "Utilisateur")
 
@@ -112,11 +107,7 @@ export async function DELETE(request: Request) {
     }
 
     // Check if user is admin
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("is_admin")
-      .eq("id", user.id)
-      .single()
+    const { data: profile } = await supabase.from("user_profiles").select("is_admin").eq("id", user.id).single()
 
     if (!profile?.is_admin) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 403 })
@@ -138,4 +129,4 @@ export async function DELETE(request: Request) {
     console.error("Error deleting staff message:", error)
     return NextResponse.json({ error: "Erreur lors de la suppression" }, { status: 500 })
   }
-} 
+}

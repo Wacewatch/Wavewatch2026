@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
       if (withWatchProviders) {
         params.append("with_watch_providers", withWatchProviders)
         params.append("watch_region", watchRegion)
+        // Add monetization types to ensure results are returned
+        params.append("with_watch_monetization_types", "flatrate|free|ads|rent|buy")
       }
 
       const response = await fetch(`${TMDB_BASE_URL}/discover/movie?${params.toString()}`)

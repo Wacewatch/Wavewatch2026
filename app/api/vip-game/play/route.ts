@@ -81,7 +81,7 @@ export async function POST() {
 
       console.log("[v0] VIP Game: User won! Activating VIP for:", username)
 
-      VIPSystem.activateVIP(user.id, "vip", vipDuration)
+      VIPSystem.upgradeUser(user.id, username, "vip")
 
       const { error: winnerError } = await supabase.from("vip_game_winners").insert({
         user_id: user.id,
