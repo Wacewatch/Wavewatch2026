@@ -1,4 +1,3 @@
-// app/api/vip-game/status/route.ts
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
@@ -10,40 +9,36 @@ export async function GET() {
     } = await supabase.auth.getUser()
 
     if (!user) {
-      return NextResponse.json({ canPlay: false, playedAt: null })
+      return NextResponse.json({ playsRemaining: 0, playsToday: 0, nextResetAt: null })
     }
 
-    // Vérifie la dernière partie
-    const { data: lastPlay, error } = await supabase
+    const now = new Date()
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+    const tomorrowStart = new Date(todayStart)
+    tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1)
+
+    const { data: plays, error } = await supabase
       .from("vip_game_plays")
-      .select("played_at")
+      .select("id")
       .eq("user_id", user.id)
-      .order("played_at", { ascending: false })
-      .limit(1)
-      .maybeSingle()
+      .gte("played_at", todayStart.toISOString())
+      .lt("played_at", tomorrowStart.toISOString())
 
     if (error) {
-      console.error("Error fetching last play:", error)
-      return NextResponse.json({ canPlay: false, playedAt: null })
+      console.error("Error fetching plays:", error)
+      return NextResponse.json({ playsRemaining: 0, playsToday: 0, nextResetAt: null })
     }
 
-    let canPlay = true
-    let playedAt: string | null = null
+    const playsToday = plays?.length || 0
+    const playsRemaining = Math.max(0, 3 - playsToday)
 
-    if (lastPlay) {
-      playedAt = lastPlay.played_at
-      const lastPlayTime = new Date(playedAt)
-      const now = new Date()
-      const nextPlayTime = new Date(lastPlayTime.getTime() + 24 * 60 * 60 * 1000)
-
-      if (now < nextPlayTime) {
-        canPlay = false
-      }
-    }
-
-    return NextResponse.json({ canPlay, playedAt })
+    return NextResponse.json({
+      playsRemaining,
+      playsToday,
+      nextResetAt: tomorrowStart.toISOString(),
+    })
   } catch (err) {
     console.error("VIP game status error:", err)
-    return NextResponse.json({ canPlay: false, playedAt: null }, { status: 500 })
+    return NextResponse.json({ playsRemaining: 0, playsToday: 0, nextResetAt: null }, { status: 500 })
   }
 }
