@@ -9,11 +9,20 @@ export async function POST() {
 
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser()
+
+    if (authError) {
+      console.error("[v0] VIP Game: Auth error:", authError)
+      return NextResponse.json({ error: `Erreur d'authentification: ${authError.message}` }, { status: 401 })
+    }
 
     if (!user) {
       console.log("[v0] VIP Game: User not authenticated")
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+      return NextResponse.json(
+        { error: "Vous devez être connecté pour jouer. Veuillez vous connecter et réessayer." },
+        { status: 401 },
+      )
     }
 
     console.log("[v0] VIP Game: User attempting to play:", user.id)
