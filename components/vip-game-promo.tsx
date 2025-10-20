@@ -47,7 +47,9 @@ export function VIPGamePromo() {
 
   const checkPlayStatus = async () => {
     try {
-      const response = await fetch("/api/vip-game/status")
+      const response = await fetch("/api/vip-game/status", {
+        credentials: "same-origin",
+      })
       if (!response.ok) return
 
       const data = await response.json()
@@ -80,7 +82,9 @@ export function VIPGamePromo() {
 
   const fetchWinners = async () => {
     try {
-      const response = await fetch("/api/vip-game/winners")
+      const response = await fetch("/api/vip-game/winners", {
+        credentials: "same-origin",
+      })
       if (!response.ok) return
       const data = await response.json()
       setWinners(data.winners || [])
@@ -131,8 +135,17 @@ export function VIPGamePromo() {
     setRotation(finalRotation)
 
     try {
-      const response = await fetch("/api/vip-game/play", { method: "POST" })
-      const data = await response.json()
+      const response = await fetch("/api/vip-game/play", {
+        method: "POST",
+        credentials: "same-origin",
+      })
+
+      let data
+      try {
+        data = await response.json()
+      } catch (jsonError) {
+        throw new Error("Erreur de communication avec le serveur")
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Erreur lors du jeu")
