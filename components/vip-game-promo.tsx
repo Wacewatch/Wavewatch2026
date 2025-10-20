@@ -21,18 +21,14 @@ export function VIPGamePromo() {
   const [rotation, setRotation] = useState(0)
   const [timeUntilNextPlay, setTimeUntilNextPlay] = useState<string>("")
 
-  // Vérifie le statut de jeu au chargement
   useEffect(() => {
     checkPlayStatus()
     fetchWinners()
   }, [user])
 
-  // Timer qui met à jour le countdown toutes les secondes
   useEffect(() => {
     if (!canPlay && user && playedAt) {
-      const interval = setInterval(() => {
-        updateCountdown(playedAt)
-      }, 1000)
+      const interval = setInterval(() => updateCountdown(playedAt), 1000)
       return () => clearInterval(interval)
     }
   }, [canPlay, user, playedAt])
@@ -45,11 +41,16 @@ export function VIPGamePromo() {
         return
       }
       const data = await response.json()
-      setCanPlay(data.canPlay)
-      setPlayedAt(data.playedAt || null)
 
-      if (!data.canPlay && data.playedAt) {
-        updateCountdown(data.playedAt)
+      // Si jamais joué, activer immédiatement
+      if (!data.playedAt) {
+        setCanPlay(true)
+        setPlayedAt(null)
+        setTimeUntilNextPlay("")
+      } else {
+        setPlayedAt(data.playedAt)
+        setCanPlay(data.canPlay)
+        if (!data.canPlay) updateCountdown(data.playedAt)
       }
     } catch (error) {
       console.error("Error checking play status:", error)
@@ -60,7 +61,7 @@ export function VIPGamePromo() {
   const updateCountdown = (lastPlayedAt: string) => {
     const now = new Date()
     const lastPlayDate = new Date(lastPlayedAt)
-    const nextPlay = new Date(lastPlayDate.getTime() + 24 * 60 * 60 * 1000) // +24h
+    const nextPlay = new Date(lastPlayDate.getTime() + 24 * 60 * 60 * 1000)
     const diff = nextPlay.getTime() - now.getTime()
 
     if (diff <= 0) {
@@ -72,7 +73,6 @@ export function VIPGamePromo() {
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
     const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-
     setTimeUntilNextPlay(`${hours}h ${minutes}m ${seconds}s`)
   }
 
@@ -89,11 +89,7 @@ export function VIPGamePromo() {
 
   const handlePlay = async () => {
     if (!user) {
-      toast({
-        title: "Connexion requise",
-        description: "Vous devez être connecté pour jouer",
-        variant: "destructive",
-      })
+      toast({ title: "Connexion requise", description: "Vous devez être connecté pour jouer", variant: "destructive" })
       return
     }
 
@@ -101,7 +97,6 @@ export function VIPGamePromo() {
     setIsSpinning(true)
     setResult(null)
 
-    // Animation de la roue
     const spins = 5 + Math.random() * 3
     const finalRotation = rotation + spins * 360
     setRotation(finalRotation)
@@ -109,42 +104,30 @@ export function VIPGamePromo() {
     try {
       const response = await fetch("/api/vip-game/play", { method: "POST" })
       const data = await response.json()
-
       if (!response.ok) throw new Error(data.message || "Erreur lors du jeu")
 
       setTimeout(() => {
         setIsSpinning(false)
         setResult(data.prize)
         setCanPlay(false)
-        setPlayedAt(data.playedAt) // Mettre à jour le playedAt pour le timer
+        setPlayedAt(data.playedAt) // met à jour playedAt pour le timer
 
         if (data.prize && data.prize !== "none") {
           const prizeText =
             data.prize === "vip_1_month" ? "VIP 1 mois" :
             data.prize === "vip_1_week" ? "VIP 1 semaine" : "VIP 1 jour"
 
-          toast({
-            title: "🎉 Félicitations !",
-            description: `Vous avez gagné ${prizeText} !`,
-          })
-
+          toast({ title: "🎉 Félicitations !", description: `Vous avez gagné ${prizeText} !` })
           window.dispatchEvent(new Event("vip-updated"))
         } else {
-          toast({
-            title: "Dommage !",
-            description: "Réessayez demain pour tenter votre chance !",
-          })
+          toast({ title: "Dommage !", description: "Réessayez demain pour tenter votre chance !" })
         }
 
         fetchWinners()
       }, 3000)
     } catch (error: any) {
       setIsSpinning(false)
-      toast({
-        title: "Erreur",
-        description: error.message,
-        variant: "destructive",
-      })
+      toast({ title: "Erreur", description: error.message, variant: "destructive" })
     } finally {
       setIsPlaying(false)
     }
@@ -182,11 +165,11 @@ export function VIPGamePromo() {
           </Dialog>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <p className="text-white text-center text-lg">
-          Tentez de gagner un VIP pour 1 mois, 1 semaine ou 1 jour !
-        </p>
 
+      <CardContent className="space-y-6">
+        <p className="text-white text-center text-lg">Tentez de gagner un VIP pour 1 mois, 1 semaine ou 1 jour !</p>
+
+        {/* Spinning Wheel */}
         <div className="relative w-64 h-64 mx-auto">
           <div
             className={`w-full h-full rounded-full border-8 border-yellow-400 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-600 flex items-center justify-center transition-transform duration-3000 ease-out ${
