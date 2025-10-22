@@ -53,6 +53,10 @@ import {
   MessageSquare,
   CheckCircle,
   XCircle,
+  Music,
+  Download,
+  BookOpen,
+  Send,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -69,6 +73,10 @@ export default function AdminPage() {
   const [retrogamingSources, setRetrogamingSources] = useState([])
   const [users, setUsers] = useState([])
   const [requests, setRequests] = useState([])
+  const [musicContent, setMusicContent] = useState([])
+  const [software, setSoftware] = useState([])
+  const [games, setGames] = useState([])
+  const [ebooks, setEbooks] = useState([])
 
   // States pour les modals
   const [activeModal, setActiveModal] = useState(null)
@@ -156,14 +164,70 @@ export default function AdminPage() {
     is_active: true,
   })
 
-  const [userForm, setUserForm] = useState({
-    username: "",
-    email: "",
-    is_vip: false,
-    is_vip_plus: false,
-    is_beta: false,
-    is_admin: false,
+  const [musicForm, setMusicForm] = useState({
+    title: "",
+    artist: "",
+    description: "",
+    thumbnail_url: "",
+    video_url: "",
+    duration: 0,
+    release_year: new Date().getFullYear(),
+    genre: "",
+    type: "Concert",
+    quality: "HD",
+    is_active: true,
   })
+
+  const [softwareForm, setSoftwareForm] = useState({
+    name: "",
+    developer: "",
+    description: "",
+    icon_url: "",
+    download_url: "",
+    version: "",
+    category: "",
+    platform: "",
+    license: "Free",
+    file_size: "",
+    is_active: true,
+  })
+
+  const [gameForm, setGameForm] = useState({
+    title: "",
+    developer: "",
+    publisher: "",
+    description: "",
+    cover_url: "",
+    download_url: "",
+    version: "",
+    genre: "",
+    platform: "",
+    rating: "PEGI 3",
+    file_size: "",
+    is_active: true,
+  })
+
+  const [ebookForm, setEbookForm] = useState({
+    title: "",
+    author: "",
+    description: "",
+    cover_url: "",
+    download_url: "",
+    isbn: "",
+    publisher: "",
+    category: "",
+    language: "Français",
+    pages: 0,
+    file_format: "PDF",
+    file_size: "",
+    is_active: true,
+  })
+
+  const [broadcastForm, setBroadcastForm] = useState({
+    subject: "",
+    content: "",
+  })
+  const [sendingBroadcast, setSendingBroadcast] = useState(false)
 
   const [changelogs, setChangelogs] = useState<any[]>([])
   const [newChangelog, setNewChangelog] = useState({
@@ -171,6 +235,16 @@ export default function AdminPage() {
     title: "",
     description: "",
     release_date: new Date().toISOString().split("T")[0],
+  })
+
+  // State for user form editing
+  const [userForm, setUserForm] = useState({
+    username: "",
+    email: "",
+    is_vip: false,
+    is_vip_plus: false,
+    is_beta: false,
+    is_admin: false,
   })
 
   const handleUpdateRequestStatus = async (id: string, status: string) => {
@@ -198,6 +272,114 @@ export default function AdminPage() {
     } catch (error) {
       console.error("Erreur lors de la suppression de la demande:", error)
       toast({ title: "Erreur", description: "Impossible de supprimer la demande.", variant: "destructive" })
+    }
+  }
+
+  const loadMusicContent = async () => {
+    try {
+      const { data, error } = await supabase.from("music_content").select("*").order("created_at", { ascending: false })
+      if (error) throw error
+      setMusicContent(data || [])
+    } catch (error) {
+      console.error("Error loading music content:", error)
+      setMusicContent([])
+    }
+  }
+
+  const loadSoftware = async () => {
+    try {
+      const { data, error } = await supabase.from("software").select("*").order("created_at", { ascending: false })
+      if (error) throw error
+      setSoftware(data || [])
+    } catch (error) {
+      console.error("Error loading software:", error)
+      setSoftware([])
+    }
+  }
+
+  const loadGames = async () => {
+    try {
+      const { data, error } = await supabase.from("games").select("*").order("created_at", { ascending: false })
+      if (error) throw error
+      setGames(data || [])
+    } catch (error) {
+      console.error("Error loading games:", error)
+      setGames([])
+    }
+  }
+
+  const loadEbooks = async () => {
+    try {
+      const { data, error } = await supabase.from("ebooks").select("*").order("created_at", { ascending: false })
+      if (error) throw error
+      setEbooks(data || [])
+    } catch (error) {
+      console.error("Error loading ebooks:", error)
+      setEbooks([])
+    }
+  }
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastForm.subject || !broadcastForm.content) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSendingBroadcast(true)
+    try {
+      // Get all user IDs
+      const { data: allUsers, error: usersError } = await supabase.from("user_profiles").select("id")
+
+      if (usersError) throw usersError
+
+      if (!allUsers || allUsers.length === 0) {
+        toast({
+          title: "Aucun utilisateur",
+          description: "Aucun utilisateur trouvé pour envoyer le message",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Get current admin user ID
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error("User not authenticated")
+
+      // Create messages for all users
+      const messages = allUsers.map((u) => ({
+        sender_id: user.id,
+        recipient_id: u.id,
+        subject: broadcastForm.subject,
+        content: broadcastForm.content,
+        is_read: false,
+      }))
+
+      const { error: insertError } = await supabase.from("user_messages").insert(messages)
+
+      if (insertError) throw insertError
+
+      toast({
+        title: "Message envoyé",
+        description: `Message diffusé à ${allUsers.length} utilisateur(s)`,
+      })
+
+      setBroadcastForm({ subject: "", content: "" })
+      setActiveModal(null)
+    } catch (error) {
+      console.error("Error sending broadcast:", error)
+      toast({
+        title: "Erreur",
+        description: `Erreur lors de l'envoi: ${error.message}`,
+        variant: "destructive",
+      })
+    } finally {
+      setSendingBroadcast(false)
     }
   }
 
@@ -648,7 +830,17 @@ export default function AdminPage() {
       }
 
       const newStats = {
-        totalContent: tmdbMovies + tmdbTVShows + tmdbAnime + totalTVChannels + totalRadio + totalRetrogaming,
+        totalContent:
+          tmdbMovies +
+          tmdbTVShows +
+          tmdbAnime +
+          totalTVChannels +
+          totalRadio +
+          totalRetrogaming +
+          musicContent.length +
+          software.length +
+          games.length +
+          ebooks.length, // Added new content types
         totalUsers,
         totalViews,
         totalRevenue: vipUsers * 1.99 * 12,
@@ -661,6 +853,10 @@ export default function AdminPage() {
           tvChannels: totalTVChannels,
           radio: totalRadio,
           retrogaming: totalRetrogaming,
+          music: musicContent.length, // Added new content types
+          software: software.length,
+          games: games.length,
+          ebooks: ebooks.length,
         },
         userGrowth: [
           { month: "Jan", users: Math.floor(totalUsers * 0.6) },
@@ -786,6 +982,22 @@ export default function AdminPage() {
           tableName = "retrogaming_sources"
           result = await supabase.from(tableName).insert([formData]).select().single()
           break
+        case "music":
+          tableName = "music_content"
+          result = await supabase.from(tableName).insert([formData]).select().single()
+          break
+        case "software":
+          tableName = "software"
+          result = await supabase.from(tableName).insert([formData]).select().single()
+          break
+        case "game":
+          tableName = "games"
+          result = await supabase.from(tableName).insert([formData]).select().single()
+          break
+        case "ebook":
+          tableName = "ebooks"
+          result = await supabase.from(tableName).insert([formData]).select().single()
+          break
         default:
           throw new Error(`Type ${type} non supporté`)
       }
@@ -824,6 +1036,34 @@ export default function AdminPage() {
           toast({
             title: "Source retrogaming ajoutée",
             description: `${formData.name} a été ajoutée avec succès.`,
+          })
+          break
+        case "music":
+          setMusicContent((prev) => [result.data, ...prev])
+          toast({
+            title: "Contenu musical ajouté",
+            description: `${formData.title} a été ajouté avec succès.`,
+          })
+          break
+        case "software":
+          setSoftware((prev) => [result.data, ...prev])
+          toast({
+            title: "Logiciel ajouté",
+            description: `${formData.name} a été ajouté avec succès.`,
+          })
+          break
+        case "game":
+          setGames((prev) => [result.data, ...prev])
+          toast({
+            title: "Jeu ajouté",
+            description: `${formData.title} a été ajouté avec succès.`,
+          })
+          break
+        case "ebook":
+          setEbooks((prev) => [result.data, ...prev])
+          toast({
+            title: "Ebook ajouté",
+            description: `${formData.title} a été ajouté avec succès.`,
           })
           break
       }
@@ -866,6 +1106,69 @@ export default function AdminPage() {
             url: "",
             color: "bg-blue-600",
             category: "",
+            is_active: true,
+          })
+          break
+        case "music":
+          setMusicForm({
+            title: "",
+            artist: "",
+            description: "",
+            thumbnail_url: "",
+            video_url: "",
+            duration: 0,
+            release_year: new Date().getFullYear(),
+            genre: "",
+            type: "Concert",
+            quality: "HD",
+            is_active: true,
+          })
+          break
+        case "software":
+          setSoftwareForm({
+            name: "",
+            developer: "",
+            description: "",
+            icon_url: "",
+            download_url: "",
+            version: "",
+            category: "",
+            platform: "",
+            license: "Free",
+            file_size: "",
+            is_active: true,
+          })
+          break
+        case "game":
+          setGameForm({
+            title: "",
+            developer: "",
+            publisher: "",
+            description: "",
+            cover_url: "",
+            download_url: "",
+            version: "",
+            genre: "",
+            platform: "",
+            rating: "PEGI 3",
+            file_size: "",
+            is_active: true,
+          })
+          break
+        case "ebook":
+          setEbookForm({
+            title: "",
+            author: "",
+            description: "",
+            cover_url: "",
+            download_url: "",
+            isbn: "",
+            publisher: "",
+            category: "",
+            language: "Français",
+            pages: 0,
+            file_format: "PDF",
+            file_size: "",
             is_active: true,
           })
           break
@@ -935,6 +1238,69 @@ export default function AdminPage() {
           is_admin: item.is_admin || false,
         })
         break
+      case "music":
+        setMusicForm({
+          title: item.title || "",
+          artist: item.artist || "",
+          description: item.description || "",
+          thumbnail_url: item.thumbnail_url || "",
+          video_url: item.video_url || "",
+          duration: item.duration || 0,
+          release_year: item.release_year || new Date().getFullYear(),
+          genre: item.genre || "",
+          type: item.type || "Concert",
+          quality: item.quality || "HD",
+          is_active: item.is_active ?? true,
+        })
+        break
+      case "software":
+        setSoftwareForm({
+          name: item.name || "",
+          developer: item.developer || "",
+          description: item.description || "",
+          icon_url: item.icon_url || "",
+          download_url: item.download_url || "",
+          version: item.version || "",
+          category: item.category || "",
+          platform: item.platform || "",
+          license: item.license || "Free",
+          file_size: item.file_size || "",
+          is_active: item.is_active ?? true,
+        })
+        break
+      case "game":
+        setGameForm({
+          title: item.title || "",
+          developer: item.developer || "",
+          publisher: item.publisher || "",
+          description: item.description || "",
+          cover_url: item.cover_url || "",
+          download_url: item.download_url || "",
+          version: item.version || "",
+          genre: item.genre || "",
+          platform: item.platform || "",
+          rating: item.rating || "PEGI 3",
+          file_size: item.file_size || "",
+          is_active: item.is_active ?? true,
+        })
+        break
+      case "ebook":
+        setEbookForm({
+          title: item.title || "",
+          author: item.author || "",
+          description: item.description || "",
+          cover_url: item.cover_url || "",
+          download_url: item.download_url || "",
+          isbn: item.isbn || "",
+          publisher: item.publisher || "",
+          category: item.category || "",
+          language: item.language || "Français",
+          pages: item.pages || 0,
+          file_format: item.file_format || "PDF",
+          file_size: item.file_size || "",
+          is_active: item.is_active ?? true,
+        })
+        break
     }
   }
 
@@ -960,6 +1326,18 @@ export default function AdminPage() {
           break
         case "user":
           tableName = "user_profiles"
+          break
+        case "music":
+          tableName = "music_content"
+          break
+        case "software":
+          tableName = "software"
+          break
+        case "game":
+          tableName = "games"
+          break
+        case "ebook":
+          tableName = "ebooks"
           break
         default:
           throw new Error(`Type ${type} non supporté`)
@@ -995,6 +1373,18 @@ export default function AdminPage() {
           break
         case "user":
           setUsers((prev) => prev.map((item) => (item.id === editingItem.id ? updatedItem : item)))
+          break
+        case "music":
+          setMusicContent((prev) => prev.map((item) => (item.id === editingItem.id ? updatedItem : item)))
+          break
+        case "software":
+          setSoftware((prev) => prev.map((item) => (item.id === editingItem.id ? updatedItem : item)))
+          break
+        case "game":
+          setGames((prev) => prev.map((item) => (item.id === editingItem.id ? updatedItem : item)))
+          break
+        case "ebook":
+          setEbooks((prev) => prev.map((item) => (item.id === editingItem.id ? updatedItem : item)))
           break
       }
 
@@ -1033,6 +1423,18 @@ export default function AdminPage() {
         case "retrogaming-source":
           tableName = "retrogaming_sources"
           break
+        case "music":
+          tableName = "music_content"
+          break
+        case "software":
+          tableName = "software"
+          break
+        case "game":
+          tableName = "games"
+          break
+        case "ebook":
+          tableName = "ebooks"
+          break
         default:
           throw new Error(`Type ${type} non supporté`)
       }
@@ -1062,6 +1464,18 @@ export default function AdminPage() {
           break
         case "retrogaming-source":
           setRetrogamingSources((prev) => prev.filter((item) => item.id !== id))
+          break
+        case "music":
+          setMusicContent((prev) => prev.filter((item) => item.id !== id))
+          break
+        case "software":
+          setSoftware((prev) => prev.filter((item) => item.id !== id))
+          break
+        case "game":
+          setGames((prev) => prev.filter((item) => item.id !== id))
+          break
+        case "ebook":
+          setEbooks((prev) => prev.filter((item) => item.id !== id))
           break
       }
 
@@ -1097,6 +1511,22 @@ export default function AdminPage() {
         case "retrogaming-source":
           currentItem = retrogamingSources.find((item) => item.id === id)
           tableName = "retrogaming_sources"
+          break
+        case "music":
+          currentItem = musicContent.find((item) => item.id === id)
+          tableName = "music_content"
+          break
+        case "software":
+          currentItem = software.find((item) => item.id === id)
+          tableName = "software"
+          break
+        case "game":
+          currentItem = games.find((item) => item.id === id)
+          tableName = "games"
+          break
+        case "ebook":
+          currentItem = ebooks.find((item) => item.id === id)
+          tableName = "ebooks"
           break
         default:
           throw new Error(`Type ${type} non supporté`)
@@ -1138,6 +1568,18 @@ export default function AdminPage() {
           break
         case "retrogaming-source":
           setRetrogamingSources((prev) => prev.map((item) => (item.id === id ? updatedItem : item)))
+          break
+        case "music":
+          setMusicContent((prev) => prev.map((item) => (item.id === id ? updatedItem : item)))
+          break
+        case "software":
+          setSoftware((prev) => prev.map((item) => (item.id === id ? updatedItem : item)))
+          break
+        case "game":
+          setGames((prev) => prev.map((item) => (item.id === id ? updatedItem : item)))
+          break
+        case "ebook":
+          setEbooks((prev) => prev.map((item) => (item.id === id ? updatedItem : item)))
           break
       }
 
@@ -1449,12 +1891,6 @@ export default function AdminPage() {
   }
 
   // Modified useEffect to call fetchAllData
-  useEffect(() => {
-    if (user?.isAdmin) {
-      fetchAllData()
-    }
-  }, [user])
-
   // Replaced loadAllData with fetchAllData to include changelogs
   const fetchAllData = async () => {
     setLoading(true)
@@ -1492,6 +1928,13 @@ export default function AdminPage() {
       setLoading(false)
     }
   }
+
+  // Use fetchAllData for the initial load if user is admin
+  useEffect(() => {
+    if (user?.isAdmin) {
+      fetchAllData()
+    }
+  }, [user])
 
   if (!user || !user.isAdmin) {
     return (
@@ -1537,6 +1980,13 @@ export default function AdminPage() {
               <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
             <TabsTrigger
+              value="broadcast"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
+              <Send className="w-4 h-4" />
+              <span className="hidden sm:inline">Message</span>
+            </TabsTrigger>
+            <TabsTrigger
               value="tvchannels"
               className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
             >
@@ -1549,6 +1999,34 @@ export default function AdminPage() {
             >
               <Radio className="w-4 h-4" />
               <span className="hidden sm:inline">Radio ({radioStations.length})</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="music"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
+              <Music className="w-4 h-4" />
+              <span className="hidden sm:inline">Musique ({musicContent.length})</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="software"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Logiciels ({software.length})</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="games"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
+              <Gamepad2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Jeux ({games.length})</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="ebooks"
+              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span className="hidden sm:inline">Ebooks ({ebooks.length})</span>
             </TabsTrigger>
             <TabsTrigger
               value="retrogaming"
@@ -1595,7 +2073,9 @@ export default function AdminPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalContent.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">Films, séries, chaînes TV, radios, jeux</p>
+                  <p className="text-xs text-muted-foreground">
+                    Films, séries, chaînes TV, radios, jeux, musique, logiciels, ebooks
+                  </p>
                 </CardContent>
               </Card>
 
@@ -1834,6 +2314,51 @@ export default function AdminPage() {
                       <div className="absolute inset-0 bg-gradient-to-br from-indigo-400/20 to-transparent rounded-xl"></div>
                     </div>
                   </div>
+
+                  {/* Added new content type cards */}
+                  <div className="relative group">
+                    <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <div className="flex flex-col items-center text-center">
+                        <Music className="w-8 h-8 mb-3 opacity-90" />
+                        <div className="text-2xl font-bold mb-1">{stats.contentByType.music.toLocaleString()}</div>
+                        <div className="text-sm opacity-90">Musique</div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-br from-pink-400/20 to-transparent rounded-xl"></div>
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <div className="bg-gradient-to-br from-gray-500 to-gray-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <div className="flex flex-col items-center text-center">
+                        <Download className="w-8 h-8 mb-3 opacity-90" />
+                        <div className="text-2xl font-bold mb-1">{stats.contentByType.software.toLocaleString()}</div>
+                        <div className="text-sm opacity-90">Logiciels</div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-br from-gray-400/20 to-transparent rounded-xl"></div>
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <div className="flex flex-col items-center text-center">
+                        <Gamepad2 className="w-8 h-8 mb-3 opacity-90" />
+                        <div className="text-2xl font-bold mb-1">{stats.contentByType.games.toLocaleString()}</div>
+                        <div className="text-sm opacity-90">Jeux</div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/20 to-transparent rounded-xl"></div>
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <div className="flex flex-col items-center text-center">
+                        <BookOpen className="w-8 h-8 mb-3 opacity-90" />
+                        <div className="text-2xl font-bold mb-1">{stats.contentByType.ebooks.toLocaleString()}</div>
+                        <div className="text-sm opacity-90">Ebooks</div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-transparent rounded-xl"></div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-6 p-4 bg-secondary rounded-lg border border-border">
@@ -1948,6 +2473,66 @@ export default function AdminPage() {
                       )
                     })
                   )}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="broadcast" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Send className="w-5 h-5" />
+                  Envoyer un message à tous les utilisateurs
+                </CardTitle>
+                <CardDescription>
+                  Diffusez un message à tous les utilisateurs inscrits via leur messagerie interne
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="broadcast-subject">Sujet du message</Label>
+                    <Input
+                      id="broadcast-subject"
+                      placeholder="Ex: Nouvelle fonctionnalité disponible"
+                      value={broadcastForm.subject}
+                      onChange={(e) => setBroadcastForm({ ...broadcastForm, subject: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="broadcast-content">Contenu du message</Label>
+                    <Textarea
+                      id="broadcast-content"
+                      placeholder="Écrivez votre message ici..."
+                      value={broadcastForm.content}
+                      onChange={(e) => setBroadcastForm({ ...broadcastForm, content: e.target.value })}
+                      rows={8}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
+                    <Users className="w-5 h-5 text-blue-400" />
+                    <span className="text-sm text-blue-300">
+                      Ce message sera envoyé à {users.length} utilisateur(s) inscrit(s)
+                    </span>
+                  </div>
+                  <Button
+                    onClick={handleSendBroadcast}
+                    disabled={sendingBroadcast || !broadcastForm.subject || !broadcastForm.content}
+                    className="w-full"
+                  >
+                    {sendingBroadcast ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2 animate-spin" />
+                        Envoi en cours...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Envoyer le message à tous
+                      </>
+                    )}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -2915,6 +3500,1082 @@ export default function AdminPage() {
                     <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>Aucune demande trouvée</p>
                     <p className="text-sm">Les demandes des utilisateurs apparaîtront ici</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Gestion Music Content */}
+          <TabsContent value="music" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion du Contenu Musical</CardTitle>
+                  <CardDescription>Gérez votre catalogue de musique et concerts</CardDescription>
+                </div>
+                <Dialog open={activeModal === "music"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setEditingItem(null)
+                        setMusicForm({
+                          title: "",
+                          artist: "",
+                          description: "",
+                          thumbnail_url: "",
+                          video_url: "",
+                          duration: 0,
+                          release_year: new Date().getFullYear(),
+                          genre: "",
+                          type: "Concert",
+                          quality: "HD",
+                          is_active: true,
+                        })
+                        setActiveModal("music")
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter un morceau
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} un contenu musical</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Titre</Label>
+                        <Input
+                          value={musicForm.title}
+                          onChange={(e) => setMusicForm({ ...musicForm, title: e.target.value })}
+                          placeholder="Nom de la chanson ou concert"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Artiste/Groupe</Label>
+                        <Input
+                          value={musicForm.artist}
+                          onChange={(e) => setMusicForm({ ...musicForm, artist: e.target.value })}
+                          placeholder="Nom de l'artiste ou du groupe"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Genre</Label>
+                        <Select
+                          value={musicForm.genre}
+                          onValueChange={(value) => setMusicForm({ ...musicForm, genre: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un genre" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Pop">Pop</SelectItem>
+                            <SelectItem value="Rock">Rock</SelectItem>
+                            <SelectItem value="Hip-Hop">Hip-Hop</SelectItem>
+                            <SelectItem value="Électronique">Électronique</SelectItem>
+                            <SelectItem value="Jazz">Jazz</SelectItem>
+                            <SelectItem value="Classique">Classique</SelectItem>
+                            <SelectItem value="Rap">Rap</SelectItem>
+                            <SelectItem value="R&B">R&B</SelectItem>
+                            <SelectItem value="Metal">Metal</SelectItem>
+                            <SelectItem value="Folk">Folk</SelectItem>
+                            <SelectItem value="Blues">Blues</SelectItem>
+                            <SelectItem value="Reggae">Reggae</SelectItem>
+                            <SelectItem value="Country">Country</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Type</Label>
+                        <Select
+                          value={musicForm.type}
+                          onValueChange={(value) => setMusicForm({ ...musicForm, type: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Chanson">Chanson</SelectItem>
+                            <SelectItem value="Album">Album</SelectItem>
+                            <SelectItem value="Concert">Concert</SelectItem>
+                            <SelectItem value="Live Session">Live Session</SelectItem>
+                            <SelectItem value="Compilation">Compilation</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Année de sortie</Label>
+                        <Input
+                          type="number"
+                          value={musicForm.release_year}
+                          onChange={(e) =>
+                            setMusicForm({ ...musicForm, release_year: Number.parseInt(e.target.value, 10) })
+                          }
+                          placeholder="2023"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Qualité</Label>
+                        <Select
+                          value={musicForm.quality}
+                          onValueChange={(value) => setMusicForm({ ...musicForm, quality: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une qualité" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="SD">SD</SelectItem>
+                            <SelectItem value="HD">HD</SelectItem>
+                            <SelectItem value="Full HD">Full HD</SelectItem>
+                            <SelectItem value="4K">4K</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de la vignette</Label>
+                        <Input
+                          value={musicForm.thumbnail_url}
+                          onChange={(e) => setMusicForm({ ...musicForm, thumbnail_url: e.target.value })}
+                          placeholder="https://example.com/thumbnail.jpg"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de la vidéo/audio</Label>
+                        <Input
+                          value={musicForm.video_url}
+                          onChange={(e) => setMusicForm({ ...musicForm, video_url: e.target.value })}
+                          placeholder="https://stream.wavewatch.xyz/music/..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Durée (secondes)</Label>
+                        <Input
+                          type="number"
+                          value={musicForm.duration}
+                          onChange={(e) =>
+                            setMusicForm({ ...musicForm, duration: Number.parseInt(e.target.value, 10) })
+                          }
+                          placeholder="180"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Statut</Label>
+                        <Select
+                          value={musicForm.is_active ? "active" : "inactive"}
+                          onValueChange={(value) => setMusicForm({ ...musicForm, is_active: value === "active" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            <SelectItem value="inactive">Inactif</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={musicForm.description}
+                          onChange={(e) => setMusicForm({ ...musicForm, description: e.target.value })}
+                          placeholder="Description du morceau ou du concert..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)}>
+                        Annuler
+                      </Button>
+                      <Button
+                        onClick={() => (editingItem ? handleUpdate("music", musicForm) : handleAdd("music", musicForm))}
+                      >
+                        {editingItem ? "Modifier" : "Ajouter"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher un morceau..."
+                      value={searchTerms.music || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, music: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Titre</TableHead>
+                      <TableHead>Artiste</TableHead>
+                      <TableHead>Genre</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Qualité</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(musicContent, "music").map((content) => (
+                      <TableRow key={content.id}>
+                        <TableCell className="font-medium">{content.title}</TableCell>
+                        <TableCell>{content.artist}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{content.genre}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{content.type}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{content.quality}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={content.is_active === true ? "default" : "secondary"}>
+                            {content.is_active === true ? "Actif" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => toggleStatus("music", content.id)}>
+                              {content.is_active === true ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit("music", content)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete("music", content.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {musicContent.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Music className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun contenu musical trouvé</p>
+                    <p className="text-sm">Ajoutez votre premier morceau ou concert pour commencer</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Gestion Software */}
+          <TabsContent value="software" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Logiciels</CardTitle>
+                  <CardDescription>Gérez votre catalogue de logiciels et applications</CardDescription>
+                </div>
+                <Dialog open={activeModal === "software"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setEditingItem(null)
+                        setSoftwareForm({
+                          name: "",
+                          developer: "",
+                          description: "",
+                          icon_url: "",
+                          download_url: "",
+                          version: "",
+                          category: "",
+                          platform: "",
+                          license: "Free",
+                          file_size: "",
+                          is_active: true,
+                        })
+                        setActiveModal("software")
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter un logiciel
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} un logiciel</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nom du logiciel</Label>
+                        <Input
+                          value={softwareForm.name}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, name: e.target.value })}
+                          placeholder="Ex: VS Code, Adobe Photoshop"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Développeur</Label>
+                        <Input
+                          value={softwareForm.developer}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, developer: e.target.value })}
+                          placeholder="Ex: Microsoft, Adobe"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Catégorie</Label>
+                        <Select
+                          value={softwareForm.category}
+                          onValueChange={(value) => setSoftwareForm({ ...softwareForm, category: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une catégorie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Productivité">Productivité</SelectItem>
+                            <SelectItem value="Design">Design</SelectItem>
+                            <SelectItem value="Développement">Développement</SelectItem>
+                            <SelectItem value="Utilitaires">Utilitaires</SelectItem>
+                            <SelectItem value="Multimédia">Multimédia</SelectItem>
+                            <SelectItem value="Jeux">Jeux</SelectItem>
+                            <SelectItem value="Sécurité">Sécurité</SelectItem>
+                            <SelectItem value="Système">Système</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Plateforme</Label>
+                        <Select
+                          value={softwareForm.platform}
+                          onValueChange={(value) => setSoftwareForm({ ...softwareForm, platform: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une plateforme" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Windows">Windows</SelectItem>
+                            <SelectItem value="macOS">macOS</SelectItem>
+                            <SelectItem value="Linux">Linux</SelectItem>
+                            <SelectItem value="Android">Android</SelectItem>
+                            <SelectItem value="iOS">iOS</SelectItem>
+                            <SelectItem value="Web">Web</SelectItem>
+                            <SelectItem value="Multiplateforme">Multiplateforme</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Version</Label>
+                        <Input
+                          value={softwareForm.version}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, version: e.target.value })}
+                          placeholder="Ex: 2023.1.1"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Licence</Label>
+                        <Select
+                          value={softwareForm.license}
+                          onValueChange={(value) => setSoftwareForm({ ...softwareForm, license: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une licence" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Gratuit">Gratuit</SelectItem>
+                            <SelectItem value="Payant">Payant</SelectItem>
+                            <SelectItem value="Open Source">Open Source</SelectItem>
+                            <SelectItem value="Essai gratuit">Essai gratuit</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de l'icône</Label>
+                        <Input
+                          value={softwareForm.icon_url}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, icon_url: e.target.value })}
+                          placeholder="https://example.com/icon.png"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de téléchargement</Label>
+                        <Input
+                          value={softwareForm.download_url}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, download_url: e.target.value })}
+                          placeholder="https://download.example.com/software.exe"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Taille du fichier</Label>
+                        <Input
+                          value={softwareForm.file_size}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, file_size: e.target.value })}
+                          placeholder="Ex: 100 MB, 2 GB"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Statut</Label>
+                        <Select
+                          value={softwareForm.is_active ? "active" : "inactive"}
+                          onValueChange={(value) => setSoftwareForm({ ...softwareForm, is_active: value === "active" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            <SelectItem value="inactive">Inactif</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={softwareForm.description}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, description: e.target.value })}
+                          placeholder="Description du logiciel..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)}>
+                        Annuler
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          editingItem ? handleUpdate("software", softwareForm) : handleAdd("software", softwareForm)
+                        }
+                      >
+                        {editingItem ? "Modifier" : "Ajouter"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher un logiciel..."
+                      value={searchTerms.software || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, software: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Développeur</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Plateforme</TableHead>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Licence</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(software, "software").map((sw) => (
+                      <TableRow key={sw.id}>
+                        <TableCell className="font-medium">{sw.name}</TableCell>
+                        <TableCell>{sw.developer}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{sw.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{sw.platform}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{sw.version}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{sw.license}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={sw.is_active === true ? "default" : "secondary"}>
+                            {sw.is_active === true ? "Actif" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => toggleStatus("software", sw.id)}>
+                              {sw.is_active === true ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit("software", sw)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete("software", sw.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {software.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Download className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun logiciel trouvé</p>
+                    <p className="text-sm">Ajoutez votre premier logiciel pour commencer</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Gestion Games */}
+          <TabsContent value="games" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Jeux</CardTitle>
+                  <CardDescription>Gérez votre catalogue de jeux</CardDescription>
+                </div>
+                <Dialog open={activeModal === "game"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setEditingItem(null)
+                        setGameForm({
+                          title: "",
+                          developer: "",
+                          publisher: "",
+                          description: "",
+                          cover_url: "",
+                          download_url: "",
+                          version: "",
+                          genre: "",
+                          platform: "",
+                          rating: "PEGI 3",
+                          file_size: "",
+                          is_active: true,
+                        })
+                        setActiveModal("game")
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter un jeu
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} un jeu</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Titre du jeu</Label>
+                        <Input
+                          value={gameForm.title}
+                          onChange={(e) => setGameForm({ ...gameForm, title: e.target.value })}
+                          placeholder="Ex: Cyberpunk 2077, Elden Ring"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Développeur</Label>
+                        <Input
+                          value={gameForm.developer}
+                          onChange={(e) => setGameForm({ ...gameForm, developer: e.target.value })}
+                          placeholder="Ex: CD Projekt Red, FromSoftware"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Éditeur</Label>
+                        <Input
+                          value={gameForm.publisher}
+                          onChange={(e) => setGameForm({ ...gameForm, publisher: e.target.value })}
+                          placeholder="Ex: Bandai Namco, Sony Interactive"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Genre</Label>
+                        <Select
+                          value={gameForm.genre}
+                          onValueChange={(value) => setGameForm({ ...gameForm, genre: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un genre" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Action">Action</SelectItem>
+                            <SelectItem value="Aventure">Aventure</SelectItem>
+                            <SelectItem value="RPG">RPG</SelectItem>
+                            <SelectItem value="Stratégie">Stratégie</SelectItem>
+                            <SelectItem value="Simulation">Simulation</SelectItem>
+                            <SelectItem value="Sport">Sport</SelectItem>
+                            <SelectItem value="Course">Course</SelectItem>
+                            <SelectItem value="Puzzle">Puzzle</SelectItem>
+                            <SelectItem value="Indépendant">Indépendant</SelectItem>
+                            <SelectItem value="MMO">MMO</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Plateforme</Label>
+                        <Select
+                          value={gameForm.platform}
+                          onValueChange={(value) => setGameForm({ ...gameForm, platform: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une plateforme" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PC">PC</SelectItem>
+                            <SelectItem value="PlayStation">PlayStation</SelectItem>
+                            <SelectItem value="Xbox">Xbox</SelectItem>
+                            <SelectItem value="Nintendo Switch">Nintendo Switch</SelectItem>
+                            <SelectItem value="Mobile">Mobile</SelectItem>
+                            <SelectItem value="Web">Web</SelectItem>
+                            <SelectItem value="Multiplateforme">Multiplateforme</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Classification PEGI</Label>
+                        <Select
+                          value={gameForm.rating}
+                          onValueChange={(value) => setGameForm({ ...gameForm, rating: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une classification" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PEGI 3">PEGI 3</SelectItem>
+                            <SelectItem value="PEGI 7">PEGI 7</SelectItem>
+                            <SelectItem value="PEGI 12">PEGI 12</SelectItem>
+                            <SelectItem value="PEGI 16">PEGI 16</SelectItem>
+                            <SelectItem value="PEGI 18">PEGI 18</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de la couverture</Label>
+                        <Input
+                          value={gameForm.cover_url}
+                          onChange={(e) => setGameForm({ ...gameForm, cover_url: e.target.value })}
+                          placeholder="https://example.com/cover.jpg"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de téléchargement</Label>
+                        <Input
+                          value={gameForm.download_url}
+                          onChange={(e) => setGameForm({ ...gameForm, download_url: e.target.value })}
+                          placeholder="https://download.example.com/game.zip"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Version</Label>
+                        <Input
+                          value={gameForm.version}
+                          onChange={(e) => setGameForm({ ...gameForm, version: e.target.value })}
+                          placeholder="Ex: 1.0.5"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Taille du fichier</Label>
+                        <Input
+                          value={gameForm.file_size}
+                          onChange={(e) => setGameForm({ ...gameForm, file_size: e.target.value })}
+                          placeholder="Ex: 50 GB"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Statut</Label>
+                        <Select
+                          value={gameForm.is_active ? "active" : "inactive"}
+                          onValueChange={(value) => setGameForm({ ...gameForm, is_active: value === "active" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            <SelectItem value="inactive">Inactif</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={gameForm.description}
+                          onChange={(e) => setGameForm({ ...gameForm, description: e.target.value })}
+                          placeholder="Description du jeu..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)}>
+                        Annuler
+                      </Button>
+                      <Button
+                        onClick={() => (editingItem ? handleUpdate("game", gameForm) : handleAdd("game", gameForm))}
+                      >
+                        {editingItem ? "Modifier" : "Ajouter"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher un jeu..."
+                      value={searchTerms.games || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, games: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Titre</TableHead>
+                      <TableHead>Développeur</TableHead>
+                      <TableHead>Genre</TableHead>
+                      <TableHead>Plateforme</TableHead>
+                      <TableHead>Classification</TableHead>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(games, "games").map((game) => (
+                      <TableRow key={game.id}>
+                        <TableCell className="font-medium">{game.title}</TableCell>
+                        <TableCell>{game.developer}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{game.genre}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{game.platform}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{game.rating}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{game.version}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={game.is_active === true ? "default" : "secondary"}>
+                            {game.is_active === true ? "Actif" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => toggleStatus("game", game.id)}>
+                              {game.is_active === true ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit("game", game)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete("game", game.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {games.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Gamepad2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun jeu trouvé</p>
+                    <p className="text-sm">Ajoutez votre premier jeu pour commencer</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Gestion Ebooks */}
+          <TabsContent value="ebooks" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Ebooks</CardTitle>
+                  <CardDescription>Gérez votre catalogue d'ebooks</CardDescription>
+                </div>
+                <Dialog open={activeModal === "ebook"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setEditingItem(null)
+                        setEbookForm({
+                          title: "",
+                          author: "",
+                          description: "",
+                          cover_url: "",
+                          download_url: "",
+                          isbn: "",
+                          publisher: "",
+                          category: "",
+                          language: "Français",
+                          pages: 0,
+                          file_format: "PDF",
+                          file_size: "",
+                          is_active: true,
+                        })
+                        setActiveModal("ebook")
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter un ebook
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} un ebook</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Titre</Label>
+                        <Input
+                          value={ebookForm.title}
+                          onChange={(e) => setEbookForm({ ...ebookForm, title: e.target.value })}
+                          placeholder="Ex: Le Petit Prince"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Auteur</Label>
+                        <Input
+                          value={ebookForm.author}
+                          onChange={(e) => setEbookForm({ ...ebookForm, author: e.target.value })}
+                          placeholder="Ex: Antoine de Saint-Exupéry"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Éditeur</Label>
+                        <Input
+                          value={ebookForm.publisher}
+                          onChange={(e) => setEbookForm({ ...ebookForm, publisher: e.target.value })}
+                          placeholder="Ex: Gallimard"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Catégorie</Label>
+                        <Select
+                          value={ebookForm.category}
+                          onValueChange={(value) => setEbookForm({ ...ebookForm, category: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une catégorie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Fiction">Fiction</SelectItem>
+                            <SelectItem value="Non-Fiction">Non-Fiction</SelectItem>
+                            <SelectItem value="Science">Science</SelectItem>
+                            <SelectItem value="Histoire">Histoire</SelectItem>
+                            <SelectItem value="Biographie">Biographie</SelectItem>
+                            <SelectItem value="Jeunesse">Jeunesse</SelectItem>
+                            <SelectItem value="Fantaisie">Fantaisie</SelectItem>
+                            <SelectItem value="Science-Fiction">Science-Fiction</SelectItem>
+                            <SelectItem value="Thriller">Thriller</SelectItem>
+                            <SelectItem value="Romance">Romance</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Langue</Label>
+                        <Select
+                          value={ebookForm.language}
+                          onValueChange={(value) => setEbookForm({ ...ebookForm, language: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une langue" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Français">Français</SelectItem>
+                            <SelectItem value="Anglais">Anglais</SelectItem>
+                            <SelectItem value="Espagnol">Espagnol</SelectItem>
+                            <SelectItem value="Allemand">Allemand</SelectItem>
+                            <SelectItem value="Italien">Italien</SelectItem>
+                            <SelectItem value="Autre">Autre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Format du fichier</Label>
+                        <Select
+                          value={ebookForm.file_format}
+                          onValueChange={(value) => setEbookForm({ ...ebookForm, file_format: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un format" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PDF">PDF</SelectItem>
+                            <SelectItem value="EPUB">EPUB</SelectItem>
+                            <SelectItem value="MOBI">MOBI</SelectItem>
+                            <SelectItem value="TXT">TXT</SelectItem>
+                            <SelectItem value="DOCX">DOCX</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>ISBN</Label>
+                        <Input
+                          value={ebookForm.isbn}
+                          onChange={(e) => setEbookForm({ ...ebookForm, isbn: e.target.value })}
+                          placeholder="Ex: 978-2-07-030000-0"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de la couverture</Label>
+                        <Input
+                          value={ebookForm.cover_url}
+                          onChange={(e) => setEbookForm({ ...ebookForm, cover_url: e.target.value })}
+                          placeholder="https://example.com/cover.jpg"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de téléchargement</Label>
+                        <Input
+                          value={ebookForm.download_url}
+                          onChange={(e) => setEbookForm({ ...ebookForm, download_url: e.target.value })}
+                          placeholder="https://download.example.com/ebook.pdf"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nombre de pages</Label>
+                        <Input
+                          type="number"
+                          value={ebookForm.pages}
+                          onChange={(e) => setEbookForm({ ...ebookForm, pages: Number.parseInt(e.target.value, 10) })}
+                          placeholder="300"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Taille du fichier</Label>
+                        <Input
+                          value={ebookForm.file_size}
+                          onChange={(e) => setEbookForm({ ...ebookForm, file_size: e.target.value })}
+                          placeholder="Ex: 5 MB"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Statut</Label>
+                        <Select
+                          value={ebookForm.is_active ? "active" : "inactive"}
+                          onValueChange={(value) => setEbookForm({ ...ebookForm, is_active: value === "active" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            <SelectItem value="inactive">Inactif</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={ebookForm.description}
+                          onChange={(e) => setEbookForm({ ...ebookForm, description: e.target.value })}
+                          placeholder="Description de l'ebook..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)}>
+                        Annuler
+                      </Button>
+                      <Button
+                        onClick={() => (editingItem ? handleUpdate("ebook", ebookForm) : handleAdd("ebook", ebookForm))}
+                      >
+                        {editingItem ? "Modifier" : "Ajouter"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher un ebook..."
+                      value={searchTerms.ebooks || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, ebooks: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Titre</TableHead>
+                      <TableHead>Auteur</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Langue</TableHead>
+                      <TableHead>Format</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(ebooks, "ebooks").map((ebook) => (
+                      <TableRow key={ebook.id}>
+                        <TableCell className="font-medium">{ebook.title}</TableCell>
+                        <TableCell>{ebook.author}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{ebook.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{ebook.language}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{ebook.file_format}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={ebook.is_active === true ? "default" : "secondary"}>
+                            {ebook.is_active === true ? "Actif" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => toggleStatus("ebook", ebook.id)}>
+                              {ebook.is_active === true ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit("ebook", ebook)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete("ebook", ebook.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {ebooks.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun ebook trouvé</p>
+                    <p className="text-sm">Ajoutez votre premier ebook pour commencer</p>
                   </div>
                 )}
               </CardContent>

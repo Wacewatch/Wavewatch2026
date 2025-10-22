@@ -96,18 +96,45 @@ export function Navigation() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
-                <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
-                  Musiques <span className="ml-auto text-xs">Bientôt</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
-                  Logiciels <span className="ml-auto text-xs">Bientôt</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
-                  Jeux <span className="ml-auto text-xs">Bientôt</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
-                  Ebooks <span className="ml-auto text-xs">Bientôt</span>
-                </DropdownMenuItem>
+                {user?.isAdmin ? (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/musique" style={{ color: "hsl(var(--nav-text))" }}>
+                        Musiques
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/logiciels" style={{ color: "hsl(var(--nav-text))" }}>
+                        Logiciels
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/jeux" style={{ color: "hsl(var(--nav-text))" }}>
+                        Jeux
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/ebooks" style={{ color: "hsl(var(--nav-text))" }}>
+                        Ebooks
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
+                      Musiques <span className="ml-auto text-xs">Bientôt</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
+                      Logiciels <span className="ml-auto text-xs">Bientôt</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
+                      Jeux <span className="ml-auto text-xs">Bientôt</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
+                      Ebooks <span className="ml-auto text-xs">Bientôt</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
 
@@ -460,38 +487,85 @@ export function Navigation() {
                       Animés
                     </Link>
                   </Button>
-                  <Button
-                    variant="ghost"
-                    disabled
-                    className="w-full justify-start opacity-60 cursor-not-allowed"
-                    style={{ color: "hsl(var(--nav-text-secondary))" }}
-                  >
-                    Musiques <span className="ml-auto text-xs">Bientôt</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled
-                    className="w-full justify-start opacity-60 cursor-not-allowed"
-                    style={{ color: "hsl(var(--nav-text-secondary))" }}
-                  >
-                    Logiciels <span className="ml-auto text-xs">Bientôt</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled
-                    className="w-full justify-start opacity-60 cursor-not-allowed"
-                    style={{ color: "hsl(var(--nav-text-secondary))" }}
-                  >
-                    Jeux <span className="ml-auto text-xs">Bientôt</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    disabled
-                    className="w-full justify-start opacity-60 cursor-not-allowed"
-                    style={{ color: "hsl(var(--nav-text-secondary))" }}
-                  >
-                    Ebooks <span className="ml-auto text-xs">Bientôt</span>
-                  </Button>
+                  {user?.isAdmin ? (
+                    <>
+                      <Button
+                        asChild
+                        variant="ghost"
+                        className="w-full justify-start"
+                        style={{ color: "hsl(var(--nav-text))" }}
+                      >
+                        <Link href="/musique" onClick={() => setIsMenuOpen(false)}>
+                          Musiques
+                        </Link>
+                      </Button>
+                      <Button
+                        asChild
+                        variant="ghost"
+                        className="w-full justify-start"
+                        style={{ color: "hsl(var(--nav-text))" }}
+                      >
+                        <Link href="/logiciels" onClick={() => setIsMenuOpen(false)}>
+                          Logiciels
+                        </Link>
+                      </Button>
+                      <Button
+                        asChild
+                        variant="ghost"
+                        className="w-full justify-start"
+                        style={{ color: "hsl(var(--nav-text))" }}
+                      >
+                        <Link href="/jeux" onClick={() => setIsMenuOpen(false)}>
+                          Jeux
+                        </Link>
+                      </Button>
+                      <Button
+                        asChild
+                        variant="ghost"
+                        className="w-full justify-start"
+                        style={{ color: "hsl(var(--nav-text))" }}
+                      >
+                        <Link href="/ebooks" onClick={() => setIsMenuOpen(false)}>
+                          Ebooks
+                        </Link>
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button
+                        variant="ghost"
+                        disabled
+                        className="w-full justify-start opacity-60 cursor-not-allowed"
+                        style={{ color: "hsl(var(--nav-text-secondary))" }}
+                      >
+                        Musiques <span className="ml-auto text-xs">Bientôt</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        disabled
+                        className="w-full justify-start opacity-60 cursor-not-allowed"
+                        style={{ color: "hsl(var(--nav-text-secondary))" }}
+                      >
+                        Logiciels <span className="ml-auto text-xs">Bientôt</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        disabled
+                        className="w-full justify-start opacity-60 cursor-not-allowed"
+                        style={{ color: "hsl(var(--nav-text-secondary))" }}
+                      >
+                        Jeux <span className="ml-auto text-xs">Bientôt</span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        disabled
+                        className="w-full justify-start opacity-60 cursor-not-allowed"
+                        style={{ color: "hsl(var(--nav-text-secondary))" }}
+                      >
+                        Ebooks <span className="ml-auto text-xs">Bientôt</span>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
 
