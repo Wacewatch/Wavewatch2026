@@ -423,10 +423,24 @@ export default function AdminPage() {
         loadRealRetrogamingSources(),
         loadRealUsers(),
         loadRequests(),
+        loadMusicContent(),
+        loadSoftware(),
+        loadGames(),
+        loadEbooks(),
       ])
 
       results.forEach((result, index) => {
-        const names = ["TV Channels", "Radio Stations", "Retrogaming Sources", "Users", "Requests"]
+        const names = [
+          "TV Channels",
+          "Radio Stations",
+          "Retrogaming Sources",
+          "Users",
+          "Requests",
+          "Music Content",
+          "Software",
+          "Games",
+          "Ebooks",
+        ]
         if (result.status === "rejected") {
           console.error(`❌ Erreur lors du chargement de ${names[index]}:`, result.reason)
         } else {
@@ -1971,102 +1985,104 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-10 bg-gray-800 border-gray-700 gap-1">
-            <TabsTrigger
-              value="dashboard"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
-            >
-              <BarChart3 className="w-4 h-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="broadcast"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
-            >
-              <Send className="w-4 h-4" />
-              <span className="hidden sm:inline">Message</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="tvchannels"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
-            >
-              <Zap className="w-4 h-4" />
-              <span className="hidden md:inline">TV ({tvChannels.length})</span>
-              <span className="md:hidden">TV</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="radio"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
-            >
-              <Radio className="w-4 h-4" />
-              <span className="hidden md:inline">Radio ({radioStations.length})</span>
-              <span className="md:hidden">Radio</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="music"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
-            >
-              <Music className="w-4 h-4" />
-              <span className="hidden md:inline">Musique ({musicContent.length})</span>
-              <span className="md:hidden">Music</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="software"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
-            >
-              <Download className="w-4 h-4" />
-              <span className="hidden md:inline">Logiciels ({software.length})</span>
-              <span className="md:hidden">Soft</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="games"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
-            >
-              <Gamepad2 className="w-4 h-4" />
-              <span className="hidden md:inline">Jeux ({games.length})</span>
-              <span className="md:hidden">Jeux</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="ebooks"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
-            >
-              <BookOpen className="w-4 h-4" />
-              <span className="hidden md:inline">Ebooks ({ebooks.length})</span>
-              <span className="md:hidden">Books</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="retrogaming"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
-            >
-              <Trophy className="w-4 h-4" />
-              <span className="hidden md:inline">Rétro ({retrogamingSources.length})</span>
-              <span className="md:hidden">Rétro</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="users"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
-            >
-              <Users className="w-4 h-4" />
-              <span className="hidden md:inline">Users ({users.length})</span>
-              <span className="md:hidden">Users</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="requests"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 col-span-2 sm:col-span-1"
-            >
-              <MessageSquare className="w-4 h-4" />
-              <span className="hidden md:inline">Demandes ({requests.length})</span>
-              <span className="md:hidden">Req</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="changelogs"
-              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 col-span-2 sm:col-span-1"
-            >
-              <FileText className="w-4 h-4" />
-              <span className="hidden md:inline">Logs ({changelogs.length})</span>
-              <span className="md:hidden">Logs</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 pb-2">
+            <TabsList className="inline-flex w-auto min-w-full bg-gray-800 border-gray-700 flex-nowrap">
+              <TabsTrigger
+                value="dashboard"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="broadcast"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <Send className="w-4 h-4" />
+                <span className="hidden sm:inline">Message</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="tvchannels"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <Zap className="w-4 h-4" />
+                <span className="hidden sm:inline">TV ({tvChannels.length})</span>
+                <span className="sm:hidden">TV</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="radio"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <Radio className="w-4 h-4" />
+                <span className="hidden sm:inline">Radio ({radioStations.length})</span>
+                <span className="sm:hidden">Radio</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="music"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <Music className="w-4 h-4" />
+                <span className="hidden sm:inline">Musique ({musicContent.length})</span>
+                <span className="sm:hidden">Music</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="software"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Logiciels ({software.length})</span>
+                <span className="sm:hidden">Soft</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="games"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <Gamepad2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Jeux ({games.length})</span>
+                <span className="sm:hidden">Jeux</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="ebooks"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <BookOpen className="w-4 h-4" />
+                <span className="hidden sm:inline">Ebooks ({ebooks.length})</span>
+                <span className="sm:hidden">Books</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="retrogaming"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <Trophy className="w-4 h-4" />
+                <span className="hidden sm:inline">Rétro ({retrogamingSources.length})</span>
+                <span className="sm:hidden">Rétro</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="users"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <Users className="w-4 h-4" />
+                <span className="hidden sm:inline">Users ({users.length})</span>
+                <span className="sm:hidden">Users</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="requests"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span className="hidden sm:inline">Demandes ({requests.length})</span>
+                <span className="sm:hidden">Req</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="changelogs"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Logs ({changelogs.length})</span>
+                <span className="sm:hidden">Logs</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Dashboard avec Statistiques */}
           <TabsContent value="dashboard" className="space-y-6">
