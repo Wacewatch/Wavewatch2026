@@ -268,7 +268,31 @@ export class WatchTracker {
     const items = this.getWatchedItems()
 
     if (type === "tv") {
-      console.log("[v0] Marking entire series as watched:", title)
+      console.log("[v0] Marking/unmarking entire series:", title)
+
+      const isCurrentlyWatched = items.some((item) => item.type === "tv" && item.tmdbId === tmdbId)
+
+      if (isCurrentlyWatched) {
+        console.log("[v0] Unmarking series and all episodes")
+
+        // Remove all episodes of this series
+        const filteredItems = items.filter((item) => {
+          if (
+            item.type === "episode" &&
+            item.showId === (typeof tmdbId === "string" ? Number.parseInt(tmdbId) : tmdbId)
+          ) {
+            return false
+          }
+          if (item.type === "tv" && item.tmdbId === tmdbId) {
+            return false
+          }
+          return true
+        })
+
+        localStorage.setItem(this.STORAGE_KEY_WATCHED, JSON.stringify(filteredItems))
+        window.dispatchEvent(new Event("watchlist-updated"))
+        return
+      }
 
       if (options?.seasons && options.seasons.length > 0) {
         // Mark all episodes from all seasons
