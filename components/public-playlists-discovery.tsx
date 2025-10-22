@@ -38,13 +38,13 @@ export function PublicPlaylistsDiscovery() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div>
           <h2 className="text-2xl font-bold text-white">Playlists Publiques</h2>
           <p className="text-gray-400">Découvrez les collections créées par la communauté</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={sortBy === "recent" ? "default" : "outline"}
             size="sm"
@@ -100,7 +100,7 @@ export function PublicPlaylistsDiscovery() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {sortedPlaylists.map((playlist) => (
             <Link key={playlist.id} href={`/playlists/${playlist.id}`}>
               <Card
@@ -128,7 +128,7 @@ export function PublicPlaylistsDiscovery() {
                         style={{
                           color: playlist.theme_color.includes("gradient") ? "#ffffff" : playlist.theme_color,
                           textShadow: playlist.theme_color.includes("gradient")
-                            ? "2px 2px 6px rgba(0,0,0,0.95), 0 0 15px rgba(0,0,0,0.8), 1px 1px 3px rgba(0,0,0,1)"
+                            ? "2px 2px 8px rgba(0,0,0,0.95), 0 0 20px rgba(0,0,0,0.9), 1px 1px 4px rgba(0,0,0,1)"
                             : "1px 1px 2px rgba(0,0,0,0.5)",
                         }}
                       >
@@ -167,7 +167,7 @@ export function PublicPlaylistsDiscovery() {
                       style={{
                         color: playlist.theme_color.includes("gradient") ? "#ffffff" : "#e5e7eb",
                         textShadow: playlist.theme_color.includes("gradient")
-                          ? "1px 1px 4px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.8)"
+                          ? "2px 2px 6px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.9)"
                           : "none",
                       }}
                     >
@@ -183,7 +183,7 @@ export function PublicPlaylistsDiscovery() {
                       style={{
                         color: playlist.theme_color.includes("gradient") ? "#ffffff" : "#e5e7eb",
                         textShadow: playlist.theme_color.includes("gradient")
-                          ? "1px 1px 4px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.8)"
+                          ? "2px 2px 6px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.9)"
                           : "none",
                       }}
                     >
@@ -196,7 +196,7 @@ export function PublicPlaylistsDiscovery() {
                     style={{
                       color: playlist.theme_color.includes("gradient") ? "#ffffff" : "#e5e7eb",
                       textShadow: playlist.theme_color.includes("gradient")
-                        ? "1px 1px 4px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.8)"
+                        ? "2px 2px 6px rgba(0,0,0,0.95), 0 0 12px rgba(0,0,0,0.9)"
                         : "none",
                     }}
                   >
@@ -207,7 +207,7 @@ export function PublicPlaylistsDiscovery() {
                           style={{
                             color: playlist.theme_color.includes("gradient") ? "#ffffff" : playlist.theme_color,
                             filter: playlist.theme_color.includes("gradient")
-                              ? "drop-shadow(1px 1px 3px rgba(0,0,0,0.95))"
+                              ? "drop-shadow(2px 2px 4px rgba(0,0,0,0.95))"
                               : "none",
                           }}
                         />
@@ -220,7 +220,7 @@ export function PublicPlaylistsDiscovery() {
                         style={{
                           color: playlist.theme_color.includes("gradient") ? "#ffffff" : playlist.theme_color,
                           filter: playlist.theme_color.includes("gradient")
-                            ? "drop-shadow(1px 1px 3px rgba(0,0,0,0.95))"
+                            ? "drop-shadow(2px 2px 4px rgba(0,0,0,0.95))"
                             : "none",
                         }}
                       />
@@ -228,7 +228,6 @@ export function PublicPlaylistsDiscovery() {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div
                     className="flex items-center justify-between pt-2"
                     style={{
@@ -248,7 +247,17 @@ export function PublicPlaylistsDiscovery() {
                           e.stopPropagation()
                           toggleLike(playlist.id, true)
                         }}
-                        className={`text-gray-400 hover:text-green-400 ${playlist.is_liked ? "text-green-400" : ""}`}
+                        className={`hover:text-green-400 ${playlist.is_liked ? "text-green-400" : ""}`}
+                        style={{
+                          color: playlist.is_liked
+                            ? "#4ade80"
+                            : playlist.theme_color.includes("gradient")
+                              ? "#ffffff"
+                              : "#9ca3af",
+                          filter: playlist.theme_color.includes("gradient")
+                            ? "drop-shadow(2px 2px 6px rgba(0,0,0,0.95)) drop-shadow(0 0 8px rgba(0,0,0,0.9))"
+                            : "none",
+                        }}
                         disabled={!user}
                       >
                         <ThumbsUp className="w-4 h-4 mr-1" />
@@ -263,7 +272,17 @@ export function PublicPlaylistsDiscovery() {
                           e.stopPropagation()
                           toggleLike(playlist.id, false)
                         }}
-                        className={`text-gray-400 hover:text-red-400 ${playlist.is_disliked ? "text-red-400" : ""}`}
+                        className={`hover:text-red-400 ${playlist.is_disliked ? "text-red-400" : ""}`}
+                        style={{
+                          color: playlist.is_disliked
+                            ? "#f87171"
+                            : playlist.theme_color.includes("gradient")
+                              ? "#ffffff"
+                              : "#9ca3af",
+                          filter: playlist.theme_color.includes("gradient")
+                            ? "drop-shadow(2px 2px 6px rgba(0,0,0,0.95)) drop-shadow(0 0 8px rgba(0,0,0,0.9))"
+                            : "none",
+                        }}
                         disabled={!user}
                       >
                         <ThumbsDown className="w-4 h-4 mr-1" />
@@ -279,7 +298,17 @@ export function PublicPlaylistsDiscovery() {
                         e.stopPropagation()
                         toggleFavorite(playlist.id)
                       }}
-                      className={`text-gray-400 hover:text-pink-400 ${playlist.is_favorited ? "text-pink-400" : ""}`}
+                      className={`hover:text-pink-400 ${playlist.is_favorited ? "text-pink-400" : ""}`}
+                      style={{
+                        color: playlist.is_favorited
+                          ? "#f472b6"
+                          : playlist.theme_color.includes("gradient")
+                            ? "#ffffff"
+                            : "#9ca3af",
+                        filter: playlist.theme_color.includes("gradient")
+                          ? "drop-shadow(2px 2px 6px rgba(0,0,0,0.95)) drop-shadow(0 0 8px rgba(0,0,0,0.9))"
+                          : "none",
+                      }}
                       disabled={!user}
                     >
                       <Heart className={`w-4 h-4 ${playlist.is_favorited ? "fill-current" : ""}`} />
@@ -292,7 +321,7 @@ export function PublicPlaylistsDiscovery() {
                       style={{
                         color: playlist.theme_color.includes("gradient") ? "rgba(255,255,255,0.85)" : "#d1d5db",
                         textShadow: playlist.theme_color.includes("gradient")
-                          ? "1px 1px 3px rgba(0,0,0,0.95), 0 0 6px rgba(0,0,0,0.8)"
+                          ? "2px 2px 4px rgba(0,0,0,0.95), 0 0 8px rgba(0,0,0,0.9)"
                           : "none",
                       }}
                     >

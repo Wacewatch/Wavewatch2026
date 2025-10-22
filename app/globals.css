@@ -381,7 +381,7 @@
     --nav-dropdown-bg: 260 45% 13%;
   }
 
-  /* Added new Neon premium theme with cyberpunk aesthetic */
+  /* Neon premium theme with cyberpunk aesthetic */
   .neon {
     --background: 200 100% 2%;
     --foreground: 180 100% 95%;
@@ -422,8 +422,6 @@
     --nav-hover: 200 90% 8%;
     --nav-dropdown-bg: 200 90% 6%;
   }
-
-  /* Added 3 new themes for all users: Desert, Lavender, and Crimson */
 
   /* Desert theme - warm sandy tones */
   .desert {
@@ -550,8 +548,6 @@
     --nav-hover: 350 35% 20%;
     --nav-dropdown-bg: 350 35% 16%;
   }
-
-  /* Added 2 new premium themes: Emerald and Cosmic */
 
   /* Emerald premium theme - luxurious green */
   .emerald {
@@ -695,7 +691,7 @@
   box-shadow: 0 0 15px rgba(147, 51, 234, 0.8);
 }
 
-/* Added Neon theme visual effects with cyberpunk glow */
+/* Neon theme visual effects with cyberpunk glow */
 .neon .logo-glow {
   filter: drop-shadow(0 0 20px rgba(255, 0, 255, 0.9)) drop-shadow(0 0 40px rgba(0, 255, 255, 0.6));
 }
@@ -719,7 +715,7 @@
   box-shadow: 0 0 20px rgba(255, 0, 255, 1), 0 0 35px rgba(0, 255, 255, 0.9);
 }
 
-/* Added Emerald premium theme visual effects */
+/* Emerald premium theme visual effects */
 .emerald .logo-glow {
   filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.8)) drop-shadow(0 0 40px rgba(16, 185, 129, 0.4));
 }
@@ -743,7 +739,7 @@
   box-shadow: 0 0 15px rgba(16, 185, 129, 0.8);
 }
 
-/* Added Cosmic premium theme visual effects */
+/* Cosmic premium theme visual effects */
 .cosmic .logo-glow {
   filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.9)) drop-shadow(0 0 40px rgba(99, 102, 241, 0.6));
 }
@@ -797,7 +793,7 @@
   animation: royal-glow 3s ease-in-out infinite;
 }
 
-/* Added Neon theme glow animation with pulsing cyberpunk effect */
+/* Neon theme glow animation with pulsing cyberpunk effect */
 @keyframes neon-glow {
   0%,
   100% {
@@ -812,7 +808,7 @@
   animation: neon-glow 2s ease-in-out infinite;
 }
 
-/* Added Emerald premium theme glow animation */
+/* Emerald premium theme glow animation */
 @keyframes emerald-glow {
   0%,
   100% {
@@ -827,7 +823,7 @@
   animation: emerald-glow 3s ease-in-out infinite;
 }
 
-/* Added Cosmic premium theme glow animation */
+/* Cosmic premium theme glow animation */
 @keyframes cosmic-glow {
   0%,
   100% {

@@ -14,6 +14,8 @@ type Theme =
   | "desert"
   | "lavender"
   | "crimson"
+  | "sapphire"
+  | "jade"
   | "premium"
   | "royal"
   | "neon"
@@ -63,6 +65,8 @@ export function ThemeProvider({ children, defaultTheme = "dark", ...props }: The
       "desert",
       "lavender",
       "crimson",
+      "sapphire",
+      "jade",
       "premium",
       "royal",
       "neon",

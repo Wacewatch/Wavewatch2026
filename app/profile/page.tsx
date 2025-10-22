@@ -459,7 +459,21 @@ export default function ProfilePage() {
     }
   }
 
-  const handleThemeChange = (newTheme: "dark" | "light" | "ocean" | "sunset" | "forest" | "midnight" | "aurora") => {
+  const handleThemeChange = (
+    newTheme:
+      | "dark"
+      | "light"
+      | "ocean"
+      | "sunset"
+      | "forest"
+      | "midnight"
+      | "aurora"
+      | "desert"
+      | "lavender"
+      | "crimson"
+      | "sapphire"
+      | "jade",
+  ) => {
     setTheme(newTheme)
     toast({
       title: "Thème modifié",
@@ -468,7 +482,24 @@ export default function ProfilePage() {
   }
 
   const handlePremiumThemeChange = (
-    newTheme: "dark" | "light" | "ocean" | "sunset" | "forest" | "midnight" | "aurora" | "premium" | "royal" | "neon",
+    newTheme:
+      | "dark"
+      | "light"
+      | "ocean"
+      | "sunset"
+      | "forest"
+      | "midnight"
+      | "aurora"
+      | "desert"
+      | "lavender"
+      | "crimson"
+      | "sapphire"
+      | "jade"
+      | "premium"
+      | "royal"
+      | "neon"
+      | "emerald"
+      | "cosmic",
   ) => {
     setTheme(newTheme)
     toast({
@@ -486,9 +517,16 @@ export default function ProfilePage() {
       forest: "Forêt",
       midnight: "Minuit",
       aurora: "Aurore",
+      desert: "Désert",
+      lavender: "Lavande",
+      crimson: "Cramoisi",
+      sapphire: "Saphir",
+      jade: "Jade",
       premium: "Premium",
       royal: "Royal",
       neon: "Neon",
+      emerald: "Émeraude",
+      cosmic: "Cosmique",
     }
     return themeNames[themeValue] || themeValue
   }
@@ -871,6 +909,42 @@ export default function ProfilePage() {
                   </button>
 
                   <button
+                    onClick={() => handleThemeChange("sapphire")}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                      theme === "sapphire"
+                        ? "border-blue-400 bg-gray-700"
+                        : "border-gray-600 bg-gray-750 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-blue-600 via-sky-500 to-cyan-400 border border-blue-500" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Saphir</div>
+                        <div className="text-xs text-gray-400">Bleu cristallin éclatant</div>
+                      </div>
+                    </div>
+                    {theme === "sapphire" && <div className="w-2 h-2 rounded-full bg-blue-400" />}
+                  </button>
+
+                  <button
+                    onClick={() => handleThemeChange("jade")}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                      theme === "jade"
+                        ? "border-emerald-500 bg-gray-700"
+                        : "border-gray-600 bg-gray-750 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-emerald-600 via-green-500 to-teal-500 border border-emerald-500" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Jade</div>
+                        <div className="text-xs text-gray-400">Vert jade précieux</div>
+                      </div>
+                    </div>
+                    {theme === "jade" && <div className="w-2 h-2 rounded-full bg-emerald-500" />}
+                  </button>
+
+                  <button
                     onClick={() => {
                       if (hasPremiumAccess) {
                         handlePremiumThemeChange("premium")
@@ -973,6 +1047,76 @@ export default function ProfilePage() {
                       </div>
                     )}
                     {theme === "neon" && <div className="w-2 h-2 rounded-full bg-cyan-500" />}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (hasPremiumAccess) {
+                        handlePremiumThemeChange("emerald")
+                      }
+                    }}
+                    disabled={!hasPremiumAccess}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all relative ${
+                      theme === "emerald"
+                        ? "border-emerald-500 bg-gray-700"
+                        : hasPremiumAccess
+                          ? "border-gray-600 bg-gray-750 hover:border-gray-500"
+                          : "border-gray-700 bg-gray-800 opacity-60 cursor-not-allowed"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-emerald-600 via-green-500 to-teal-500 border border-emerald-500 animate-gradient" />
+                      <div className="text-left">
+                        <div className="font-medium text-white flex items-center gap-2">
+                          Émeraude
+                          <Crown className="w-3 h-3 text-emerald-400" />
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {hasPremiumAccess ? "Luxe vert émeraude" : "Réservé VIP/VIP+/Admin"}
+                        </div>
+                      </div>
+                    </div>
+                    {!hasPremiumAccess && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 rounded-lg">
+                        <Lock className="w-5 h-5 text-emerald-400" />
+                      </div>
+                    )}
+                    {theme === "emerald" && <div className="w-2 h-2 rounded-full bg-emerald-500" />}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (hasPremiumAccess) {
+                        handlePremiumThemeChange("cosmic")
+                      }
+                    }}
+                    disabled={!hasPremiumAccess}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all relative ${
+                      theme === "cosmic"
+                        ? "border-violet-500 bg-gray-700"
+                        : hasPremiumAccess
+                          ? "border-gray-600 bg-gray-750 hover:border-gray-500"
+                          : "border-gray-700 bg-gray-800 opacity-60 cursor-not-allowed"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-violet-700 via-purple-600 to-indigo-700 border border-violet-500 animate-gradient" />
+                      <div className="text-left">
+                        <div className="font-medium text-white flex items-center gap-2">
+                          Cosmique
+                          <Crown className="w-3 h-3 text-violet-400" />
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {hasPremiumAccess ? "Espace profond mystique" : "Réservé VIP/VIP+/Admin"}
+                        </div>
+                      </div>
+                    </div>
+                    {!hasPremiumAccess && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 rounded-lg">
+                        <Lock className="w-5 h-5 text-violet-400" />
+                      </div>
+                    )}
+                    {theme === "cosmic" && <div className="w-2 h-2 rounded-full bg-violet-500" />}
                   </button>
                 </div>
 

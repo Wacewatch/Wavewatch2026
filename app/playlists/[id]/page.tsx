@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Globe, Lock, Calendar, Film, Trash2 } from "lucide-react"
+import { ArrowLeft, Globe, Lock, Calendar, Film, Trash2, Clock } from "lucide-react"
 import { usePlaylists } from "@/hooks/use-playlists"
 import { createClient } from "@/lib/supabase"
 import Image from "next/image"
@@ -384,14 +384,30 @@ export default function PlaylistContentPage() {
                     <Film className="w-3 h-3 mr-1" />
                     {playlist.items_count} éléments
                   </Badge>
-                  <Badge
-                    variant="outline"
-                    className="text-sm"
-                    style={{ borderColor: playlist.theme_color, color: playlist.theme_color }}
-                  >
-                    <Calendar className="w-3 h-3 mr-1" />
-                    {new Date(playlist.updated_at).toLocaleDateString()}
-                  </Badge>
+                </div>
+                <div className="flex flex-col gap-1 mt-3 text-sm text-gray-300">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" style={{ color: playlist.theme_color }} />
+                    <span>
+                      Créée le{" "}
+                      {new Date(playlist.created_at).toLocaleDateString("fr-FR", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4" style={{ color: playlist.theme_color }} />
+                    <span>
+                      Dernière mise à jour le{" "}
+                      {new Date(playlist.updated_at).toLocaleDateString("fr-FR", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
                 </div>
                 <p className="text-gray-300 text-sm mt-2">Créée par {playlist.username}</p>
               </div>
@@ -473,11 +489,11 @@ export default function PlaylistContentPage() {
             {filteredPlaylistItems.length === 0 ? (
               <div className="text-center py-12">
                 <Film className="h-16 w-16 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 text-lg mb-2">
+                <h3 className="text-xl font-semibold text-white mb-2">
                   {playlistItems.length === 0
                     ? "Cette playlist est vide"
                     : `Aucun ${contentFilter === "movie" ? "film" : "série"} dans cette playlist`}
-                </p>
+                </h3>
                 <p className="text-gray-500 text-sm">
                   {isOwner && playlistItems.length === 0
                     ? "Ajoutez des films et séries depuis leurs pages de détails."
@@ -531,9 +547,9 @@ export default function PlaylistContentPage() {
                     }
                   }
 
-                  const displayDate = item.added_at || item.created_at
-                  const formattedDate = displayDate
-                    ? new Date(displayDate).toLocaleDateString("fr-FR", {
+                  const releaseDate = item.release_date || item.first_air_date
+                  const formattedDate = releaseDate
+                    ? new Date(releaseDate).toLocaleDateString("fr-FR", {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
@@ -594,7 +610,7 @@ export default function PlaylistContentPage() {
                         <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white cursor-pointer">
                           {item.title}
                         </p>
-                        {formattedDate && <p className="text-xs text-gray-400">{formattedDate}</p>}
+                        {formattedDate && <p className="text-xs text-gray-400">Sortie: {formattedDate}</p>}
                       </div>
                     </div>
                   )
