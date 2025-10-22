@@ -1971,95 +1971,101 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-10 bg-gray-800 border-gray-700">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-10 bg-gray-800 border-gray-700 gap-1">
             <TabsTrigger
               value="dashboard"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
             >
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Dashboard</span>
             </TabsTrigger>
             <TabsTrigger
               value="broadcast"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
             >
               <Send className="w-4 h-4" />
               <span className="hidden sm:inline">Message</span>
             </TabsTrigger>
             <TabsTrigger
               value="tvchannels"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
             >
               <Zap className="w-4 h-4" />
-              <span className="hidden sm:inline">TV ({tvChannels.length})</span>
+              <span className="hidden md:inline">TV ({tvChannels.length})</span>
+              <span className="md:hidden">TV</span>
             </TabsTrigger>
             <TabsTrigger
               value="radio"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
             >
               <Radio className="w-4 h-4" />
-              <span className="hidden sm:inline">Radio ({radioStations.length})</span>
+              <span className="hidden md:inline">Radio ({radioStations.length})</span>
+              <span className="md:hidden">Radio</span>
             </TabsTrigger>
             <TabsTrigger
               value="music"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
             >
               <Music className="w-4 h-4" />
-              <span className="hidden sm:inline">Musique ({musicContent.length})</span>
+              <span className="hidden md:inline">Musique ({musicContent.length})</span>
+              <span className="md:hidden">Music</span>
             </TabsTrigger>
             <TabsTrigger
               value="software"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Logiciels ({software.length})</span>
+              <span className="hidden md:inline">Logiciels ({software.length})</span>
+              <span className="md:hidden">Soft</span>
             </TabsTrigger>
             <TabsTrigger
               value="games"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
             >
               <Gamepad2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Jeux ({games.length})</span>
+              <span className="hidden md:inline">Jeux ({games.length})</span>
+              <span className="md:hidden">Jeux</span>
             </TabsTrigger>
             <TabsTrigger
               value="ebooks"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
             >
               <BookOpen className="w-4 h-4" />
-              <span className="hidden sm:inline">Ebooks ({ebooks.length})</span>
+              <span className="hidden md:inline">Ebooks ({ebooks.length})</span>
+              <span className="md:hidden">Books</span>
             </TabsTrigger>
             <TabsTrigger
               value="retrogaming"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
             >
               <Trophy className="w-4 h-4" />
-              <span className="hidden sm:inline">Rétro ({retrogamingSources.length})</span>
+              <span className="hidden md:inline">Rétro ({retrogamingSources.length})</span>
+              <span className="md:hidden">Rétro</span>
             </TabsTrigger>
             <TabsTrigger
               value="users"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2"
             >
               <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">Users ({users.length})</span>
+              <span className="hidden md:inline">Users ({users.length})</span>
+              <span className="md:hidden">Users</span>
             </TabsTrigger>
             <TabsTrigger
               value="requests"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 col-span-2 sm:col-span-1"
             >
               <MessageSquare className="w-4 h-4" />
-              <span className="hidden sm:inline">Demandes ({requests.length})</span>
+              <span className="hidden md:inline">Demandes ({requests.length})</span>
+              <span className="md:hidden">Req</span>
             </TabsTrigger>
             <TabsTrigger
               value="changelogs"
-              className="flex items-center gap-1 data-[state=active]:bg-gray-700 text-gray-300"
+              className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 col-span-2 sm:col-span-1"
             >
               <FileText className="w-4 h-4" />
-              <span className="hidden sm:inline">Logs ({changelogs.length})</span>
+              <span className="hidden md:inline">Logs ({changelogs.length})</span>
+              <span className="md:hidden">Logs</span>
             </TabsTrigger>
-            {/* Added placeholder triggers to fill up space for lg:grid-cols-10 */}
-            <TabsTrigger disabled className="pointer-events-none opacity-0"></TabsTrigger>
-            <TabsTrigger disabled className="pointer-events-none opacity-0"></TabsTrigger>
-            <TabsTrigger disabled className="pointer-events-none opacity-0"></TabsTrigger>
           </TabsList>
 
           {/* Dashboard avec Statistiques */}
@@ -2480,14 +2486,16 @@ export default function AdminPage() {
 
           <TabsContent value="broadcast" className="space-y-6">
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Send className="w-5 h-5" />
-                  Envoyer un message à tous les utilisateurs
-                </CardTitle>
-                <CardDescription>
-                  Diffusez un message à tous les utilisateurs inscrits via leur messagerie interne
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Send className="w-5 h-5" />
+                    Envoyer un message à tous les utilisateurs
+                  </CardTitle>
+                  <CardDescription>
+                    Diffusez un message à tous les utilisateurs inscrits via leur messagerie interne
+                  </CardDescription>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
