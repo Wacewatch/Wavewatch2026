@@ -254,32 +254,26 @@ export function RandomContent() {
     setError("")
   }
 
-  const allContent = [
-    ...contentCache.movies.map((item) => ({ ...item, type: "movie" })),
-    ...contentCache.tvShows.map((item) => ({ ...item, type: "tv" })),
-    ...contentCache.anime.map((item) => ({ ...item, type: "anime" })),
-  ]
-
   return (
-    <Card className="bg-gradient-to-br from-slate-900/50 to-blue-900/30 border-slate-700">
-      <div className="p-4 border-b border-slate-600">
+    <Card className="bg-card border-border">
+      <div className="p-4 border-b border-border">
         <div
           className={`flex items-center justify-center relative ${isMobile ? "cursor-pointer" : ""}`}
           onClick={isMobile ? () => setIsExpanded(!isExpanded) : undefined}
         >
           <div className="text-center">
-            <CardTitle className="flex items-center justify-center gap-2 text-xl md:text-2xl">
-              <Sparkles className="h-6 w-6 text-purple-400" />
+            <CardTitle className="flex items-center justify-center gap-2 text-xl md:text-2xl text-foreground">
+              <Sparkles className="h-6 w-6 text-purple-500" />
               Découverte Aléatoire
-              <Sparkles className="h-6 w-6 text-purple-400" />
+              <Sparkles className="h-6 w-6 text-purple-500" />
             </CardTitle>
-            <p className="text-sm text-gray-400">Laissez-nous vous surprendre !</p>
+            <p className="text-sm text-muted-foreground mt-1">Laissez-nous vous surprendre !</p>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={isMobile ? undefined : () => setIsExpanded(!isExpanded)}
-            className={`absolute right-0 text-gray-400 hover:text-white hover:bg-slate-700 ${isMobile ? "hidden" : ""}`}
+            className={`absolute right-0 text-muted-foreground hover:text-foreground ${isMobile ? "hidden" : ""}`}
           >
             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </Button>
@@ -287,15 +281,15 @@ export function RandomContent() {
       </div>
 
       {isExpanded && (
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {error && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
-              <p className="text-red-400 text-sm">{error}</p>
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-center">
+              <p className="text-destructive text-sm">{error}</p>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setError("")}
-                className="mt-2 text-red-400 hover:text-red-300"
+                className="mt-2 text-destructive hover:text-destructive/80"
               >
                 Fermer
               </Button>
@@ -304,7 +298,7 @@ export function RandomContent() {
 
           {step === 0 && (
             <div className="space-y-4">
-              <p className="text-center text-gray-300 text-sm md:text-base">Que voulez-vous regarder ?</p>
+              <p className="text-center text-muted-foreground text-sm md:text-base">Que voulez-vous regarder ?</p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                 {contentTypes.map((type) => {
                   const Icon = type.icon
@@ -312,7 +306,7 @@ export function RandomContent() {
                     <Button
                       key={type.id}
                       variant="outline"
-                      className={`h-16 md:h-20 flex flex-col gap-2 bg-gradient-to-r ${type.color} bg-opacity-10 border-opacity-30 hover:bg-opacity-20 transition-all duration-300`}
+                      className="h-16 md:h-20 flex flex-col gap-2 border-border hover:bg-accent transition-all duration-300 bg-transparent"
                       onClick={() => {
                         setPreferences({ ...preferences, type: type.id })
                         setStep(1)
@@ -357,10 +351,8 @@ export function RandomContent() {
           {step === 1 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-gray-300 text-sm md:text-base">Genre préféré ?</p>
-                <Badge variant="secondary" className="text-xs">
-                  {contentTypes.find((t) => t.id === preferences.type)?.label}
-                </Badge>
+                <p className="text-muted-foreground text-sm md:text-base">Genre préféré ?</p>
+                <Badge variant="secondary">{contentTypes.find((t) => t.id === preferences.type)?.label}</Badge>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {genres.map((genre) => (
@@ -368,7 +360,7 @@ export function RandomContent() {
                     key={genre}
                     variant="outline"
                     size="sm"
-                    className="text-xs h-8 hover:bg-blue-500/20 bg-transparent"
+                    className="text-xs h-8 hover:bg-accent border-border bg-transparent"
                     onClick={() => {
                       setPreferences({ ...preferences, genre })
                       setStep(2)
@@ -400,7 +392,7 @@ export function RandomContent() {
           {step === 2 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-gray-300 text-sm md:text-base">Durée souhaitée ?</p>
+                <p className="text-muted-foreground text-sm md:text-base">Durée souhaitée ?</p>
                 <div className="flex gap-1">
                   <Badge variant="secondary" className="text-xs">
                     {contentTypes.find((t) => t.id === preferences.type)?.label}
@@ -419,7 +411,7 @@ export function RandomContent() {
                     <Button
                       key={duration.id}
                       variant="outline"
-                      className="h-12 flex items-center gap-2 hover:bg-green-500/20 bg-transparent"
+                      className="h-12 flex items-center gap-2 hover:bg-accent border-border bg-transparent"
                       onClick={() => {
                         setPreferences({ ...preferences, duration: duration.id })
                         setStep(3)
@@ -453,7 +445,7 @@ export function RandomContent() {
           {step === 3 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-gray-300 text-sm md:text-base">Note minimale ?</p>
+                <p className="text-muted-foreground text-sm md:text-base">Note minimale ?</p>
                 <div className="flex gap-1 flex-wrap">
                   <Badge variant="secondary" className="text-xs">
                     {contentTypes.find((t) => t.id === preferences.type)?.label}
@@ -477,7 +469,7 @@ export function RandomContent() {
                     <Button
                       key={rating.id}
                       variant="outline"
-                      className="h-12 flex items-center gap-2 hover:bg-yellow-500/20 bg-transparent"
+                      className="h-12 flex items-center gap-2 hover:bg-accent border-border bg-transparent"
                       onClick={() => {
                         setPreferences({ ...preferences, rating: rating.id })
                         handleGetRecommendation()

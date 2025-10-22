@@ -44,23 +44,58 @@ const STANDARD_COLORS = [
   { name: "Cyan", value: "#06B6D4", premium: false },
   { name: "Indigo", value: "#6366F1", premium: false },
   { name: "Lime", value: "#84CC16", premium: false },
+  { name: "Teal", value: "#14B8A6", premium: false },
+  { name: "Magenta", value: "#D946EF", premium: false },
+  { name: "Ambre", value: "#F59E0B", premium: false },
+  { name: "Ardoise", value: "#64748B", premium: false },
+  { name: "Corail", value: "#FB7185", premium: false },
 ]
 
 const PREMIUM_COLORS = [
-  { name: "Or", value: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)", premium: true, animated: true },
-  { name: "Émeraude", value: "linear-gradient(135deg, #10B981 0%, #059669 100%)", premium: true, animated: true },
-  { name: "Saphir", value: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)", premium: true, animated: true },
-  { name: "Rubis", value: "linear-gradient(135deg, #EF4444 0%, #DC2626 100%)", premium: true, animated: true },
-  { name: "Améthyste", value: "linear-gradient(135deg, #A855F7 0%, #7C3AED 100%)", premium: true, animated: true },
+  { name: "Or", value: "linear-gradient(135deg, #FDE68A 0%, #FCD34D 100%)", premium: true, animated: true },
+  { name: "Émeraude", value: "linear-gradient(135deg, #6EE7B7 0%, #34D399 100%)", premium: true, animated: true },
+  { name: "Saphir", value: "linear-gradient(135deg, #93C5FD 0%, #60A5FA 100%)", premium: true, animated: true },
+  { name: "Rubis", value: "linear-gradient(135deg, #FCA5A5 0%, #F87171 100%)", premium: true, animated: true },
+  { name: "Améthyste", value: "linear-gradient(135deg, #C4B5FD 0%, #A78BFA 100%)", premium: true, animated: true },
   {
     name: "Arc-en-ciel",
-    value: "linear-gradient(135deg, #FF0080 0%, #FF8C00 25%, #40E0D0 50%, #FF0080 100%)",
+    value: "linear-gradient(135deg, #FCA5A5 0%, #FDE68A 25%, #A7F3D0 50%, #BFDBFE 75%, #DDD6FE 100%)",
     premium: true,
     animated: true,
   },
   {
     name: "Galaxie",
-    value: "linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)",
+    value: "linear-gradient(135deg, #A78BFA 0%, #C084FC 50%, #F0ABFC 100%)",
+    premium: true,
+    animated: true,
+  },
+  {
+    name: "Aurore Boréale",
+    value: "linear-gradient(135deg, #6EE7B7 0%, #5EEAD4 33%, #7DD3FC 66%, #A5B4FC 100%)",
+    premium: true,
+    animated: true,
+  },
+  {
+    name: "Coucher de Soleil",
+    value: "linear-gradient(135deg, #FED7AA 0%, #FDBA74 33%, #FB923C 66%, #F97316 100%)",
+    premium: true,
+    animated: true,
+  },
+  {
+    name: "Océan Profond",
+    value: "linear-gradient(135deg, #67E8F9 0%, #22D3EE 33%, #06B6D4 66%, #0891B2 100%)",
+    premium: true,
+    animated: true,
+  },
+  {
+    name: "Rose Doré",
+    value: "linear-gradient(135deg, #FBCFE8 0%, #F9A8D4 33%, #F472B6 66%, #EC4899 100%)",
+    premium: true,
+    animated: true,
+  },
+  {
+    name: "Forêt Enchantée",
+    value: "linear-gradient(135deg, #BBF7D0 0%, #86EFAC 33%, #4ADE80 66%, #22C55E 100%)",
     premium: true,
     animated: true,
   },
@@ -197,7 +232,7 @@ export function PlaylistManager() {
           {!hasPremiumAccess && (
             <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
               <Lock className="w-3 h-3" />
-              Ces couleurs sont réservées aux membres VIP et VIP+
+              Ces couleurs sont réservées aux membres VIP, VIP+ et Admin
             </p>
           )}
         </div>

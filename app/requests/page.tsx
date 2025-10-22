@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { Search, Plus, ExternalLink, ArrowLeft } from "lucide-react"
+import { Search, Plus, ArrowLeft } from "lucide-react"
 import { searchMulti } from "@/lib/tmdb"
 import Image from "next/image"
 import Link from "next/link"
@@ -28,12 +28,29 @@ export default function RequestsPage() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [requests, setRequests] = useState([])
+  const [myRequests, setMyRequests] = useState([])
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  // Search for content in TMDB
+  useEffect(() => {
+    if (user) {
+      loadRequests()
+    }
+  }, [user])
+
+  const loadRequests = async () => {
+    try {
+      const response = await fetch("/api/content-requests")
+      const data = await response.json()
+      setRequests(data.requests || [])
+      setMyRequests(data.requests || [])
+    } catch (error) {
+      console.error("Error loading requests:", error)
+    }
+  }
+
   const handleSearch = async (query: string) => {
     if (!query.trim()) {
       setSearchResults([])
@@ -56,7 +73,6 @@ export default function RequestsPage() {
     }
   }
 
-  // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
       handleSearch(searchQuery)
@@ -78,41 +94,37 @@ export default function RequestsPage() {
     setLoading(true)
 
     try {
-      // Check if content already exists (mock check)
-      const isAvailable = Math.random() > 0.7 // 30% chance it's already available
+      const response = await fetch("/api/content-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: content.title || content.name,
+          description: content.overview,
+          content_type: content.media_type,
+          tmdb_id: content.id,
+        }),
+      })
 
-      if (isAvailable) {
-        const contentType = content.media_type === "movie" ? "movies" : "tv-shows"
-        toast({
-          title: "Contenu déjà disponible !",
-          description: (
-            <div className="space-y-2">
-              <p>Ce contenu est déjà disponible sur WaveWatch.</p>
-              <Link
-                href={`/${contentType}/${content.id}`}
-                className="inline-flex items-center text-blue-400 hover:underline"
-              >
-                Voir maintenant <ExternalLink className="w-3 h-3 ml-1" />
-              </Link>
-            </div>
-          ),
-        })
-        return
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erreur lors de l'envoi")
       }
 
-      // Submit request (mock API call)
       toast({
         title: "Demande envoyée",
         description: `Votre demande pour "${content.title || content.name}" a été envoyée avec succès.`,
       })
 
-      // Clear search
       setSearchQuery("")
       setSearchResults([])
-    } catch (error) {
+      loadRequests()
+    } catch (error: any) {
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de l'envoi de la demande.",
+        description: error.message || "Une erreur est survenue lors de l'envoi de la demande.",
         variant: "destructive",
       })
     } finally {
@@ -327,7 +339,42 @@ export default function RequestsPage() {
                   <CardDescription className="text-gray-400">Suivez le statut de vos demandes</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-center text-gray-400 py-8">Vous n'avez fait aucune demande pour le moment.</p>
+                  {myRequests.length === 0 ? (
+                    <p className="text-center text-gray-400 py-8">Vous n'avez fait aucune demande pour le moment.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {myRequests.map((request: any) => (
+                        <div
+                          key={request.id}
+                          className="border border-gray-700 rounded-lg p-4 space-y-2 bg-gray-700/50"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-semibold text-white">{request.title}</h3>
+                              <p className="text-sm text-gray-400">
+                                {request.content_type === "movie"
+                                  ? "Film"
+                                  : request.content_type === "tv"
+                                    ? "Série TV"
+                                    : "Animé"}
+                              </p>
+                            </div>
+                            {getStatusBadge(request.status)}
+                          </div>
+                          {request.description && <p className="text-sm text-gray-300">{request.description}</p>}
+                          <p className="text-xs text-gray-500">
+                            Demandé le {new Date(request.created_at).toLocaleDateString("fr-FR")}
+                          </p>
+                          {request.admin_notes && (
+                            <div className="mt-2 p-2 bg-gray-800 rounded border border-gray-600">
+                              <p className="text-xs text-gray-400 font-semibold mb-1">Note de l'admin :</p>
+                              <p className="text-xs text-gray-300">{request.admin_notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

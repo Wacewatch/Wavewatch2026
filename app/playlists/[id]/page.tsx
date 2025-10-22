@@ -502,12 +502,10 @@ export default function PlaylistContentPage() {
                   const getItemUrl = () => {
                     const mediaType = item.media_type || item.content_type
 
-                    // TV channels, radio, and retrogaming should not have URLs (they open modals)
                     if (mediaType === "tv-channel" || mediaType === "live") return null
                     if (mediaType === "radio") return null
                     if (mediaType === "game" || mediaType === "gaming") return null
 
-                    // Movies and TV shows link to their detail pages
                     if (mediaType === "movie") {
                       return `/movies/${item.tmdb_id || item.content_id}`
                     } else if (mediaType === "tv") {
@@ -532,6 +530,15 @@ export default function PlaylistContentPage() {
                       handlePlayItem(item)
                     }
                   }
+
+                  const displayDate = item.added_at || item.created_at
+                  const formattedDate = displayDate
+                    ? new Date(displayDate).toLocaleDateString("fr-FR", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })
+                    : ""
 
                   const content = (
                     <div key={item.id} className="space-y-2 group">
@@ -587,7 +594,7 @@ export default function PlaylistContentPage() {
                         <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white cursor-pointer">
                           {item.title}
                         </p>
-                        <p className="text-xs text-gray-400">{new Date(item.created_at).toLocaleDateString()}</p>
+                        {formattedDate && <p className="text-xs text-gray-400">{formattedDate}</p>}
                       </div>
                     </div>
                   )

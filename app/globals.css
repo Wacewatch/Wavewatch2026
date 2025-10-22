@@ -422,6 +422,220 @@
     --nav-hover: 200 90% 8%;
     --nav-dropdown-bg: 200 90% 6%;
   }
+
+  /* Added 3 new themes for all users: Desert, Lavender, and Crimson */
+
+  /* Desert theme - warm sandy tones */
+  .desert {
+    --background: 30 25% 10%;
+    --foreground: 40 20% 95%;
+    --card: 30 20% 15%;
+    --card-foreground: 40 20% 95%;
+    --popover: 30 20% 15%;
+    --popover-foreground: 40 20% 95%;
+    --primary: 35 85% 55%;
+    --primary-foreground: 30 25% 12%;
+    --secondary: 30 20% 22%;
+    --secondary-foreground: 40 20% 95%;
+    --muted: 30 18% 22%;
+    --muted-foreground: 40 15% 65%;
+    --accent: 25 80% 60%;
+    --accent-foreground: 40 20% 95%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 30 20% 28%;
+    --input: 30 20% 28%;
+    --ring: 35 85% 55%;
+    --chart-1: 35 85% 55%;
+    --chart-2: 25 80% 60%;
+    --chart-3: 40 75% 50%;
+    --chart-4: 30 80% 55%;
+    --chart-5: 20 85% 60%;
+    --sidebar: 30 20% 15%;
+    --sidebar-foreground: 40 20% 90%;
+    --sidebar-primary: 35 85% 55%;
+    --sidebar-primary-foreground: 30 25% 12%;
+    --sidebar-accent: 30 22% 20%;
+    --sidebar-accent-foreground: 40 20% 95%;
+    --sidebar-border: 30 20% 28%;
+    --sidebar-ring: 35 85% 55%;
+    --nav-bg: 30 30% 12%;
+    --nav-border: 35 75% 40%;
+    --nav-text: 40 25% 95%;
+    --nav-text-secondary: 35 80% 70%;
+    --nav-hover: 30 28% 20%;
+    --nav-dropdown-bg: 30 25% 16%;
+  }
+
+  /* Lavender theme - soft purple tones */
+  .lavender {
+    --background: 270 30% 10%;
+    --foreground: 270 15% 95%;
+    --card: 270 25% 15%;
+    --card-foreground: 270 15% 95%;
+    --popover: 270 25% 15%;
+    --popover-foreground: 270 15% 95%;
+    --primary: 275 65% 65%;
+    --primary-foreground: 270 30% 12%;
+    --secondary: 270 20% 22%;
+    --secondary-foreground: 270 15% 95%;
+    --muted: 270 18% 22%;
+    --muted-foreground: 270 12% 65%;
+    --accent: 285 70% 70%;
+    --accent-foreground: 270 15% 95%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 270 20% 28%;
+    --input: 270 20% 28%;
+    --ring: 275 65% 65%;
+    --chart-1: 275 65% 65%;
+    --chart-2: 285 70% 70%;
+    --chart-3: 265 60% 60%;
+    --chart-4: 280 65% 65%;
+    --chart-5: 290 70% 70%;
+    --sidebar: 270 25% 15%;
+    --sidebar-foreground: 270 15% 90%;
+    --sidebar-primary: 275 65% 65%;
+    --sidebar-primary-foreground: 270 30% 12%;
+    --sidebar-accent: 270 22% 20%;
+    --sidebar-accent-foreground: 270 15% 95%;
+    --sidebar-border: 270 20% 28%;
+    --sidebar-ring: 275 65% 65%;
+    --nav-bg: 270 32% 12%;
+    --nav-border: 275 60% 45%;
+    --nav-text: 270 20% 95%;
+    --nav-text-secondary: 275 65% 75%;
+    --nav-hover: 270 28% 20%;
+    --nav-dropdown-bg: 270 28% 16%;
+  }
+
+  /* Crimson theme - deep red tones */
+  .crimson {
+    --background: 350 35% 10%;
+    --foreground: 350 15% 95%;
+    --card: 350 30% 15%;
+    --card-foreground: 350 15% 95%;
+    --popover: 350 30% 15%;
+    --popover-foreground: 350 15% 95%;
+    --primary: 355 75% 55%;
+    --primary-foreground: 350 35% 12%;
+    --secondary: 350 25% 22%;
+    --secondary-foreground: 350 15% 95%;
+    --muted: 350 20% 22%;
+    --muted-foreground: 350 12% 65%;
+    --accent: 345 80% 60%;
+    --accent-foreground: 350 15% 95%;
+    --destructive: 0 80% 55%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 350 25% 28%;
+    --input: 350 25% 28%;
+    --ring: 355 75% 55%;
+    --chart-1: 355 75% 55%;
+    --chart-2: 345 80% 60%;
+    --chart-3: 0 70% 50%;
+    --chart-4: 350 75% 55%;
+    --chart-5: 340 80% 60%;
+    --sidebar: 350 30% 15%;
+    --sidebar-foreground: 350 15% 90%;
+    --sidebar-primary: 355 75% 55%;
+    --sidebar-primary-foreground: 350 35% 12%;
+    --sidebar-accent: 350 28% 20%;
+    --sidebar-accent-foreground: 350 15% 95%;
+    --sidebar-border: 350 25% 28%;
+    --sidebar-ring: 355 75% 55%;
+    --nav-bg: 350 40% 12%;
+    --nav-border: 355 70% 40%;
+    --nav-text: 350 20% 95%;
+    --nav-text-secondary: 355 75% 70%;
+    --nav-hover: 350 35% 20%;
+    --nav-dropdown-bg: 350 35% 16%;
+  }
+
+  /* Added 2 new premium themes: Emerald and Cosmic */
+
+  /* Emerald premium theme - luxurious green */
+  .emerald {
+    --background: 160 40% 6%;
+    --foreground: 160 15% 98%;
+    --card: 160 35% 10%;
+    --card-foreground: 160 15% 98%;
+    --popover: 160 35% 10%;
+    --popover-foreground: 160 15% 98%;
+    --primary: 165 70% 50%;
+    --primary-foreground: 160 40% 8%;
+    --secondary: 160 30% 18%;
+    --secondary-foreground: 160 15% 98%;
+    --muted: 160 25% 18%;
+    --muted-foreground: 160 15% 70%;
+    --accent: 155 75% 55%;
+    --accent-foreground: 160 15% 98%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 160 30% 28%;
+    --input: 160 30% 28%;
+    --ring: 165 70% 50%;
+    --chart-1: 165 70% 50%;
+    --chart-2: 155 75% 55%;
+    --chart-3: 170 65% 48%;
+    --chart-4: 160 70% 52%;
+    --chart-5: 150 75% 55%;
+    --sidebar: 160 35% 10%;
+    --sidebar-foreground: 160 15% 95%;
+    --sidebar-primary: 165 70% 50%;
+    --sidebar-primary-foreground: 160 40% 8%;
+    --sidebar-accent: 160 32% 15%;
+    --sidebar-accent-foreground: 160 15% 98%;
+    --sidebar-border: 160 30% 28%;
+    --sidebar-ring: 165 70% 50%;
+    --nav-bg: 160 45% 9%;
+    --nav-border: 165 65% 40%;
+    --nav-text: 160 20% 98%;
+    --nav-text-secondary: 165 70% 70%;
+    --nav-hover: 160 40% 16%;
+    --nav-dropdown-bg: 160 40% 13%;
+  }
+
+  /* Cosmic premium theme - deep space purple/blue */
+  .cosmic {
+    --background: 250 50% 5%;
+    --foreground: 250 15% 98%;
+    --card: 250 45% 9%;
+    --card-foreground: 250 15% 98%;
+    --popover: 250 45% 9%;
+    --popover-foreground: 250 15% 98%;
+    --primary: 255 80% 60%;
+    --primary-foreground: 250 50% 7%;
+    --secondary: 250 35% 16%;
+    --secondary-foreground: 250 15% 98%;
+    --muted: 250 30% 16%;
+    --muted-foreground: 250 15% 70%;
+    --accent: 270 85% 65%;
+    --accent-foreground: 250 15% 98%;
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 250 35% 26%;
+    --input: 250 35% 26%;
+    --ring: 255 80% 60%;
+    --chart-1: 255 80% 60%;
+    --chart-2: 270 85% 65%;
+    --chart-3: 240 75% 58%;
+    --chart-4: 260 80% 62%;
+    --chart-5: 280 85% 65%;
+    --sidebar: 250 45% 9%;
+    --sidebar-foreground: 250 15% 95%;
+    --sidebar-primary: 255 80% 60%;
+    --sidebar-primary-foreground: 250 50% 7%;
+    --sidebar-accent: 250 40% 14%;
+    --sidebar-accent-foreground: 250 15% 98%;
+    --sidebar-border: 250 35% 26%;
+    --sidebar-ring: 255 80% 60%;
+    --nav-bg: 250 52% 7%;
+    --nav-border: 255 75% 45%;
+    --nav-text: 250 20% 98%;
+    --nav-text-secondary: 255 80% 75%;
+    --nav-hover: 250 48% 15%;
+    --nav-dropdown-bg: 250 48% 11%;
+  }
 }
 
 @layer base {
@@ -505,6 +719,54 @@
   box-shadow: 0 0 20px rgba(255, 0, 255, 1), 0 0 35px rgba(0, 255, 255, 0.9);
 }
 
+/* Added Emerald premium theme visual effects */
+.emerald .logo-glow {
+  filter: drop-shadow(0 0 20px rgba(16, 185, 129, 0.8)) drop-shadow(0 0 40px rgba(16, 185, 129, 0.4));
+}
+
+.emerald .logo-glow:hover {
+  filter: drop-shadow(0 0 25px rgba(16, 185, 129, 1)) drop-shadow(0 0 50px rgba(16, 185, 129, 0.6));
+}
+
+.emerald ::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, rgb(10, 40, 30) 0%, rgb(5, 25, 20) 100%);
+}
+
+.emerald ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #10b981 0%, #059669 50%, #10b981 100%);
+  border-radius: 4px;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+}
+
+.emerald ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #059669 0%, #10b981 50%, #059669 100%);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.8);
+}
+
+/* Added Cosmic premium theme visual effects */
+.cosmic .logo-glow {
+  filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.9)) drop-shadow(0 0 40px rgba(99, 102, 241, 0.6));
+}
+
+.cosmic .logo-glow:hover {
+  filter: drop-shadow(0 0 30px rgba(139, 92, 246, 1)) drop-shadow(0 0 60px rgba(99, 102, 241, 0.8));
+}
+
+.cosmic ::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, rgb(15, 10, 35) 0%, rgb(8, 5, 20) 100%);
+}
+
+.cosmic ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 50%, #8b5cf6 100%);
+  border-radius: 4px;
+  box-shadow: 0 0 15px rgba(139, 92, 246, 0.8), 0 0 25px rgba(99, 102, 241, 0.6);
+}
+
+.cosmic ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #6366f1 100%);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 1), 0 0 35px rgba(99, 102, 241, 0.9);
+}
+
 /* Premium theme glow animation for navigation */
 @keyframes premium-glow {
   0%,
@@ -548,6 +810,36 @@
 
 .neon nav {
   animation: neon-glow 2s ease-in-out infinite;
+}
+
+/* Added Emerald premium theme glow animation */
+@keyframes emerald-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), 0 0 40px rgba(16, 185, 129, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(16, 185, 129, 0.5), 0 0 60px rgba(16, 185, 129, 0.2);
+  }
+}
+
+.emerald nav {
+  animation: emerald-glow 3s ease-in-out infinite;
+}
+
+/* Added Cosmic premium theme glow animation */
+@keyframes cosmic-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.4), 0 0 40px rgba(99, 102, 241, 0.3), 0 0 60px rgba(139, 92, 246, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.6), 0 0 60px rgba(99, 102, 241, 0.5), 0 0 90px rgba(139, 92, 246, 0.3);
+  }
+}
+
+.cosmic nav {
+  animation: cosmic-glow 2.5s ease-in-out infinite;
 }
 
 @theme inline {
