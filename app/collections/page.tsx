@@ -37,10 +37,40 @@ export default function CollectionsPage() {
   const [currentPage, setCurrentPage] = useState(1)
 
   const popularCollectionIds = [
-    10, 1241, 131295, 645, 2344, 8945, 121938, 295, 528, 1570, 9485, 87359, 86311, 131296, 535313, 748, 1575, 2150,
-    8091, 8354, 623, 8650, 230, 2980, 1709, 556, 8917, 8354, 119, 2806, 131292, 131293, 131294, 131297, 131298, 131299,
-    131300, 131301, 131302, 131303, 131304, 131305, 328, 404, 495, 556, 623, 645, 748, 1241, 1570, 1575, 1709, 2150,
-    2344, 2980, 8091, 8354, 8650, 8917, 8945, 9485, 10, 119, 230, 295, 528, 535313, 86311, 87359, 121938, 131292,
+    10, // Star Wars Collection
+    119, // The Lord of the Rings Collection
+    295, // Pirates of the Caribbean Collection
+    328, // Jurassic Park Collection
+    404, // Alien Collection
+    495, // Batman Collection
+    528, // The Terminator Collection
+    556, // Spider-Man Collection
+    645, // James Bond Collection
+    748, // X-Men Collection
+    1241, // Harry Potter Collection
+    1570, // Die Hard Collection
+    1575, // Rocky Collection
+    1709, // The Mummy Collection
+    2150, // Lethal Weapon Collection
+    2344, // The Matrix Collection
+    2806, // American Pie Collection
+    8091, // Alien vs. Predator Collection
+    8354, // Jason Bourne Collection
+    8650, // Kung Fu Panda Collection
+    8917, // The Hunger Games Collection
+    8945, // Mad Max Collection
+    9485, // The Fast and the Furious Collection
+    86311, // The Avengers Collection
+    87359, // Mission: Impossible Collection
+    121938, // The Hobbit Collection
+    131292, // The Twilight Saga
+    131295, // Divergent Collection
+    263, // The Dark Knight Collection
+    529892, // Marvel Cinematic Universe
+    535313, // Godzilla Collection
+    623, // Toy Story Collection
+    2980, // Ghostbusters Collection
+    230, // The Godfather Collection
   ]
 
   useEffect(() => {
@@ -55,16 +85,19 @@ export default function CollectionsPage() {
     setLoading(true)
     try {
       const loadedCollections: Collection[] = []
+      const uniqueIds = [...new Set(popularCollectionIds)]
 
-      for (const id of popularCollectionIds) {
+      for (const id of uniqueIds) {
         try {
           const response = await fetch(`/api/tmdb/collection/${id}`)
           if (response.ok) {
             const data = await response.json()
             loadedCollections.push(data)
+          } else {
+            console.log(`[v0] Collection ${id} not found, skipping`)
           }
         } catch (error) {
-          console.error(`Error loading collection ${id}:`, error)
+          console.log(`[v0] Error loading collection ${id}, skipping`)
         }
       }
 
