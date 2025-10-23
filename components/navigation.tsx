@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown } from "lucide-react"
+import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown, Palette } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import {
   DropdownMenu,
@@ -14,11 +14,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
 import { useRouter } from "next/navigation"
 import { useMobile } from "@/hooks/use-mobile"
 import { useMessaging } from "@/hooks/use-messaging"
 import { Badge } from "@/components/ui/badge"
+import { useTheme } from "@/components/theme-provider"
+import { useToast } from "@/hooks/use-toast"
 
 export function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -27,6 +30,8 @@ export function Navigation() {
   const router = useRouter()
   const isMobile = useMobile()
   const { unreadCount } = useMessaging()
+  const { theme, setTheme } = useTheme()
+  const { toast } = useToast()
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,6 +45,55 @@ export function Navigation() {
     await signOut()
     router.push("/")
     setIsMenuOpen(false)
+  }
+
+  const freeThemes = [
+    { id: "dark", name: "Sombre", gradient: "from-gray-900 to-gray-800" },
+    { id: "light", name: "Clair", gradient: "from-gray-100 to-gray-200" },
+    { id: "ocean", name: "Océan", gradient: "from-blue-900 to-cyan-700" },
+    { id: "sunset", name: "Coucher de soleil", gradient: "from-orange-600 to-pink-600" },
+    { id: "forest", name: "Forêt", gradient: "from-green-900 to-emerald-700" },
+    { id: "midnight", name: "Minuit", gradient: "from-indigo-950 to-blue-900" },
+    { id: "aurora", name: "Aurore", gradient: "from-teal-800 to-cyan-600" },
+    { id: "desert", name: "Désert", gradient: "from-yellow-800 to-orange-700" },
+    { id: "lavender", name: "Lavande", gradient: "from-purple-400 to-pink-400" },
+    { id: "crimson", name: "Cramoisi", gradient: "from-red-900 to-rose-700" },
+    { id: "sapphire", name: "Saphir", gradient: "from-blue-800 to-indigo-700" },
+    { id: "jade", name: "Jade", gradient: "from-emerald-800 to-teal-700" },
+  ]
+
+  const premiumThemes = [
+    { id: "premium", name: "Premium", gradient: "from-yellow-600 via-purple-600 to-yellow-600", requiresVip: true },
+    { id: "royal", name: "Royal", gradient: "from-purple-700 to-indigo-800", requiresVip: true },
+    { id: "neon", name: "Néon", gradient: "from-pink-500 via-cyan-500 to-pink-500", requiresVipPlus: true },
+    { id: "emerald", name: "Émeraude", gradient: "from-emerald-600 to-teal-700", requiresVipPlus: true },
+    { id: "cosmic", name: "Cosmique", gradient: "from-purple-600 via-blue-600 to-purple-600", requiresVipPlus: true },
+  ]
+
+  const handleThemeChange = (themeId: string, requiresVip?: boolean, requiresVipPlus?: boolean) => {
+    if (requiresVipPlus && !user?.isVipPlus && !user?.isAdmin) {
+      toast({
+        title: "Thème VIP+ requis",
+        description: "Ce thème est réservé aux membres VIP+",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (requiresVip && !user?.isVip && !user?.isVipPlus && !user?.isAdmin) {
+      toast({
+        title: "Thème VIP requis",
+        description: "Ce thème est réservé aux membres VIP et VIP+",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setTheme(themeId as any)
+    toast({
+      title: "Thème changé",
+      description: `Le thème a été changé avec succès`,
+    })
   }
 
   return (
@@ -174,6 +228,11 @@ export function Navigation() {
                     Découvrir des Playlists
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/collections" style={{ color: "hsl(var(--nav-text))" }}>
+                    Collections
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -202,6 +261,75 @@ export function Navigation() {
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
+            {user && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="h-12 w-12 rounded-full border-2 transition-colors"
+                    style={{ borderColor: "hsl(var(--nav-border))" }}
+                  >
+                    <Palette className="w-5 h-5" style={{ color: "hsl(var(--nav-text))" }} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="w-72 max-h-[500px] overflow-y-auto"
+                  style={{ backgroundColor: "hsl(var(--nav-dropdown-bg))", borderColor: "hsl(var(--nav-border))" }}
+                >
+                  <DropdownMenuLabel style={{ color: "hsl(var(--nav-text))" }}>Thèmes Standard</DropdownMenuLabel>
+                  <div className="grid grid-cols-2 gap-2 p-2">
+                    {freeThemes.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => handleThemeChange(t.id)}
+                        className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors ${
+                          theme === t.id ? "ring-2 ring-blue-500" : ""
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${t.gradient}`} />
+                        <span className="text-sm" style={{ color: "hsl(var(--nav-text))" }}>
+                          {t.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
+
+                  <DropdownMenuLabel style={{ color: "hsl(var(--nav-text))" }}>
+                    Thèmes Premium
+                    {!user.isVip && !user.isVipPlus && !user.isAdmin && (
+                      <Crown className="w-4 h-4 inline ml-2 text-yellow-400" />
+                    )}
+                  </DropdownMenuLabel>
+                  <div className="grid grid-cols-2 gap-2 p-2">
+                    {premiumThemes.map((t) => {
+                      const isLocked =
+                        (t.requiresVipPlus && !user.isVipPlus && !user.isAdmin) ||
+                        (t.requiresVip && !user.isVip && !user.isVipPlus && !user.isAdmin)
+
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => handleThemeChange(t.id, t.requiresVip, t.requiresVipPlus)}
+                          className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors relative ${
+                            theme === t.id ? "ring-2 ring-blue-500" : ""
+                          } ${isLocked ? "opacity-60" : ""}`}
+                        >
+                          <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${t.gradient}`} />
+                          <span className="text-sm" style={{ color: "hsl(var(--nav-text))" }}>
+                            {t.name}
+                          </span>
+                          {isLocked && <Crown className="w-3 h-3 absolute top-1 right-1 text-yellow-400" />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -449,6 +577,55 @@ export function Navigation() {
                     <LogOut className="w-4 h-4 mr-2" />
                     Déconnexion
                   </Button>
+                </div>
+              )}
+
+              {/* Theme Switcher for Mobile */}
+              {user && (
+                <div className="pt-4 border-t" style={{ borderColor: "hsl(var(--nav-border))" }}>
+                  <h3 className="text-lg font-medium mb-3" style={{ color: "hsl(var(--nav-text))" }}>
+                    Thèmes
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2 p-2">
+                    {freeThemes.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => handleThemeChange(t.id)}
+                        className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors ${
+                          theme === t.id ? "ring-2 ring-blue-500" : ""
+                        }`}
+                      >
+                        <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${t.gradient}`} />
+                        <span className="text-sm" style={{ color: "hsl(var(--nav-text))" }}>
+                          {t.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 p-2">
+                    {premiumThemes.map((t) => {
+                      const isLocked =
+                        (t.requiresVipPlus && !user.isVipPlus && !user.isAdmin) ||
+                        (t.requiresVip && !user.isVip && !user.isVipPlus && !user.isAdmin)
+
+                      return (
+                        <button
+                          key={t.id}
+                          onClick={() => handleThemeChange(t.id, t.requiresVip, t.requiresVipPlus)}
+                          className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors relative ${
+                            theme === t.id ? "ring-2 ring-blue-500" : ""
+                          } ${isLocked ? "opacity-60" : ""}`}
+                        >
+                          <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${t.gradient}`} />
+                          <span className="text-sm" style={{ color: "hsl(var(--nav-text))" }}>
+                            {t.name}
+                          </span>
+                          {isLocked && <Crown className="w-3 h-3 absolute top-1 right-1 text-yellow-400" />}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               )}
 

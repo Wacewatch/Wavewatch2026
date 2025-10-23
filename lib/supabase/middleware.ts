@@ -25,10 +25,14 @@ export async function updateSession(request: NextRequest) {
     },
   )
 
-  // IMPORTANT: getUser() refreshes the session and prevents random logouts
+  // This is the key to fixing session persistence issues
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  if (user) {
+    console.log("[v0] Middleware: Session refreshed for user:", user.id)
+  }
 
   return supabaseResponse
 }

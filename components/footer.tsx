@@ -146,12 +146,7 @@ export function Footer() {
                       >
                         <ChevronLeft className="w-4 h-4 text-gray-400" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={goToNext}
-                        className="h-8 w-8 p-0 hover:bg-gray-700"
-                      >
+                      <Button variant="ghost" size="sm" onClick={goToNext} className="h-8 w-8 p-0 hover:bg-gray-700">
                         <ChevronRight className="w-4 h-4 text-gray-400" />
                       </Button>
                     </div>
@@ -160,9 +155,7 @@ export function Footer() {
 
                 <div className="relative min-h-[80px] flex items-center">
                   {currentMessage && (
-                    <div
-                      className={`w-full transition-opacity duration-300 ${fadeIn ? "opacity-100" : "opacity-0"}`}
-                    >
+                    <div className={`w-full transition-opacity duration-300 ${fadeIn ? "opacity-100" : "opacity-0"}`}>
                       <div className="bg-gray-900/50 rounded-lg p-4 border border-gray-700/50">
                         <div className="flex items-start gap-3">
                           <div className="flex-shrink-0">
@@ -248,6 +241,20 @@ export function Footer() {
             >
               <Mail className="w-4 h-4" />
               Écrire au staff
+            </Link>
+            <Link
+              href="/dns-vpn"
+              className="transition-colors text-sm hover:text-blue-400"
+              style={{ color: "hsl(var(--nav-text-secondary))" }}
+            >
+              DNS & VPN
+            </Link>
+            <Link
+              href="/faq"
+              className="transition-colors text-sm hover:text-blue-400"
+              style={{ color: "hsl(var(--nav-text-secondary))" }}
+            >
+              FAQ
             </Link>
             <Link
               href="/changelogs"

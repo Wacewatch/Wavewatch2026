@@ -8,10 +8,11 @@ export async function GET() {
 
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser()
 
-    if (!user) {
-      console.log("[v0] Staff Messages: User not authenticated")
+    if (authError || !user) {
+      console.log("[v0] Staff Messages: User not authenticated", authError?.message)
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
     }
 
@@ -49,7 +50,7 @@ export async function GET() {
       const { data: messages, error } = await supabase
         .from("staff_messages")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("sender_id", user.id)
         .order("created_at", { ascending: false })
 
       if (error) {
@@ -72,11 +73,12 @@ export async function POST(request: Request) {
 
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser()
 
-    if (!user) {
-      console.log("[v0] Staff Messages: User not authenticated")
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+    if (authError || !user) {
+      console.log("[v0] Staff Messages: User not authenticated", authError?.message)
+      return NextResponse.json({ error: "Non authentifié. Veuillez vous reconnecter." }, { status: 401 })
     }
 
     console.log("[v0] Staff Messages: User authenticated:", user.id)
@@ -108,10 +110,10 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from("staff_messages")
       .insert({
-        user_id: user.id,
-        username: username,
-        title,
-        message,
+        sender_id: user.id,
+        subject: title,
+        message: message,
+        is_read: false,
       })
       .select()
       .single()
@@ -135,9 +137,10 @@ export async function DELETE(request: Request) {
 
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser()
 
-    if (!user) {
+    if (authError || !user) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
     }
 
