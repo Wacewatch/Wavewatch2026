@@ -3,8 +3,8 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { Search, Film, TrendingUp, Calendar, Star, Filter } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Search, Film, TrendingUp, Filter, ChevronLeft, ChevronRight } from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -26,30 +26,21 @@ interface Collection {
   }>
 }
 
+const ITEMS_PER_PAGE = 24
+
 export default function CollectionsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [collections, setCollections] = useState<Collection[]>([])
   const [filteredCollections, setFilteredCollections] = useState<Collection[]>([])
   const [loading, setLoading] = useState(false)
   const [sortBy, setSortBy] = useState<"name" | "parts" | "recent">("name")
+  const [currentPage, setCurrentPage] = useState(1)
 
-  // Popular collections IDs from TMDB
   const popularCollectionIds = [
-    10, // Star Wars
-    1241, // Harry Potter
-    131295, // Marvel Cinematic Universe
-    645, // James Bond
-    2344, // The Matrix
-    8945, // The Lord of the Rings
-    121938, // The Hobbit
-    295, // Pirates of the Caribbean
-    528, // The Terminator
-    1570, // Die Hard
-    9485, // The Fast and the Furious
-    87359, // Mission: Impossible
-    86311, // The Avengers
-    131296, // X-Men
-    535313, // Jurassic Park
+    10, 1241, 131295, 645, 2344, 8945, 121938, 295, 528, 1570, 9485, 87359, 86311, 131296, 535313, 748, 1575, 2150,
+    8091, 8354, 623, 8650, 230, 2980, 1709, 556, 8917, 8354, 119, 2806, 131292, 131293, 131294, 131297, 131298, 131299,
+    131300, 131301, 131302, 131303, 131304, 131305, 328, 404, 495, 556, 623, 645, 748, 1241, 1570, 1575, 1709, 2150,
+    2344, 2980, 8091, 8354, 8650, 8917, 8945, 9485, 10, 119, 230, 295, 528, 535313, 86311, 87359, 121938, 131292,
   ]
 
   useEffect(() => {
@@ -88,7 +79,6 @@ export default function CollectionsPage() {
   const filterAndSortCollections = () => {
     let filtered = [...collections]
 
-    // Filter by search query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
@@ -97,7 +87,6 @@ export default function CollectionsPage() {
       )
     }
 
-    // Sort collections
     filtered.sort((a, b) => {
       switch (sortBy) {
         case "name":
@@ -114,11 +103,22 @@ export default function CollectionsPage() {
     })
 
     setFilteredCollections(filtered)
+    setCurrentPage(1)
   }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     filterAndSortCollections()
+  }
+
+  const totalPages = Math.ceil(filteredCollections.length / ITEMS_PER_PAGE)
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE
+  const endIndex = startIndex + ITEMS_PER_PAGE
+  const currentCollections = filteredCollections.slice(startIndex, endIndex)
+
+  const goToPage = (page: number) => {
+    setCurrentPage(page)
+    window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
   return (
@@ -194,67 +194,98 @@ export default function CollectionsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCollections.map((collection) => (
-            <Link key={collection.id} href={`/collections/${collection.id}`}>
-              <Card className="bg-gray-800 border-gray-700 hover:border-blue-500 transition-all duration-300 cursor-pointer group h-full">
-                <div className="relative aspect-[2/3] overflow-hidden rounded-t-lg">
-                  {collection.poster_path ? (
-                    <Image
-                      src={`https://image.tmdb.org/t/p/w500${collection.poster_path}`}
-                      alt={collection.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                      <Film className="w-16 h-16 text-gray-600" />
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-
-                  {/* Film count badge */}
-                  <Badge className="absolute top-3 right-3 bg-blue-600 text-white border-0">
-                    <Film className="w-3 h-3 mr-1" />
-                    {collection.parts?.length || 0} films
-                  </Badge>
-                </div>
-
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-white group-hover:text-blue-400 transition-colors line-clamp-2">
-                    {collection.name}
-                  </CardTitle>
-                  {collection.overview && (
-                    <CardDescription className="text-gray-400 line-clamp-3 text-sm">
-                      {collection.overview}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-
-                <CardContent className="pt-0">
-                  {collection.parts && collection.parts.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-400">
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                          {new Date(collection.parts[0].release_date).getFullYear()} -{" "}
-                          {new Date(collection.parts[collection.parts.length - 1].release_date).getFullYear()}
-                        </span>
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {currentCollections.map((collection) => (
+              <Link key={collection.id} href={`/collections/${collection.id}`}>
+                <Card className="bg-gray-800 border-gray-700 hover:border-blue-500 transition-all duration-300 cursor-pointer group h-full">
+                  <div className="relative aspect-[2/3] overflow-hidden rounded-t-lg">
+                    {collection.poster_path ? (
+                      <Image
+                        src={`https://image.tmdb.org/t/p/w342${collection.poster_path}`}
+                        alt={collection.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+                        <Film className="w-12 h-12 text-gray-600" />
                       </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-                      {collection.parts[0].vote_average > 0 && (
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                          <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                          <span>{collection.parts[0].vote_average.toFixed(1)}/10</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
-        </div>
+                    {/* Film count badge */}
+                    <Badge className="absolute top-2 right-2 bg-blue-600 text-white border-0 text-xs">
+                      <Film className="w-2.5 h-2.5 mr-0.5" />
+                      {collection.parts?.length || 0}
+                    </Badge>
+                  </div>
+
+                  <CardHeader className="pb-2 pt-3 px-3">
+                    <CardTitle className="text-white group-hover:text-blue-400 transition-colors line-clamp-2 text-sm">
+                      {collection.name}
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+              </Link>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-8">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+
+              <div className="flex gap-1">
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let pageNum
+                  if (totalPages <= 5) {
+                    pageNum = i + 1
+                  } else if (currentPage <= 3) {
+                    pageNum = i + 1
+                  } else if (currentPage >= totalPages - 2) {
+                    pageNum = totalPages - 4 + i
+                  } else {
+                    pageNum = currentPage - 2 + i
+                  }
+
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={currentPage === pageNum ? "default" : "outline"}
+                      size="icon"
+                      onClick={() => goToPage(pageNum)}
+                      className={
+                        currentPage === pageNum
+                          ? "bg-blue-600 hover:bg-blue-700 text-white"
+                          : "bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+                      }
+                    >
+                      {pageNum}
+                    </Button>
+                  )
+                })}
+              </div>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Info Card */}

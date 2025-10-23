@@ -149,6 +149,11 @@ export function Navigation() {
                     Animés
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/collections" style={{ color: "hsl(var(--nav-text))" }}>
+                    Collections
+                  </Link>
+                </DropdownMenuItem>
                 <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
                 {user?.isAdmin ? (
                   <>
@@ -226,11 +231,6 @@ export function Navigation() {
                 <DropdownMenuItem asChild>
                   <Link href="/discover/playlists" style={{ color: "hsl(var(--nav-text))" }}>
                     Découvrir des Playlists
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/collections" style={{ color: "hsl(var(--nav-text))" }}>
-                    Collections
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -615,6 +615,16 @@ export function Navigation() {
                       Animés
                     </Link>
                   </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                  >
+                    <Link href="/collections" onClick={() => setIsMenuOpen(false)}>
+                      Collections
+                    </Link>
+                  </Button>
                   {user?.isAdmin ? (
                     <>
                       <Button
@@ -740,16 +750,6 @@ export function Navigation() {
                   >
                     <Link href="/discover/playlists" onClick={() => setIsMenuOpen(false)}>
                       Découvrir des Playlists
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    className="w-full justify-start"
-                    style={{ color: "hsl(var(--nav-text))" }}
-                  >
-                    <Link href="/collections" onClick={() => setIsMenuOpen(false)}>
-                      Collections
                     </Link>
                   </Button>
                 </div>
