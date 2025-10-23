@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Film } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
 interface Collection {
   id: number
@@ -22,22 +23,39 @@ export function PopularCollections() {
   const [canScrollRight, setCanScrollRight] = useState(true)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
+  const popularCollectionIds = [
+    10, // Star Wars
+    119, // Lord of the Rings
+    295, // Pirates of the Caribbean
+    328, // Jurassic Park
+    645, // James Bond
+    748, // X-Men
+    1241, // Harry Potter
+    9485, // Fast & Furious
+    86311, // The Avengers
+    87359, // Mission: Impossible
+    529892, // Marvel Cinematic Universe
+    623, // Toy Story
+  ]
+
   useEffect(() => {
     const fetchCollections = async () => {
       try {
-        // Fetch popular collections by getting popular movies and extracting their collections
-        const response = await fetch("/api/tmdb/trending/movies")
-        if (!response.ok) throw new Error("Failed to fetch")
-        const data = await response.json()
+        const loadedCollections: Collection[] = []
 
-        // Extract unique collections from movies
-        const collectionPromises = data.results
-          .filter((movie: any) => movie.belongs_to_collection)
-          .slice(0, 8)
-          .map((movie: any) => fetch(`/api/tmdb/collection/${movie.belongs_to_collection.id}`).then((r) => r.json()))
+        for (const id of popularCollectionIds) {
+          try {
+            const response = await fetch(`/api/tmdb/collection/${id}`)
+            if (response.ok) {
+              const data = await response.json()
+              loadedCollections.push(data)
+            }
+          } catch (error) {
+            console.log(`[v0] Error loading collection ${id}, skipping`)
+          }
+        }
 
-        const collectionsData = await Promise.all(collectionPromises)
-        setCollections(collectionsData.filter((c) => c && c.id))
+        setCollections(loadedCollections)
       } catch (error) {
         console.error("Error fetching collections:", error)
       } finally {
@@ -150,7 +168,7 @@ export function PopularCollections() {
                     />
                   ) : (
                     <div className="w-full h-full bg-muted flex items-center justify-center">
-                      <span className="text-muted-foreground">Pas d'image</span>
+                      <Film className="w-12 h-12 text-muted-foreground" />
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
@@ -159,7 +177,12 @@ export function PopularCollections() {
                       {collection.name}
                     </h3>
                     {collection.parts && collection.parts.length > 0 && (
-                      <p className="text-xs text-gray-300 mt-1">{collection.parts.length} films</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <Badge className="bg-blue-600 text-white border-0 text-xs">
+                          <Film className="w-2.5 h-2.5 mr-0.5" />
+                          {collection.parts.length}
+                        </Badge>
+                      </div>
                     )}
                   </div>
                 </div>

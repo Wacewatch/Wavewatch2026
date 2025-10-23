@@ -85,19 +85,16 @@ export default function CollectionsPage() {
     setLoading(true)
     try {
       const loadedCollections: Collection[] = []
-      const uniqueIds = [...new Set(popularCollectionIds)]
 
-      for (const id of uniqueIds) {
+      for (const id of popularCollectionIds) {
         try {
           const response = await fetch(`/api/tmdb/collection/${id}`)
           if (response.ok) {
             const data = await response.json()
             loadedCollections.push(data)
-          } else {
-            console.log(`[v0] Collection ${id} not found, skipping`)
           }
         } catch (error) {
-          console.log(`[v0] Error loading collection ${id}, skipping`)
+          // Silently skip collections that fail to load
         }
       }
 
