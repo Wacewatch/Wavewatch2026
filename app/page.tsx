@@ -9,6 +9,7 @@ import { CalendarWidget } from "@/components/calendar-widget"
 import { RandomContent } from "@/components/random-content"
 import { SubscriptionOffer } from "@/components/subscription-offer"
 import { PublicPlaylistsRow } from "@/components/public-playlists-row"
+import { PopularCollections } from "@/components/popular-collections"
 
 function LoadingSection() {
   return (
@@ -36,6 +37,9 @@ export default function HomePage() {
         </Suspense>
         <Suspense fallback={<LoadingSection />}>
           <PopularAnime />
+        </Suspense>
+        <Suspense fallback={<LoadingSection />}>
+          <PopularCollections />
         </Suspense>
         <Suspense fallback={<LoadingSection />}>
           <PublicPlaylistsRow />

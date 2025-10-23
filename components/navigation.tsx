@@ -580,55 +580,6 @@ export function Navigation() {
                 </div>
               )}
 
-              {/* Theme Switcher for Mobile */}
-              {user && (
-                <div className="pt-4 border-t" style={{ borderColor: "hsl(var(--nav-border))" }}>
-                  <h3 className="text-lg font-medium mb-3" style={{ color: "hsl(var(--nav-text))" }}>
-                    Thèmes
-                  </h3>
-                  <div className="grid grid-cols-2 gap-2 p-2">
-                    {freeThemes.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => handleThemeChange(t.id)}
-                        className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors ${
-                          theme === t.id ? "ring-2 ring-blue-500" : ""
-                        }`}
-                      >
-                        <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${t.gradient}`} />
-                        <span className="text-sm" style={{ color: "hsl(var(--nav-text))" }}>
-                          {t.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 p-2">
-                    {premiumThemes.map((t) => {
-                      const isLocked =
-                        (t.requiresVipPlus && !user.isVipPlus && !user.isAdmin) ||
-                        (t.requiresVip && !user.isVip && !user.isVipPlus && !user.isAdmin)
-
-                      return (
-                        <button
-                          key={t.id}
-                          onClick={() => handleThemeChange(t.id, t.requiresVip, t.requiresVipPlus)}
-                          className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors relative ${
-                            theme === t.id ? "ring-2 ring-blue-500" : ""
-                          } ${isLocked ? "opacity-60" : ""}`}
-                        >
-                          <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${t.gradient}`} />
-                          <span className="text-sm" style={{ color: "hsl(var(--nav-text))" }}>
-                            {t.name}
-                          </span>
-                          {isLocked && <Crown className="w-3 h-3 absolute top-1 right-1 text-yellow-400" />}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
               <div className="pt-4 border-t" style={{ borderColor: "hsl(var(--nav-border))" }}>
                 <h3 className="text-lg font-medium mb-3" style={{ color: "hsl(var(--nav-text))" }}>
                   Contenu
@@ -789,6 +740,16 @@ export function Navigation() {
                   >
                     <Link href="/discover/playlists" onClick={() => setIsMenuOpen(false)}>
                       Découvrir des Playlists
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                  >
+                    <Link href="/collections" onClick={() => setIsMenuOpen(false)}>
+                      Collections
                     </Link>
                   </Button>
                 </div>
