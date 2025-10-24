@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/components/auth-provider";
 import { Navigation } from "@/components/navigation";
 import { Footer } from "@/components/footer";
-import Script from "next/script"; // <--- import du composant Script
+import Script from "next/script"; // Import du composant Script
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,7 +15,8 @@ export const metadata: Metadata = {
   title: "WaveWatch - Plateforme de Streaming Premium",
   description:
     "Découvrez et streamez des milliers de films, séries TV, animés et contenus exclusifs en haute qualité sur WaveWatch",
-  keywords: "streaming, films, séries, animés, WaveWatch, plateforme streaming, contenu premium",
+  keywords:
+    "streaming, films, séries, animés, WaveWatch, plateforme streaming, contenu premium",
   authors: [{ name: "WaveWatch Team" }],
   creator: "WaveWatch",
   publisher: "WaveWatch",
@@ -60,9 +61,20 @@ export default function RootLayout({
         <Script
           src="https://analytics.ahrefs.com/analytics.js"
           data-key="H7U+kFL0zyofiO02zN/tSg"
-          strategy="afterInteractive" // se charge après que la page soit interactive
+          strategy="afterInteractive"
           async
         />
+
+        {/* Compteur Histats caché */}
+        <div style={{ display: "none" }}>
+          <a href="/" target="_blank" rel="noreferrer">
+            <img
+              src="https://sstatic1.histats.com/0.gif?4986671&101"
+              alt="web hit counter"
+              border={0}
+            />
+          </a>
+        </div>
       </body>
     </html>
   );
