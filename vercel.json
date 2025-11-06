@@ -1,0 +1,9 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://beta.wavewatch.xyz/$1",
+      "permanent": true
+    }
+  ]
+}
