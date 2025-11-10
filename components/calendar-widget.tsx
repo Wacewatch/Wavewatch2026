@@ -29,7 +29,7 @@ export function CalendarWidget() {
 
   useEffect(() => {
     if (isMobile !== undefined) {
-      setIsExpanded(!isMobile) // Ouvert sur desktop, fermé sur mobile
+      setIsExpanded(false)
     }
   }, [isMobile])
 

@@ -16,7 +16,7 @@ export function RandomContent() {
 
   useEffect(() => {
     if (isMobile !== undefined) {
-      setIsExpanded(!isMobile)
+      setIsExpanded(false)
     }
   }, [isMobile])
 

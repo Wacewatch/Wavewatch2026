@@ -284,7 +284,7 @@ export function FootballCalendarWidget() {
           )}
 
           {/* Liste des matchs */}
-          <div className="space-y-3">
+          <div className="space-y-3 overflow-x-auto">
             {allMatches.map((fixture) => {
               const isLive =
                 fixture.fixture.status.short === "1H" ||
@@ -298,7 +298,7 @@ export function FootballCalendarWidget() {
                   className={`p-3 rounded-lg ${isLive ? "bg-green-900/50 border-2 border-green-500 animate-pulse" : "bg-green-900/30 border border-green-700/50"} hover:bg-green-800/50 transition-colors`}
                 >
                   {/* En-tête match */}
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
                       <Image
                         src={fixture.league.logo || "/placeholder.svg"}
@@ -306,25 +306,25 @@ export function FootballCalendarWidget() {
                         width={20}
                         height={20}
                       />
-                      <span className="text-xs text-green-300">{fixture.league.name}</span>
+                      <span className="text-xs text-green-300 truncate">{fixture.league.name}</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {isLive && (
-                        <Badge variant="destructive" className="text-xs animate-pulse">
+                        <Badge variant="destructive" className="text-xs animate-pulse whitespace-nowrap">
                           <Radio className="w-3 h-3 mr-1" />
                           LIVE {fixture.fixture.status.elapsed}'
                         </Badge>
                       )}
-                      <Badge variant="outline" className="border-green-600 text-green-300 text-xs">
+                      <Badge variant="outline" className="border-green-600 text-green-300 text-xs whitespace-nowrap">
                         {isLive ? getMatchStatus(fixture) : formatMatchDate(fixture.fixture.date)}
                       </Badge>
                     </div>
                   </div>
 
-                  {/* Équipes et score */}
-                  <div className="flex items-center justify-between gap-4">
+                  {/* Équipes et score - layout responsif */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 mb-2">
                     {/* Équipe domicile */}
-                    <div className="flex items-center gap-2 flex-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <Image
                         src={fixture.teams.home.logo || "/placeholder.svg"}
                         alt={fixture.teams.home.name}
@@ -335,21 +335,23 @@ export function FootballCalendarWidget() {
                       <span className="text-white font-medium text-sm truncate">{fixture.teams.home.name}</span>
                     </div>
 
-                    {/* Score */}
-                    <div className="flex items-center gap-3 flex-shrink-0">
+                    {/* Score - centralisé */}
+                    <div className="flex items-center gap-2 flex-shrink-0 justify-center w-full sm:w-auto">
                       {isLive || fixture.fixture.status.short === "FT" ? (
                         <>
-                          <span className="text-2xl font-bold text-white">{fixture.goals.home ?? 0}</span>
+                          <span className="text-xl sm:text-2xl font-bold text-white">{fixture.goals.home ?? 0}</span>
                           <span className="text-green-400">-</span>
-                          <span className="text-2xl font-bold text-white">{fixture.goals.away ?? 0}</span>
+                          <span className="text-xl sm:text-2xl font-bold text-white">{fixture.goals.away ?? 0}</span>
                         </>
                       ) : (
-                        <span className="text-green-400 font-medium">{formatMatchTime(fixture.fixture.date)}</span>
+                        <span className="text-green-400 font-medium text-sm">
+                          {formatMatchTime(fixture.fixture.date)}
+                        </span>
                       )}
                     </div>
 
                     {/* Équipe extérieur */}
-                    <div className="flex items-center gap-2 flex-1 justify-end">
+                    <div className="flex items-center gap-2 min-w-0 flex-1 justify-end">
                       <span className="text-white font-medium text-sm truncate text-right">
                         {fixture.teams.away.name}
                       </span>
@@ -364,9 +366,9 @@ export function FootballCalendarWidget() {
                   </div>
 
                   {/* Chaînes TV */}
-                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-green-700/50">
-                    <Tv className="w-4 h-4 text-green-400" />
-                    <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 pt-2 border-t border-green-700/50">
+                    <Tv className="w-4 h-4 text-green-400 flex-shrink-0" />
+                    <div className="flex flex-wrap gap-1 w-full">
                       {tvChannels.map((channel) => (
                         <Badge key={channel} variant="secondary" className="text-xs bg-green-800 text-green-200">
                           {channel}
