@@ -4,12 +4,13 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { IframeModal } from "@/components/iframe-modal"
 import { AddToListSelector } from "@/components/add-to-list-selector"
-import { Star, Calendar, Clock, Play, Download, ThumbsUp, ThumbsDown, Users, Music } from "lucide-react"
+import { Star, Calendar, Clock, Play, Download, ThumbsUp, ThumbsDown, Users, Music, ListMusic } from "lucide-react"
 
 interface MusicDetailsProps {
   music: any
@@ -18,6 +19,7 @@ interface MusicDetailsProps {
 export function MusicDetails({ music }: MusicDetailsProps) {
   const [showStreamingModal, setShowStreamingModal] = useState(false)
   const [showDownloadModal, setShowDownloadModal] = useState(false)
+  const [showTrackListingModal, setShowTrackListingModal] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [userRating, setUserRating] = useState<"like" | "dislike" | null>(null)
   const { user } = useAuth()
@@ -203,11 +205,6 @@ export function MusicDetails({ music }: MusicDetailsProps) {
               </Badge>
             </div>
 
-            {/* Description */}
-            <p className="text-base md:text-lg text-gray-200 leading-relaxed text-center md:text-left">
-              {music.description}
-            </p>
-
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4">
               <Button
@@ -228,6 +225,17 @@ export function MusicDetails({ music }: MusicDetailsProps) {
                 <Download className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                 Télécharger
               </Button>
+              {music.description && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-green-600 text-green-400 hover:bg-green-900/20 w-full sm:w-auto bg-transparent"
+                  onClick={() => setShowTrackListingModal(true)}
+                >
+                  <ListMusic className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                  Voir les titres
+                </Button>
+              )}
               <AddToListSelector
                 content={{ id: music.id, title: music.title, poster_path: music.thumbnail_url }}
                 contentType="movie"
@@ -263,6 +271,19 @@ export function MusicDetails({ music }: MusicDetailsProps) {
         src={downloadUrl}
         title={`Téléchargement - ${music.title}`}
       />
+
+      <Dialog open={showTrackListingModal} onOpenChange={setShowTrackListingModal}>
+        <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl text-white">Liste des titres</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <p className="text-center text-gray-200 leading-relaxed whitespace-pre-line px-4 py-6">
+              {music.description}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

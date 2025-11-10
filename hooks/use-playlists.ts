@@ -225,7 +225,17 @@ export function usePlaylists() {
     if (!user?.id) return false
 
     try {
-      const contentId = mediaType === "music" || mediaType === "software" ? Math.random() * 1000000 : tmdbId
+      const contentId =
+        mediaType === "music" || mediaType === "software" || mediaType === "game"
+          ? Math.floor(Math.random() * 1000000000)
+          : tmdbId
+
+      console.log("[v0] Adding to playlist:", {
+        playlistId,
+        contentId,
+        mediaType,
+        title,
+      })
 
       const { data: existing } = await supabase
         .from("playlist_items")
@@ -254,17 +264,6 @@ export function usePlaylists() {
         .maybeSingle()
 
       const newPosition = (maxPos?.position || 0) + 1
-
-      console.log("[v0] Adding item to playlist:", {
-        playlistId,
-        contentId,
-        mediaType,
-        title,
-        posterPath,
-        position: newPosition,
-        episodeId,
-        seriesId,
-      })
 
       const { error } = await supabase.from("playlist_items").insert({
         playlist_id: playlistId,

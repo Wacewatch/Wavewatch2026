@@ -27,7 +27,9 @@ export default function PlaylistContentPage() {
   const [mounted, setMounted] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
   const supabase = createClient()
-  const [contentFilter, setContentFilter] = useState<"all" | "movie" | "tv" | "ebook" | "episode">("all")
+  const [contentFilter, setContentFilter] = useState<
+    "all" | "movie" | "tv" | "ebook" | "episode" | "music" | "software"
+  >("all")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalTitle, setModalTitle] = useState("")
   const [modalUrl, setModalUrl] = useState("")
@@ -156,7 +158,7 @@ export default function PlaylistContentPage() {
 
     // Handle TV channels - open modal with stream
     if (item.media_type === "tv-channel") {
-      const streamUrl = item.streamUrl || item.stream_url || item.url
+      const streamUrl = item.stream_url || item.streamUrl || item.url || item.poster_path
       console.log("[v0] TV Channel stream URL:", streamUrl)
 
       if (streamUrl) {
@@ -176,7 +178,7 @@ export default function PlaylistContentPage() {
 
     // Handle radio stations - play audio
     if (item.media_type === "radio") {
-      const streamUrl = item.streamUrl || item.stream_url || item.url
+      const streamUrl = item.stream_url || item.streamUrl || item.url || item.poster_path
       console.log("[v0] Radio stream URL:", streamUrl)
 
       if (!streamUrl) {
@@ -236,7 +238,7 @@ export default function PlaylistContentPage() {
 
     // Handle retrogaming - open modal with game
     if (item.media_type === "game") {
-      const gameUrl = item.url || item.game_url || item.gameUrl
+      const gameUrl = item.url || item.game_url || item.gameUrl || item.poster_path
       console.log("[v0] Game URL:", gameUrl)
 
       if (gameUrl) {
@@ -251,6 +253,16 @@ export default function PlaylistContentPage() {
           variant: "destructive",
         })
       }
+      return
+    }
+
+    if (item.media_type === "music") {
+      router.push(`/music/${item.tmdb_id || item.content_id}`)
+      return
+    }
+
+    if (item.media_type === "software") {
+      router.push(`/software/${item.tmdb_id || item.content_id}`)
       return
     }
 
@@ -501,6 +513,12 @@ export default function PlaylistContentPage() {
                   <TabsTrigger value="episode" className="data-[state=active]:bg-gray-700 text-gray-300">
                     Épisodes
                   </TabsTrigger>
+                  <TabsTrigger value="music" className="data-[state=active]:bg-gray-700 text-gray-300">
+                    Musique
+                  </TabsTrigger>
+                  <TabsTrigger value="software" className="data-[state=active]:bg-gray-700 text-gray-300">
+                    Logiciels
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -512,11 +530,11 @@ export default function PlaylistContentPage() {
                 <h3 className="text-xl font-semibold text-white mb-2">
                   {playlistItems.length === 0
                     ? "Cette playlist est vide"
-                    : `Aucun ${contentFilter === "movie" ? "film" : contentFilter === "tv" ? "série" : contentFilter === "ebook" ? "ebook" : contentFilter === "episode" ? "épisode" : "contenu"} dans cette playlist`}
+                    : `Aucun ${contentFilter === "movie" ? "film" : contentFilter === "tv" ? "série" : contentFilter === "ebook" ? "ebook" : contentFilter === "episode" ? "épisode" : contentFilter === "music" ? "musique" : contentFilter === "software" ? "logiciel" : "contenu"} dans cette playlist`}
                 </h3>
                 <p className="text-gray-500 text-sm">
                   {isOwner && playlistItems.length === 0
-                    ? "Ajoutez des films, séries, ebooks et épisodes depuis leurs pages de détails."
+                    ? "Ajoutez des films, séries, ebooks, épisodes, musique et logiciels depuis leurs pages de détails."
                     : contentFilter !== "all"
                       ? "Essayez un autre filtre pour voir plus de contenu."
                       : "Cette playlist ne contient aucun élément pour le moment."}
@@ -541,6 +559,14 @@ export default function PlaylistContentPage() {
                     if (mediaType === "tv-channel") return null
                     if (mediaType === "radio") return null
                     if (mediaType === "game") return null
+
+                    if (mediaType === "music") {
+                      return `/music/${item.tmdb_id || item.content_id}`
+                    }
+                    if (mediaType === "software") {
+                      return `/software/${item.tmdb_id || item.content_id}`
+                    }
+
                     if (mediaType === "ebook") {
                       return `/ebooks/${item.tmdb_id || item.content_id}`
                     }
@@ -589,13 +615,17 @@ export default function PlaylistContentPage() {
                       case "tv-channel":
                         return "Chaîne TV"
                       case "radio":
-                        return "Radio"
+                        return "Station Radio"
                       case "game":
                         return "Jeu Rétro"
                       case "ebook":
                         return "Ebook"
                       case "episode":
                         return "Épisode"
+                      case "music":
+                        return "Musique"
+                      case "software":
+                        return "Logiciel"
                       default:
                         return "Contenu"
                     }
