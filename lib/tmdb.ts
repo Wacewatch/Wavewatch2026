@@ -201,12 +201,11 @@ const isAnime = (show: any) => {
   )
 }
 
-const buildApiUrl = async (endpoint: string, params: Record<string, any> = {}) => {
-  const showAdultContent = await getUserAdultContentPreference()
+const buildApiUrl = (endpoint: string, params: Record<string, any> = {}, includeAdult = false) => {
   const urlParams = new URLSearchParams({
     api_key: API_KEY,
     language: "fr-FR",
-    include_adult: showAdultContent.toString(),
+    include_adult: includeAdult.toString(),
     ...params,
   })
 
@@ -214,7 +213,7 @@ const buildApiUrl = async (endpoint: string, params: Record<string, any> = {}) =
 }
 
 export async function getTrendingMovies(page = 1) {
-  const url = await buildApiUrl("/trending/movie/week", { page: page.toString() })
+  const url = buildApiUrl("/trending/movie/week", { page: page.toString() }, false)
   const response = await fetchWithFallback(url, createMockResponse("movie"))
   if (!response.ok) throw new Error("Failed to fetch trending movies")
   const data = await response.json()
@@ -227,7 +226,7 @@ export async function getTrendingMovies(page = 1) {
 }
 
 export async function getTrendingTVShows(page = 1) {
-  const url = await buildApiUrl("/trending/tv/week", { page: page.toString() })
+  const url = buildApiUrl("/trending/tv/week", { page: page.toString() }, false)
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch trending TV shows")
   const data = await response.json()
@@ -244,12 +243,16 @@ export async function getTrendingTVShows(page = 1) {
 export async function getTrendingAnime() {
   try {
     // First, try to get trending anime using discover with animation genre
-    const url = await buildApiUrl("/discover/tv", {
-      with_genres: "16",
-      with_origin_country: "JP",
-      sort_by: "popularity.desc",
-      "first_air_date.lte": new Date().toISOString().split("T")[0],
-    })
+    const url = buildApiUrl(
+      "/discover/tv",
+      {
+        with_genres: "16",
+        with_origin_country: "JP",
+        sort_by: "popularity.desc",
+        "first_air_date.lte": new Date().toISOString().split("T")[0],
+      },
+      false,
+    )
     const discoverResponse = await fetchWithFallback(url, createMockResponse("tv"))
 
     if (discoverResponse.ok) {
@@ -262,7 +265,7 @@ export async function getTrendingAnime() {
     }
 
     // Fallback: get trending TV and filter for anime
-    const trendingUrl = await buildApiUrl("/trending/tv/week")
+    const trendingUrl = buildApiUrl("/trending/tv/week", {}, false)
     const trendingResponse = await fetchWithFallback(trendingUrl, createMockResponse("tv"))
 
     if (!trendingResponse.ok) throw new Error("Failed to fetch trending anime")
@@ -276,11 +279,15 @@ export async function getTrendingAnime() {
 
     // If no anime found in trending, get popular anime as fallback
     if (!trendingData.results || trendingData.results.length === 0) {
-      const popularAnimeUrl = await buildApiUrl("/discover/tv", {
-        with_genres: "16",
-        sort_by: "popularity.desc",
-        "first_air_date.lte": new Date().toISOString().split("T")[0],
-      })
+      const popularAnimeUrl = buildApiUrl(
+        "/discover/tv",
+        {
+          with_genres: "16",
+          sort_by: "popularity.desc",
+          "first_air_date.lte": new Date().toISOString().split("T")[0],
+        },
+        false,
+      )
       const popularAnimeResponse = await fetchWithFallback(popularAnimeUrl, createMockResponse("tv"))
 
       if (popularAnimeResponse.ok) {
@@ -372,7 +379,7 @@ export async function getTrendingAnime() {
 }
 
 export async function getPopularMovies(page = 1) {
-  const url = await buildApiUrl("/movie/popular", { page: page.toString() })
+  const url = buildApiUrl("/movie/popular", { page: page.toString() }, false)
   const response = await fetchWithFallback(url, createMockResponse("movie"))
   if (!response.ok) throw new Error("Failed to fetch popular movies")
   const data = await response.json()
@@ -385,7 +392,7 @@ export async function getPopularMovies(page = 1) {
 }
 
 export async function getPopularTVShows(page = 1) {
-  const url = await buildApiUrl("/tv/popular", { page: page.toString() })
+  const url = buildApiUrl("/tv/popular", { page: page.toString() }, false)
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch popular TV shows")
   const data = await response.json()
@@ -400,12 +407,16 @@ export async function getPopularTVShows(page = 1) {
 }
 
 export async function getPopularAnime(page = 1) {
-  const url = await buildApiUrl("/discover/tv", {
-    with_genres: "16",
-    sort_by: "popularity.desc",
-    page: page.toString(),
-    "first_air_date.lte": new Date().toISOString().split("T")[0],
-  })
+  const url = buildApiUrl(
+    "/discover/tv",
+    {
+      with_genres: "16",
+      sort_by: "popularity.desc",
+      page: page.toString(),
+      "first_air_date.lte": new Date().toISOString().split("T")[0],
+    },
+    false,
+  )
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch popular anime")
   const data = await response.json()
@@ -418,7 +429,7 @@ export async function getPopularAnime(page = 1) {
 }
 
 export async function getUpcomingMovies(page = 1) {
-  const url = await buildApiUrl("/movie/upcoming", { page: page.toString() })
+  const url = buildApiUrl("/movie/upcoming", { page: page.toString() }, false)
   const response = await fetchWithFallback(url, createMockResponse("movie"))
   if (!response.ok) throw new Error("Failed to fetch upcoming movies")
   const data = await response.json()
@@ -431,7 +442,7 @@ export async function getUpcomingMovies(page = 1) {
 }
 
 export async function getUpcomingTVShows(page = 1) {
-  const url = await buildApiUrl("/tv/on_the_air", { page: page.toString() })
+  const url = buildApiUrl("/tv/on_the_air", { page: page.toString() }, false)
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch upcoming TV shows")
   const data = await response.json()
@@ -444,7 +455,7 @@ export async function getUpcomingTVShows(page = 1) {
 }
 
 export async function getMovieDetails(id: number) {
-  const url = await buildApiUrl(`/movie/${id}`, {
+  const url = buildApiUrl(`/movie/${id}`, {
     append_to_response: "credits,videos,similar,reviews,watch/providers",
   })
   const response = await fetchWithFallback(url, createMockResponse("movie"))
@@ -453,7 +464,7 @@ export async function getMovieDetails(id: number) {
 }
 
 export async function getTVShowDetails(id: number) {
-  const url = await buildApiUrl(`/tv/${id}`, {
+  const url = buildApiUrl(`/tv/${id}`, {
     append_to_response: "credits,videos,similar,reviews,watch/providers",
   })
   const response = await fetchWithFallback(url, createMockResponse("tv"))
@@ -462,28 +473,28 @@ export async function getTVShowDetails(id: number) {
 }
 
 export async function getMovieCredits(id: number) {
-  const url = await buildApiUrl(`/movie/${id}/credits`)
+  const url = buildApiUrl(`/movie/${id}/credits`)
   const response = await fetchWithFallback(url, createMockResponse("movie"))
   if (!response.ok) throw new Error("Failed to fetch movie credits")
   return response.json()
 }
 
 export async function getTVShowCredits(id: number) {
-  const url = await buildApiUrl(`/tv/${id}/credits`)
+  const url = buildApiUrl(`/tv/${id}/credits`)
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch TV show credits")
   return response.json()
 }
 
 export async function getSeasonDetails(showId: number, seasonNumber: number) {
-  const url = await buildApiUrl(`/tv/${showId}/season/${seasonNumber}`)
+  const url = buildApiUrl(`/tv/${showId}/season/${seasonNumber}`)
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch season details")
   return response.json()
 }
 
 export async function getEpisodeDetails(showId: number, seasonNumber: number, episodeNumber: number) {
-  const url = await buildApiUrl(`/tv/${showId}/season/${seasonNumber}/episode/${episodeNumber}`, {
+  const url = buildApiUrl(`/tv/${showId}/season/${seasonNumber}/episode/${episodeNumber}`, {
     append_to_response: "credits,videos",
   })
   const response = await fetchWithFallback(url, createMockResponse("tv"))
@@ -492,18 +503,22 @@ export async function getEpisodeDetails(showId: number, seasonNumber: number, ep
 }
 
 export async function getGenres(type: "movie" | "tv") {
-  const url = await buildApiUrl(`/genre/${type}/list`)
+  const url = buildApiUrl(`/genre/${type}/list`)
   const response = await fetchWithFallback(url, createMockResponse())
   if (!response.ok) throw new Error("Failed to fetch genres")
   return response.json()
 }
 
 export async function getMoviesByGenre(genreId: number, page = 1) {
-  const url = await buildApiUrl("/discover/movie", {
-    with_genres: genreId.toString(),
-    page: page.toString(),
-    sort_by: "popularity.desc",
-  })
+  const url = buildApiUrl(
+    "/discover/movie",
+    {
+      with_genres: genreId.toString(),
+      page: page.toString(),
+      sort_by: "popularity.desc",
+    },
+    false,
+  )
   const response = await fetchWithFallback(url, createMockResponse("movie"))
   if (!response.ok) throw new Error("Failed to fetch movies by genre")
   const data = await response.json()
@@ -516,11 +531,15 @@ export async function getMoviesByGenre(genreId: number, page = 1) {
 }
 
 export async function getTVShowsByGenre(genreId: number, page = 1) {
-  const url = await buildApiUrl("/discover/tv", {
-    with_genres: genreId.toString(),
-    page: page.toString(),
-    sort_by: "popularity.desc",
-  })
+  const url = buildApiUrl(
+    "/discover/tv",
+    {
+      with_genres: genreId.toString(),
+      page: page.toString(),
+      sort_by: "popularity.desc",
+    },
+    false,
+  )
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch TV shows by genre")
   const data = await response.json()
@@ -533,7 +552,7 @@ export async function getTVShowsByGenre(genreId: number, page = 1) {
 }
 
 export async function searchMulti(query: string, page = 1) {
-  const url = await buildApiUrl("/search/multi", {
+  const url = buildApiUrl("/search/multi", {
     query: encodeURIComponent(query),
     page: page.toString(),
   })
@@ -569,7 +588,7 @@ export async function searchMulti(query: string, page = 1) {
 }
 
 export async function searchMovies(query: string, page = 1) {
-  const url = await buildApiUrl("/search/movie", {
+  const url = buildApiUrl("/search/movie", {
     query: encodeURIComponent(query),
     page: page.toString(),
   })
@@ -585,7 +604,7 @@ export async function searchMovies(query: string, page = 1) {
 }
 
 export async function searchTVShows(query: string, page = 1) {
-  const url = await buildApiUrl("/search/tv", {
+  const url = buildApiUrl("/search/tv", {
     query: encodeURIComponent(query),
     page: page.toString(),
   })
@@ -601,7 +620,7 @@ export async function searchTVShows(query: string, page = 1) {
 }
 
 export async function searchAnime(query: string, page = 1) {
-  const url = await buildApiUrl("/search/tv", {
+  const url = buildApiUrl("/search/tv", {
     query: encodeURIComponent(query),
     page: page.toString(),
   })
@@ -617,14 +636,14 @@ export async function searchAnime(query: string, page = 1) {
 }
 
 export async function getPopularActors(page = 1) {
-  const url = await buildApiUrl("/person/popular", { page: page.toString() })
+  const url = buildApiUrl("/person/popular", { page: page.toString() })
   const response = await fetchWithFallback(url, createMockResponse("person"))
   if (!response.ok) throw new Error("Failed to fetch popular actors")
   return response.json()
 }
 
 export async function getActorDetails(id: number) {
-  const url = await buildApiUrl(`/person/${id}`, {
+  const url = buildApiUrl(`/person/${id}`, {
     append_to_response: "movie_credits,tv_credits,images",
   })
   const response = await fetchWithFallback(url, createMockResponse("person"))
@@ -633,7 +652,7 @@ export async function getActorDetails(id: number) {
 }
 
 export async function getActorCredits(id: number) {
-  const url = await buildApiUrl(`/person/${id}/combined_credits`)
+  const url = buildApiUrl(`/person/${id}/combined_credits`)
   const response = await fetchWithFallback(url, createMockResponse("person"))
   if (!response.ok) throw new Error("Failed to fetch actor credits")
   const data = await response.json()
@@ -666,7 +685,7 @@ export async function getActorCredits(id: number) {
 }
 
 export async function searchActors(query: string, page = 1) {
-  const url = await buildApiUrl("/search/person", {
+  const url = buildApiUrl("/search/person", {
     query: encodeURIComponent(query),
     page: page.toString(),
   })
@@ -677,7 +696,7 @@ export async function searchActors(query: string, page = 1) {
 
 // Director functions
 export async function getDirectorDetails(id: number) {
-  const url = await buildApiUrl(`/person/${id}`, {
+  const url = buildApiUrl(`/person/${id}`, {
     append_to_response: "movie_credits,tv_credits,images",
   })
   const response = await fetchWithFallback(url, createMockResponse("person"))
@@ -686,7 +705,7 @@ export async function getDirectorDetails(id: number) {
 }
 
 export async function getDirectorCredits(id: number) {
-  const url = await buildApiUrl(`/person/${id}/combined_credits`)
+  const url = buildApiUrl(`/person/${id}/combined_credits`)
   const response = await fetchWithFallback(url, createMockResponse("person"))
   if (!response.ok) throw new Error("Failed to fetch director credits")
   const data = await response.json()
@@ -723,7 +742,7 @@ export async function getDirectorCredits(id: number) {
 
 // New functions for collections and similar content
 export async function getMovieCollection(id: number) {
-  const url = await buildApiUrl(`/collection/${id}`)
+  const url = buildApiUrl(`/collection/${id}`)
   const response = await fetchWithFallback(url, createMockResponse("movie"))
   if (!response.ok) throw new Error("Failed to fetch movie collection")
   const data = await response.json()
@@ -737,7 +756,7 @@ export async function getMovieCollection(id: number) {
 }
 
 export async function getSimilarMovies(id: number, page = 1) {
-  const url = await buildApiUrl(`/movie/${id}/similar`, { page: page.toString() })
+  const url = buildApiUrl(`/movie/${id}/similar`, { page: page.toString() })
   const response = await fetchWithFallback(url, createMockResponse("movie"))
   if (!response.ok) throw new Error("Failed to fetch similar movies")
   const data = await response.json()
@@ -750,7 +769,7 @@ export async function getSimilarMovies(id: number, page = 1) {
 }
 
 export async function getSimilarTVShows(id: number, page = 1) {
-  const url = await buildApiUrl(`/tv/${id}/similar`, { page: page.toString() })
+  const url = buildApiUrl(`/tv/${id}/similar`, { page: page.toString() })
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch similar TV shows")
   const data = await response.json()
@@ -763,7 +782,7 @@ export async function getSimilarTVShows(id: number, page = 1) {
 }
 
 export async function getRecommendedMovies(id: number, page = 1) {
-  const url = await buildApiUrl(`/movie/${id}/recommendations`, { page: page.toString() })
+  const url = buildApiUrl(`/movie/${id}/recommendations`, { page: page.toString() })
   const response = await fetchWithFallback(url, createMockResponse("movie"))
   if (!response.ok) throw new Error("Failed to fetch recommended movies")
   const data = await response.json()
@@ -776,7 +795,7 @@ export async function getRecommendedMovies(id: number, page = 1) {
 }
 
 export async function getRecommendedTVShows(id: number, page = 1) {
-  const url = await buildApiUrl(`/tv/${id}/recommendations`, { page: page.toString() })
+  const url = buildApiUrl(`/tv/${id}/recommendations`, { page: page.toString() })
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch recommended TV shows")
   const data = await response.json()
@@ -790,14 +809,14 @@ export async function getRecommendedTVShows(id: number, page = 1) {
 
 // Season and episode functions
 export async function getTVShowSeason(tvId: number, seasonNumber: number) {
-  const url = await buildApiUrl(`/tv/${tvId}/season/${seasonNumber}`)
+  const url = buildApiUrl(`/tv/${tvId}/season/${seasonNumber}`)
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch TV show season")
   return response.json()
 }
 
 export async function getTVShowEpisode(tvId: number, seasonNumber: number, episodeNumber: number) {
-  const url = await buildApiUrl(`/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`, {
+  const url = buildApiUrl(`/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`, {
     append_to_response: "credits,videos",
   })
   const response = await fetchWithFallback(url, createMockResponse("tv"))
@@ -829,14 +848,14 @@ export const searchPerson = searchActors
 
 // New functions to get watch providers for movies and TV shows
 export async function getMovieWatchProviders(id: number) {
-  const url = await buildApiUrl(`/movie/${id}/watch/providers`)
+  const url = buildApiUrl(`/movie/${id}/watch/providers`)
   const response = await fetchWithFallback(url, { results: {} })
   if (!response.ok) throw new Error("Failed to fetch movie watch providers")
   return response.json()
 }
 
 export async function getTVShowWatchProviders(id: number) {
-  const url = await buildApiUrl(`/tv/${id}/watch/providers`)
+  const url = buildApiUrl(`/tv/${id}/watch/providers`)
   const response = await fetchWithFallback(url, { results: {} })
   if (!response.ok) throw new Error("Failed to fetch TV show watch providers")
   return response.json()
