@@ -231,7 +231,7 @@ export function usePlaylists() {
         .eq("playlist_id", playlistId)
         .eq("tmdb_id", tmdbId)
         .eq("media_type", mediaType)
-        .single()
+        .maybeSingle()
 
       if (existing) {
         toast({
@@ -249,9 +249,20 @@ export function usePlaylists() {
         .eq("playlist_id", playlistId)
         .order("position", { ascending: false })
         .limit(1)
-        .single()
+        .maybeSingle()
 
       const newPosition = (maxPos?.position || 0) + 1
+
+      console.log("[v0] Adding item to playlist:", {
+        playlistId,
+        tmdbId,
+        mediaType,
+        title,
+        posterPath,
+        position: newPosition,
+        episodeId,
+        seriesId,
+      })
 
       const { error } = await supabase.from("playlist_items").insert({
         playlist_id: playlistId,
@@ -265,9 +276,16 @@ export function usePlaylists() {
       })
 
       if (error) {
-        console.error("Error adding to playlist:", error)
+        console.error("[v0] Error adding to playlist:", error)
+        toast({
+          title: "Erreur",
+          description: `Impossible d'ajouter à la playlist: ${error.message}`,
+          variant: "destructive",
+        })
         return false
       }
+
+      console.log("[v0] Successfully added item to playlist")
 
       // Update playlist updated_at
       await supabase.from("playlists").update({ updated_at: new Date().toISOString() }).eq("id", playlistId)
@@ -288,7 +306,12 @@ export function usePlaylists() {
 
       return true
     } catch (error) {
-      console.error("Error adding to playlist:", error)
+      console.error("[v0] Error adding to playlist:", error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de l'ajout",
+        variant: "destructive",
+      })
       return false
     }
   }

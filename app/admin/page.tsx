@@ -743,6 +743,83 @@ export default function AdminPage() {
     try {
       console.log("🔄 Calcul des statistiques...")
 
+      const tmdbContentPromise = Promise.all([
+        (async () => {
+          try {
+            // Count movies from favorites and watch history
+            const { data: movieData } = await supabase
+              .from("user_favorites")
+              .select("content_id")
+              .eq("content_type", "movie")
+            const movieIds = new Set(movieData?.map((m) => m.content_id) || [])
+
+            const { data: watchedMovies } = await supabase
+              .from("user_watch_history")
+              .select("content_id")
+              .eq("content_type", "movie")
+            watchedMovies?.forEach((m) => movieIds.add(m.content_id))
+
+            // Count movies in playlists
+            const { data: playlistMovies } = await supabase
+              .from("playlist_items")
+              .select("tmdb_id")
+              .eq("media_type", "movie")
+            playlistMovies?.forEach((m) => movieIds.add(m.tmdb_id))
+
+            console.log("[v0] Unique movies tracked:", movieIds.size)
+            return movieIds.size
+          } catch (err: any) {
+            console.error("[v0] Movies count exception:", err?.message)
+            return 0
+          }
+        })(),
+        (async () => {
+          try {
+            // Count TV shows from favorites and watch history
+            const { data: tvData } = await supabase.from("user_favorites").select("content_id").eq("content_type", "tv")
+            const tvIds = new Set(tvData?.map((t) => t.content_id) || [])
+
+            const { data: watchedTV } = await supabase
+              .from("user_watch_history")
+              .select("content_id")
+              .eq("content_type", "tv")
+            watchedTV?.forEach((t) => tvIds.add(t.content_id))
+
+            // Count TV shows in playlists
+            const { data: playlistTV } = await supabase.from("playlist_items").select("tmdb_id").eq("media_type", "tv")
+            playlistTV?.forEach((t) => tvIds.add(t.tmdb_id))
+
+            console.log("[v0] Unique TV shows tracked:", tvIds.size)
+            return tvIds.size
+          } catch (err: any) {
+            console.error("[v0] TV shows count exception:", err?.message)
+            return 0
+          }
+        })(),
+        (async () => {
+          try {
+            // Count anime from favorites and watch history
+            const { data: animeData } = await supabase
+              .from("user_favorites")
+              .select("content_id")
+              .eq("content_type", "anime")
+            const animeIds = new Set(animeData?.map((a) => a.content_id) || [])
+
+            const { data: watchedAnime } = await supabase
+              .from("user_watch_history")
+              .select("content_id")
+              .eq("content_type", "anime")
+            watchedAnime?.forEach((a) => animeIds.add(a.content_id))
+
+            console.log("[v0] Unique anime tracked:", animeIds.size)
+            return animeIds.size
+          } catch (err: any) {
+            console.error("[v0] Anime count exception:", err?.message)
+            return 0
+          }
+        })(),
+      ])
+
       const additionalContentPromise = Promise.all([
         (async () => {
           try {
@@ -798,9 +875,17 @@ export default function AdminPage() {
         })(),
       ])
 
+      const [tmdbMovies, tmdbTVShows, tmdbAnime] = await tmdbContentPromise
       const [musicCount, softwareCount, gameCount, ebookCount] = await additionalContentPromise
+
       console.log(
-        "[v0] Content counts - Music:",
+        "[v0] Content counts - Movies:",
+        tmdbMovies,
+        "TV Shows:",
+        tmdbTVShows,
+        "Anime:",
+        tmdbAnime,
+        "Music:",
         musicCount,
         "Software:",
         softwareCount,
@@ -832,10 +917,6 @@ export default function AdminPage() {
       const totalUsers = supabaseUserCount || users.length
       const vipUsers = (users || []).filter((u) => u.is_vip || u.is_vip_plus).length
       const activeUsers = (users || []).filter((u) => u.status === "active").length
-
-      const tmdbMovies = 50000
-      const tmdbTVShows = 25000
-      const tmdbAnime = 8000
 
       const newStats = {
         totalContent:
@@ -871,26 +952,26 @@ export default function AdminPage() {
           { month: "Fév", users: Math.floor(totalUsers * 0.7) },
           { month: "Mar", users: Math.floor(totalUsers * 0.8) },
           { month: "Avr", users: Math.floor(totalUsers * 0.85) },
-          { month: "Mai", users: Math.floor(totalUsers * 0.9) }, // Changed from 0.92 to 0.9
+          { month: "Mai", users: Math.floor(totalUsers * 0.9) },
           { month: "Jun", users: totalUsers },
         ],
         revenueByMonth: [
-          { month: "Jan", revenue: 1200 }, // Changed from calculation to fixed values
+          { month: "Jan", revenue: 1200 },
           { month: "Fév", revenue: 1900 },
           { month: "Mar", revenue: 3200 },
           { month: "Avr", revenue: 2780 },
           { month: "Mai", revenue: 1890 },
-          { month: "Jun", revenue: vipUsers * 1.99 }, // Kept as calculation
+          { month: "Jun", revenue: vipUsers * 1.99 },
         ],
         topContent: [
-          { id: 1, title: "Top Movie 1", views: 15230, revenue: 2500 }, // Added id and revenue
-          { id: 2, title: "Top Movie 2", views: 12500, revenue: 2000 }, // Added id and revenue
+          { id: 1, title: "Top Movie 1", views: 15230, revenue: 2500 },
+          { id: 2, title: "Top Movie 2", views: 12500, revenue: 2000 },
         ],
         systemHealth: {
           uptime: "99.9%",
           responseTime: "120ms",
           errorRate: "0.1%",
-          databaseStatus: "Healthy", // Changed from bandwidth
+          databaseStatus: "Healthy",
         },
       }
 
@@ -1783,7 +1864,7 @@ export default function AdminPage() {
         throw error
       }
 
-      console.log(`✅ Statut utilisateur changé: ${newStatus}`)
+      console.log(`✅ Statut utilisateur changed: ${newStatus}`)
 
       const updatedUser = { ...currentUser, status: newStatus }
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))

@@ -326,7 +326,7 @@ export function PlaylistManager() {
               Nouvelle Playlist
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
+          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Créer une nouvelle playlist</DialogTitle>
               <DialogDescription className="text-gray-400">
