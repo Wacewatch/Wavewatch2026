@@ -1,25 +1,18 @@
-import { createClient as createBrowserClient } from "@/lib/supabase/client"
+import { createClient } from "@/lib/supabase/client"
 
-/**
- * @deprecated Use createClient from @/lib/supabase/client instead
- */
-export function createClient() {
-  return createBrowserClient()
-}
-
-// Re-export for backwards compatibility
-export const supabase = createBrowserClient()
+// Re-export for backwards compatibility - single instance
+export const supabase = createClient()
 
 export const recoverSession = async () => {
   try {
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession()
+    const { session, error } = await supabase.auth.getSession()
     if (error) {
       console.warn("[v0] Session recovery error:", error.message)
-      // Clear invalid session
-      await supabase.auth.signOut()
+      try {
+        await supabase.auth.signOut()
+      } catch {
+        // Ignore signout errors during recovery
+      }
       return null
     }
     return session

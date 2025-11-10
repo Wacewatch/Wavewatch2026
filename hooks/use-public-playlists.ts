@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
@@ -29,17 +29,29 @@ export function usePublicPlaylists() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const supabase = createClient()
+  const isMountedRef = useRef(true)
 
   const loadPublicPlaylists = useCallback(async () => {
+    if (!isMountedRef.current) return
+
     try {
       console.log("[v0] Loading public playlists...")
 
-      const { data: playlistsData, error: playlistsError } = await supabase
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), 10000))
+
+      const queryPromise = supabase
         .from("playlists")
         .select("id, user_id, title, description, theme_color, created_at, updated_at")
         .eq("is_public", true)
         .order("updated_at", { ascending: false })
         .limit(50)
+
+      const { data: playlistsData, error: playlistsError } = (await Promise.race([
+        queryPromise as any,
+        timeoutPromise,
+      ])) as any
+
+      if (!isMountedRef.current) return
 
       if (playlistsError) {
         console.error("[v0] Error loading public playlists:", playlistsError.message)
@@ -149,6 +161,8 @@ export function usePublicPlaylists() {
 
       setPlaylists(processedPlaylists)
     } catch (error) {
+      if (!isMountedRef.current) return
+
       console.error("[v0] Exception loading public playlists:", error)
 
       if (error instanceof SyntaxError && error.message.includes("JSON")) {
@@ -170,9 +184,17 @@ export function usePublicPlaylists() {
 
       setPlaylists([])
     } finally {
-      setLoading(false)
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
     }
   }, [user?.id, supabase])
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   useEffect(() => {
     loadPublicPlaylists()

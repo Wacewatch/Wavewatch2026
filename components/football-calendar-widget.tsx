@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -75,6 +75,8 @@ export function FootballCalendarWidget() {
   const [isExpanded, setIsExpanded] = useState(false)
   const [selectedLeague, setSelectedLeague] = useState("61") // Ligue 1 par défaut
   const isMobile = useMobile()
+  const isMountedRef = useRef(true)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const leagues = [
     { id: "61", name: "Ligue 1", flag: "🇫🇷" },
@@ -92,18 +94,35 @@ export function FootballCalendarWidget() {
   }, [isMobile])
 
   useEffect(() => {
+    // Initial load
     fetchFixtures()
     fetchLiveMatches()
 
-    // Rafraîchir les matchs en direct toutes les 30 secondes
-    const interval = setInterval(() => {
-      fetchLiveMatches()
-    }, 30000)
+    intervalRef.current = setInterval(() => {
+      if (isMountedRef.current) {
+        fetchLiveMatches()
+      }
+    }, 300000) // 5 minutes
 
-    return () => clearInterval(interval)
+    return () => {
+      // Cleanup interval on unmount or league change
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
   }, [selectedLeague])
 
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [])
+
   const fetchFixtures = async () => {
+    if (!isMountedRef.current) return
     try {
       setLoading(true)
       setError(null)
@@ -111,26 +130,37 @@ export function FootballCalendarWidget() {
       const response = await fetch(`/api/football/fixtures?league=${selectedLeague}&days=7`)
       const data = await response.json()
 
+      if (!isMountedRef.current) return
+
       if (data.error) {
         setError(data.error)
       } else {
         setFixtures(data.fixtures || [])
       }
     } catch (err) {
-      console.error("[v0] Error loading football fixtures:", err)
-      setError("Impossible de charger les matchs")
+      if (isMountedRef.current) {
+        console.error("[v0] Error loading football fixtures:", err)
+        setError("Impossible de charger les matchs")
+      }
     } finally {
-      setLoading(false)
+      if (isMountedRef.current) {
+        setLoading(false)
+      }
     }
   }
 
   const fetchLiveMatches = async () => {
+    if (!isMountedRef.current) return
     try {
       const response = await fetch("/api/football/live")
       const data = await response.json()
-      setLiveFixtures(data.fixtures || [])
+      if (isMountedRef.current) {
+        setLiveFixtures(data.fixtures || [])
+      }
     } catch (err) {
-      console.error("[v0] Error loading live matches:", err)
+      if (isMountedRef.current) {
+        console.error("[v0] Error loading live matches:", err)
+      }
     }
   }
 

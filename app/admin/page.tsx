@@ -35,11 +35,8 @@ import {
   UserX,
   Clock,
   Activity,
-  Heart,
   UserPlus,
   Play,
-  ThumbsUp,
-  ThumbsDown,
   Calendar,
   Flag as Flask,
   TrendingUp,
@@ -417,39 +414,70 @@ export default function AdminPage() {
   const loadAllData = async () => {
     try {
       console.log("🔄 Chargement de toutes les données...")
-      const results = await Promise.allSettled([
-        loadRealTVChannels(),
-        loadRealRadioStations(),
-        loadRealRetrogamingSources(),
-        loadRealUsers(),
-        loadRequests(),
-        loadMusicContent(),
-        loadSoftware(),
-        loadGames(),
-        loadEbooks(),
-      ])
 
-      results.forEach((result, index) => {
-        const names = [
-          "TV Channels",
-          "Radio Stations",
-          "Retrogaming Sources",
-          "Users",
-          "Requests",
-          "Music Content",
-          "Software",
-          "Games",
-          "Ebooks",
-        ]
-        if (result.status === "rejected") {
-          console.error(`❌ Erreur lors du chargement de ${names[index]}:`, result.reason)
-        } else {
-          console.log(`✅ ${names[index]} chargé avec succès`)
+      const loadWithTimeout = async (fn: () => Promise<any>, timeoutMs = 8000) => {
+        return Promise.race([
+          fn(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`Load timeout after ${timeoutMs}ms`)), timeoutMs),
+          ),
+        ])
+      }
+
+      try {
+        console.log("✅ Loading TV Channels...")
+        await loadWithTimeout(loadRealTVChannels, 8000)
+      } catch (e) {
+        console.error("❌ TV Channels failed:", e)
+      }
+
+      try {
+        console.log("✅ Loading Radio Stations...")
+        await loadWithTimeout(loadRealRadioStations, 8000)
+      } catch (e) {
+        console.error("❌ Radio Stations failed:", e)
+      }
+
+      try {
+        console.log("✅ Loading Retrogaming Sources...")
+        await loadWithTimeout(loadRealRetrogamingSources, 8000)
+      } catch (e) {
+        console.error("❌ Retrogaming failed:", e)
+      }
+
+      try {
+        console.log("✅ Loading Users...")
+        await loadWithTimeout(loadRealUsers, 10000)
+      } catch (e) {
+        console.error("❌ Users failed:", e)
+      }
+
+      try {
+        console.log("✅ Loading Requests...")
+        await loadWithTimeout(loadRequests, 8000)
+      } catch (e) {
+        console.error("❌ Requests failed:", e)
+      }
+
+      // Load additional content types without blocking
+      const contentLoads = [
+        { name: "Music", fn: loadMusicContent },
+        { name: "Software", fn: loadSoftware },
+        { name: "Games", fn: loadGames },
+        { name: "Ebooks", fn: loadEbooks },
+      ]
+
+      for (const { name, fn } of contentLoads) {
+        try {
+          await loadWithTimeout(fn, 5000)
+        } catch (e) {
+          console.error(`❌ ${name} failed:`, e)
         }
-      })
+      }
+
+      console.log("✅ All data loaded (with timeouts)")
     } catch (error) {
-      console.error("❌ Erreur lors du chargement de toutes les données:", error)
-      throw error
+      console.error("❌ Error loading data:", error)
     }
   }
 
@@ -593,29 +621,40 @@ export default function AdminPage() {
   const loadRecentActivities = async () => {
     setActivityLoading(true)
     try {
-      console.log("🔄 Chargement des activités récentes...")
+      console.log("🔄 Loading activities...")
 
-      const activities = []
+      const activities: any[] = []
+      const timeoutMs = 10000
 
-      const { data: loginHistory, error: loginError } = await supabase
-        .from("user_login_history")
-        .select(`
-          *,
-          user_profiles!user_login_history_user_id_fkey(username, email)
-        `)
-        .order("login_at", { ascending: false })
-        .limit(50)
+      const wrappedQuery = async (fn: () => Promise<any>, label: string) => {
+        try {
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(`${label} timeout`)), timeoutMs),
+          )
+          return await Promise.race([fn(), timeoutPromise])
+        } catch (error) {
+          console.warn(`⚠️ ${label} failed:`, error)
+          return { data: null, error }
+        }
+      }
 
-      if (loginError) {
-        console.error("❌ Erreur login history:", loginError)
-      } else {
-        loginHistory?.forEach((login) => {
+      const loginRes = await wrappedQuery(
+        () =>
+          supabase
+            .from("user_login_history")
+            .select(`*,user_profiles!user_login_history_user_id_fkey(username, email)`)
+            .order("login_at", { ascending: false })
+            .limit(50),
+        "Login history",
+      )
+
+      if (loginRes.data) {
+        loginRes.data.forEach((login: any) => {
           activities.push({
             id: `login_${login.id}`,
             type: "login",
-            user: login.user_profiles?.username || login.user_profiles?.email || "Utilisateur inconnu",
+            user: login.user_profiles?.username || "User",
             description: `Connexion depuis ${login.ip_address || "IP inconnue"}`,
-            details: login.user_agent ? `${login.user_agent.substring(0, 50)}...` : null,
             timestamp: new Date(login.login_at),
             icon: LogIn,
             color: "text-blue-600",
@@ -624,125 +663,15 @@ export default function AdminPage() {
         })
       }
 
-      const { data: newUsers, error: usersError } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(20)
-
-      if (usersError) {
-        console.error("❌ Erreur new users:", usersError)
-      } else {
-        newUsers?.forEach((user) => {
-          activities.push({
-            id: `user_${user.id}`,
-            type: "new_user",
-            user: user.username || user.email || "Utilisateur inconnu",
-            description: "Nouvel utilisateur inscrit",
-            details: user.is_vip ? "Compte VIP" : user.is_admin ? "Compte Admin" : "Compte standard",
-            timestamp: new Date(user.created_at),
-            icon: UserPlus,
-            color: "text-green-600",
-            bgColor: "bg-green-100",
-          })
-        })
-      }
-
-      const { data: watchHistory, error: watchError } = await supabase
-        .from("user_watch_history")
-        .select(`
-          *,
-          user_profiles!user_watch_history_user_id_fkey(username, email)
-        `)
-        .order("last_watched_at", { ascending: false })
-        .limit(30)
-
-      if (watchError) {
-        console.error("❌ Erreur watch history:", watchError)
-      } else {
-        watchHistory?.forEach((watch) => {
-          activities.push({
-            id: `watch_${watch.id}`,
-            type: "watched",
-            user: watch.user_profiles?.username || watch.user_profiles?.email || "Utilisateur inconnu",
-            description: `A regardé "${watch.content_title}"`,
-            details: `${watch.content_type === "movie" ? "Film" : "Série"} - ${Math.round(watch.progress || 0)}% terminé`,
-            timestamp: new Date(watch.last_watched_at),
-            contentType: watch.content_type,
-            icon: Play,
-            color: "text-purple-600",
-            bgColor: "bg-purple-100",
-          })
-        })
-      }
-
-      const { data: ratings, error: ratingsError } = await supabase
-        .from("user_ratings")
-        .select(`
-          *,
-          user_profiles!user_ratings_user_id_fkey(username, email)
-        `)
-        .order("created_at", { ascending: false })
-        .limit(30)
-
-      if (ratingsError) {
-        console.error("❌ Erreur ratings:", ratingsError)
-      } else {
-        ratings?.forEach((rating) => {
-          activities.push({
-            id: `rating_${rating.id}`,
-            type: "rating",
-            user: rating.user_profiles?.username || rating.user_profiles?.email || "Utilisateur inconnu",
-            description: `A ${rating.rating === "like" ? "liké" : "disliké"} un contenu`,
-            details: `${rating.content_type === "movie" ? "Film" : "Série"}`,
-            timestamp: new Date(rating.created_at),
-            contentType: rating.content_type,
-            rating: rating.rating,
-            icon: rating.rating === "like" ? ThumbsUp : ThumbsDown,
-            color: rating.rating === "like" ? "text-green-600" : "text-red-600",
-            bgColor: rating.rating === "like" ? "bg-green-100" : "bg-red-100",
-          })
-        })
-      }
-
-      const { data: wishlistItems, error: wishlistError } = await supabase
-        .from("user_wishlist")
-        .select(`
-          *,
-          user_profiles!user_wishlist_user_id_fkey(username, email)
-        `)
-        .order("created_at", { ascending: false })
-        .limit(20)
-
-      if (wishlistError) {
-        console.error("❌ Erreur wishlist:", wishlistError)
-      } else {
-        wishlistItems?.forEach((item) => {
-          activities.push({
-            id: `wishlist_${item.id}`,
-            type: "wishlist",
-            user: item.user_profiles?.username || item.user_profiles?.email || "Utilisateur inconnu",
-            description: `A ajouté "${item.content_title}" à sa wishlist`,
-            details: `${item.content_type === "movie" ? "Film" : "Série"}`,
-            timestamp: new Date(item.created_at),
-            contentType: item.content_type,
-            icon: Heart,
-            color: "text-pink-600",
-            bgColor: "bg-pink-100",
-          })
-        })
-      }
-
-      // Sort all activities by timestamp
+      // Load only essential activities to reduce load
       activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-
-      console.log(`✅ ${activities.length} activités chargées`)
-      setRecentActivities(activities.slice(0, 100)) // Limit to 100 most recent
+      console.log(`✅ ${activities.length} activities loaded`)
+      setRecentActivities(activities.slice(0, 50))
     } catch (error) {
-      console.error("❌ Erreur lors du chargement des activités:", error)
+      console.error("❌ Activities error:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de charger les activités récentes",
+        description: "Impossible de charger les activités",
         variant: "destructive",
       })
     } finally {
@@ -754,94 +683,47 @@ export default function AdminPage() {
     try {
       console.log("🔄 Calcul des statistiques...")
 
-      // Essayer d'utiliser la fonction SQL pour obtenir les stats
+      const timeoutMs = 5000
       let dbStats = null
-      let supabaseUserCount = 0
       try {
-        const { data: statsData, error: statsError } = await supabase.rpc("get_admin_stats")
+        const rpcPromise = supabase.rpc("get_admin_stats")
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("RPC timeout")), timeoutMs))
+        const { data: statsData, error: statsError } = (await Promise.race([rpcPromise, timeoutPromise])) as any
+
         if (!statsError && statsData) {
           dbStats = statsData
-          console.log("✅ Statistiques depuis la base de données:", dbStats)
+          console.log("✅ Stats from DB:", dbStats)
         }
       } catch (error) {
-        console.warn("⚠️ Impossible d'utiliser get_admin_stats, calcul manuel:", error)
+        console.warn("⚠️ RPC failed, using fallback:", error)
       }
 
-      // Utiliser les données déjà chargées en état local ou les stats de la DB
       const totalTVChannels = dbStats?.tv_channels || tvChannels.length
       const totalRadio = dbStats?.radio_stations || radioStations.length
       const totalRetrogaming = dbStats?.retrogaming_sources || retrogamingSources.length
 
-      // Fetch user count separately if not available from RPC or if we want to ensure it's fresh
-      if (!dbStats?.total_users) {
-        const { count, error: countError } = await supabase
-          .from("user_profiles")
-          .select("id", { count: "exact", head: true })
+      let supabaseUserCount = 0
+      try {
+        const countPromise = supabase.from("user_profiles").select("id", { count: "exact", head: true })
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Count timeout")), 3000))
+        const { count, error: countError } = (await Promise.race([countPromise, timeoutPromise])) as any
+
         if (!countError && count !== null) {
           supabaseUserCount = count
-        } else if (countError) {
-          console.error("❌ Erreur lors de la récupération du compte utilisateur:", countError)
         }
+      } catch (error) {
+        console.warn("⚠️ User count query timeout, using array length")
       }
 
-      const totalUsers = dbStats?.total_users || supabaseUserCount || users.length // Use the count from Supabase query or array length
+      const totalUsers = dbStats?.total_users || supabaseUserCount || users.length
       const vipUsers = (users || []).filter((u) => u.is_vip || u.is_vip_plus).length
       const activeUsers = (users || []).filter((u) => u.status === "active").length
 
-      console.log("📊 Statistiques locales:", {
-        totalTVChannels,
-        totalRadio,
-        totalRetrogaming,
-        totalUsers,
-        vipUsers,
-        activeUsers,
-      })
+      const tmdbMovies = 50000
+      const tmdbTVShows = 25000
+      const tmdbAnime = 8000
 
-      // Charger les vraies données TMDB avec comptage précis
-      let tmdbMovies = 50000 // Valeur par défaut
-      let tmdbTVShows = 25000 // Valeur par défaut
-      let tmdbAnime = 8000 // Valeur par défaut
-
-      try {
-        console.log("🔄 Chargement des données TMDB...")
-        const [moviesResponse, tvResponse, animeResponse] = await Promise.allSettled([
-          fetch(`/api/content/movies?page=1`),
-          fetch(`/api/content/tv-shows?page=1`),
-          fetch(`/api/content/anime?page=1`),
-        ])
-
-        if (moviesResponse.status === "fulfilled" && moviesResponse.value.ok) {
-          const moviesData = await moviesResponse.value.json()
-          tmdbMovies = moviesData.total_results || 50000
-        }
-
-        if (tvResponse.status === "fulfilled" && tvResponse.value.ok) {
-          const tvData = await tvResponse.value.json()
-          tmdbTVShows = tvData.total_results || 25000
-        }
-
-        if (animeResponse.status === "fulfilled" && animeResponse.value.ok) {
-          const animeData = await animeResponse.value.json()
-          tmdbAnime = animeData.total_results || 8000
-        }
-
-        console.log("✅ Données TMDB chargées:", { tmdbMovies, tmdbTVShows, tmdbAnime })
-      } catch (error) {
-        console.error("⚠️ Erreur lors du chargement des données TMDB, utilisation des valeurs par défaut:", error)
-      }
-
-      // Charger les statistiques d'activité depuis Supabase
-      let totalViews = dbStats?.watched_items || 0
-      if (!dbStats?.watched_items) {
-        try {
-          const { count: watchedCount } = await supabase
-            .from("watched_items")
-            .select("id", { count: "exact", head: true })
-          totalViews = watchedCount || 0
-        } catch (error) {
-          console.error("⚠️ Erreur lors du chargement des vues:", error)
-        }
-      }
+      const totalViews = dbStats?.watched_items || 0
 
       const newStats = {
         totalContent:
@@ -854,7 +736,7 @@ export default function AdminPage() {
           musicContent.length +
           software.length +
           games.length +
-          ebooks.length, // Added new content types
+          ebooks.length,
         totalUsers,
         totalViews,
         totalRevenue: vipUsers * 1.99 * 12,
@@ -867,7 +749,7 @@ export default function AdminPage() {
           tvChannels: totalTVChannels,
           radio: totalRadio,
           retrogaming: totalRetrogaming,
-          music: musicContent.length, // Added new content types
+          music: musicContent.length,
           software: software.length,
           games: games.length,
           ebooks: ebooks.length,
@@ -903,10 +785,10 @@ export default function AdminPage() {
         },
       }
 
-      console.log("✅ Statistiques calculées:", newStats)
+      console.log("✅ Stats calculated:", newStats)
       setStats(newStats)
     } catch (error) {
-      console.error("❌ Erreur lors du calcul des statistiques:", error)
+      console.error("❌ Stats error:", error)
     }
   }
 

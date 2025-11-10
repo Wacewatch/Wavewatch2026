@@ -28,6 +28,13 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("Request timeout")), timeoutMs)),
+  ])
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -39,14 +46,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const {
           data: { session },
-        } = await supabase.auth.getSession()
+        } = await withTimeout(supabase.auth.getSession(), 10000)
 
         if (session?.user) {
           await loadUserProfile(session.user)
+        } else {
+          setLoading(false)
         }
       } catch (error) {
         console.error("Auth initialization error:", error)
-      } finally {
         setLoading(false)
       }
     }
@@ -56,15 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[v0] Auth state changed:", event)
-
       if (event === "SIGNED_IN" && session?.user) {
         await loadUserProfile(session.user)
       } else if (event === "SIGNED_OUT") {
         setUser(null)
         updateAdultContentPreference(false)
       } else if (event === "TOKEN_REFRESHED" && session?.user) {
-        console.log("[v0] Token refreshed successfully")
         await loadUserProfile(session.user)
       } else if (event === "USER_UPDATED" && session?.user) {
         await loadUserProfile(session.user)
@@ -73,17 +78,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => {
-      subscription.unsubscribe()
+      subscription?.unsubscribe()
     }
   }, [])
 
   const loadUserProfile = async (supabaseUser: SupabaseUser) => {
     try {
-      const { data: profile, error } = await supabase
-        .from("user_profiles")
-        .select("*")
-        .eq("id", supabaseUser.id)
-        .maybeSingle()
+      const { data: profile, error } = await withTimeout(
+        supabase.from("user_profiles").select("*").eq("id", supabaseUser.id).maybeSingle(),
+        8000,
+      )
 
       let userData: User
 
@@ -120,10 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             is_vip: userData.isVip,
             show_adult_content: false,
           })
-          .then(({ error }) => {
-            if (error) {
-              console.log("Could not create profile in database:", error.message)
-            }
+          .catch(() => {
+            // Silently ignore profile creation errors
           })
       }
 
@@ -147,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const {
         data: { session },
-      } = await supabase.auth.getSession()
+      } = await withTimeout(supabase.auth.getSession(), 10000)
       if (session?.user) {
         await loadUserProfile(session.user)
       }
@@ -160,10 +162,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      })
+      const { error } = await withTimeout(
+        supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        }),
+        15000,
+      )
 
       if (error) {
         throw new Error(error.message)
@@ -199,16 +204,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Le mot de passe doit contenir au moins 6 caractères")
       }
 
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
-          data: {
-            username: username.trim(),
+      const { data, error } = await withTimeout(
+        supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
+            data: {
+              username: username.trim(),
+            },
           },
-        },
-      })
+        }),
+        15000,
+      )
 
       if (error) throw error
 
@@ -232,9 +240,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-
+      await withTimeout(supabase.auth.signOut(), 10000)
       setUser(null)
       updateAdultContentPreference(false)
 
