@@ -8,11 +8,13 @@ import { useToast } from "@/hooks/use-toast"
 interface PlaylistItem {
   id: string
   tmdb_id: number
-  media_type: "movie" | "tv"
+  media_type: "movie" | "tv" | "tv-channel" | "radio" | "game" | "ebook" | "episode"
   title: string
   poster_path?: string
   position: number
   added_at: string
+  episode_id?: number
+  series_id?: number
 }
 
 interface Playlist {
@@ -214,14 +216,15 @@ export function usePlaylists() {
   const addToPlaylist = async (
     playlistId: string,
     tmdbId: number,
-    mediaType: "movie" | "tv",
+    mediaType: "movie" | "tv" | "tv-channel" | "radio" | "game" | "ebook" | "episode",
     title: string,
     posterPath?: string,
+    episodeId?: number,
+    seriesId?: number,
   ) => {
     if (!user?.id) return false
 
     try {
-      // Check if item already exists
       const { data: existing } = await supabase
         .from("playlist_items")
         .select("id")
@@ -257,6 +260,8 @@ export function usePlaylists() {
         title: title,
         poster_path: posterPath,
         position: newPosition,
+        episode_id: episodeId,
+        series_id: seriesId,
       })
 
       if (error) {

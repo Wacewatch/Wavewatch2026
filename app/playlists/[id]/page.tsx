@@ -27,7 +27,7 @@ export default function PlaylistContentPage() {
   const [mounted, setMounted] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
   const supabase = createClient()
-  const [contentFilter, setContentFilter] = useState<"all" | "movie" | "tv">("all")
+  const [contentFilter, setContentFilter] = useState<"all" | "movie" | "tv" | "ebook" | "episode">("all")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalTitle, setModalTitle] = useState("")
   const [modalUrl, setModalUrl] = useState("")
@@ -155,7 +155,7 @@ export default function PlaylistContentPage() {
     console.log("[v0] Playing playlist item:", item)
 
     // Handle TV channels - open modal with stream
-    if (item.media_type === "tv-channel" || item.content_type === "live") {
+    if (item.media_type === "tv-channel") {
       const streamUrl = item.streamUrl || item.stream_url || item.url
       console.log("[v0] TV Channel stream URL:", streamUrl)
 
@@ -175,7 +175,7 @@ export default function PlaylistContentPage() {
     }
 
     // Handle radio stations - play audio
-    if (item.media_type === "radio" || item.content_type === "radio") {
+    if (item.media_type === "radio") {
       const streamUrl = item.streamUrl || item.stream_url || item.url
       console.log("[v0] Radio stream URL:", streamUrl)
 
@@ -235,7 +235,7 @@ export default function PlaylistContentPage() {
     }
 
     // Handle retrogaming - open modal with game
-    if (item.media_type === "game" || item.content_type === "gaming") {
+    if (item.media_type === "game") {
       const gameUrl = item.url || item.game_url || item.gameUrl
       console.log("[v0] Game URL:", gameUrl)
 
@@ -251,6 +251,20 @@ export default function PlaylistContentPage() {
           variant: "destructive",
         })
       }
+      return
+    }
+
+    // Handle ebooks - navigate to ebook page
+    if (item.media_type === "ebook") {
+      router.push(`/ebooks/${item.tmdb_id || item.content_id}`)
+      return
+    }
+
+    // Handle episodes - navigate to episode page with episode_id
+    if (item.media_type === "episode") {
+      const episodeId = item.episode_id || item.tmdb_id
+      const seriesId = item.series_id || item.content_id
+      router.push(`/tv-shows/${seriesId}/episode/${episodeId}`)
       return
     }
   }
@@ -481,6 +495,12 @@ export default function PlaylistContentPage() {
                   <TabsTrigger value="tv" className="data-[state=active]:bg-gray-700 text-gray-300">
                     Séries
                   </TabsTrigger>
+                  <TabsTrigger value="ebook" className="data-[state=active]:bg-gray-700 text-gray-300">
+                    Ebooks
+                  </TabsTrigger>
+                  <TabsTrigger value="episode" className="data-[state=active]:bg-gray-700 text-gray-300">
+                    Épisodes
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
@@ -492,11 +512,11 @@ export default function PlaylistContentPage() {
                 <h3 className="text-xl font-semibold text-white mb-2">
                   {playlistItems.length === 0
                     ? "Cette playlist est vide"
-                    : `Aucun ${contentFilter === "movie" ? "film" : "série"} dans cette playlist`}
+                    : `Aucun ${contentFilter === "movie" ? "film" : contentFilter === "tv" ? "série" : contentFilter === "ebook" ? "ebook" : contentFilter === "episode" ? "épisode" : "contenu"} dans cette playlist`}
                 </h3>
                 <p className="text-gray-500 text-sm">
                   {isOwner && playlistItems.length === 0
-                    ? "Ajoutez des films et séries depuis leurs pages de détails."
+                    ? "Ajoutez des films, séries, ebooks et épisodes depuis leurs pages de détails."
                     : contentFilter !== "all"
                       ? "Essayez un autre filtre pour voir plus de contenu."
                       : "Cette playlist ne contient aucun élément pour le moment."}
@@ -518,9 +538,17 @@ export default function PlaylistContentPage() {
                   const getItemUrl = () => {
                     const mediaType = item.media_type || item.content_type
 
-                    if (mediaType === "tv-channel" || mediaType === "live") return null
+                    if (mediaType === "tv-channel") return null
                     if (mediaType === "radio") return null
-                    if (mediaType === "game" || mediaType === "gaming") return null
+                    if (mediaType === "game") return null
+                    if (mediaType === "ebook") {
+                      return `/ebooks/${item.tmdb_id || item.content_id}`
+                    }
+                    if (mediaType === "episode") {
+                      const episodeId = item.episode_id || item.tmdb_id
+                      const seriesId = item.series_id || item.content_id
+                      return `/tv-shows/${seriesId}/episode/${episodeId}`
+                    }
 
                     if (mediaType === "movie") {
                       return `/movies/${item.tmdb_id || item.content_id}`
@@ -532,12 +560,7 @@ export default function PlaylistContentPage() {
 
                   const itemUrl = getItemUrl()
                   const mediaType = item.media_type || item.content_type
-                  const isPlayableItem =
-                    mediaType === "tv-channel" ||
-                    mediaType === "live" ||
-                    mediaType === "radio" ||
-                    mediaType === "game" ||
-                    mediaType === "gaming"
+                  const isPlayableItem = mediaType === "tv-channel" || mediaType === "radio" || mediaType === "game"
 
                   const handleItemClick = (e: React.MouseEvent) => {
                     if (isPlayableItem) {
@@ -564,13 +587,15 @@ export default function PlaylistContentPage() {
                       case "tv":
                         return "Série"
                       case "tv-channel":
-                      case "live":
                         return "Chaîne TV"
                       case "radio":
                         return "Radio"
                       case "game":
-                      case "gaming":
                         return "Jeu Rétro"
+                      case "ebook":
+                        return "Ebook"
+                      case "episode":
+                        return "Épisode"
                       default:
                         return "Contenu"
                     }
