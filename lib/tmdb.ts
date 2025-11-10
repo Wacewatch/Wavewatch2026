@@ -213,8 +213,8 @@ const buildApiUrl = async (endpoint: string, params: Record<string, any> = {}) =
   return `${BASE_URL}${endpoint}?${urlParams.toString()}`
 }
 
-export async function getTrendingMovies() {
-  const url = await buildApiUrl("/trending/movie/week")
+export async function getTrendingMovies(page = 1) {
+  const url = await buildApiUrl("/trending/movie/week", { page: page.toString() })
   const response = await fetchWithFallback(url, createMockResponse("movie"))
   if (!response.ok) throw new Error("Failed to fetch trending movies")
   const data = await response.json()
@@ -226,8 +226,8 @@ export async function getTrendingMovies() {
   return data
 }
 
-export async function getTrendingTVShows() {
-  const url = await buildApiUrl("/trending/tv/week")
+export async function getTrendingTVShows(page = 1) {
+  const url = await buildApiUrl("/trending/tv/week", { page: page.toString() })
   const response = await fetchWithFallback(url, createMockResponse("tv"))
   if (!response.ok) throw new Error("Failed to fetch trending TV shows")
   const data = await response.json()
