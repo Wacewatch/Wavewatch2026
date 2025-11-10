@@ -326,15 +326,15 @@ export function PlaylistManager() {
               Nouvelle Playlist
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl max-h-[90vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>Créer une nouvelle playlist</DialogTitle>
               <DialogDescription className="text-gray-400">
                 Créez une collection personnalisée de films et séries
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto flex-1 pr-2">
               <div className="space-y-2">
                 <Label htmlFor="title">Titre de la playlist</Label>
                 <Input
@@ -378,7 +378,7 @@ export function PlaylistManager() {
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex-shrink-0 mt-4">
               <Button
                 variant="outline"
                 onClick={() => setShowCreateDialog(false)}
@@ -465,15 +465,15 @@ export function PlaylistManager() {
                             <Edit className="w-4 h-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl">
-                          <DialogHeader>
+                        <DialogContent className="bg-gray-800 border-gray-700 text-white max-w-2xl max-h-[90vh] flex flex-col">
+                          <DialogHeader className="flex-shrink-0">
                             <DialogTitle>Modifier la playlist</DialogTitle>
                             <DialogDescription className="text-gray-400">
                               Modifiez les paramètres de votre playlist
                             </DialogDescription>
                           </DialogHeader>
 
-                          <div className="space-y-4">
+                          <div className="space-y-4 overflow-y-auto flex-1 pr-2">
                             <div className="space-y-2">
                               <Label htmlFor="edit-title">Titre de la playlist</Label>
                               <Input
@@ -515,7 +515,7 @@ export function PlaylistManager() {
                             </div>
                           </div>
 
-                          <DialogFooter>
+                          <DialogFooter className="flex-shrink-0 mt-4">
                             <Button
                               variant="outline"
                               onClick={() => setEditingPlaylist(null)}

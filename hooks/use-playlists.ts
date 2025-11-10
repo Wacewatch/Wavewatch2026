@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast"
 interface PlaylistItem {
   id: string
   tmdb_id: number
-  media_type: "movie" | "tv" | "tv-channel" | "radio" | "game" | "ebook" | "episode"
+  media_type: "movie" | "tv" | "tv-channel" | "radio" | "game" | "ebook" | "episode" | "music" | "software"
   title: string
   poster_path?: string
   position: number
@@ -216,7 +216,7 @@ export function usePlaylists() {
   const addToPlaylist = async (
     playlistId: string,
     tmdbId: number,
-    mediaType: "movie" | "tv" | "tv-channel" | "radio" | "game" | "ebook" | "episode",
+    mediaType: "movie" | "tv" | "tv-channel" | "radio" | "game" | "ebook" | "episode" | "music" | "software",
     title: string,
     posterPath?: string,
     episodeId?: number,
@@ -225,11 +225,13 @@ export function usePlaylists() {
     if (!user?.id) return false
 
     try {
+      const contentId = mediaType === "music" || mediaType === "software" ? Math.random() * 1000000 : tmdbId
+
       const { data: existing } = await supabase
         .from("playlist_items")
         .select("id")
         .eq("playlist_id", playlistId)
-        .eq("tmdb_id", tmdbId)
+        .eq("tmdb_id", contentId)
         .eq("media_type", mediaType)
         .maybeSingle()
 
@@ -255,7 +257,7 @@ export function usePlaylists() {
 
       console.log("[v0] Adding item to playlist:", {
         playlistId,
-        tmdbId,
+        contentId,
         mediaType,
         title,
         posterPath,
@@ -266,7 +268,7 @@ export function usePlaylists() {
 
       const { error } = await supabase.from("playlist_items").insert({
         playlist_id: playlistId,
-        tmdb_id: tmdbId,
+        tmdb_id: contentId,
         media_type: mediaType,
         title: title,
         poster_path: posterPath,
