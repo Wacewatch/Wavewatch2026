@@ -87,6 +87,21 @@ export class WatchTracker {
   private static STORAGE_KEY_FAVORITES = "wavewatch_favorite_items"
   private static STORAGE_KEY_RATINGS = "wavewatch_rating_items"
 
+  private static async triggerSync(type: "favorites" | "history") {
+    if (typeof window === "undefined") return
+
+    // Import dynamique pour éviter les erreurs SSR
+    const { DatabaseSync } = await import("@/lib/database-sync")
+
+    if (type === "favorites") {
+      const favorites = this.getFavoriteItems()
+      await DatabaseSync.syncFavorites(favorites)
+    } else if (type === "history") {
+      const history = this.getWatchedItems()
+      await DatabaseSync.syncHistory(history)
+    }
+  }
+
   // === RATINGS (LIKE/DISLIKE) ===
   static getRatingItems(): RatingItem[] {
     if (typeof window === "undefined") return []
@@ -404,6 +419,8 @@ export class WatchTracker {
 
     localStorage.setItem(this.STORAGE_KEY_WATCHED, JSON.stringify(items))
     window.dispatchEvent(new Event("watchlist-updated"))
+
+    this.triggerSync("history")
   }
 
   // === WISHLIST ===
@@ -492,6 +509,8 @@ export class WatchTracker {
       items.push(item)
       localStorage.setItem(this.STORAGE_KEY_FAVORITES, JSON.stringify(items))
       window.dispatchEvent(new Event("favorites-updated"))
+
+      this.triggerSync("favorites")
     }
   }
 
@@ -503,6 +522,8 @@ export class WatchTracker {
 
     localStorage.setItem(this.STORAGE_KEY_FAVORITES, JSON.stringify(filteredItems))
     window.dispatchEvent(new Event("favorites-updated"))
+
+    this.triggerSync("favorites")
   }
 
   static toggleFavorite(
@@ -526,6 +547,8 @@ export class WatchTracker {
       items.splice(existingIndex, 1)
       localStorage.setItem(this.STORAGE_KEY_FAVORITES, JSON.stringify(items))
       window.dispatchEvent(new Event("favorites-updated"))
+
+      this.triggerSync("favorites")
       return false
     } else {
       const newItem: FavoriteItem = {
@@ -539,6 +562,8 @@ export class WatchTracker {
       items.push(newItem)
       localStorage.setItem(this.STORAGE_KEY_FAVORITES, JSON.stringify(items))
       window.dispatchEvent(new Event("favorites-updated"))
+
+      this.triggerSync("favorites")
       return true
     }
   }

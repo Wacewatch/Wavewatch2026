@@ -3,7 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { useToast } from "@/hooks/use-toast"
-import { createClient } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 import { updateAdultContentPreference } from "@/lib/tmdb"
 import type { User as SupabaseUser } from "@supabase/supabase-js"
 
@@ -53,69 +53,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initAuth()
 
-    // 🔁 Rafraîchir le token toutes les 25 secondes
-    const refreshInterval = setInterval(async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          await supabase.auth.refreshSession()
-        }
-      } catch (error) {
-        console.error("Erreur lors du rafraîchissement du token :", error)
-      }
-    }, 25000) // 25 secondes
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("[v0] Auth state changed:", event)
+
       if (event === "SIGNED_IN" && session?.user) {
         await loadUserProfile(session.user)
       } else if (event === "SIGNED_OUT") {
         setUser(null)
         updateAdultContentPreference(false)
       } else if (event === "TOKEN_REFRESHED" && session?.user) {
+        console.log("[v0] Token refreshed successfully")
+        await loadUserProfile(session.user)
+      } else if (event === "USER_UPDATED" && session?.user) {
         await loadUserProfile(session.user)
       }
       setLoading(false)
     })
 
-    const sessionCheckInterval = setInterval(async () => {
-      try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-        if (session?.user && user) {
-          const { data: profile } = await supabase
-            .from("user_profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .maybeSingle()
-
-          if (profile) {
-            const userData: User = {
-              id: session.user.id,
-              username: profile.username || session.user.email?.split("@")[0] || "User",
-              email: session.user.email || "",
-              isVip: Boolean(profile.is_vip || profile.is_vip_plus),
-              isAdmin: Boolean(profile.is_admin),
-              vipExpiresAt: profile.vip_expires_at,
-              showAdultContent: Boolean(profile.show_adult_content),
-            }
-            setUser(userData)
-          }
-        } else if (!session && user) {
-          setUser(null)
-          updateAdultContentPreference(false)
-        }
-      } catch (error) {
-        console.error("Session check error:", error)
-      }
-    }, 60000) // Vérification toutes les minutes
-
     return () => {
       subscription.unsubscribe()
-      clearInterval(sessionCheckInterval)
-      clearInterval(refreshInterval) // 🧹 Nettoyage du rafraîchissement du token
     }
   }, [])
 

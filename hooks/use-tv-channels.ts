@@ -1,5 +1,5 @@
 import useSWR from "swr"
-import { createClient } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 
 interface TVChannel {
   id: number
@@ -56,22 +56,43 @@ const fallbackChannels: TVChannel[] = [
 
 const fetcher = async (): Promise<TVChannel[]> => {
   try {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-      console.warn("Supabase not configured, using fallback data")
-      return fallbackChannels
-    }
-
+    console.log("[v0] Fetching TV channels from database...")
     const supabase = createClient()
+
     const { data, error } = await supabase.from("tv_channels").select("*").eq("is_active", true).order("name")
 
     if (error) {
-      console.error("Error loading TV channels:", error)
+      console.error("[v0] Error loading TV channels:", error.message)
+      console.error("[v0] Error hint:", error.hint)
+      console.error("[v0] Error code:", error.code)
+      console.error("[v0] Error details:", error.details)
+
+      if (error.message.includes("JSON") || error.message.includes("Invalid")) {
+        console.error("[v0] ❌ Supabase project issue detected:")
+        console.error("[v0]   - Project may be PAUSED (check Supabase dashboard)")
+        console.error("[v0]   - Tables may not exist (run SQL migrations)")
+        console.error("[v0]   - RLS policies may be blocking requests")
+        console.error("[v0]   - Using fallback data instead")
+      }
+
       return fallbackChannels
     }
 
-    return data || fallbackChannels
+    console.log("[v0] Successfully loaded", data?.length || 0, "TV channels from database")
+    return data && data.length > 0 ? data : fallbackChannels
   } catch (error) {
-    console.error("Error loading TV channels:", error)
+    console.error("[v0] Exception loading TV channels:", error)
+
+    if (error instanceof SyntaxError && error.message.includes("JSON")) {
+      console.error("[v0] ❌ JSON PARSE ERROR DETECTED")
+      console.error("[v0] This means Supabase returned plain text instead of JSON")
+      console.error("[v0] Most likely causes:")
+      console.error("[v0]   1. Supabase project is PAUSED - check your Supabase dashboard")
+      console.error("[v0]   2. Wrong API URL or key")
+      console.error("[v0]   3. Network/CORS issue")
+      console.error("[v0] Using fallback TV channels data...")
+    }
+
     return fallbackChannels
   }
 }
@@ -80,7 +101,7 @@ export function useTVChannels() {
   const { data, error, isLoading, mutate } = useSWR<TVChannel[]>("tv-channels", fetcher, {
     revalidateOnFocus: false,
     revalidateOnReconnect: true,
-    dedupingInterval: 60000, // 1 minute
+    dedupingInterval: 60000,
     errorRetryCount: 3,
     fallbackData: fallbackChannels,
   })

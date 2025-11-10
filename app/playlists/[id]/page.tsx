@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft, Globe, Lock, Calendar, Film, Trash2, Clock } from "lucide-react"
 import { usePlaylists } from "@/hooks/use-playlists"
-import { createClient } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 import Image from "next/image"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -547,14 +547,34 @@ export default function PlaylistContentPage() {
                     }
                   }
 
-                  const releaseDate = item.release_date || item.first_air_date
+                  const releaseDate = item.release_date || item.first_air_date || item.added_at
                   const formattedDate = releaseDate
                     ? new Date(releaseDate).toLocaleDateString("fr-FR", {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
                       })
-                    : ""
+                    : null
+
+                  // Déterminer le label correct du type de média
+                  const getMediaTypeLabel = (type: string) => {
+                    switch (type) {
+                      case "movie":
+                        return "Film"
+                      case "tv":
+                        return "Série"
+                      case "tv-channel":
+                      case "live":
+                        return "Chaîne TV"
+                      case "radio":
+                        return "Radio"
+                      case "game":
+                      case "gaming":
+                        return "Jeu Rétro"
+                      default:
+                        return "Contenu"
+                    }
+                  }
 
                   const content = (
                     <div key={item.id} className="space-y-2 group">
@@ -586,31 +606,19 @@ export default function PlaylistContentPage() {
                             </Button>
                           </div>
                         )}
-                        <div className="absolute bottom-2 left-2">
-                          <Badge
-                            variant="secondary"
-                            className="text-xs"
-                            style={{ backgroundColor: `${playlist.theme_color}20`, color: playlist.theme_color }}
-                          >
-                            {mediaType === "movie"
-                              ? "Film"
-                              : mediaType === "tv"
-                                ? "Série"
-                                : mediaType === "tv-channel" || mediaType === "live"
-                                  ? "Chaîne TV"
-                                  : mediaType === "radio"
-                                    ? "Radio"
-                                    : mediaType === "game" || mediaType === "gaming"
-                                      ? "Jeu"
-                                      : "Série"}
-                          </Badge>
-                        </div>
                       </div>
-                      <div>
+                      <div className="space-y-1">
                         <p className="text-sm font-medium line-clamp-2 group-hover:text-blue-400 text-white cursor-pointer">
                           {item.title}
                         </p>
-                        {formattedDate && <p className="text-xs text-gray-400">Sortie: {formattedDate}</p>}
+                        <Badge
+                          variant="secondary"
+                          className="text-xs"
+                          style={{ backgroundColor: `${playlist.theme_color}20`, color: playlist.theme_color }}
+                        >
+                          {getMediaTypeLabel(mediaType)}
+                        </Badge>
+                        {formattedDate && <p className="text-xs text-gray-400">{formattedDate}</p>}
                       </div>
                     </div>
                   )

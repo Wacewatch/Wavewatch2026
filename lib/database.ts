@@ -1,16 +1,40 @@
-import { createClient as createSupabaseClient } from "@supabase/supabase-js"
+import { createBrowserClient } from "@supabase/ssr"
+
+// Singleton client for browser usage only
+let browserClient: ReturnType<typeof createBrowserClient> | null = null
 
 export function createClient() {
-  return createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_ANON_KEY!, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-      detectSessionInUrl: false,
-    },
-  })
+  if (typeof window === "undefined") {
+    throw new Error(
+      "createClient from lib/database.ts should only be used in browser context. Use lib/supabase/server.ts for server-side code.",
+    )
+  }
+
+  if (browserClient) {
+    return browserClient
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error(
+      "Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and/or NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    )
+  }
+
+  browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey)
+
+  return browserClient
 }
 
 export function createAdminClient() {
+  if (typeof window !== "undefined") {
+    throw new Error("Admin client should not be used in browser context")
+  }
+
+  // This should only be used server-side
+  const { createClient: createSupabaseClient } = require("@supabase/supabase-js")
   return createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
     auth: {
       autoRefreshToken: false,

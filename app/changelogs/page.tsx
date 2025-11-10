@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Calendar, Package } from "lucide-react"
-import { createBrowserClient } from "@supabase/ssr"
+import { createClient } from "@/lib/supabase/client"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface Changelog {
@@ -22,10 +22,7 @@ export default function ChangelogsPage() {
 
   useEffect(() => {
     const fetchChangelogs = async () => {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      )
+      const supabase = createClient()
 
       const { data, error } = await supabase.from("changelogs").select("*").order("release_date", { ascending: false })
 

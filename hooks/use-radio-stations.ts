@@ -1,5 +1,5 @@
 import useSWR from "swr"
-import { createClient } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 
 interface RadioStation {
   id: number

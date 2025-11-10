@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { createClient } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 
@@ -34,13 +34,6 @@ export function usePublicPlaylists() {
     try {
       console.log("[v0] Loading public playlists...")
 
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        console.warn("[v0] Supabase not configured properly")
-        setPlaylists([])
-        setLoading(false)
-        return
-      }
-
       const { data: playlistsData, error: playlistsError } = await supabase
         .from("playlists")
         .select("id, user_id, title, description, theme_color, created_at, updated_at")
@@ -49,10 +42,18 @@ export function usePublicPlaylists() {
         .limit(50)
 
       if (playlistsError) {
-        console.error("Error loading public playlists:", playlistsError)
-        setPlaylists([])
-        setLoading(false)
-        return
+        console.error("[v0] Error loading public playlists:", playlistsError.message)
+        console.error("[v0] Error code:", playlistsError.code)
+        console.error("[v0] Error hint:", playlistsError.hint)
+
+        if (playlistsError.message.includes("JSON") || playlistsError.message.includes("Invalid")) {
+          console.error("[v0] ❌ Supabase project issue:")
+          console.error("[v0]   - Your Supabase project may be PAUSED")
+          console.error("[v0]   - Go to https://supabase.com/dashboard to check project status")
+          console.error("[v0]   - Or the 'playlists' table may not exist")
+        }
+
+        throw playlistsError
       }
 
       if (!playlistsData || playlistsData.length === 0) {
@@ -62,30 +63,30 @@ export function usePublicPlaylists() {
         return
       }
 
+      console.log("[v0] Loaded", playlistsData.length, "public playlists")
+
       const playlistIds = playlistsData.map((p) => p.id)
       const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
 
       console.log("[v0] Loading profiles for", userIds.length, "users")
 
-      // ✅ CORRECTION: Utiliser 'id' au lieu de 'user_id'
       const { data: userProfilesData, error: profilesError } = await supabase
         .from("user_profiles")
         .select("id, username, email")
         .in("id", userIds)
 
       if (profilesError) {
-        console.error("[v0] Error loading user profiles:", profilesError)
+        console.error("[v0] Error loading user profiles:", profilesError.message)
       }
 
       console.log("[v0] Loaded", userProfilesData?.length || 0, "user profiles")
 
-      // ✅ CORRECTION: Mapper sur profile.id au lieu de profile.user_id
       const userProfilesMap = new Map(
         (userProfilesData || []).map((profile) => {
           const displayName = profile.username || (profile.email ? profile.email.split("@")[0] : "Utilisateur")
           console.log("[v0] Mapping user", profile.id, "to", displayName)
           return [profile.id, { ...profile, displayName }]
-        })
+        }),
       )
 
       console.log("[v0] Created username map with", userProfilesMap.size, "entries")
@@ -123,7 +124,6 @@ export function usePublicPlaylists() {
         const userLike = userLikes.find((like) => like.playlist_id === playlist.id)
         const isFavorited = userFavorites.some((fav) => fav.playlist_id === playlist.id)
 
-        // ✅ Récupération du username depuis le map
         const userProfile = userProfilesMap.get(playlist.user_id)
         const username = userProfile?.displayName || "Utilisateur inconnu"
 
@@ -142,11 +142,32 @@ export function usePublicPlaylists() {
       })
 
       console.log("[v0] Public playlists loaded successfully:", processedPlaylists.length)
-      console.log("[v0] Sample usernames:", processedPlaylists.slice(0, 3).map(p => ({ title: p.title, username: p.username })))
-      
+      console.log(
+        "[v0] Sample usernames:",
+        processedPlaylists.slice(0, 3).map((p) => ({ title: p.title, username: p.username })),
+      )
+
       setPlaylists(processedPlaylists)
     } catch (error) {
-      console.error("Error loading public playlists:", error)
+      console.error("[v0] Exception loading public playlists:", error)
+
+      if (error instanceof SyntaxError && error.message.includes("JSON")) {
+        console.error("[v0] ❌ JSON PARSING ERROR")
+        console.error("[v0] Supabase is returning text 'Invalid request' instead of JSON")
+        console.error("[v0] This happens when:")
+        console.error("[v0]   1. Supabase project is PAUSED - https://supabase.com/dashboard")
+        console.error("[v0]   2. Database tables don't exist - run migrations")
+        console.error("[v0]   3. Wrong environment variables")
+        console.error("[v0] Current env check:")
+        console.error("[v0]   - NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "SET" : "MISSING")
+        console.error(
+          "[v0]   - NEXT_PUBLIC_SUPABASE_ANON_KEY:",
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+            ? `SET (${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length} chars)`
+            : "MISSING",
+        )
+      }
+
       setPlaylists([])
     } finally {
       setLoading(false)

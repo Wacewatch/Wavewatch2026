@@ -6,6 +6,7 @@ import { PopularAnime } from "@/components/popular-anime"
 import { TrendingActors } from "@/components/trending-actors"
 import { TrendingTVChannels } from "@/components/trending-tv-channels"
 import { CalendarWidget } from "@/components/calendar-widget"
+import { FootballCalendarWidget } from "@/components/football-calendar-widget"
 import { RandomContent } from "@/components/random-content"
 import { SubscriptionOffer } from "@/components/subscription-offer"
 import { PublicPlaylistsRow } from "@/components/public-playlists-row"
@@ -53,6 +54,9 @@ export default function HomePage() {
         <SubscriptionOffer />
         <Suspense fallback={<LoadingSection />}>
           <RandomContent />
+        </Suspense>
+        <Suspense fallback={<LoadingSection />}>
+          <FootballCalendarWidget />
         </Suspense>
         <Suspense fallback={<LoadingSection />}>
           <CalendarWidget />
