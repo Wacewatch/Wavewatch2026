@@ -165,12 +165,6 @@ export default function SearchPage() {
     performSearch(searchQuery)
   }
 
-  const handleSearchIconClick = () => {
-    if (searchQuery.trim()) {
-      performSearch(searchQuery)
-    }
-  }
-
   const filteredResults = results.filter((item) => {
     if (activeTab === "all") return true
     if (activeTab === "movies") return item.media_type === "movie"
@@ -201,10 +195,7 @@ export default function SearchPage() {
 
         <form onSubmit={handleSearch} className="flex gap-2">
           <div className="relative flex-1">
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 cursor-pointer hover:text-gray-300 transition-colors"
-              onClick={handleSearchIconClick}
-            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               type="text"
               placeholder="Films, séries, acteurs, musique, jeux, logiciels, ebooks..."
