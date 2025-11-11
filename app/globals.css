@@ -613,6 +613,64 @@ body {
     --nav-hover: 270 50% 12%;
     --nav-dropdown-bg: 220 75% 13%;
   }
+
+  /* Adding Halloween theme with orange, black, and purple colors */
+  .halloween {
+    --background: 0 0% 5%;
+    --foreground: 25 95% 85%;
+    --card: 0 0% 8%;
+    --card-foreground: 25 95% 85%;
+    --popover: 0 0% 8%;
+    --popover-foreground: 25 95% 85%;
+    --primary: 25 95% 55%;
+    --primary-foreground: 0 0% 5%;
+    --secondary: 280 60% 20%;
+    --secondary-foreground: 25 95% 85%;
+    --muted: 280 40% 12%;
+    --muted-foreground: 25 70% 60%;
+    --accent: 280 80% 50%;
+    --accent-foreground: 25 95% 85%;
+    --destructive: 0 85% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 25 60% 18%;
+    --input: 280 40% 12%;
+    --ring: 25 95% 55%;
+    --nav-bg: 0 0% 6%;
+    --nav-border: 25 90% 25%;
+    --nav-text: 25 95% 85%;
+    --nav-text-secondary: 25 80% 65%;
+    --nav-hover: 280 60% 12%;
+    --nav-dropdown-bg: 0 0% 8%;
+  }
+
+  /* Adding Christmas theme with red and green colors */
+  .christmas {
+    --background: 0 60% 8%;
+    --foreground: 0 0% 98%;
+    --card: 0 55% 11%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 55% 11%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 80% 50%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 140 60% 25%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 140 40% 16%;
+    --muted-foreground: 0 0% 70%;
+    --accent: 140 70% 45%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 85% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 50% 18%;
+    --input: 140 40% 16%;
+    --ring: 0 80% 50%;
+    --nav-bg: 0 65% 8%;
+    --nav-border: 0 70% 27%;
+    --nav-text: 0 0% 98%;
+    --nav-text-secondary: 0 60% 75%;
+    --nav-hover: 140 60% 14%;
+    --nav-dropdown-bg: 140 50% 12%;
+  }
 }
 
 @layer base {
