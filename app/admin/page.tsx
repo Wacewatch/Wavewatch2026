@@ -4773,8 +4773,6 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Removed bugs TabsContent section */}
-
           <TabsContent value="changelogs" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -5100,11 +5098,11 @@ export default function AdminPage() {
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )
