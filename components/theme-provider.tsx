@@ -2,8 +2,10 @@
 
 import * as React from "react"
 
-type BaseTheme =
-  | "default"
+type Theme =
+  | "dark"
+  | "light"
+  | "system"
   | "ocean"
   | "sunset"
   | "forest"
@@ -19,130 +21,73 @@ type BaseTheme =
   | "neon"
   | "emerald"
   | "cosmic"
-  | "halloween"
-  | "christmas"
-  | "obsidian"
-  | "aurora-borealis"
-  | "volcanic"
-  | "cyberpunk"
-
-type ThemeMode = "light" | "dark"
 
 interface ThemeProviderProps {
   children: React.ReactNode
   attribute?: string
-  defaultTheme?: BaseTheme
-  defaultMode?: ThemeMode
+  defaultTheme?: Theme
   enableSystem?: boolean
   disableTransitionOnChange?: boolean
 }
 
 interface ThemeProviderState {
-  theme: BaseTheme
-  mode: ThemeMode
-  setTheme: (theme: BaseTheme) => void
-  setMode: (mode: ThemeMode) => void
+  theme: Theme
+  setTheme: (theme: Theme) => void
 }
 
 const initialState: ThemeProviderState = {
-  theme: "default",
-  mode: "dark",
+  theme: "dark",
   setTheme: () => null,
-  setMode: () => null,
 }
 
 const ThemeProviderContext = React.createContext<ThemeProviderState>(initialState)
 
-export function ThemeProvider({
-  children,
-  defaultTheme = "ocean",
-  defaultMode = "dark",
-  ...props
-}: ThemeProviderProps) {
-  const [theme, setTheme] = React.useState<BaseTheme>(defaultTheme)
-  const [mode, setMode] = React.useState<ThemeMode>(defaultMode)
+export function ThemeProvider({ children, defaultTheme = "dark", ...props }: ThemeProviderProps) {
+  const [theme, setTheme] = React.useState<Theme>(defaultTheme)
 
   React.useEffect(() => {
-    const savedTheme = localStorage.getItem("wavewatch_theme") as BaseTheme
-    const savedMode = localStorage.getItem("wavewatch_mode") as ThemeMode
-
+    const savedTheme = localStorage.getItem("wavewatch_theme") as Theme
     if (savedTheme) {
       setTheme(savedTheme)
-    }
-    if (savedMode) {
-      setMode(savedMode)
     }
   }, [])
 
   React.useEffect(() => {
     const root = window.document.documentElement
-
-    // Remove all theme classes
     root.classList.remove(
-      // Light themes
-      "light-default",
-      "light-ocean",
-      "light-sunset",
-      "light-forest",
-      "light-midnight",
-      "light-aurora",
-      "light-desert",
-      "light-lavender",
-      "light-crimson",
-      "light-sapphire",
-      "light-jade",
-      "light-premium",
-      "light-royal",
-      "light-neon",
-      "light-emerald",
-      "light-cosmic",
-      "light-christmas",
-      "light-halloween",
-      "light-obsidian",
-      "light-aurora-borealis",
-      "light-volcanic",
-      "light-cyberpunk",
-      // Dark themes
-      "dark-default",
-      "dark-ocean",
-      "dark-sunset",
-      "dark-forest",
-      "dark-midnight",
-      "dark-aurora",
-      "dark-desert",
-      "dark-lavender",
-      "dark-crimson",
-      "dark-sapphire",
-      "dark-jade",
-      "dark-premium",
-      "dark-royal",
-      "dark-neon",
-      "dark-emerald",
-      "dark-cosmic",
-      "dark-christmas",
-      "dark-halloween",
-      "dark-obsidian",
-      "dark-aurora-borealis",
-      "dark-volcanic",
-      "dark-cyberpunk",
+      "light",
+      "dark",
+      "ocean",
+      "sunset",
+      "forest",
+      "midnight",
+      "aurora",
+      "desert",
+      "lavender",
+      "crimson",
+      "sapphire",
+      "jade",
+      "premium",
+      "royal",
+      "neon",
+      "emerald",
+      "cosmic",
     )
 
-    // Apply new theme class
-    const themeClass = `${mode}-${theme}`
-    root.classList.add(themeClass)
+    if (theme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
+      root.classList.add(systemTheme)
+    } else {
+      root.classList.add(theme)
+    }
 
     localStorage.setItem("wavewatch_theme", theme)
-    localStorage.setItem("wavewatch_mode", mode)
-  }, [theme, mode])
+  }, [theme])
 
   const value = {
     theme,
-    mode,
-    setTheme: (theme: BaseTheme) => {
+    setTheme: (theme: Theme) => {
       setTheme(theme)
-    },
-    setMode: (mode: ThemeMode) => {
-      setMode(mode)
     },
   }
 
