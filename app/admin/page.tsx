@@ -57,6 +57,8 @@ import {
   Download,
   BookOpen,
   Send,
+  SettingsIcon,
+  Save,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
@@ -100,6 +102,10 @@ export default function AdminPage() {
       tvChannels: 0,
       radio: 0,
       retrogaming: 0,
+      music: 0,
+      software: 0,
+      games: 0,
+      ebooks: 0,
     },
     userGrowth: [],
     revenueByMonth: [],
@@ -247,6 +253,22 @@ export default function AdminPage() {
     is_admin: false,
   })
 
+  const [siteSettings, setSiteSettings] = useState({
+    hero: true,
+    trending_movies: true,
+    trending_tv_shows: true,
+    popular_anime: true,
+    popular_collections: true,
+    public_playlists: true,
+    trending_actors: true,
+    trending_tv_channels: true,
+    subscription_offer: true,
+    random_content: true,
+    football_calendar: true,
+    calendar_widget: true,
+  })
+  const [newPassword, setNewPassword] = useState("")
+
   const handleUpdateRequestStatus = async (id: string, status: string) => {
     try {
       const { error } = await supabase.from("requests").update({ status }).eq("id", id)
@@ -384,35 +406,11 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    if (!user?.isAdmin) {
-      router.push("/")
-      return
+    if (user && user.isAdmin) {
+      loadAllData()
+      loadSiteSettings() // Added
     }
-
-    const loadData = async () => {
-      setLoading(true)
-      try {
-        console.log("🔄 Chargement des données admin...")
-        await loadAllData()
-        console.log("✅ Données chargées, calcul des statistiques...")
-        await loadStatistics()
-        console.log("✅ Statistiques calculées, chargement des activités...")
-        await loadRecentActivities()
-        console.log("✅ Toutes les données chargées")
-      } catch (error) {
-        console.error("❌ Erreur lors du chargement des données admin:", error)
-        toast({
-          title: "Erreur de chargement",
-          description: "Impossible de charger les données d'administration",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadData()
-  }, [user, router])
+  }, [user])
 
   const loadAllData = async () => {
     try {
@@ -750,6 +748,62 @@ export default function AdminPage() {
     }
   }
 
+  const loadSiteSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("setting_value")
+        .eq("setting_key", "home_modules")
+        .single()
+
+      if (error) {
+        console.error("Error loading site settings:", error)
+        return
+      }
+
+      if (data?.setting_value) {
+        setSiteSettings(data.setting_value)
+      }
+    } catch (error) {
+      console.error("Error loading site settings:", error)
+    }
+  }
+
+  const handleSaveSiteSettings = async () => {
+    try {
+      const { error } = await supabase
+        .from("site_settings")
+        .update({
+          setting_value: siteSettings,
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id,
+        })
+        .eq("setting_key", "home_modules")
+
+      if (error) {
+        console.error("Error saving site settings:", error)
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder les paramètres",
+          variant: "destructive",
+        })
+        return
+      }
+
+      toast({
+        title: "Paramètres sauvegardés",
+        description: "Les modules de la page d'accueil ont été mis à jour",
+      })
+    } catch (error) {
+      console.error("Error saving site settings:", error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la sauvegarde",
+        variant: "destructive",
+      })
+    }
+  }
+
   const loadStatistics = async () => {
     try {
       console.log("🔄 Calcul des statistiques...")
@@ -767,31 +821,47 @@ export default function AdminPage() {
         console.warn("⚠️ Impossible d'utiliser get_admin_stats, calcul manuel:", error)
       }
 
-      // Utiliser les données déjà chargées en état local ou les stats de la DB
-      const totalTVChannels = dbStats?.tv_channels || tvChannels.length
-      const totalRadio = dbStats?.radio_stations || radioStations.length
-      const totalRetrogaming = dbStats?.retrogaming_sources || retrogamingSources.length
+      const { count: userCount, error: countError } = await supabase
+        .from("user_profiles")
+        .select("id", { count: "exact", head: true })
 
-      // Fetch user count separately if not available from RPC or if we want to ensure it's fresh
-      if (!dbStats?.total_users) {
-        const { count, error: countError } = await supabase
-          .from("user_profiles")
-          .select("id", { count: "exact", head: true })
-        if (!countError && count !== null) {
-          supabaseUserCount = count
-        } else if (countError) {
-          console.error("❌ Erreur lors de la récupération du compte utilisateur:", countError)
-        }
+      if (!countError && userCount !== null) {
+        supabaseUserCount = userCount
+      } else if (countError) {
+        console.error("❌ Erreur lors de la récupération du compte utilisateur:", countError)
       }
 
-      const totalUsers = dbStats?.total_users || supabaseUserCount || users.length // Use the count from Supabase query or array length
+      const [tvChannelsResult, radioResult, retrogamingResult, musicResult, softwareResult, gamesResult, ebooksResult] =
+        await Promise.all([
+          supabase.from("tv_channels").select("id", { count: "exact", head: true }),
+          supabase.from("radio_stations").select("id", { count: "exact", head: true }),
+          supabase.from("retrogaming_sources").select("id", { count: "exact", head: true }),
+          supabase.from("music_content").select("id", { count: "exact", head: true }),
+          supabase.from("software").select("id", { count: "exact", head: true }),
+          supabase.from("games").select("id", { count: "exact", head: true }),
+          supabase.from("ebooks").select("id", { count: "exact", head: true }),
+        ])
+
+      const totalTVChannels = tvChannelsResult.count || 0
+      const totalRadio = radioResult.count || 0
+      const totalRetrogaming = retrogamingResult.count || 0
+      const totalMusic = musicResult.count || 0
+      const totalSoftware = softwareResult.count || 0
+      const totalGames = gamesResult.count || 0
+      const totalEbooks = ebooksResult.count || 0
+
+      const totalUsers = supabaseUserCount || users.length
       const vipUsers = (users || []).filter((u) => u.is_vip || u.is_vip_plus).length
       const activeUsers = (users || []).filter((u) => u.status === "active").length
 
-      console.log("📊 Statistiques locales:", {
+      console.log("📊 Statistiques avec comptage exact BDD:", {
         totalTVChannels,
         totalRadio,
         totalRetrogaming,
+        totalMusic,
+        totalSoftware,
+        totalGames,
+        totalEbooks,
         totalUsers,
         vipUsers,
         activeUsers,
@@ -851,10 +921,10 @@ export default function AdminPage() {
           totalTVChannels +
           totalRadio +
           totalRetrogaming +
-          musicContent.length +
-          software.length +
-          games.length +
-          ebooks.length, // Added new content types
+          totalMusic + // Added new content types
+          totalSoftware + // Added new content types
+          totalGames + // Added new content types
+          totalEbooks, // Added new content types
         totalUsers,
         totalViews,
         totalRevenue: vipUsers * 1.99 * 12,
@@ -864,13 +934,13 @@ export default function AdminPage() {
           movies: tmdbMovies,
           tvShows: tmdbTVShows,
           anime: tmdbAnime,
-          tvChannels: totalTVChannels,
-          radio: totalRadio,
-          retrogaming: totalRetrogaming,
-          music: musicContent.length, // Added new content types
-          software: software.length,
-          games: games.length,
-          ebooks: ebooks.length,
+          tvChannels: totalTVChannels, // Using exact count
+          radio: totalRadio, // Using exact count
+          retrogaming: totalRetrogaming, // Using exact count
+          music: totalMusic, // Using exact count
+          software: totalSoftware, // Using exact count
+          games: totalGames, // Using exact count
+          ebooks: totalEbooks, // Using exact count
         },
         userGrowth: [
           { month: "Jan", users: Math.floor(totalUsers * 0.6) },
@@ -906,7 +976,7 @@ export default function AdminPage() {
       console.log("✅ Statistiques calculées:", newStats)
       setStats(newStats)
     } catch (error) {
-      console.error("❌ Erreur lors du calcul des statistiques:", error)
+      console.error("❌ Erreur lors du chargement des statistiques:", error)
     }
   }
 
@@ -1340,6 +1410,33 @@ export default function AdminPage() {
           break
         case "user":
           tableName = "user_profiles"
+          if (newPassword && newPassword.trim() !== "") {
+            try {
+              // Note: This requires Supabase service role key for admin operations
+              // In a real app, this should be done server-side via API route
+              const { error: passwordError } = await supabase.auth.admin.updateUserById(editingItem.id, {
+                password: newPassword,
+              })
+
+              if (passwordError) {
+                console.error("❌ Erreur lors du changement de mot de passe:", passwordError)
+                toast({
+                  title: "Avertissement",
+                  description:
+                    "Profil mis à jour mais le mot de passe n'a pas pu être changé. Utilisez la fonctionnalité de réinitialisation par email.",
+                  variant: "destructive",
+                })
+              } else {
+                toast({
+                  title: "Mot de passe modifié",
+                  description: "Le mot de passe de l'utilisateur a été changé",
+                })
+              }
+            } catch (pwError) {
+              console.error("❌ Erreur mot de passe:", pwError)
+            }
+            setNewPassword("") // Reset password field
+          }
           break
         case "music":
           tableName = "music_content"
@@ -1806,6 +1903,43 @@ export default function AdminPage() {
     }
   }
 
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.")) {
+      return
+    }
+
+    try {
+      // Delete from user_profiles_extended first (foreign key)
+      await supabase.from("user_profiles_extended").delete().eq("user_id", userId)
+
+      // Delete from user_profiles
+      const { error } = await supabase.from("user_profiles").delete().eq("id", userId)
+
+      if (error) {
+        console.error("❌ Erreur lors de la suppression:", error)
+        throw error
+      }
+
+      console.log(`✅ Utilisateur supprimé avec succès`)
+
+      setUsers((prev) => prev.filter((user) => user.id !== userId))
+
+      toast({
+        title: "Utilisateur supprimé",
+        description: "L'utilisateur a été supprimé avec succès",
+      })
+
+      await loadStatistics()
+    } catch (error) {
+      console.error("❌ Erreur lors de la suppression:", error)
+      toast({
+        title: "Erreur",
+        description: `Erreur lors de la suppression: ${error.message}`,
+        variant: "destructive",
+      })
+    }
+  }
+
   // Fonctions de filtrage
   const getFilteredData = (data, type) => {
     const searchTerm = searchTerms[type] || ""
@@ -2086,6 +2220,14 @@ export default function AdminPage() {
                 <FileText className="w-4 h-4" />
                 <span className="hidden sm:inline">Logs ({changelogs.length})</span>
                 <span className="sm:hidden">Logs</span>
+              </TabsTrigger>
+              {/* Added new Settings tab to the TabsList */}
+              <TabsTrigger
+                value="settings"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <SettingsIcon className="w-4 h-4" />
+                <span className="hidden sm:inline">Paramètres</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -2510,10 +2652,7 @@ export default function AdminPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Send className="w-5 h-5" />
-                    Envoyer un message à tous les utilisateurs
-                  </CardTitle>
+                  <CardTitle>Envoyer un message à tous les utilisateurs</CardTitle>
                   <CardDescription>
                     Diffusez un message à tous les utilisateurs inscrits via leur messagerie interne
                   </CardDescription>
@@ -3354,12 +3493,22 @@ export default function AdminPage() {
                             <Button variant="outline" size="sm" onClick={() => banUser(user.id)}>
                               <UserX className="w-4 h-4" />
                             </Button>
+                            {/* Added delete button in user actions */}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                             <Dialog>
                               <DialogTrigger asChild>
                                 <Button variant="outline" size="sm" onClick={() => handleEdit("user", user)}>
                                   <Edit className="w-4 h-4" />
                                 </Button>
                               </DialogTrigger>
+                              {/* Modified user edit dialog to include password field */}
                               <DialogContent>
                                 <DialogHeader>
                                   <DialogTitle>Modifier l'utilisateur</DialogTitle>
@@ -3379,12 +3528,24 @@ export default function AdminPage() {
                                       onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
                                     />
                                   </div>
+                                  <div className="space-y-2">
+                                    <Label>Nouveau mot de passe (optionnel)</Label>
+                                    <Input
+                                      type="password"
+                                      placeholder="Laisser vide pour ne pas changer"
+                                      value={newPassword}
+                                      onChange={(e) => setNewPassword(e.target.value)}
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                      Entrez un nouveau mot de passe seulement si vous voulez le changer
+                                    </p>
+                                  </div>
                                   <div className="space-y-4">
                                     <div className="flex items-center space-x-2">
                                       <Checkbox
                                         id="is_admin"
                                         checked={userForm.is_admin}
-                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_admin: checked })}
+                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_admin: !!checked })}
                                       />
                                       <Label htmlFor="is_admin">Administrateur</Label>
                                     </div>
@@ -3393,7 +3554,7 @@ export default function AdminPage() {
                                         id="is_vip_plus"
                                         checked={userForm.is_vip_plus}
                                         onCheckedChange={(checked) =>
-                                          setUserForm({ ...userForm, is_vip_plus: checked })
+                                          setUserForm({ ...userForm, is_vip_plus: !!checked })
                                         }
                                       />
                                       <Label htmlFor="is_vip_plus">VIP+</Label>
@@ -3402,7 +3563,7 @@ export default function AdminPage() {
                                       <Checkbox
                                         id="is_vip"
                                         checked={userForm.is_vip}
-                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_vip: checked })}
+                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_vip: !!checked })}
                                       />
                                       <Label htmlFor="is_vip">VIP</Label>
                                     </div>
@@ -3410,7 +3571,7 @@ export default function AdminPage() {
                                       <Checkbox
                                         id="is_beta"
                                         checked={userForm.is_beta}
-                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_beta: checked })}
+                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_beta: !!checked })}
                                       />
                                       <Label htmlFor="is_beta">Bêta Testeur</Label>
                                     </div>
@@ -4728,7 +4889,222 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </TabsContent>
-        </Tabs>
+
+          {/* Add new Settings tab content at the end before closing </Tabs> */}
+          <TabsContent value="settings" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Paramètres du Site</CardTitle>
+                <CardDescription>Gérez les modules affichés sur la page d'accueil</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Modules de la page d'accueil</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Activez ou désactivez les modules qui apparaissent sur la page d'accueil du site
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="hero" className="text-base font-medium">
+                            Hero (Carousel)
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Carousel des tendances en haut</p>
+                        </div>
+                        <Checkbox
+                          id="hero"
+                          checked={siteSettings.hero}
+                          onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, hero: !!checked })}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="trending_movies" className="text-base font-medium">
+                            Films Tendance
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des films populaires</p>
+                        </div>
+                        <Checkbox
+                          id="trending_movies"
+                          checked={siteSettings.trending_movies}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, trending_movies: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="trending_tv_shows" className="text-base font-medium">
+                            Séries Tendance
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des séries populaires</p>
+                        </div>
+                        <Checkbox
+                          id="trending_tv_shows"
+                          checked={siteSettings.trending_tv_shows}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, trending_tv_shows: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="popular_anime" className="text-base font-medium">
+                            Animés Populaires
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des animés</p>
+                        </div>
+                        <Checkbox
+                          id="popular_anime"
+                          checked={siteSettings.popular_anime}
+                          onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, popular_anime: !!checked })}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="popular_collections" className="text-base font-medium">
+                            Collections Populaires
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des collections</p>
+                        </div>
+                        <Checkbox
+                          id="popular_collections"
+                          checked={siteSettings.popular_collections}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, popular_collections: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="public_playlists" className="text-base font-medium">
+                            Playlists Publiques
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des playlists partagées</p>
+                        </div>
+                        <Checkbox
+                          id="public_playlists"
+                          checked={siteSettings.public_playlists}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, public_playlists: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="trending_actors" className="text-base font-medium">
+                            Acteurs Tendance
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des acteurs populaires</p>
+                        </div>
+                        <Checkbox
+                          id="trending_actors"
+                          checked={siteSettings.trending_actors}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, trending_actors: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="trending_tv_channels" className="text-base font-medium">
+                            Chaînes TV
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des chaînes télé</p>
+                        </div>
+                        <Checkbox
+                          id="trending_tv_channels"
+                          checked={siteSettings.trending_tv_channels}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, trending_tv_channels: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="subscription_offer" className="text-base font-medium">
+                            Offre d'Abonnement
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Bandeau publicitaire VIP</p>
+                        </div>
+                        <Checkbox
+                          id="subscription_offer"
+                          checked={siteSettings.subscription_offer}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, subscription_offer: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="random_content" className="text-base font-medium">
+                            Contenu Aléatoire
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Suggestion de contenu random</p>
+                        </div>
+                        <Checkbox
+                          id="random_content"
+                          checked={siteSettings.random_content}
+                          onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, random_content: !!checked })}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="football_calendar" className="text-base font-medium">
+                            Calendrier Football
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Widget calendrier sportif</p>
+                        </div>
+                        <Checkbox
+                          id="football_calendar"
+                          checked={siteSettings.football_calendar}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, football_calendar: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="calendar_widget" className="text-base font-medium">
+                            Calendrier Général
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Widget calendrier événements</p>
+                        </div>
+                        <Checkbox
+                          id="calendar_widget"
+                          checked={siteSettings.calendar_widget}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, calendar_widget: !!checked })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex justify-end">
+                      <Button onClick={handleSaveSiteSettings}>
+                        <Save className="w-4 h-4 mr-2" />
+                        Sauvegarder les paramètres
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
     </div>
   )

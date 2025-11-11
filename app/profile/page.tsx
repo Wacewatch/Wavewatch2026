@@ -65,6 +65,13 @@ export default function ProfilePage() {
   const [showActivationCode, setShowActivationCode] = useState(false)
   const [allowMessages, setAllowMessages] = useState(true)
 
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  })
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+
   useEffect(() => {
     setMounted(true)
     if (user?.id) {
@@ -529,6 +536,67 @@ export default function ProfilePage() {
       cosmic: "Cosmique",
     }
     return themeNames[themeValue] || themeValue
+  }
+
+  const handlePasswordChange = async () => {
+    if (!passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: "Erreur",
+        description: "Les mots de passe ne correspondent pas",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      toast({
+        title: "Erreur",
+        description: "Le mot de passe doit contenir au moins 6 caractères",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsChangingPassword(true)
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwordForm.newPassword,
+      })
+
+      if (error) {
+        throw error
+      }
+
+      toast({
+        title: "Mot de passe modifié",
+        description: "Votre mot de passe a été changé avec succès",
+      })
+
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      })
+    } catch (error) {
+      console.error("Error changing password:", error)
+      toast({
+        title: "Erreur",
+        description: `Impossible de changer le mot de passe: ${error.message}`,
+        variant: "destructive",
+      })
+    } finally {
+      setIsChangingPassword(false)
+    }
   }
 
   if (!mounted) {
@@ -1276,6 +1344,61 @@ export default function ProfilePage() {
                       Gérer mes messages
                     </Link>
                   </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Added the password change card */}
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Lock className="h-5 w-5 text-red-400" />
+                  Sécurité du compte
+                </CardTitle>
+                <CardDescription className="text-gray-400">Modifiez votre mot de passe</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Removed current password field as it's not used in the backend logic */}
+                <div className="space-y-2">
+                  <Label htmlFor="new-password" className="text-gray-300">
+                    Nouveau mot de passe
+                  </Label>
+                  <Input
+                    id="new-password"
+                    type="password"
+                    placeholder="Entrez votre nouveau mot de passe"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    className="bg-gray-700 border-gray-600 text-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password" className="text-gray-300">
+                    Confirmer le mot de passe
+                  </Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="Confirmez votre nouveau mot de passe"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    className="bg-gray-700 border-gray-600 text-white"
+                  />
+                </div>
+
+                <Button
+                  onClick={handlePasswordChange}
+                  disabled={isChangingPassword}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  <Lock className="w-4 h-4 mr-2" />
+                  {isChangingPassword ? "Modification..." : "Changer le mot de passe"}
+                </Button>
+
+                <div className="text-xs text-gray-500 bg-gray-700/50 p-3 rounded-lg">
+                  <strong>Note:</strong> Votre mot de passe doit contenir au moins 6 caractères. Après le changement,
+                  vous resterez connecté sur cet appareil.
                 </div>
               </CardContent>
             </Card>

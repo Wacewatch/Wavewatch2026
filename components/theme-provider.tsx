@@ -20,6 +20,7 @@ type BaseTheme =
   | "emerald"
   | "cosmic"
   | "christmas"
+  | "halloween"
   | "obsidian"
   | "aurora-borealis"
   | "volcanic"
@@ -96,6 +97,7 @@ export function ThemeProvider({
       "light-emerald",
       "light-cosmic",
       "light-christmas",
+      "light-halloween",
       "light-obsidian",
       "light-aurora-borealis",
       "light-volcanic",
@@ -118,6 +120,7 @@ export function ThemeProvider({
       "dark-emerald",
       "dark-cosmic",
       "dark-christmas",
+      "dark-halloween",
       "dark-obsidian",
       "dark-aurora-borealis",
       "dark-volcanic",

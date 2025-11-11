@@ -1390,8 +1390,91 @@
     --nav-dropdown-bg: 250 43% 9%;
   }
 
-  /* Added Christmas theme for everyone */
-  .christmas {
+  /* Added Halloween theme for all users */
+  .dark-halloween {
+    --background: 25 70% 5%;
+    --foreground: 30 100% 98%;
+    --card: 25 65% 8%;
+    --card-foreground: 30 100% 98%;
+    --popover: 25 65% 8%;
+    --popover-foreground: 30 100% 98%;
+    --primary: 30 100% 50%;
+    --primary-foreground: 25 70% 7%;
+    --secondary: 280 80% 45%;
+    --secondary-foreground: 30 100% 98%;
+    --muted: 25 45% 12%;
+    --muted-foreground: 30 40% 65%;
+    --accent: 15 100% 50%;
+    --accent-foreground: 25 70% 7%;
+    --destructive: 0 90% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 25 50% 20%;
+    --input: 25 50% 20%;
+    --ring: 30 100% 55%;
+    --chart-1: 30 100% 55%;
+    --chart-2: 280 85% 50%;
+    --chart-3: 15 100% 55%;
+    --chart-4: 35 95% 50%;
+    --chart-5: 290 80% 50%;
+    --sidebar: 25 65% 8%;
+    --sidebar-foreground: 30 100% 95%;
+    --sidebar-primary: 30 100% 55%;
+    --sidebar-primary-foreground: 25 70% 7%;
+    --sidebar-accent: 25 60% 12%;
+    --sidebar-accent-foreground: 30 100% 98%;
+    --sidebar-border: 25 50% 20%;
+    --sidebar-ring: 30 100% 55%;
+    --nav-bg: 25 70% 6%;
+    --nav-border: 30 90% 40%;
+    --nav-text: 30 95% 96%;
+    --nav-text-secondary: 30 90% 70%;
+    --nav-hover: 25 65% 11%;
+    --nav-dropdown-bg: 25 65% 8%;
+  }
+
+  .light-halloween {
+    --background: 30 60% 96%;
+    --foreground: 25 70% 10%;
+    --card: 30 50% 93%;
+    --card-foreground: 25 70% 10%;
+    --popover: 30 50% 93%;
+    --popover-foreground: 25 70% 10%;
+    --primary: 30 90% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 280 70% 60%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 30 35% 88%;
+    --muted-foreground: 25 40% 35%;
+    --accent: 15 90% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 30 30% 80%;
+    --input: 30 30% 80%;
+    --ring: 30 90% 50%;
+    --chart-1: 30 90% 50%;
+    --chart-2: 280 75% 55%;
+    --chart-3: 15 90% 50%;
+    --chart-4: 35 85% 45%;
+    --chart-5: 290 70% 55%;
+    --sidebar: 30 50% 95%;
+    --sidebar-foreground: 25 70% 15%;
+    --sidebar-primary: 30 90% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 40% 90%;
+    --sidebar-accent-foreground: 25 70% 15%;
+    --sidebar-border: 30 30% 82%;
+    --sidebar-ring: 30 90% 50%;
+    --nav-bg: 30 80% 92%;
+    --nav-border: 30 60% 75%;
+    --nav-text: 25 70% 15%;
+    --nav-text-secondary: 30 50% 40%;
+    --nav-hover: 30 70% 88%;
+    --nav-dropdown-bg: 30 60% 94%;
+  }
+
+  /* Renamed existing Christmas theme to dark-christmas */
+  .dark-christmas {
     --background: 0 60% 8%;
     --foreground: 0 10% 98%;
     --card: 0 55% 12%;
@@ -1432,8 +1515,49 @@
     --nav-dropdown-bg: 0 60% 14%;
   }
 
-  /* Added Obsidian theme for VIP */
-  .obsidian {
+  .light-christmas {
+    --background: 140 30% 96%;
+    --foreground: 0 60% 10%;
+    --card: 140 25% 93%;
+    --card-foreground: 0 60% 10%;
+    --popover: 140 25% 93%;
+    --popover-foreground: 0 60% 10%;
+    --primary: 0 70% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 140 70% 40%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 140 20% 88%;
+    --muted-foreground: 0 30% 35%;
+    --accent: 48 95% 45%;
+    --accent-foreground: 0 60% 10%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 140 20% 80%;
+    --input: 140 20% 80%;
+    --ring: 0 70% 55%;
+    --chart-1: 0 75% 55%;
+    --chart-2: 140 75% 45%;
+    --chart-3: 48 95% 50%;
+    --chart-4: 0 70% 50%;
+    --chart-5: 120 70% 40%;
+    --sidebar: 140 25% 95%;
+    --sidebar-foreground: 0 60% 15%;
+    --sidebar-primary: 0 70% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 140 20% 90%;
+    --sidebar-accent-foreground: 0 60% 10%;
+    --sidebar-border: 140 20% 82%;
+    --sidebar-ring: 0 70% 50%;
+    --nav-bg: 0 60% 92%;
+    --nav-border: 0 50% 75%;
+    --nav-text: 0 60% 15%;
+    --nav-text-secondary: 0 40% 40%;
+    --nav-hover: 0 50% 88%;
+    --nav-dropdown-bg: 0 55% 94%;
+  }
+
+  /* Renamed existing Obsidian theme to dark-obsidian and added light variant */
+  .dark-obsidian {
     --background: 0 0% 3%;
     --foreground: 0 0% 95%;
     --card: 0 0% 6%;
@@ -1474,8 +1598,49 @@
     --nav-dropdown-bg: 0 0% 6%;
   }
 
-  /* Added Aurora Borealis theme for VIP+ */
-  .aurora-borealis {
+  .light-obsidian {
+    --background: 210 35% 96%;
+    --foreground: 0 0% 5%;
+    --card: 210 30% 93%;
+    --card-foreground: 0 0% 5%;
+    --popover: 210 30% 93%;
+    --popover-foreground: 0 0% 5%;
+    --primary: 210 90% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 88%;
+    --secondary-foreground: 0 0% 5%;
+    --muted: 210 20% 88%;
+    --muted-foreground: 0 0% 40%;
+    --accent: 195 90% 55%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 210 20% 80%;
+    --input: 210 20% 80%;
+    --ring: 210 90% 55%;
+    --chart-1: 210 90% 55%;
+    --chart-2: 195 90% 50%;
+    --chart-3: 220 90% 55%;
+    --chart-4: 200 90% 50%;
+    --chart-5: 180 90% 55%;
+    --sidebar: 210 30% 95%;
+    --sidebar-foreground: 0 0% 8%;
+    --sidebar-primary: 210 90% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 90%;
+    --sidebar-accent-foreground: 0 0% 5%;
+    --sidebar-border: 210 20% 82%;
+    --sidebar-ring: 210 90% 55%;
+    --nav-bg: 210 80% 94%;
+    --nav-border: 210 60% 75%;
+    --nav-text: 0 0% 7%;
+    --nav-text-secondary: 210 50% 35%;
+    --nav-hover: 210 70% 90%;
+    --nav-dropdown-bg: 210 75% 96%;
+  }
+
+  /* Renamed existing Aurora Borealis theme to dark-aurora-borealis and added light variant */
+  .dark-aurora-borealis {
     --background: 180 45% 6%;
     --foreground: 180 15% 98%;
     --card: 180 40% 10%;
@@ -1516,8 +1681,49 @@
     --nav-dropdown-bg: 180 40% 10%;
   }
 
-  /* Added Volcanic theme for VIP+ */
-  .volcanic {
+  .light-aurora-borealis {
+    --background: 180 40% 96%;
+    --foreground: 180 60% 10%;
+    --card: 180 35% 93%;
+    --card-foreground: 180 60% 10%;
+    --popover: 180 35% 93%;
+    --popover-foreground: 180 60% 10%;
+    --primary: 160 80% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 280 70% 55%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 180 25% 88%;
+    --muted-foreground: 180 30% 35%;
+    --accent: 120 85% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 180 25% 80%;
+    --input: 180 25% 80%;
+    --ring: 160 90% 50%;
+    --chart-1: 160 90% 50%;
+    --chart-2: 280 85% 55%;
+    --chart-3: 120 90% 55%;
+    --chart-4: 200 85% 50%;
+    --chart-5: 340 80% 55%;
+    --sidebar: 180 35% 95%;
+    --sidebar-foreground: 180 60% 15%;
+    --sidebar-primary: 160 90% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 180 25% 90%;
+    --sidebar-accent-foreground: 180 60% 10%;
+    --sidebar-border: 180 25% 82%;
+    --sidebar-ring: 160 90% 50%;
+    --nav-bg: 180 70% 92%;
+    --nav-border: 160 55% 70%;
+    --nav-text: 180 60% 15%;
+    --nav-text-secondary: 160 50% 35%;
+    --nav-hover: 180 60% 88%;
+    --nav-dropdown-bg: 180 65% 94%;
+  }
+
+  /* Renamed existing Volcanic theme to dark-volcanic and added light variant */
+  .dark-volcanic {
     --background: 15 50% 6%;
     --foreground: 15 15% 98%;
     --card: 15 45% 10%;
@@ -1558,8 +1764,49 @@
     --nav-dropdown-bg: 15 45% 10%;
   }
 
-  /* Added Cyberpunk theme for Admin */
-  .cyberpunk {
+  .light-volcanic {
+    --background: 15 45% 96%;
+    --foreground: 15 70% 10%;
+    --card: 15 40% 93%;
+    --card-foreground: 15 70% 10%;
+    --popover: 15 40% 93%;
+    --popover-foreground: 15 70% 10%;
+    --primary: 10 90% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 80% 50%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 15 30% 88%;
+    --muted-foreground: 15 40% 35%;
+    --accent: 0 85% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 15 30% 80%;
+    --input: 15 30% 80%;
+    --ring: 10 90% 50%;
+    --chart-1: 10 90% 50%;
+    --chart-2: 30 85% 45%;
+    --chart-3: 0 90% 55%;
+    --chart-4: 20 85% 48%;
+    --chart-5: 5 90% 52%;
+    --sidebar: 15 40% 95%;
+    --sidebar-foreground: 15 70% 15%;
+    --sidebar-primary: 10 90% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 15 30% 90%;
+    --sidebar-accent-foreground: 15 70% 10%;
+    --sidebar-border: 15 30% 82%;
+    --sidebar-ring: 10 90% 50%;
+    --nav-bg: 15 75% 92%;
+    --nav-border: 10 60% 70%;
+    --nav-text: 15 70% 15%;
+    --nav-text-secondary: 10 55% 35%;
+    --nav-hover: 15 65% 88%;
+    --nav-dropdown-bg: 15 70% 94%;
+  }
+
+  /* Renamed existing Cyberpunk theme to dark-cyberpunk and added light variant */
+  .dark-cyberpunk {
     --background: 300 60% 5%;
     --foreground: 60 100% 95%;
     --card: 300 55% 9%;
@@ -1598,6 +1845,47 @@
     --nav-text-secondary: 315 95% 70%;
     --nav-hover: 300 55% 12%;
     --nav-dropdown-bg: 300 55% 9%;
+  }
+
+  .light-cyberpunk {
+    --background: 300 40% 96%;
+    --foreground: 300 70% 10%;
+    --card: 300 35% 93%;
+    --card-foreground: 300 70% 10%;
+    --popover: 300 35% 93%;
+    --popover-foreground: 300 70% 10%;
+    --primary: 315 90% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 180 90% 50%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 300 25% 88%;
+    --muted-foreground: 300 40% 35%;
+    --accent: 60 95% 50%;
+    --accent-foreground: 300 70% 10%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 300 25% 80%;
+    --input: 300 25% 80%;
+    --ring: 315 90% 50%;
+    --chart-1: 315 90% 50%;
+    --chart-2: 180 90% 50%;
+    --chart-3: 60 95% 50%;
+    --chart-4: 285 90% 55%;
+    --chart-5: 200 90% 55%;
+    --sidebar: 300 35% 95%;
+    --sidebar-foreground: 300 70% 15%;
+    --sidebar-primary: 315 90% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 300 25% 90%;
+    --sidebar-accent-foreground: 300 70% 10%;
+    --sidebar-border: 300 25% 82%;
+    --sidebar-ring: 315 90% 50%;
+    --nav-bg: 300 70% 92%;
+    --nav-border: 315 60% 70%;
+    --nav-text: 300 70% 15%;
+    --nav-text-secondary: 315 55% 35%;
+    --nav-hover: 300 60% 88%;
+    --nav-dropdown-bg: 300 65% 94%;
   }
 }
 
@@ -1774,6 +2062,21 @@
 }
 
 /* Added Aurora Borealis theme effects */
+@keyframes aurora-borealis-glow {
+  0% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(168, 85, 247, 0.3);
+  }
+  33% {
+    box-shadow: 0 0 30px rgba(168, 85, 247, 0.5), 0 0 50px rgba(34, 197, 94, 0.4);
+  }
+  66% {
+    box-shadow: 0 0 25px rgba(34, 197, 94, 0.5), 0 0 45px rgba(16, 185, 129, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(168, 85, 247, 0.3);
+  }
+}
+
 .aurora-borealis .logo-glow {
   filter: drop-shadow(0 0 25px rgba(16, 185, 129, 0.9)) drop-shadow(0 0 45px rgba(168, 85, 247, 0.7))
     drop-shadow(0 0 60px rgba(34, 197, 94, 0.5));
@@ -1800,6 +2103,16 @@
 }
 
 /* Added Volcanic theme effects */
+@keyframes volcanic-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 25px rgba(255, 87, 34, 0.5), 0 0 50px rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(239, 68, 68, 0.7), 0 0 70px rgba(255, 87, 34, 0.5);
+  }
+}
+
 .volcanic .logo-glow {
   filter: drop-shadow(0 0 25px rgba(255, 87, 34, 1)) drop-shadow(0 0 50px rgba(239, 68, 68, 0.8));
 }
@@ -1824,6 +2137,24 @@
 }
 
 /* Added Cyberpunk theme effects */
+@keyframes cyberpunk-glow {
+  0% {
+    box-shadow: 0 0 30px rgba(236, 72, 153, 0.5), 0 0 50px rgba(6, 182, 212, 0.4);
+  }
+  25% {
+    box-shadow: 0 0 35px rgba(6, 182, 212, 0.6), 0 0 60px rgba(234, 179, 8, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(234, 179, 8, 0.7), 0 0 70px rgba(236, 72, 153, 0.6);
+  }
+  75% {
+    box-shadow: 0 0 35px rgba(236, 72, 153, 0.6), 0 0 60px rgba(6, 182, 212, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(236, 72, 153, 0.5), 0 0 50px rgba(6, 182, 212, 0.4);
+  }
+}
+
 .cyberpunk .logo-glow {
   filter: drop-shadow(0 0 30px rgba(236, 72, 153, 1)) drop-shadow(0 0 50px rgba(6, 182, 212, 0.9))
     drop-shadow(0 0 70px rgba(234, 179, 8, 0.7));
@@ -1935,59 +2266,37 @@
 }
 
 /* Added Aurora Borealis theme effects */
-@keyframes aurora-borealis-glow {
-  0% {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(168, 85, 247, 0.3);
-  }
-  33% {
-    box-shadow: 0 0 30px rgba(168, 85, 247, 0.5), 0 0 50px rgba(34, 197, 94, 0.4);
-  }
-  66% {
-    box-shadow: 0 0 25px rgba(34, 197, 94, 0.5), 0 0 45px rgba(16, 185, 129, 0.4);
-  }
-  100% {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(168, 85, 247, 0.3);
-  }
+.aurora-borealis .logo-glow {
+  filter: drop-shadow(0 0 25px rgba(16, 185, 129, 0.9)) drop-shadow(0 0 45px rgba(168, 85, 247, 0.7))
+    drop-shadow(0 0 60px rgba(34, 197, 94, 0.5));
 }
 
-.aurora-borealis nav {
-  animation: aurora-borealis-glow 4s ease-in-out infinite;
+.aurora-borealis .logo-glow:hover {
+  filter: drop-shadow(0 0 35px rgba(16, 185, 129, 1)) drop-shadow(0 0 60px rgba(168, 85, 247, 0.9))
+    drop-shadow(0 0 80px rgba(34, 197, 94, 0.7));
+}
+
+.aurora-borealis ::-webkit-scrollbar-track {
+  background: linear-gradient(180deg, rgb(10, 30, 30) 0%, rgb(5, 20, 20) 100%);
+}
+
+.aurora-borealis ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #10b981 0%, #a855f7 50%, #22c55e 100%);
+  border-radius: 4px;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.7), 0 0 30px rgba(168, 85, 247, 0.5);
+}
+
+.aurora-borealis ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #a855f7 0%, #22c55e 50%, #10b981 100%);
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.9), 0 0 40px rgba(168, 85, 247, 0.8);
 }
 
 /* Added Volcanic theme effects */
-@keyframes volcanic-glow {
-  0%,
-  100% {
-    box-shadow: 0 0 25px rgba(255, 87, 34, 0.5), 0 0 50px rgba(239, 68, 68, 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(239, 68, 68, 0.7), 0 0 70px rgba(255, 87, 34, 0.5);
-  }
-}
-
 .volcanic nav {
   animation: volcanic-glow 2s ease-in-out infinite;
 }
 
 /* Added Cyberpunk theme effects */
-@keyframes cyberpunk-glow {
-  0% {
-    box-shadow: 0 0 30px rgba(236, 72, 153, 0.5), 0 0 50px rgba(6, 182, 212, 0.4);
-  }
-  25% {
-    box-shadow: 0 0 35px rgba(6, 182, 212, 0.6), 0 0 60px rgba(234, 179, 8, 0.5);
-  }
-  50% {
-    box-shadow: 0 0 40px rgba(234, 179, 8, 0.7), 0 0 70px rgba(236, 72, 153, 0.6);
-  }
-  75% {
-    box-shadow: 0 0 35px rgba(236, 72, 153, 0.6), 0 0 60px rgba(6, 182, 212, 0.5);
-  }
-  100% {
-    box-shadow: 0 0 30px rgba(236, 72, 153, 0.5), 0 0 50px rgba(6, 182, 212, 0.4);
-  }
-}
-
 .cyberpunk nav {
   animation: cyberpunk-glow 3s ease-in-out infinite;
 }

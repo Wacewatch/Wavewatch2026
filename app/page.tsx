@@ -11,6 +11,7 @@ import { RandomContent } from "@/components/random-content"
 import { SubscriptionOffer } from "@/components/subscription-offer"
 import { PublicPlaylistsRow } from "@/components/public-playlists-row"
 import { PopularCollections } from "@/components/popular-collections"
+import { supabase } from "@/lib/supabase" // Added supabase import
 
 function LoadingSection() {
   return (
@@ -25,42 +26,111 @@ function LoadingSection() {
   )
 }
 
-export default function HomePage() {
+async function getHomeModulesSettings() {
+  try {
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("setting_value")
+      .eq("setting_key", "home_modules")
+      .single()
+
+    if (error || !data) {
+      // Return default settings if not found
+      return {
+        hero: true,
+        trending_movies: true,
+        trending_tv_shows: true,
+        popular_anime: true,
+        popular_collections: true,
+        public_playlists: true,
+        trending_actors: true,
+        trending_tv_channels: true,
+        subscription_offer: true,
+        random_content: true,
+        football_calendar: true,
+        calendar_widget: true,
+      }
+    }
+
+    return data.setting_value
+  } catch (error) {
+    console.error("Error loading home modules settings:", error)
+    // Return default settings on error
+    return {
+      hero: true,
+      trending_movies: true,
+      trending_tv_shows: true,
+      popular_anime: true,
+      popular_collections: true,
+      public_playlists: true,
+      trending_actors: true,
+      trending_tv_channels: true,
+      subscription_offer: true,
+      random_content: true,
+      football_calendar: true,
+      calendar_widget: true,
+    }
+  }
+}
+
+export default async function HomePage() {
+  const modules = await getHomeModulesSettings()
+
   return (
     <div className="space-y-8">
-      <Hero />
+      {modules.hero && <Hero />}
       <div className="container mx-auto px-4 space-y-12">
-        <Suspense fallback={<LoadingSection />}>
-          <TrendingMovies />
-        </Suspense>
-        <Suspense fallback={<LoadingSection />}>
-          <TrendingTVShows />
-        </Suspense>
-        <Suspense fallback={<LoadingSection />}>
-          <PopularAnime />
-        </Suspense>
-        <Suspense fallback={<LoadingSection />}>
-          <PopularCollections />
-        </Suspense>
-        <Suspense fallback={<LoadingSection />}>
-          <PublicPlaylistsRow />
-        </Suspense>
-        <Suspense fallback={<LoadingSection />}>
-          <TrendingActors />
-        </Suspense>
-        <Suspense fallback={<LoadingSection />}>
-          <TrendingTVChannels />
-        </Suspense>
-        <SubscriptionOffer />
-        <Suspense fallback={<LoadingSection />}>
-          <RandomContent />
-        </Suspense>
-        <Suspense fallback={<LoadingSection />}>
-          <FootballCalendarWidget />
-        </Suspense>
-        <Suspense fallback={<LoadingSection />}>
-          <CalendarWidget />
-        </Suspense>
+        {modules.trending_movies && (
+          <Suspense fallback={<LoadingSection />}>
+            <TrendingMovies />
+          </Suspense>
+        )}
+        {modules.trending_tv_shows && (
+          <Suspense fallback={<LoadingSection />}>
+            <TrendingTVShows />
+          </Suspense>
+        )}
+        {modules.popular_anime && (
+          <Suspense fallback={<LoadingSection />}>
+            <PopularAnime />
+          </Suspense>
+        )}
+        {modules.popular_collections && (
+          <Suspense fallback={<LoadingSection />}>
+            <PopularCollections />
+          </Suspense>
+        )}
+        {modules.public_playlists && (
+          <Suspense fallback={<LoadingSection />}>
+            <PublicPlaylistsRow />
+          </Suspense>
+        )}
+        {modules.trending_actors && (
+          <Suspense fallback={<LoadingSection />}>
+            <TrendingActors />
+          </Suspense>
+        )}
+        {modules.trending_tv_channels && (
+          <Suspense fallback={<LoadingSection />}>
+            <TrendingTVChannels />
+          </Suspense>
+        )}
+        {modules.subscription_offer && <SubscriptionOffer />}
+        {modules.random_content && (
+          <Suspense fallback={<LoadingSection />}>
+            <RandomContent />
+          </Suspense>
+        )}
+        {modules.football_calendar && (
+          <Suspense fallback={<LoadingSection />}>
+            <FootballCalendarWidget />
+          </Suspense>
+        )}
+        {modules.calendar_widget && (
+          <Suspense fallback={<LoadingSection />}>
+            <CalendarWidget />
+          </Suspense>
+        )}
       </div>
     </div>
   )
