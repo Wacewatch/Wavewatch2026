@@ -46,9 +46,8 @@ type Credit = MovieCredit | TVCredit
 
 async function fetchActorDetails(actorId: string) {
   try {
-    // Fetch actor details
     const actorResponse = await fetch(
-      `https://api.themoviedb.org/3/person/${actorId}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&language=fr-FR`,
+      `https://api.themoviedb.org/3/person/${actorId}?api_key=${process.env.TMDB_API_KEY}&language=fr-FR`,
       { next: { revalidate: 3600 } }, // Cache for 1 hour
     )
 
@@ -58,9 +57,8 @@ async function fetchActorDetails(actorId: string) {
 
     const actorData = await actorResponse.json()
 
-    // Fetch actor credits
     const creditsResponse = await fetch(
-      `https://api.themoviedb.org/3/person/${actorId}/combined_credits?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&language=fr-FR`,
+      `https://api.themoviedb.org/3/person/${actorId}/combined_credits?api_key=${process.env.TMDB_API_KEY}&language=fr-FR`,
       { next: { revalidate: 3600 } }, // Cache for 1 hour
     )
 

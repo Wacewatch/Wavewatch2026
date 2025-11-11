@@ -10,7 +10,18 @@ import { IframeModal } from "@/components/iframe-modal"
 import { TrailerModal } from "@/components/trailer-modal"
 import { AddToListSelector } from "@/components/add-to-list-selector"
 import { ClassificationBadge } from "@/components/classification-badge"
-import { Star, Calendar, Check, Play, Download, Youtube, ThumbsUp, ThumbsDown, Shuffle } from "lucide-react"
+import {
+  Star,
+  Calendar,
+  Check,
+  Play,
+  Download,
+  Youtube,
+  ThumbsUp,
+  ThumbsDown,
+  Shuffle,
+  ExternalLink,
+} from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
@@ -81,9 +92,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
   useEffect(() => {
     const fetchCertification = async () => {
       try {
-        const response = await fetch(
-          `https://api.themoviedb.org/3/tv/${show.id}/content_ratings?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`,
-        )
+        const response = await fetch(`/api/tmdb/tv/${show.id}/content-ratings`)
         if (response.ok) {
           const data = await response.json()
           // Find US or FR rating
@@ -286,9 +295,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
       const seasonsWithEpisodes = await Promise.all(
         validSeasons.map(async (season: any) => {
           try {
-            const response = await fetch(
-              `https://api.themoviedb.org/3/tv/${show.id}/season/${season.season_number}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`,
-            )
+            const response = await fetch(`/api/tmdb/tv/${show.id}/season/${season.season_number}`)
             if (response.ok) {
               const seasonData = await response.json()
               console.log(`Saison ${season.season_number}: ${seasonData.episodes?.length || 0} épisodes récupérés`)
@@ -461,9 +468,39 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
           {/* Details */}
           <div className="lg:col-span-3 space-y-8">
             <div className="space-y-6">
-              <h1 className="text-xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left">
-                {show.name}
-              </h1>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <h1 className="text-xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left">
+                  {show.name}
+                </h1>
+                <a
+                  href={`https://www.themoviedb.org/tv/${show.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 bg-[#01b4e4] hover:bg-[#0299c5] text-white rounded-lg transition-colors self-center md:self-auto"
+                  title="Voir sur TMDB"
+                >
+                  <svg className="w-8 h-8" viewBox="0 0 190.24 81.52">
+                    <defs>
+                      <linearGradient
+                        id="linear-gradient-tv"
+                        y1="40.76"
+                        x2="190.24"
+                        y2="40.76"
+                        gradientUnits="userSpaceOnUse"
+                      >
+                        <stop offset="0" stopColor="#90cea1" />
+                        <stop offset=".56" stopColor="#3cbec9" />
+                        <stop offset="1" stopColor="#00b3e5" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      fill="url(#linear-gradient-tv)"
+                      d="M105.67,36.06h66.9A17.67,17.67,0,0,0,190.24,18.4h0A17.67,17.67,0,0,0,172.57.73h-66.9A17.67,17.67,0,0,0,88,18.4h0A17.67,17.67,0,0,0,105.67,36.06Zm-88,45h76.9A17.67,17.67,0,0,0,112.24,63.4h0A17.67,17.67,0,0,0,94.57,45.73H17.67A17.67,17.67,0,0,0,0,63.4H0A17.67,17.67,0,0,0,17.67,81.06ZM10.41,35.42h7.8V6.92h10.1V0H.31v6.9h10.1Zm28.1,0h7.8V8.25h.1l9,27.15h6l9.3-27.15h.1V35.4h7.8V0H66.76l-8.2,23.1h-.1L50.31,0H38.51ZM152.43,55.67a15.07,15.07,0,0,0-4.52-5.52,18.57,18.57,0,0,0-6.68-3.08,33.54,33.54,0,0,0-8.07-1h-11.7v35.4h12.75a24.58,24.58,0,0,0,7.55-1.15A19.34,19.34,0,0,0,148.11,77a16.27,16.27,0,0,0,4.37-5.5,16.91,16.91,0,0,0,1.63-7.58A18.5,18.5,0,0,0,152.43,55.67Zm-8.31,11.92a8.94,8.94,0,0,1-1.87,3.31,9.49,9.49,0,0,1-3.25,2.35,11.92,11.92,0,0,1-4.73.9H128.7v-21h5.3a17,17,0,0,1,4.58.65,10.24,10.24,0,0,1,3.43,1.95,8.09,8.09,0,0,1,2.13,3.23,11.94,11.94,0,0,1,.74,4.29A13.38,13.38,0,0,1,144.12,67.59Zm29.19-20.66a10.07,10.07,0,0,0-4.18,3.57,15.48,15.48,0,0,0-2.37,5.16,23.93,23.93,0,0,0-.77,6.24,19.16,19.16,0,0,0,.87,6.08A14.77,14.77,0,0,0,169.3,73a10.21,10.21,0,0,0,4.18,3.5,14.35,14.35,0,0,0,12.08,0,10.21,10.21,0,0,0,4.18-3.5,14.77,14.77,0,0,0,2.44-5.06,19.16,19.16,0,0,0,.87-6.08,23.93,23.93,0,0,0-.77-6.24,15.48,15.48,0,0,0-2.37-5.16,10.07,10.07,0,0,0-4.18-3.57,13.77,13.77,0,0,0-6.07-1.33A13.89,13.89,0,0,0,173.31,46.93Zm8.16,19.65a8.18,8.18,0,0,1-1.08,3.07,5.1,5.1,0,0,1-2,2,6.12,6.12,0,0,1-3.06.73,6.12,6.12,0,0,1-3.06-.73,5.1,5.1,0,0,1-2-2,8.18,8.18,0,0,1-1.08-3.07,18.94,18.94,0,0,1-.33-3.77,21.07,21.07,0,0,1,.33-3.87,8.59,8.59,0,0,1,1.08-3.15,5.1,5.1,0,0,1,2-2.12,6.12,6.12,0,0,1,3.06-.73,6.12,6.12,0,0,1,3.06.73,5.1,5.1,0,0,1,2,2.12,8.59,8.59,0,0,1,1.08,3.15,21.07,21.07,0,0,1,.33,3.87A18.94,18.94,0,0,1,181.47,66.58Z"
+                    />
+                  </svg>
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
 
               {/* Info Bar */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6 text-gray-300">

@@ -19,8 +19,8 @@ type BaseTheme =
   | "neon"
   | "emerald"
   | "cosmic"
-  | "christmas"
   | "halloween"
+  | "christmas"
   | "obsidian"
   | "aurora-borealis"
   | "volcanic"
@@ -55,7 +55,7 @@ const ThemeProviderContext = React.createContext<ThemeProviderState>(initialStat
 
 export function ThemeProvider({
   children,
-  defaultTheme = "default",
+  defaultTheme = "ocean",
   defaultMode = "dark",
   ...props
 }: ThemeProviderProps) {
