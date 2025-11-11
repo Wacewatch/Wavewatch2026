@@ -1812,6 +1812,12 @@ export default function AdminPage() {
     if (!searchTerm) return data
 
     return data.filter((item) => {
+      if (type === "users") {
+        const searchableFields = ["username", "email"]
+        return searchableFields.some((field) =>
+          item[field]?.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+        )
+      }
       const searchableFields = ["title", "name", "username", "genre", "category"]
       return searchableFields.some((field) => item[field]?.toString().toLowerCase().includes(searchTerm.toLowerCase()))
     })

@@ -24,7 +24,7 @@ export default function MoviesPage() {
 
   const platforms = [
     { id: 8, name: "Netflix" },
-    { id: 9, name: "Amazon Prime Video" },
+    { id: 119, name: "Amazon Prime Video" },
     { id: 337, name: "Disney+" },
     { id: 531, name: "Paramount+" },
     { id: 350, name: "Apple TV+" },

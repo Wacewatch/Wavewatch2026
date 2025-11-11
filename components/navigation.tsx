@@ -60,17 +60,46 @@ export function Navigation() {
     { id: "crimson", name: "Cramoisi", gradient: "from-red-900 to-rose-700" },
     { id: "sapphire", name: "Saphir", gradient: "from-blue-800 to-indigo-700" },
     { id: "jade", name: "Jade", gradient: "from-emerald-800 to-teal-700" },
+    { id: "christmas", name: "🎄 Noël", gradient: "from-red-700 via-green-700 to-red-700" },
   ]
 
   const premiumThemes = [
     { id: "premium", name: "Premium", gradient: "from-yellow-600 via-purple-600 to-yellow-600", requiresVip: true },
     { id: "royal", name: "Royal", gradient: "from-purple-700 to-indigo-800", requiresVip: true },
+    { id: "obsidian", name: "Obsidienne", gradient: "from-gray-950 via-blue-500 to-gray-950", requiresVip: true },
     { id: "neon", name: "Néon", gradient: "from-pink-500 via-cyan-500 to-pink-500", requiresVipPlus: true },
     { id: "emerald", name: "Émeraude", gradient: "from-emerald-600 to-teal-700", requiresVipPlus: true },
     { id: "cosmic", name: "Cosmique", gradient: "from-purple-600 via-blue-600 to-purple-600", requiresVipPlus: true },
+    {
+      id: "aurora-borealis",
+      name: "Aurore Boréale",
+      gradient: "from-green-500 via-purple-500 to-teal-500",
+      requiresVipPlus: true,
+    },
+    {
+      id: "volcanic",
+      name: "Volcanique",
+      gradient: "from-orange-600 via-red-600 to-orange-600",
+      requiresVipPlus: true,
+    },
+    { id: "cyberpunk", name: "Cyberpunk", gradient: "from-pink-500 via-cyan-500 to-yellow-500", requiresAdmin: true },
   ]
 
-  const handleThemeChange = (themeId: string, requiresVip?: boolean, requiresVipPlus?: boolean) => {
+  const handleThemeChange = (
+    themeId: string,
+    requiresVip?: boolean,
+    requiresVipPlus?: boolean,
+    requiresAdmin?: boolean,
+  ) => {
+    if (requiresAdmin && !user?.isAdmin) {
+      toast({
+        title: "Thème Admin requis",
+        description: "Ce thème est réservé aux administrateurs",
+        variant: "destructive",
+      })
+      return
+    }
+
     if (requiresVipPlus && !user?.isVipPlus && !user?.isAdmin) {
       toast({
         title: "Thème VIP+ requis",
@@ -306,13 +335,14 @@ export function Navigation() {
                   <div className="grid grid-cols-2 gap-2 p-2">
                     {premiumThemes.map((t) => {
                       const isLocked =
+                        (t.requiresAdmin && !user.isAdmin) ||
                         (t.requiresVipPlus && !user.isVipPlus && !user.isAdmin) ||
                         (t.requiresVip && !user.isVip && !user.isVipPlus && !user.isAdmin)
 
                       return (
                         <button
                           key={t.id}
-                          onClick={() => handleThemeChange(t.id, t.requiresVip, t.requiresVipPlus)}
+                          onClick={() => handleThemeChange(t.id, t.requiresVip, t.requiresVipPlus, t.requiresAdmin)}
                           className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors relative ${
                             theme === t.id ? "ring-2 ring-blue-500" : ""
                           } ${isLocked ? "opacity-60" : ""}`}

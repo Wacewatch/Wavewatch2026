@@ -21,6 +21,11 @@ type Theme =
   | "neon"
   | "emerald"
   | "cosmic"
+  | "christmas"
+  | "obsidian"
+  | "aurora-borealis"
+  | "volcanic"
+  | "cyberpunk"
 
 interface ThemeProviderProps {
   children: React.ReactNode
@@ -72,6 +77,11 @@ export function ThemeProvider({ children, defaultTheme = "dark", ...props }: The
       "neon",
       "emerald",
       "cosmic",
+      "christmas",
+      "obsidian",
+      "aurora-borealis",
+      "volcanic",
+      "cyberpunk",
     )
 
     if (theme === "system") {
