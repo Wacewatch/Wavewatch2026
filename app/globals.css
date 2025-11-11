@@ -4,6 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @layer base {
+  /* Fixed all light themes to have proper, not-too-bright colors and all dark themes to be truly dark with no white/light backgrounds */
+
+  /* Default Base Theme */
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
@@ -46,7 +49,7 @@
     --nav-dropdown-bg: 217 85% 95%;
   }
 
-  /* Light mode for default theme - improved for better visibility */
+  /* Light Default */
   .light-default {
     --background: 0 0% 98%;
     --foreground: 222 47% 11%;
@@ -56,16 +59,16 @@
     --popover-foreground: 222 47% 11%;
     --primary: 221 83% 53%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
+    --secondary: 210 40% 90%;
     --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
+    --muted: 210 40% 92%;
+    --muted-foreground: 215 16% 40%;
+    --accent: 210 40% 88%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
+    --border: 214 32% 85%;
+    --input: 214 32% 85%;
     --ring: 221 83% 53%;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
@@ -76,9 +79,9 @@
     --sidebar-foreground: 240 5% 26%;
     --sidebar-primary: 240 6% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 5% 96%;
+    --sidebar-accent: 240 5% 94%;
     --sidebar-accent-foreground: 240 6% 10%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 220 13% 88%;
     --sidebar-ring: 217 91% 60%;
     --nav-bg: 217 91% 88%;
     --nav-border: 217 60% 75%;
@@ -88,68 +91,68 @@
     --nav-dropdown-bg: 217 85% 95%;
   }
 
-  /* Dark mode for default theme - proper dark backgrounds based on reference */
+  /* Dark Default - truly dark */
   .dark-default {
-    --background: 222 47% 11%;
+    --background: 222 47% 8%;
     --foreground: 210 40% 98%;
-    --card: 217 33% 17%;
+    --card: 217 33% 12%;
     --card-foreground: 210 40% 98%;
-    --popover: 222 47% 11%;
+    --popover: 222 47% 10%;
     --popover-foreground: 210 40% 98%;
     --primary: 217 92% 60%;
-    --primary-foreground: 222 47% 11%;
-    --secondary: 217 33% 17%;
+    --primary-foreground: 222 47% 8%;
+    --secondary: 217 33% 15%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 215 20% 26%;
+    --muted: 215 20% 18%;
     --muted-foreground: 217 11% 65%;
-    --accent: 217 33% 17%;
+    --accent: 217 33% 14%;
     --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
+    --destructive: 0 63% 45%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
+    --border: 217 33% 15%;
+    --input: 217 33% 15%;
     --ring: 224 76% 48%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
-    --sidebar: 222 47% 11%;
+    --sidebar: 222 47% 8%;
     --sidebar-foreground: 210 40% 98%;
     --sidebar-primary: 217 92% 60%;
-    --sidebar-primary-foreground: 222 47% 11%;
-    --sidebar-accent: 217 33% 17%;
+    --sidebar-primary-foreground: 222 47% 8%;
+    --sidebar-accent: 217 33% 13%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 17%;
+    --sidebar-border: 217 33% 15%;
     --sidebar-ring: 217 92% 60%;
-    --nav-bg: 217 91% 15%;
-    --nav-border: 217 91% 25%;
+    --nav-bg: 217 91% 12%;
+    --nav-border: 217 91% 20%;
     --nav-text: 0 0% 100%;
     --nav-text-secondary: 217 91% 70%;
-    --nav-hover: 217 91% 25%;
-    --nav-dropdown-bg: 217 91% 20%;
+    --nav-hover: 217 91% 18%;
+    --nav-dropdown-bg: 217 91% 15%;
   }
 
-  /* Light Ocean - improved colors */
+  /* Light Ocean */
   .light-ocean {
     --background: 195 50% 97%;
-    --foreground: 200 60% 15%;
+    --foreground: 200 60% 12%;
     --card: 195 45% 94%;
-    --card-foreground: 200 60% 15%;
+    --card-foreground: 200 60% 12%;
     --popover: 195 45% 94%;
-    --popover-foreground: 200 60% 15%;
-    --primary: 190 80% 50%;
+    --popover-foreground: 200 60% 12%;
+    --primary: 190 80% 45%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 195 30% 88%;
-    --secondary-foreground: 200 60% 15%;
+    --secondary: 195 30% 85%;
+    --secondary-foreground: 200 60% 12%;
     --muted: 195 30% 88%;
-    --muted-foreground: 200 30% 40%;
-    --accent: 175 70% 55%;
-    --accent-foreground: 200 60% 15%;
+    --muted-foreground: 200 30% 35%;
+    --accent: 175 70% 50%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 195 30% 82%;
-    --input: 195 30% 82%;
+    --border: 195 30% 80%;
+    --input: 195 30% 80%;
     --ring: 190 80% 50%;
     --chart-1: 190 80% 50%;
     --chart-2: 175 70% 55%;
@@ -157,64 +160,64 @@
     --chart-4: 210 50% 55%;
     --chart-5: 185 75% 60%;
     --sidebar: 195 40% 96%;
-    --sidebar-foreground: 200 50% 20%;
+    --sidebar-foreground: 200 50% 15%;
     --sidebar-primary: 190 80% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 195 35% 92%;
-    --sidebar-accent-foreground: 200 60% 15%;
-    --sidebar-border: 195 30% 85%;
+    --sidebar-accent: 195 35% 90%;
+    --sidebar-accent-foreground: 200 60% 12%;
+    --sidebar-border: 195 30% 82%;
     --sidebar-ring: 190 80% 50%;
     --nav-bg: 195 60% 88%;
-    --nav-border: 190 40% 72%;
-    --nav-text: 200 70% 15%;
-    --nav-text-secondary: 190 50% 38%;
+    --nav-border: 190 40% 70%;
+    --nav-text: 200 70% 12%;
+    --nav-text-secondary: 190 50% 35%;
     --nav-hover: 190 45% 83%;
     --nav-dropdown-bg: 195 50% 92%;
   }
 
-  /* Dark Ocean - proper dark theme from reference */
+  /* Dark Ocean - truly dark */
   .dark-ocean {
     --background: 200 50% 8%;
     --foreground: 180 20% 95%;
-    --card: 200 45% 12%;
+    --card: 200 45% 11%;
     --card-foreground: 180 20% 95%;
-    --popover: 200 45% 12%;
+    --popover: 200 45% 10%;
     --popover-foreground: 180 20% 95%;
     --primary: 190 80% 50%;
-    --primary-foreground: 200 50% 10%;
-    --secondary: 200 30% 20%;
+    --primary-foreground: 200 50% 8%;
+    --secondary: 200 30% 16%;
     --secondary-foreground: 180 20% 95%;
-    --muted: 200 30% 20%;
-    --muted-foreground: 180 15% 65%;
+    --muted: 200 30% 15%;
+    --muted-foreground: 180 15% 60%;
     --accent: 175 70% 45%;
     --accent-foreground: 180 20% 95%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 200 30% 25%;
-    --input: 200 30% 25%;
+    --border: 200 30% 18%;
+    --input: 200 30% 18%;
     --ring: 190 80% 50%;
     --chart-1: 190 80% 50%;
     --chart-2: 175 70% 45%;
     --chart-3: 200 60% 40%;
     --chart-4: 210 50% 50%;
     --chart-5: 185 75% 55%;
-    --sidebar: 200 45% 12%;
+    --sidebar: 200 45% 10%;
     --sidebar-foreground: 180 20% 90%;
     --sidebar-primary: 190 80% 50%;
-    --sidebar-primary-foreground: 200 50% 10%;
-    --sidebar-accent: 200 35% 18%;
+    --sidebar-primary-foreground: 200 50% 8%;
+    --sidebar-accent: 200 35% 14%;
     --sidebar-accent-foreground: 180 20% 95%;
-    --sidebar-border: 200 30% 25%;
+    --sidebar-border: 200 30% 18%;
     --sidebar-ring: 190 80% 50%;
     --nav-bg: 200 60% 10%;
-    --nav-border: 190 50% 30%;
+    --nav-border: 190 50% 25%;
     --nav-text: 180 30% 95%;
     --nav-text-secondary: 190 60% 70%;
-    --nav-hover: 190 50% 20%;
-    --nav-dropdown-bg: 200 55% 15%;
+    --nav-hover: 190 50% 15%;
+    --nav-dropdown-bg: 200 55% 12%;
   }
 
-  /* Light Sunset - improved */
+  /* Light Sunset */
   .light-sunset {
     --background: 30 40% 97%;
     --foreground: 20 50% 12%;
@@ -256,7 +259,7 @@
     --nav-dropdown-bg: 25 60% 90%;
   }
 
-  /* Dark Sunset - from reference */
+  /* Dark Sunset */
   .dark-sunset {
     --background: 20 30% 10%;
     --foreground: 30 15% 95%;
@@ -298,9 +301,7 @@
     --nav-dropdown-bg: 280 45% 18%;
   }
 
-  /* Continuing with all other theme definitions with proper light/dark distinctions following reference pattern */
-  /* All light themes have backgrounds at 96-98% lightness, all dark themes at 6-12% lightness */
-
+  /* Light Forest */
   .light-forest {
     --background: 140 40% 97%;
     --foreground: 120 50% 12%;
@@ -1371,166 +1372,168 @@
   .light-halloween {
     --background: 30 60% 96%;
     --foreground: 25 70% 10%;
-    --card: 30 50% 93%;
+    --card: 30 50% 92%;
     --card-foreground: 25 70% 10%;
-    --popover: 30 50% 93%;
+    --popover: 30 50% 92%;
     --popover-foreground: 25 70% 10%;
     --primary: 30 90% 45%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 280 70% 60%;
+    --secondary: 280 70% 55%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 30 35% 88%;
-    --muted-foreground: 25 40% 35%;
-    --accent: 15 90% 55%;
+    --muted: 30 35% 85%;
+    --muted-foreground: 25 40% 30%;
+    --accent: 15 90% 50%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 30 30% 80%;
-    --input: 30 30% 80%;
+    --border: 30 30% 78%;
+    --input: 30 30% 78%;
     --ring: 30 90% 50%;
     --chart-1: 30 90% 50%;
     --chart-2: 280 75% 55%;
     --chart-3: 15 90% 50%;
     --chart-4: 35 85% 45%;
     --chart-5: 290 70% 55%;
-    --sidebar: 30 50% 95%;
-    --sidebar-foreground: 25 70% 15%;
+    --sidebar: 30 50% 94%;
+    --sidebar-foreground: 25 70% 12%;
     --sidebar-primary: 30 90% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 30 40% 90%;
-    --sidebar-accent-foreground: 25 70% 15%;
-    --sidebar-border: 30 30% 82%;
+    --sidebar-accent: 30 40% 88%;
+    --sidebar-accent-foreground: 25 70% 12%;
+    --sidebar-border: 30 30% 80%;
     --sidebar-ring: 30 90% 50%;
-    --nav-bg: 30 80% 92%;
-    --nav-border: 30 60% 75%;
-    --nav-text: 25 70% 15%;
-    --nav-text-secondary: 30 50% 40%;
-    --nav-hover: 30 70% 88%;
-    --nav-dropdown-bg: 30 60% 94%;
+    --nav-bg: 30 80% 90%;
+    --nav-border: 30 60% 72%;
+    --nav-text: 25 70% 12%;
+    --nav-text-secondary: 30 50% 35%;
+    --nav-hover: 30 70% 86%;
+    --nav-dropdown-bg: 30 60% 92%;
   }
 
+  /* Dark Halloween - truly dark */
   .dark-halloween {
-    --background: 25 70% 5%;
+    --background: 25 70% 6%;
     --foreground: 30 100% 98%;
-    --card: 25 65% 8%;
+    --card: 25 65% 10%;
     --card-foreground: 30 100% 98%;
-    --popover: 25 65% 8%;
+    --popover: 25 65% 9%;
     --popover-foreground: 30 100% 98%;
     --primary: 30 100% 50%;
-    --primary-foreground: 25 70% 7%;
+    --primary-foreground: 25 70% 6%;
     --secondary: 280 80% 45%;
     --secondary-foreground: 30 100% 98%;
-    --muted: 25 45% 12%;
-    --muted-foreground: 30 40% 65%;
+    --muted: 25 45% 14%;
+    --muted-foreground: 30 40% 60%;
     --accent: 15 100% 50%;
-    --accent-foreground: 25 70% 7%;
+    --accent-foreground: 25 70% 6%;
     --destructive: 0 90% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 25 50% 20%;
-    --input: 25 50% 20%;
+    --border: 25 50% 16%;
+    --input: 25 50% 16%;
     --ring: 30 100% 55%;
     --chart-1: 30 100% 55%;
     --chart-2: 280 85% 50%;
     --chart-3: 15 100% 55%;
     --chart-4: 35 95% 50%;
     --chart-5: 290 80% 50%;
-    --sidebar: 25 65% 8%;
+    --sidebar: 25 65% 9%;
     --sidebar-foreground: 30 100% 95%;
     --sidebar-primary: 30 100% 55%;
-    --sidebar-primary-foreground: 25 70% 7%;
-    --sidebar-accent: 25 60% 12%;
+    --sidebar-primary-foreground: 25 70% 6%;
+    --sidebar-accent: 25 60% 13%;
     --sidebar-accent-foreground: 30 100% 98%;
-    --sidebar-border: 25 50% 20%;
+    --sidebar-border: 25 50% 16%;
     --sidebar-ring: 30 100% 55%;
-    --nav-bg: 25 70% 6%;
-    --nav-border: 30 90% 40%;
+    --nav-bg: 25 70% 7%;
+    --nav-border: 30 90% 30%;
     --nav-text: 30 95% 96%;
     --nav-text-secondary: 30 90% 70%;
-    --nav-hover: 25 65% 11%;
-    --nav-dropdown-bg: 25 65% 8%;
+    --nav-hover: 25 65% 12%;
+    --nav-dropdown-bg: 25 65% 9%;
   }
 
   /* Christmas themes - renamed from existing */
   .light-christmas {
     --background: 140 30% 96%;
     --foreground: 0 60% 10%;
-    --card: 140 25% 93%;
+    --card: 140 25% 92%;
     --card-foreground: 0 60% 10%;
-    --popover: 140 25% 93%;
+    --popover: 140 25% 92%;
     --popover-foreground: 0 60% 10%;
-    --primary: 0 70% 50%;
+    --primary: 0 70% 48%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 140 70% 40%;
+    --secondary: 140 70% 38%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 140 20% 88%;
-    --muted-foreground: 0 30% 35%;
-    --accent: 48 95% 45%;
-    --accent-foreground: 0 60% 10%;
+    --muted: 140 20% 86%;
+    --muted-foreground: 0 30% 32%;
+    --accent: 48 95% 42%;
+    --accent-foreground: 0 0% 100%;
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 98%;
-    --border: 140 20% 80%;
-    --input: 140 20% 80%;
+    --border: 140 20% 78%;
+    --input: 140 20% 78%;
     --ring: 0 70% 55%;
     --chart-1: 0 75% 55%;
     --chart-2: 140 75% 45%;
     --chart-3: 48 95% 50%;
     --chart-4: 0 70% 50%;
     --chart-5: 120 70% 40%;
-    --sidebar: 140 25% 95%;
-    --sidebar-foreground: 0 60% 15%;
-    --sidebar-primary: 0 70% 50%;
+    --sidebar: 140 25% 94%;
+    --sidebar-foreground: 0 60% 12%;
+    --sidebar-primary: 0 70% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 140 20% 90%;
+    --sidebar-accent: 140 20% 88%;
     --sidebar-accent-foreground: 0 60% 10%;
-    --sidebar-border: 140 20% 82%;
+    --sidebar-border: 140 20% 80%;
     --sidebar-ring: 0 70% 50%;
-    --nav-bg: 0 60% 92%;
-    --nav-border: 0 50% 75%;
-    --nav-text: 0 60% 15%;
-    --nav-text-secondary: 0 40% 40%;
-    --nav-hover: 0 50% 88%;
-    --nav-dropdown-bg: 0 55% 94%;
+    --nav-bg: 0 60% 90%;
+    --nav-border: 0 50% 72%;
+    --nav-text: 0 60% 12%;
+    --nav-text-secondary: 0 40% 35%;
+    --nav-hover: 0 50% 86%;
+    --nav-dropdown-bg: 0 55% 92%;
   }
 
+  /* Dark Christmas - truly dark */
   .dark-christmas {
-    --background: 0 60% 8%;
+    --background: 0 60% 7%;
     --foreground: 0 10% 98%;
-    --card: 0 55% 12%;
+    --card: 0 55% 11%;
     --card-foreground: 0 10% 98%;
-    --popover: 0 55% 12%;
+    --popover: 0 55% 10%;
     --popover-foreground: 0 10% 98%;
     --primary: 140 80% 45%;
-    --primary-foreground: 0 60% 10%;
-    --secondary: 0 75% 55%;
+    --primary-foreground: 0 60% 8%;
+    --secondary: 0 75% 50%;
     --secondary-foreground: 0 10% 98%;
-    --muted: 0 40% 18%;
-    --muted-foreground: 0 10% 65%;
-    --accent: 48 100% 50%;
-    --accent-foreground: 0 60% 10%;
+    --muted: 0 40% 15%;
+    --muted-foreground: 0 10% 62%;
+    --accent: 48 100% 48%;
+    --accent-foreground: 0 60% 8%;
     --destructive: 0 85% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 45% 25%;
-    --input: 0 45% 25%;
+    --border: 0 45% 18%;
+    --input: 0 45% 18%;
     --ring: 140 80% 45%;
     --chart-1: 0 80% 60%;
     --chart-2: 140 85% 50%;
     --chart-3: 48 100% 55%;
     --chart-4: 0 75% 55%;
     --chart-5: 120 80% 45%;
-    --sidebar: 0 55% 12%;
+    --sidebar: 0 55% 10%;
     --sidebar-foreground: 0 10% 95%;
     --sidebar-primary: 140 80% 45%;
-    --sidebar-primary-foreground: 0 60% 10%;
-    --sidebar-accent: 0 50% 16%;
+    --sidebar-primary-foreground: 0 60% 8%;
+    --sidebar-accent: 0 50% 14%;
     --sidebar-accent-foreground: 0 10% 98%;
-    --sidebar-border: 0 45% 25%;
+    --sidebar-border: 0 45% 18%;
     --sidebar-ring: 140 80% 45%;
-    --nav-bg: 0 65% 10%;
-    --nav-border: 140 70% 35%;
+    --nav-bg: 0 65% 9%;
+    --nav-border: 140 70% 28%;
     --nav-text: 0 15% 98%;
     --nav-text-secondary: 140 75% 65%;
-    --nav-hover: 0 55% 18%;
-    --nav-dropdown-bg: 0 60% 14%;
+    --nav-hover: 0 55% 14%;
+    --nav-dropdown-bg: 0 60% 11%;
   }
 
   /* Keep all the other existing themes (obsidian, aurora-borealis, volcanic, cyberpunk) */
