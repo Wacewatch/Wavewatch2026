@@ -1,4 +1,4 @@
-const API_KEY = process.env.TMDB_API_KEY || ""
+const API_KEY = process.env.NEXT_PUBLIC_TMDB_API_KEY || process.env.TMDB_API_KEY || ""
 
 const BASE_URL = "https://api.themoviedb.org/3"
 
@@ -52,6 +52,7 @@ const createMockResponse = (type: "movie" | "tv" | "person" = "movie") => {
       vote_count: 1200,
       popularity: 95.5,
       adult: false,
+      media_type: "movie",
     },
     {
       id: 2,
@@ -65,6 +66,7 @@ const createMockResponse = (type: "movie" | "tv" | "person" = "movie") => {
       vote_count: 890,
       popularity: 87.2,
       adult: false,
+      media_type: "movie",
     },
   ]
 
@@ -83,6 +85,21 @@ const createMockResponse = (type: "movie" | "tv" | "person" = "movie") => {
       origin_country: ["US"],
       original_language: "en",
       adult: false,
+      media_type: "tv",
+    },
+  ]
+
+  const mockPersons = [
+    {
+      id: 1,
+      name: "Acteur Célèbre",
+      profile_path: "/placeholder.svg?height=600&width=400",
+      known_for_department: "Acting",
+      popularity: 85.3,
+      gender: 2,
+      adult: false,
+      media_type: "person",
+      known_for: mockMovies.slice(0, 1),
     },
   ]
 
@@ -91,6 +108,15 @@ const createMockResponse = (type: "movie" | "tv" | "person" = "movie") => {
       results: mockTVShows,
       total_pages: 1,
       total_results: mockTVShows.length,
+      page: 1,
+    }
+  }
+
+  if (type === "person") {
+    return {
+      results: mockPersons,
+      total_pages: 1,
+      total_results: mockPersons.length,
       page: 1,
     }
   }
@@ -105,7 +131,9 @@ const createMockResponse = (type: "movie" | "tv" | "person" = "movie") => {
 
 // Helper function to handle API calls with better fallback
 const fetchWithFallback = async (url: string, mockData?: any) => {
+  // Only use mock data if there's truly no API key
   if (!API_KEY) {
+    console.warn("[v0] No TMDB API key found, using mock data")
     return {
       ok: true,
       json: () => Promise.resolve(mockData || createMockResponse()),
@@ -113,14 +141,19 @@ const fetchWithFallback = async (url: string, mockData?: any) => {
   }
 
   try {
+    console.log("[v0] Fetching from TMDB API:", url)
     const response = await fetch(url)
+
     if (!response.ok) {
-      console.error("[v0] TMDB API error:", response.status, response.statusText)
-      throw new Error(`HTTP error! status: ${response.status}`)
+      const errorBody = await response.text()
+      console.error("[v0] TMDB API error:", response.status, response.statusText, errorBody)
+      throw new Error(`TMDB API error: ${response.status}`)
     }
+
     return response
   } catch (error) {
-    console.warn("[v0] TMDB API error, falling back to mock data:", error)
+    console.error("[v0] TMDB API request failed:", error)
+    // Only fall back to mock data if there's a network error
     return {
       ok: true,
       json: () => Promise.resolve(mockData || createMockResponse()),
@@ -313,6 +346,7 @@ export async function getTrendingAnime() {
           vote_average: 9.0,
           vote_count: 4500,
           adult: false,
+          media_type: "tv",
         },
         {
           id: 2,
@@ -329,6 +363,7 @@ export async function getTrendingAnime() {
           vote_average: 8.7,
           vote_count: 3200,
           adult: false,
+          media_type: "tv",
         },
         {
           id: 3,
@@ -345,6 +380,7 @@ export async function getTrendingAnime() {
           vote_average: 8.9,
           vote_count: 2800,
           adult: false,
+          media_type: "tv",
         },
         {
           id: 4,
@@ -361,6 +397,7 @@ export async function getTrendingAnime() {
           vote_average: 8.5,
           vote_count: 2100,
           adult: false,
+          media_type: "tv",
         },
       ],
       total_pages: 1,

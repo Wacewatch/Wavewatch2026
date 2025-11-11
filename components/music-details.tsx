@@ -206,6 +206,22 @@ export function MusicDetails({ music }: MusicDetailsProps) {
             </div>
 
             {/* Action Buttons */}
+            {/* Primary button: View titles (if available) */}
+            {music.description && (
+              <div className="pb-3 border-b border-gray-700">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-green-600 text-green-400 hover:bg-green-900/20 w-full sm:w-auto bg-transparent"
+                  onClick={() => setShowTrackListingModal(true)}
+                >
+                  <ListMusic className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                  Voir les titres
+                </Button>
+              </div>
+            )}
+
+            {/* Action Buttons - Other buttons */}
             <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4">
               <Button
                 size="lg"
@@ -225,17 +241,6 @@ export function MusicDetails({ music }: MusicDetailsProps) {
                 <Download className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                 Télécharger
               </Button>
-              {music.description && (
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-green-600 text-green-400 hover:bg-green-900/20 w-full sm:w-auto bg-transparent"
-                  onClick={() => setShowTrackListingModal(true)}
-                >
-                  <ListMusic className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                  Voir les titres
-                </Button>
-              )}
               <AddToListSelector
                 content={{ id: music.id, title: music.title, poster_path: music.thumbnail_url }}
                 contentType="movie"

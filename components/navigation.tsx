@@ -62,6 +62,11 @@ export function Navigation() {
     { id: "jade", name: "Jade", gradient: "from-emerald-800 to-teal-700" },
   ]
 
+  const limitedThemes = [
+    { id: "halloween", name: "Halloween", gradient: "from-orange-600 via-black to-purple-900" },
+    { id: "christmas", name: "Noël", gradient: "from-red-700 via-green-700 to-red-700" },
+  ]
+
   const premiumThemes = [
     { id: "premium", name: "Premium", gradient: "from-yellow-600 via-purple-600 to-yellow-600", requiresVip: true },
     { id: "royal", name: "Royal", gradient: "from-purple-700 to-indigo-800", requiresVip: true },
@@ -279,6 +284,27 @@ export function Navigation() {
                 <DropdownMenuLabel style={{ color: "hsl(var(--nav-text))" }}>Thèmes Standard</DropdownMenuLabel>
                 <div className="grid grid-cols-2 gap-2 p-2">
                   {freeThemes.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => handleThemeChange(t.id)}
+                      className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors ${
+                        theme === t.id ? "ring-2 ring-blue-500" : ""
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${t.gradient}`} />
+                      <span className="text-sm" style={{ color: "hsl(var(--nav-text))" }}>
+                        {t.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Limited Themes section */}
+                <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
+
+                <DropdownMenuLabel style={{ color: "hsl(var(--nav-text))" }}>Thèmes Limités</DropdownMenuLabel>
+                <div className="grid grid-cols-2 gap-2 p-2">
+                  {limitedThemes.map((t) => (
                     <button
                       key={t.id}
                       onClick={() => handleThemeChange(t.id)}

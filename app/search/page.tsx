@@ -99,57 +99,100 @@ export default function SearchPage() {
   const [activeTab, setActiveTab] = useState("all")
 
   useEffect(() => {
+    console.log("[v0] Search page mounted, initialQuery:", initialQuery)
     if (initialQuery) {
       performSearch(initialQuery)
     }
   }, [initialQuery])
 
   const performSearch = async (query: string) => {
-    if (!query.trim()) return
+    if (!query.trim()) {
+      console.log("[v0] Empty query, skipping search")
+      return
+    }
 
+    console.log("[v0] Performing search for:", query)
     setLoading(true)
     try {
       // Search TMDB
+      console.log("[v0] Searching TMDB...")
       const tmdbData = await searchMulti(query)
+      console.log("[v0] TMDB results:", tmdbData)
       setResults(tmdbData.results || [])
 
       // Search Music Content
-      const { data: musicData } = await supabase
+      console.log("[v0] Searching music content...")
+      const { data: musicData, error: musicError } = await supabase
         .from("music_content")
         .select("*")
         .eq("is_active", true)
         .or(`title.ilike.%${query}%,artist.ilike.%${query}%`)
         .limit(20)
+
+      if (musicError) {
+        console.log("[v0] Music search error:", musicError)
+      } else {
+        console.log("[v0] Music results:", musicData?.length || 0)
+      }
       setMusicResults(musicData || [])
 
       // Search Software
-      const { data: softwareData } = await supabase
+      console.log("[v0] Searching software...")
+      const { data: softwareData, error: softwareError } = await supabase
         .from("software")
         .select("*")
         .eq("is_active", true)
         .or(`name.ilike.%${query}%,developer.ilike.%${query}%,category.ilike.%${query}%`)
         .limit(20)
+
+      if (softwareError) {
+        console.log("[v0] Software search error:", softwareError)
+      } else {
+        console.log("[v0] Software results:", softwareData?.length || 0)
+      }
       setSoftwareResults(softwareData || [])
 
       // Search Games
-      const { data: gamesData } = await supabase
+      console.log("[v0] Searching games...")
+      const { data: gamesData, error: gamesError } = await supabase
         .from("games")
         .select("*")
         .eq("is_active", true)
         .or(`title.ilike.%${query}%,developer.ilike.%${query}%,genre.ilike.%${query}%`)
         .limit(20)
+
+      if (gamesError) {
+        console.log("[v0] Games search error:", gamesError)
+      } else {
+        console.log("[v0] Games results:", gamesData?.length || 0)
+      }
       setGameResults(gamesData || [])
 
       // Search Ebooks
-      const { data: ebooksData } = await supabase
+      console.log("[v0] Searching ebooks...")
+      const { data: ebooksData, error: ebooksError } = await supabase
         .from("ebooks")
         .select("*")
         .eq("is_active", true)
         .or(`title.ilike.%${query}%,author.ilike.%${query}%,category.ilike.%${query}%`)
         .limit(20)
+
+      if (ebooksError) {
+        console.log("[v0] Ebooks search error:", ebooksError)
+      } else {
+        console.log("[v0] Ebooks results:", ebooksData?.length || 0)
+      }
       setEbookResults(ebooksData || [])
+
+      console.log("[v0] Search complete - Total results:", {
+        tmdb: tmdbData.results?.length || 0,
+        music: musicData?.length || 0,
+        software: softwareData?.length || 0,
+        games: gamesData?.length || 0,
+        ebooks: ebooksData?.length || 0,
+      })
     } catch (error) {
-      console.error("Error searching:", error)
+      console.error("[v0] Error searching:", error)
       setResults([])
       setMusicResults([])
       setSoftwareResults([])

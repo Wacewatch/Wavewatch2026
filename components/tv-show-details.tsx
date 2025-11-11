@@ -508,8 +508,41 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
 
               {/* Watch Providers for mobile */}
               {show["watch/providers"] && (
-                <div className="md:hidden">
+                <div className="md:hidden space-y-4">
                   <WatchProviders providers={show["watch/providers"]} />
+                  <a
+                    href={`https://www.themoviedb.org/tv/${show.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-12 h-12 rounded-lg overflow-hidden bg-white shadow-md flex-shrink-0 inline-block hover:scale-105 transition-transform"
+                    title="Voir sur TMDB"
+                  >
+                    <img
+                      src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg"
+                      alt="TMDB"
+                      className="w-full h-full object-contain p-1.5"
+                    />
+                  </a>
+                </div>
+              )}
+
+              {/* Watch Providers for desktop */}
+              {show["watch/providers"] && (
+                <div className="hidden md:block space-y-4">
+                  <WatchProviders providers={show["watch/providers"]} />
+                  <a
+                    href={`https://www.themoviedb.org/tv/${show.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-12 h-12 rounded-lg overflow-hidden bg-white shadow-md flex-shrink-0 inline-block hover:scale-105 transition-transform"
+                    title="Voir sur TMDB"
+                  >
+                    <img
+                      src="https://www.themoviedb.org/assets/2/v4/logos/v2/blue_square_2-d537fb228cf3ded904ef09b136fe3fec72548ebc1fea3fbbd1ad9e36364db38b.svg"
+                      alt="TMDB"
+                      className="w-full h-full object-contain p-1.5"
+                    />
+                  </a>
                 </div>
               )}
 
@@ -553,13 +586,6 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                   Bande-annonce
                 </Button>
               </div>
-
-              {/* Watch Providers for desktop */}
-              {show["watch/providers"] && (
-                <div className="hidden md:block">
-                  <WatchProviders providers={show["watch/providers"]} />
-                </div>
-              )}
 
               {/* Secondary Action Buttons */}
               <div className="flex flex-col sm:flex-row flex-wrap gap-2 md:gap-4">
