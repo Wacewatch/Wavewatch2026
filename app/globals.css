@@ -508,8 +508,8 @@
     --nav-dropdown-bg: 170 50% 93%;
   }
 
-  /* Dark Aurora (existing) */
-  .aurora {
+  /* Dark Aurora - renamed from .aurora */
+  .dark-aurora {
     --background: 170 35% 8%;
     --foreground: 160 15% 95%;
     --card: 170 30% 12%;
@@ -592,8 +592,8 @@
     --nav-dropdown-bg: 280 50% 93%;
   }
 
-  /* Dark Premium (existing) */
-  .premium {
+  /* Dark Premium - renamed from .premium */
+  .dark-premium {
     --background: 280 50% 4%;
     --foreground: 50 40% 85%;
     --card: 280 45% 8%;
@@ -676,8 +676,8 @@
     --nav-dropdown-bg: 260 50% 93%;
   }
 
-  /* Dark Royal (existing) */
-  .royal {
+  /* Dark Royal - renamed from .royal */
+  .dark-royal {
     --background: 260 45% 6%;
     --foreground: 260 15% 85%;
     --card: 260 40% 10%;
@@ -760,8 +760,8 @@
     --nav-dropdown-bg: 200 50% 93%;
   }
 
-  /* Dark Neon (existing) */
-  .neon {
+  /* Dark Neon - renamed from .neon */
+  .dark-neon {
     --background: 200 100% 2%;
     --foreground: 180 60% 80%;
     --card: 200 90% 5%;
@@ -844,8 +844,8 @@
     --nav-dropdown-bg: 30 50% 93%;
   }
 
-  /* Dark Desert (existing) */
-  .desert {
+  /* Dark Desert - renamed from .desert */
+  .dark-desert {
     --background: 30 25% 10%;
     --foreground: 40 15% 95%;
     --card: 30 20% 15%;
@@ -928,8 +928,8 @@
     --nav-dropdown-bg: 270 50% 93%;
   }
 
-  /* Dark Lavender (existing) */
-  .lavender {
+  /* Dark Lavender - renamed from .lavender */
+  .dark-lavender {
     --background: 270 30% 10%;
     --foreground: 270 15% 95%;
     --card: 270 25% 15%;
@@ -1012,8 +1012,8 @@
     --nav-dropdown-bg: 350 50% 93%;
   }
 
-  /* Dark Crimson (existing) */
-  .crimson {
+  /* Dark Crimson - renamed from .crimson */
+  .dark-crimson {
     --background: 350 35% 10%;
     --foreground: 350 15% 95%;
     --card: 350 30% 15%;
@@ -1096,8 +1096,8 @@
     --nav-dropdown-bg: 220 50% 93%;
   }
 
-  /* Dark Sapphire (existing) */
-  .sapphire {
+  /* Dark Sapphire - renamed from .sapphire */
+  .dark-sapphire {
     --background: 220 40% 10%;
     --foreground: 220 15% 95%;
     --card: 220 35% 15%;
@@ -1180,8 +1180,8 @@
     --nav-dropdown-bg: 160 50% 93%;
   }
 
-  /* Dark Jade (existing) */
-  .jade {
+  /* Dark Jade - renamed from .jade */
+  .dark-jade {
     --background: 160 35% 10%;
     --foreground: 160 15% 95%;
     --card: 160 30% 15%;
@@ -1264,8 +1264,8 @@
     --nav-dropdown-bg: 160 50% 93%;
   }
 
-  /* Dark Emerald (existing) */
-  .emerald {
+  /* Dark Emerald - renamed from .emerald */
+  .dark-emerald {
     --background: 160 40% 6%;
     --foreground: 160 15% 98%;
     --card: 160 35% 10%;
@@ -1349,7 +1349,7 @@
   }
 
   /* Dark Cosmic (existing) */
-  .cosmic {
+  .dark-cosmic {
     --background: 250 50% 5%;
     --foreground: 250 15% 98%;
     --card: 250 45% 9%;
