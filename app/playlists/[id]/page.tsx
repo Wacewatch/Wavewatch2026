@@ -16,6 +16,7 @@ import { useParams, useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { IframeModal } from "@/components/iframe-modal"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function PlaylistContentPage() {
   const { user } = useAuth()
@@ -36,6 +37,7 @@ export default function PlaylistContentPage() {
   const [currentRadio, setCurrentRadio] = useState<any | null>(null)
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [creatorProfile, setCreatorProfile] = useState<any>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -74,12 +76,13 @@ export default function PlaylistContentPage() {
       if (playlistData.user_id) {
         const { data: userProfile } = await supabase
           .from("user_profiles")
-          .select("username")
+          .select("username, avatar_url")
           .eq("id", playlistData.user_id)
           .single()
 
-        if (userProfile?.username) {
-          username = userProfile.username
+        if (userProfile) {
+          username = userProfile.username || "Utilisateur"
+          setCreatorProfile(userProfile)
         }
       }
 
@@ -156,7 +159,6 @@ export default function PlaylistContentPage() {
   const handlePlayItem = (item: any) => {
     console.log("[v0] Playing playlist item:", item)
 
-    // Handle TV channels - open modal with stream
     if (item.media_type === "tv-channel") {
       const streamUrl = item.stream_url || item.streamUrl || item.url || item.poster_path
       console.log("[v0] TV Channel stream URL:", streamUrl)
@@ -176,7 +178,6 @@ export default function PlaylistContentPage() {
       return
     }
 
-    // Handle radio stations - play audio
     if (item.media_type === "radio") {
       const streamUrl = item.stream_url || item.streamUrl || item.url || item.poster_path
       console.log("[v0] Radio stream URL:", streamUrl)
@@ -191,7 +192,6 @@ export default function PlaylistContentPage() {
         return
       }
 
-      // Stop current radio if playing the same one
       if (audio) {
         audio.pause()
       }
@@ -202,7 +202,6 @@ export default function PlaylistContentPage() {
         return
       }
 
-      // Create new audio element
       const newAudio = new Audio(streamUrl)
       newAudio.crossOrigin = "anonymous"
 
@@ -236,7 +235,6 @@ export default function PlaylistContentPage() {
       return
     }
 
-    // Handle retrogaming - open modal with game
     if (item.media_type === "game") {
       const gameUrl = item.url || item.game_url || item.gameUrl || item.poster_path
       console.log("[v0] Game URL:", gameUrl)
@@ -266,13 +264,11 @@ export default function PlaylistContentPage() {
       return
     }
 
-    // Handle ebooks - navigate to ebook page
     if (item.media_type === "ebook") {
       router.push(`/ebooks/${item.tmdb_id || item.content_id}`)
       return
     }
 
-    // Handle episodes - navigate to episode page with episode_id
     if (item.media_type === "episode") {
       const episodeId = item.episode_id || item.tmdb_id
       const seriesId = item.series_id || item.content_id
@@ -280,6 +276,13 @@ export default function PlaylistContentPage() {
       return
     }
   }
+
+  const getExistingMediaTypes = () => {
+    const types = new Set(playlistItems.map((item) => item.media_type || item.content_type))
+    return Array.from(types)
+  }
+
+  const existingTypes = getExistingMediaTypes()
 
   const filteredPlaylistItems = playlistItems.filter((item) => {
     if (contentFilter === "all") return true
@@ -318,7 +321,6 @@ export default function PlaylistContentPage() {
       }}
     >
       <div className="container mx-auto px-4 py-8 space-y-8">
-        {/* Header */}
         <div className="flex items-center gap-4">
           <Button
             asChild
@@ -370,7 +372,6 @@ export default function PlaylistContentPage() {
           </Card>
         )}
 
-        {/* Playlist Info */}
         <Card
           className="border-gray-700"
           style={{ backgroundColor: `${playlist.theme_color}20`, borderColor: playlist.theme_color }}
@@ -435,7 +436,15 @@ export default function PlaylistContentPage() {
                     </span>
                   </div>
                 </div>
-                <p className="text-gray-300 text-sm mt-2">Créée par {playlist.username}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={creatorProfile?.avatar_url || ""} alt={playlist.username} />
+                    <AvatarFallback className="bg-gray-700 text-white">
+                      {playlist.username.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <p className="text-gray-300 text-sm">Créée par {playlist.username}</p>
+                </div>
               </div>
               {playlist.is_public && (
                 <div className="flex-shrink-0">
@@ -485,7 +494,6 @@ export default function PlaylistContentPage() {
           </CardHeader>
         </Card>
 
-        {/* Playlist Content */}
         <Card
           className="border-gray-700"
           style={{ backgroundColor: `${playlist.theme_color}15`, borderColor: playlist.theme_color }}
@@ -501,24 +509,36 @@ export default function PlaylistContentPage() {
                   <TabsTrigger value="all" className="data-[state=active]:bg-gray-700 text-gray-300">
                     Tout
                   </TabsTrigger>
-                  <TabsTrigger value="movie" className="data-[state=active]:bg-gray-700 text-gray-300">
-                    Films
-                  </TabsTrigger>
-                  <TabsTrigger value="tv" className="data-[state=active]:bg-gray-700 text-gray-300">
-                    Séries
-                  </TabsTrigger>
-                  <TabsTrigger value="ebook" className="data-[state=active]:bg-gray-700 text-gray-300">
-                    Ebooks
-                  </TabsTrigger>
-                  <TabsTrigger value="episode" className="data-[state=active]:bg-gray-700 text-gray-300">
-                    Épisodes
-                  </TabsTrigger>
-                  <TabsTrigger value="music" className="data-[state=active]:bg-gray-700 text-gray-300">
-                    Musique
-                  </TabsTrigger>
-                  <TabsTrigger value="software" className="data-[state=active]:bg-gray-700 text-gray-300">
-                    Logiciels
-                  </TabsTrigger>
+                  {existingTypes.includes("movie") && (
+                    <TabsTrigger value="movie" className="data-[state=active]:bg-gray-700 text-gray-300">
+                      Films
+                    </TabsTrigger>
+                  )}
+                  {existingTypes.includes("tv") && (
+                    <TabsTrigger value="tv" className="data-[state=active]:bg-gray-700 text-gray-300">
+                      Séries
+                    </TabsTrigger>
+                  )}
+                  {existingTypes.includes("ebook") && (
+                    <TabsTrigger value="ebook" className="data-[state=active]:bg-gray-700 text-gray-300">
+                      Ebooks
+                    </TabsTrigger>
+                  )}
+                  {existingTypes.includes("episode") && (
+                    <TabsTrigger value="episode" className="data-[state=active]:bg-gray-700 text-gray-300">
+                      Épisodes
+                    </TabsTrigger>
+                  )}
+                  {existingTypes.includes("music") && (
+                    <TabsTrigger value="music" className="data-[state=active]:bg-gray-700 text-gray-300">
+                      Musique
+                    </TabsTrigger>
+                  )}
+                  {existingTypes.includes("software") && (
+                    <TabsTrigger value="software" className="data-[state=active]:bg-gray-700 text-gray-300">
+                      Logiciels
+                    </TabsTrigger>
+                  )}
                 </TabsList>
               </Tabs>
             </div>
@@ -605,7 +625,6 @@ export default function PlaylistContentPage() {
                       })
                     : null
 
-                  // Déterminer le label correct du type de média
                   const getMediaTypeLabel = (type: string) => {
                     switch (type) {
                       case "movie":

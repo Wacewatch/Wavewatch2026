@@ -409,6 +409,26 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
     }
   }
 
+  const getShowStatus = () => {
+    if (!show.status) {
+      return { status: "unknown", label: "Statut inconnu", color: "bg-gray-600" }
+    }
+
+    const status = show.status.toLowerCase()
+
+    if (status.includes("returning") || status.includes("airing")) {
+      return { status: "ongoing", label: "En cours", color: "bg-green-600" }
+    } else if (status.includes("ended") || status.includes("canceled")) {
+      return { status: "ended", label: "Terminée", color: "bg-red-600" }
+    } else if (status.includes("planned") || status.includes("pilot")) {
+      return { status: "planned", label: "À venir", color: "bg-blue-600" }
+    } else {
+      return { status: "unknown", label: show.status, color: "bg-gray-600" }
+    }
+  }
+
+  const showStatus = getShowStatus()
+
   return (
     <div className="min-h-screen bg-black no-horizontal-scroll">
       {/* Hero Section */}
@@ -430,6 +450,11 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
           <div className="lg:col-span-1">
             <div className="relative aspect-[2/3] w-full max-w-[200px] mx-auto lg:max-w-none rounded-lg overflow-hidden">
               <Image src={posterUrl || "/placeholder.svg"} alt={show.name} fill className="object-cover" />
+            </div>
+            <div className="mt-4 flex justify-center">
+              <Badge className={`${showStatus.color} text-white px-4 py-1.5 text-sm font-medium`}>
+                {showStatus.label}
+              </Badge>
             </div>
           </div>
 

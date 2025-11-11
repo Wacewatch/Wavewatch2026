@@ -301,6 +301,19 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
     return `https://www.youtube.com/embed?listType=search&list=${trailerQuery}&autoplay=1`
   }
 
+  const getReleaseStatus = () => {
+    const releaseDate = new Date(movie.release_date)
+    const today = new Date()
+
+    if (releaseDate > today) {
+      return { status: "coming-soon", label: "À venir", color: "bg-blue-600" }
+    } else {
+      return { status: "released", label: "Disponible", color: "bg-green-600" }
+    }
+  }
+
+  const releaseStatus = getReleaseStatus()
+
   return (
     <div className="min-h-screen bg-black no-horizontal-scroll">
       {/* Hero Section */}
@@ -322,6 +335,11 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
           <div className="lg:col-span-1">
             <div className="relative aspect-[2/3] w-full max-w-[200px] mx-auto lg:max-w-none rounded-lg overflow-hidden">
               <Image src={posterUrl || "/placeholder.svg"} alt={movie.title} fill className="object-cover" />
+            </div>
+            <div className="mt-4 flex justify-center">
+              <Badge className={`${releaseStatus.color} text-white px-4 py-1.5 text-sm font-medium`}>
+                {releaseStatus.label}
+              </Badge>
             </div>
           </div>
 

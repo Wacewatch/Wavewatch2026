@@ -125,6 +125,13 @@ export function Navigation() {
     })
   }
 
+  const handleSearchIconClick = () => {
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`)
+      setIsMenuOpen(false)
+    }
+  }
+
   return (
     <nav
       className="sticky top-0 z-50 border-b"
@@ -270,8 +277,9 @@ export function Navigation() {
           <form onSubmit={handleSearch} className="hidden md:flex items-center flex-1 max-w-md mx-8">
             <div className="relative w-full">
               <Search
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 cursor-pointer hover:opacity-80 transition-opacity"
                 style={{ color: "hsl(var(--nav-text-secondary))" }}
+                onClick={handleSearchIconClick}
               />
               <Input
                 type="text"
@@ -493,8 +501,9 @@ export function Navigation() {
             <form onSubmit={handleSearch} className="mb-6">
               <div className="relative">
                 <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 cursor-pointer hover:opacity-80 transition-opacity"
                   style={{ color: "hsl(var(--nav-text-secondary))" }}
+                  onClick={handleSearchIconClick}
                 />
                 <Input
                   type="text"
