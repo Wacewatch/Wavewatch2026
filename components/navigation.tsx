@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown, Palette } from "lucide-react"
+import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown, Palette, Sun, Moon } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import {
   DropdownMenu,
@@ -30,7 +30,7 @@ export function Navigation() {
   const router = useRouter()
   const isMobile = useMobile()
   const { unreadCount } = useMessaging()
-  const { theme, setTheme } = useTheme()
+  const { theme, mode, setTheme, setMode } = useTheme()
   const { toast } = useToast()
 
   const handleSearch = (e: React.FormEvent) => {
@@ -48,8 +48,7 @@ export function Navigation() {
   }
 
   const freeThemes = [
-    { id: "dark", name: "Sombre", gradient: "from-gray-900 to-gray-800" },
-    { id: "light", name: "Clair", gradient: "from-gray-100 to-gray-200" },
+    { id: "default", name: "Défaut", gradient: "from-blue-900 to-blue-700" },
     { id: "ocean", name: "Océan", gradient: "from-blue-900 to-cyan-700" },
     { id: "sunset", name: "Coucher de soleil", gradient: "from-orange-600 to-pink-600" },
     { id: "forest", name: "Forêt", gradient: "from-green-900 to-emerald-700" },
@@ -298,75 +297,102 @@ export function Navigation() {
 
           {/* User Menu */}
           <div className="flex items-center space-x-4">
-            {user && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="h-12 w-12 rounded-full border-2 transition-colors"
-                    style={{ borderColor: "hsl(var(--nav-border))" }}
-                  >
-                    <Palette className="w-5 h-5" style={{ color: "hsl(var(--nav-text))" }} />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-72 max-h-[500px] overflow-y-auto"
-                  style={{ backgroundColor: "hsl(var(--nav-dropdown-bg))", borderColor: "hsl(var(--nav-border))" }}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-12 w-12 rounded-full border-2 transition-colors"
+                  style={{ borderColor: "hsl(var(--nav-border))" }}
                 >
-                  <DropdownMenuLabel style={{ color: "hsl(var(--nav-text))" }}>Thèmes Standard</DropdownMenuLabel>
-                  <div className="grid grid-cols-2 gap-2 p-2">
-                    {freeThemes.map((t) => (
+                  <Palette className="w-5 h-5" style={{ color: "hsl(var(--nav-text))" }} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-80 max-h-[600px] overflow-y-auto"
+                style={{ backgroundColor: "hsl(var(--nav-dropdown-bg))", borderColor: "hsl(var(--nav-border))" }}
+              >
+                {/* Mode Toggle */}
+                <div className="p-3 border-b" style={{ borderColor: "hsl(var(--nav-border))" }}>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-medium" style={{ color: "hsl(var(--nav-text))" }}>
+                      Mode
+                    </span>
+                    <div className="flex gap-2">
+                      <Button
+                        variant={mode === "light" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setMode("light")}
+                        className="gap-2"
+                      >
+                        <Sun className="w-4 h-4" />
+                        Clair
+                      </Button>
+                      <Button
+                        variant={mode === "dark" ? "default" : "ghost"}
+                        size="sm"
+                        onClick={() => setMode("dark")}
+                        className="gap-2"
+                      >
+                        <Moon className="w-4 h-4" />
+                        Sombre
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <DropdownMenuLabel style={{ color: "hsl(var(--nav-text))" }}>Thèmes Standard</DropdownMenuLabel>
+                <div className="grid grid-cols-2 gap-2 p-2">
+                  {freeThemes.map((t) => (
+                    <button
+                      key={t.id}
+                      onClick={() => handleThemeChange(t.id)}
+                      className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors ${
+                        theme === t.id ? "ring-2 ring-blue-500" : ""
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${t.gradient}`} />
+                      <span className="text-sm" style={{ color: "hsl(var(--nav-text))" }}>
+                        {t.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
+
+                <DropdownMenuLabel style={{ color: "hsl(var(--nav-text))" }}>
+                  Thèmes Premium
+                  {!user?.isVip && !user?.isVipPlus && !user?.isAdmin && (
+                    <Crown className="w-4 h-4 inline ml-2 text-yellow-400" />
+                  )}
+                </DropdownMenuLabel>
+                <div className="grid grid-cols-2 gap-2 p-2">
+                  {premiumThemes.map((t) => {
+                    const isLocked =
+                      (t.requiresAdmin && !user?.isAdmin) ||
+                      (t.requiresVipPlus && !user?.isVipPlus && !user?.isAdmin) ||
+                      (t.requiresVip && !user?.isVip && !user?.isVipPlus && !user?.isAdmin)
+
+                    return (
                       <button
                         key={t.id}
-                        onClick={() => handleThemeChange(t.id)}
-                        className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors ${
+                        onClick={() => handleThemeChange(t.id, t.requiresVip, t.requiresVipPlus, t.requiresAdmin)}
+                        className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors relative ${
                           theme === t.id ? "ring-2 ring-blue-500" : ""
-                        }`}
+                        } ${isLocked ? "opacity-60" : ""}`}
                       >
                         <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${t.gradient}`} />
                         <span className="text-sm" style={{ color: "hsl(var(--nav-text))" }}>
                           {t.name}
                         </span>
+                        {isLocked && <Crown className="w-3 h-3 absolute top-1 right-1 text-yellow-400" />}
                       </button>
-                    ))}
-                  </div>
-
-                  <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
-
-                  <DropdownMenuLabel style={{ color: "hsl(var(--nav-text))" }}>
-                    Thèmes Premium
-                    {!user.isVip && !user.isVipPlus && !user.isAdmin && (
-                      <Crown className="w-4 h-4 inline ml-2 text-yellow-400" />
-                    )}
-                  </DropdownMenuLabel>
-                  <div className="grid grid-cols-2 gap-2 p-2">
-                    {premiumThemes.map((t) => {
-                      const isLocked =
-                        (t.requiresAdmin && !user.isAdmin) ||
-                        (t.requiresVipPlus && !user.isVipPlus && !user.isAdmin) ||
-                        (t.requiresVip && !user.isVip && !user.isVipPlus && !user.isAdmin)
-
-                      return (
-                        <button
-                          key={t.id}
-                          onClick={() => handleThemeChange(t.id, t.requiresVip, t.requiresVipPlus, t.requiresAdmin)}
-                          className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors relative ${
-                            theme === t.id ? "ring-2 ring-blue-500" : ""
-                          } ${isLocked ? "opacity-60" : ""}`}
-                        >
-                          <div className={`w-6 h-6 rounded-full bg-gradient-to-br ${t.gradient}`} />
-                          <span className="text-sm" style={{ color: "hsl(var(--nav-text))" }}>
-                            {t.name}
-                          </span>
-                          {isLocked && <Crown className="w-3 h-3 absolute top-1 right-1 text-yellow-400" />}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                    )
+                  })}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {user ? (
               <DropdownMenu>

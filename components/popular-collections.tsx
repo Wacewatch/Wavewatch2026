@@ -118,7 +118,9 @@ export function PopularCollections() {
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Collections Populaires</h2>
+        <Link href="/collections" className="hover:opacity-80 transition-opacity">
+          <h2 className="text-2xl font-bold cursor-pointer">Collections Populaires</h2>
+        </Link>
         <div className="flex space-x-2">
           <Button
             variant="outline"

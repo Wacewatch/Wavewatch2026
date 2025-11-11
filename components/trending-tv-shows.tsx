@@ -5,6 +5,7 @@ import { TVShowCard } from "@/components/tv-show-card"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useMobile } from "@/hooks/use-mobile"
+import Link from "next/link"
 
 export function TrendingTVShows() {
   const [shows, setShows] = useState<any[]>([])
@@ -79,7 +80,9 @@ export function TrendingTVShows() {
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Séries Tendance</h2>
+        <Link href="/tv-shows" className="hover:opacity-80 transition-opacity">
+          <h2 className="text-2xl font-bold cursor-pointer">Séries Tendance</h2>
+        </Link>
         <div className="flex space-x-2">
           <Button
             variant="outline"

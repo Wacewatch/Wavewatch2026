@@ -5,6 +5,7 @@ import { MovieCard } from "@/components/movie-card"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useMobile } from "@/hooks/use-mobile"
+import Link from "next/link"
 
 export function TrendingMovies() {
   const [movies, setMovies] = useState<any[]>([])
@@ -79,7 +80,9 @@ export function TrendingMovies() {
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Films Tendance</h2>
+        <Link href="/movies" className="hover:opacity-80 transition-opacity">
+          <h2 className="text-2xl font-bold cursor-pointer">Films Tendance</h2>
+        </Link>
         <div className="flex space-x-2">
           <Button
             variant="outline"

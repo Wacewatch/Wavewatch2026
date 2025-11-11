@@ -146,7 +146,9 @@ export function TrendingActors() {
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Acteurs Tendance</h2>
+        <Link href="/actors" className="hover:opacity-80 transition-opacity">
+          <h2 className="text-2xl font-bold cursor-pointer">Acteurs Tendance</h2>
+        </Link>
         <div className="flex space-x-2">
           <Button
             variant="outline"

@@ -76,7 +76,9 @@ export function PublicPlaylistsRow() {
   return (
     <section className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Playlists Publiques</h2>
+        <Link href="/discover/playlists" className="hover:opacity-80 transition-opacity">
+          <h2 className="text-2xl font-bold text-white cursor-pointer">Playlists Publiques</h2>
+        </Link>
         <div className="flex items-center gap-2">
           <div className="flex space-x-2">
             <Button

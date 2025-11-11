@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Tv, ChevronLeft, ChevronRight } from "lucide-react"
 import { IframeModal } from "@/components/iframe-modal"
 import { useTVChannels } from "@/hooks/use-tv-channels"
+import Link from "next/link"
 
 interface TVChannel {
   id: number
@@ -79,10 +80,10 @@ export function TrendingTVChannels() {
     <>
       <section className="space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link href="/tv-channels" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <Tv className="h-8 w-8 text-blue-500" />
-            <h2 className="text-3xl font-bold">Chaînes TV Populaires</h2>
-          </div>
+            <h2 className="text-3xl font-bold cursor-pointer">Chaînes TV Populaires</h2>
+          </Link>
           <div className="flex space-x-2">
             <Button
               variant="outline"
