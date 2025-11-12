@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { IframeModal } from "@/components/iframe-modal"
 import { AddToListSelector } from "@/components/add-to-list-selector"
-import { Star, Calendar, Download, ThumbsUp, ThumbsDown, BookOpen, FileText, User } from "lucide-react"
+import { Star, Calendar, Download, ThumbsUp, ThumbsDown, BookOpen, FileText, User, Headphones } from "lucide-react"
 
 interface EbookDetailsProps {
   ebook: any
@@ -18,6 +18,7 @@ interface EbookDetailsProps {
 export function EbookDetails({ ebook }: EbookDetailsProps) {
   const [showReadModal, setShowReadModal] = useState(false)
   const [showDownloadModal, setShowDownloadModal] = useState(false)
+  const [showAudioModal, setShowAudioModal] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [userRating, setUserRating] = useState<"like" | "dislike" | null>(null)
   const { user } = useAuth()
@@ -80,6 +81,7 @@ export function EbookDetails({ ebook }: EbookDetailsProps) {
 
   const readUrl = `https://embed.wavewatch.xyz/read/ebook?id=${ebook.id}`
   const downloadUrl = ebook.download_url || `https://embed.wavewatch.xyz/download/ebook?id=${ebook.id}`
+  const audiobookUrl = ebook.audiobook_url || `https://embed.wavewatch.xyz/audio/ebook?id=${ebook.id}`
 
   return (
     <div className="min-h-screen bg-black">
@@ -241,6 +243,17 @@ export function EbookDetails({ ebook }: EbookDetailsProps) {
                 <BookOpen className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                 Lire en ligne
               </Button>
+              {ebook.is_audiobook && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-purple-600 text-purple-400 hover:bg-purple-900/20 w-full sm:w-auto bg-transparent"
+                  onClick={() => setShowAudioModal(true)}
+                >
+                  <Headphones className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                  Écouter
+                </Button>
+              )}
               <Button
                 size="lg"
                 variant="outline"
@@ -277,6 +290,13 @@ export function EbookDetails({ ebook }: EbookDetailsProps) {
         onClose={() => setShowReadModal(false)}
         src={readUrl}
         title={`Lecture - ${ebook.title}`}
+      />
+
+      <IframeModal
+        isOpen={showAudioModal}
+        onClose={() => setShowAudioModal(false)}
+        src={audiobookUrl}
+        title={`Écoute - ${ebook.title}`}
       />
 
       <IframeModal

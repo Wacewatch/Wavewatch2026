@@ -179,7 +179,7 @@ export default function AdminPage() {
     duration: 0,
     release_year: new Date().getFullYear(),
     genre: "",
-    type: "Concert",
+    type: "Chanson", // Changed default type to Chanson as per the update
     quality: "HD",
     is_active: true,
   })
@@ -226,6 +226,8 @@ export default function AdminPage() {
     pages: 0,
     file_format: "PDF",
     file_size: "",
+    is_audiobook: false,
+    audiobook_url: "",
     is_active: true,
   })
 
@@ -1203,7 +1205,7 @@ export default function AdminPage() {
             duration: 0,
             release_year: new Date().getFullYear(),
             genre: "",
-            type: "Concert",
+            type: "Chanson", // Default type
             quality: "HD",
             is_active: true,
           })
@@ -1253,6 +1255,8 @@ export default function AdminPage() {
             pages: 0,
             file_format: "PDF",
             file_size: "",
+            is_audiobook: false,
+            audiobook_url: "",
             is_active: true,
           })
           break
@@ -1332,7 +1336,7 @@ export default function AdminPage() {
           duration: item.duration || 0,
           release_year: item.release_year || new Date().getFullYear(),
           genre: item.genre || "",
-          type: item.type || "Concert",
+          type: item.type || "Chanson", // Default type
           quality: item.quality || "HD",
           is_active: item.is_active ?? true,
         })
@@ -1382,6 +1386,8 @@ export default function AdminPage() {
           pages: item.pages || 0,
           file_format: item.file_format || "PDF",
           file_size: item.file_size || "",
+          is_audiobook: item.is_audiobook || false,
+          audiobook_url: item.audiobook_url || "",
           is_active: item.is_active ?? true,
         })
         break
@@ -3719,7 +3725,7 @@ export default function AdminPage() {
                           duration: 0,
                           release_year: new Date().getFullYear(),
                           genre: "",
-                          type: "Concert",
+                          type: "Chanson", // Changed default type
                           quality: "HD",
                           is_active: true,
                         })
@@ -3792,6 +3798,8 @@ export default function AdminPage() {
                             <SelectItem value="Concert">Concert</SelectItem>
                             <SelectItem value="Live Session">Live Session</SelectItem>
                             <SelectItem value="Compilation">Compilation</SelectItem>
+                            <SelectItem value="OST">OST</SelectItem>
+                            <SelectItem value="Discographie">Discographie</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -4523,6 +4531,8 @@ export default function AdminPage() {
                           pages: 0,
                           file_format: "PDF",
                           file_size: "",
+                          is_audiobook: false,
+                          audiobook_url: "",
                           is_active: true,
                         })
                         setActiveModal("ebook")
@@ -4677,6 +4687,30 @@ export default function AdminPage() {
                           </SelectContent>
                         </Select>
                       </div>
+                      <div className="space-y-2 col-span-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="is_audiobook"
+                            checked={ebookForm.is_audiobook}
+                            onCheckedChange={(checked) =>
+                              setEbookForm({ ...ebookForm, is_audiobook: checked as boolean })
+                            }
+                          />
+                          <Label htmlFor="is_audiobook" className="cursor-pointer">
+                            Audio Book
+                          </Label>
+                        </div>
+                      </div>
+                      {ebookForm.is_audiobook && (
+                        <div className="space-y-2 col-span-2">
+                          <Label>Lien de lecture audio</Label>
+                          <Input
+                            value={ebookForm.audiobook_url}
+                            onChange={(e) => setEbookForm({ ...ebookForm, audiobook_url: e.target.value })}
+                            placeholder="https://example.com/audiobook-stream"
+                          />
+                        </div>
+                      )}
                       <div className="space-y-2 col-span-2">
                         <Label>Description</Label>
                         <Textarea
