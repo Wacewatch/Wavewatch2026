@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Plus, List } from "lucide-react"
+import { Plus, List } from 'lucide-react'
 import { useAuth } from "@/components/auth-provider"
 import { usePlaylists } from "@/hooks/use-playlists"
 import { toast } from "@/hooks/use-toast"
@@ -16,11 +16,13 @@ interface AddToListSelectorProps {
     title?: string
     name?: string
     poster_path?: string
+    icon_url?: string
+    thumbnail_url?: string
     vote_average?: number
     release_date?: string
     first_air_date?: string
   }
-  contentType: "movie" | "tv"
+  contentType: "movie" | "tv" | "music" | "software"
   className?: string
 }
 
@@ -33,7 +35,8 @@ export function AddToListSelector({ content, contentType, className = "" }: AddT
 
   const handleAddToPlaylist = async (playlistId: string) => {
     try {
-      await addToPlaylist(playlistId, content.id, contentType, content.title || content.name || "", content.poster_path)
+      await addToPlaylist(playlistId, content.id, contentType, content.title || content.name || "", 
+        content.poster_path || content.icon_url || content.thumbnail_url)
 
       toast({
         title: "Ajouté à la playlist",
@@ -49,15 +52,29 @@ export function AddToListSelector({ content, contentType, className = "" }: AddT
     }
   }
 
+  const getButtonStyles = () => {
+    switch (contentType) {
+      case "music":
+        return "border-green-600 text-green-400 hover:bg-green-900/20"
+      case "software":
+        return "border-blue-600 text-blue-400 hover:bg-blue-900/20"
+      case "tv":
+        return "border-purple-600 text-purple-400 hover:bg-purple-900/20"
+      case "movie":
+      default:
+        return "border-blue-600 text-white hover:bg-blue-800 bg-blue-900/50"
+    }
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button
           variant="outline"
-          size="sm"
-          className={`border-blue-600 text-white hover:bg-blue-800 bg-blue-900/50 ${className}`}
+          size="lg"
+          className={`bg-transparent ${getButtonStyles()} w-full sm:w-auto ${className}`}
         >
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="w-4 h-4 md:w-5 md:h-5 mr-2" />
           Ajouter à une playlist
         </Button>
       </DialogTrigger>

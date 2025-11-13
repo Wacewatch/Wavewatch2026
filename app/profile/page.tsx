@@ -10,28 +10,12 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import {
-  User,
-  ArrowLeft,
-  Camera,
-  Calendar,
-  MapPin,
-  Edit,
-  Crown,
-  Shield,
-  Mail,
-  Save,
-  X,
-  Flag as Flask,
-  MessageSquare,
-  Palette,
-  Lock,
-} from "lucide-react"
+import { User, ArrowLeft, Camera, Calendar, MapPin, Edit, Crown, Shield, Mail, Save, X, Flag as Flask, MessageSquare, Palette, Lock } from 'lucide-react'
 import { supabase } from "@/lib/supabase"
 import { VIPSystem } from "@/lib/vip-system"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { useUserPreferences } from "@/hooks/use-user-preferences"
 import { useMessaging } from "@/hooks/use-messaging"
 import { useTheme } from "@/components/theme-provider"
@@ -977,6 +961,60 @@ export default function ProfilePage() {
                   </button>
 
                   <button
+                    onClick={() => handleThemeChange("desert")}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                      theme === "desert"
+                        ? "border-yellow-500 bg-gray-700"
+                        : "border-gray-600 bg-gray-750 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-yellow-700 via-orange-600 to-amber-700 border border-yellow-500" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Désert</div>
+                        <div className="text-xs text-gray-400">Orange sable chaleureux</div>
+                      </div>
+                    </div>
+                    {theme === "desert" && <div className="w-2 h-2 rounded-full bg-yellow-500" />}
+                  </button>
+
+                  <button
+                    onClick={() => handleThemeChange("lavender")}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                      theme === "lavender"
+                        ? "border-purple-400 bg-gray-700"
+                        : "border-gray-600 bg-gray-750 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-purple-600 via-pink-500 to-purple-700 border border-purple-400" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Lavande</div>
+                        <div className="text-xs text-gray-400">Violet lavande doux</div>
+                      </div>
+                    </div>
+                    {theme === "lavender" && <div className="w-2 h-2 rounded-full bg-purple-400" />}
+                  </button>
+
+                  <button
+                    onClick={() => handleThemeChange("crimson")}
+                    className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                      theme === "crimson"
+                        ? "border-red-500 bg-gray-700"
+                        : "border-gray-600 bg-gray-750 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-gradient-to-br from-red-700 via-rose-600 to-red-800 border border-red-500" />
+                      <div className="text-left">
+                        <div className="font-medium text-white">Cramoisi</div>
+                        <div className="text-xs text-gray-400">Rouge cramoisi profond</div>
+                      </div>
+                    </div>
+                    {theme === "crimson" && <div className="w-2 h-2 rounded-full bg-red-500" />}
+                  </button>
+
+                  <button
                     onClick={() => handleThemeChange("sapphire")}
                     className={`flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
                       theme === "sapphire"
@@ -1348,7 +1386,6 @@ export default function ProfilePage() {
               </CardContent>
             </Card>
 
-            {/* Added the password change card */}
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
@@ -1358,7 +1395,6 @@ export default function ProfilePage() {
                 <CardDescription className="text-gray-400">Modifiez votre mot de passe</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Removed current password field as it's not used in the backend logic */}
                 <div className="space-y-2">
                   <Label htmlFor="new-password" className="text-gray-300">
                     Nouveau mot de passe
