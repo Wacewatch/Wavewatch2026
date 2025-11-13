@@ -409,6 +409,32 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
     }
   }
 
+  const getShowStatus = () => {
+    const today = new Date()
+    const firstAirDate = show.first_air_date ? new Date(show.first_air_date) : null
+    const lastAirDate = show.last_air_date ? new Date(show.last_air_date) : null
+
+    // Pas encore sorti
+    if (firstAirDate && firstAirDate > today) {
+      return { label: "Pas encore sorti", color: "bg-gray-600" }
+    }
+
+    // Série terminée
+    if (show.status === "Ended" || show.status === "Canceled") {
+      return { label: "Terminée", color: "bg-red-600" }
+    }
+
+    // En cours de diffusion
+    if (show.status === "Returning Series" || show.in_production) {
+      return { label: "En cours", color: "bg-green-600" }
+    }
+
+    // Par défaut, si a déjà commencé et pas d'infos
+    return { label: "En cours", color: "bg-green-600" }
+  }
+
+  const showStatus = getShowStatus()
+
   return (
     <div className="min-h-screen bg-black no-horizontal-scroll">
       {/* Hero Section */}
@@ -458,6 +484,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
                 <div>
                   <span>{show.number_of_episodes} épisodes</span>
                 </div>
+                <Badge className={`${showStatus.color} text-white`}>{showStatus.label}</Badge>
                 <ClassificationBadge certification={certification} />
                 {/* Votes compacts */}
                 <div className="flex items-center gap-2 bg-gray-800/50 rounded-lg px-3 py-1">

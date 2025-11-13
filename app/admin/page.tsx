@@ -273,6 +273,8 @@ export default function AdminPage() {
   })
   const [newPassword, setNewPassword] = useState("")
 
+  const [editingLog, setEditingLog] = useState<any>(null)
+
   const handleUpdateRequestStatus = async (id: string, status: string) => {
     try {
       const { error } = await supabase.from("requests").update({ status }).eq("id", id)
@@ -2092,6 +2094,68 @@ export default function AdminPage() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  // Add edit log handler
+  const handleEditLog = (log: any) => {
+    setEditingLog({
+      id: log.id,
+      version: log.version,
+      release_date: log.release_date,
+      title: log.title,
+      description: log.description,
+    })
+    setActiveModal("edit-log")
+  }
+
+  // Add update log handler
+  const handleUpdateLog = async () => {
+    if (!editingLog) return
+
+    try {
+      const { error } = await supabase
+        .from("changelogs")
+        .update({
+          version: editingLog.version,
+          release_date: editingLog.release_date,
+          title: editingLog.title,
+          description: editingLog.description,
+        })
+        .eq("id", editingLog.id)
+
+      if (error) throw error
+
+      await fetchAllData() // Reload changelogs
+      setActiveModal(null)
+      setEditingLog(null)
+      toast({
+        title: "Log modifié",
+        description: "Le log a été mis à jour avec succès",
+      })
+    } catch (error) {
+      console.error("Error updating log:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier le log",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Add loadChangelogs function to be called by fetchAllData
+  const loadChangelogs = async () => {
+    try {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      )
+      const { data, error } = await supabase.from("changelogs").select("*").order("release_date", { ascending: false })
+      if (error) throw error
+      setChangelogs(data || [])
+    } catch (error) {
+      console.error("Error loading changelogs:", error)
+      setChangelogs([])
     }
   }
 
@@ -4929,14 +4993,24 @@ export default function AdminPage() {
                           {new Date(changelog.release_date).toLocaleDateString("fr-FR")}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteChangelog(changelog.id)}
-                            className="text-red-400 hover:text-red-300 hover:bg-red-950"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditLog(changelog)}
+                              className="text-blue-400 hover:text-blue-300 hover:bg-blue-950"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteChangelog(changelog.id)}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-950"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -4952,6 +5026,74 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <Dialog open={activeModal === "edit-log"} onOpenChange={(open) => !open && setActiveModal(null)}>
+            <DialogContent className="bg-blue-900 border-blue-700 max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="text-white">Modifier le Changelog</DialogTitle>
+                <DialogDescription className="text-blue-300">
+                  Modifiez les informations de cette version
+                </DialogDescription>
+              </DialogHeader>
+              {editingLog && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-white mb-2 block">Version</label>
+                      <Input
+                        placeholder="1.0.0"
+                        value={editingLog.version}
+                        onChange={(e) => setEditingLog({ ...editingLog, version: e.target.value })}
+                        className="bg-blue-800 border-blue-600 text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-white mb-2 block">Date de sortie</label>
+                      <Input
+                        type="date"
+                        value={editingLog.release_date}
+                        onChange={(e) => setEditingLog({ ...editingLog, release_date: e.target.value })}
+                        className="bg-blue-800 border-blue-600 text-white"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-white mb-2 block">Titre</label>
+                    <Input
+                      placeholder="Nouvelle fonctionnalité"
+                      value={editingLog.title}
+                      onChange={(e) => setEditingLog({ ...editingLog, title: e.target.value })}
+                      className="bg-blue-800 border-blue-600 text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-white mb-2 block">Description</label>
+                    <textarea
+                      placeholder="Décrivez les changements de cette version..."
+                      value={editingLog.description}
+                      onChange={(e) => setEditingLog({ ...editingLog, description: e.target.value })}
+                      className="w-full min-h-[200px] bg-blue-800 border-blue-600 text-white rounded-md p-3"
+                    />
+                  </div>
+                </div>
+              )}
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setActiveModal(null)
+                    setEditingLog(null)
+                  }}
+                  className="border-blue-600"
+                >
+                  Annuler
+                </Button>
+                <Button onClick={handleUpdateLog} className="bg-blue-600 hover:bg-blue-700">
+                  Enregistrer
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Add new Settings tab content at the end before closing </Tabs> */}
           <TabsContent value="settings" className="space-y-6">
