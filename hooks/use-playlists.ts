@@ -8,7 +8,17 @@ import { useToast } from "@/hooks/use-toast"
 interface PlaylistItem {
   id: string
   tmdb_id: number
-  media_type: "movie" | "tv" | "tv-channel" | "radio" | "game" | "ebook" | "episode" | "music" | "software"
+  media_type:
+    | "movie"
+    | "tv"
+    | "tv-channel"
+    | "radio"
+    | "game"
+    | "ebook"
+    | "episode"
+    | "music"
+    | "software"
+    | "retrogaming"
   title: string
   poster_path?: string
   position: number
@@ -216,7 +226,17 @@ export function usePlaylists() {
   const addToPlaylist = async (
     playlistId: string,
     tmdbId: number,
-    mediaType: "movie" | "tv" | "tv-channel" | "radio" | "game" | "ebook" | "episode" | "music" | "software",
+    mediaType:
+      | "movie"
+      | "tv"
+      | "tv-channel"
+      | "radio"
+      | "game"
+      | "ebook"
+      | "episode"
+      | "music"
+      | "software"
+      | "retrogaming",
     title: string,
     posterPath?: string,
     episodeId?: number,

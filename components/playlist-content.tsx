@@ -25,7 +25,17 @@ interface PlaylistContentProps {
     items: Array<{
       id: string
       tmdb_id: number
-      media_type: "movie" | "tv"
+      media_type:
+        | "movie"
+        | "tv"
+        | "tv-channel"
+        | "radio"
+        | "game"
+        | "ebook"
+        | "episode"
+        | "music"
+        | "software"
+        | "retrogaming"
       title: string
       poster_path?: string
       position: number
@@ -206,6 +216,30 @@ export function PlaylistContent({ playlist }: PlaylistContentProps) {
 
   const isOwner = user?.id === playlist.user_id
 
+  const getMediaTypeInfo = (item: any) => {
+    switch (item.media_type) {
+      case "movie":
+        return { label: "Film", url: `/movies/${item.tmdb_id}` }
+      case "tv":
+        return { label: "Série", url: `/tv-shows/${item.tmdb_id}` }
+      case "tv-channel":
+        return { label: "Chaîne TV", url: `/tv-channels` }
+      case "radio":
+        return { label: "Radio", url: `/radio` }
+      case "game":
+      case "retrogaming":
+        return { label: "Jeu Rétro", url: `/retrogaming` }
+      case "ebook":
+        return { label: "Ebook", url: `/ebooks` }
+      case "music":
+        return { label: "Musique", url: `/musique` }
+      case "software":
+        return { label: "Logiciel", url: `/softwares` }
+      default:
+        return { label: "Contenu", url: "#" }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <div className="container mx-auto px-4 py-8">
@@ -320,10 +354,10 @@ export function PlaylistContent({ playlist }: PlaylistContentProps) {
                     ? `https://image.tmdb.org/t/p/w300${item.poster_path}`
                     : "/placeholder.svg?height=300&width=200"
 
-                  const itemUrl = item.media_type === "movie" ? `/movies/${item.tmdb_id}` : `/tv-shows/${item.tmdb_id}`
+                  const mediaInfo = getMediaTypeInfo(item)
 
                   return (
-                    <Link key={item.id} href={itemUrl}>
+                    <Link key={item.id} href={mediaInfo.url}>
                       <div className="space-y-2 group cursor-pointer">
                         <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700">
                           <Image
@@ -348,7 +382,7 @@ export function PlaylistContent({ playlist }: PlaylistContentProps) {
                             {item.title}
                           </p>
                           <Badge variant="secondary" className="bg-gray-800 text-white text-xs">
-                            {item.media_type === "movie" ? "Film" : "Série"}
+                            {mediaInfo.label}
                           </Badge>
                           {item.added_at && (
                             <p className="text-xs text-gray-500">
