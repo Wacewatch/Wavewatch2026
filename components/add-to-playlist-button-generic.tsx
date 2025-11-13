@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import { Plus, ListMusic } from 'lucide-react'
+import { Plus } from "lucide-react"
 import { usePlaylists } from "@/hooks/use-playlists"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
@@ -66,36 +66,10 @@ export function AddToPlaylistButtonGeneric({
     setAdding(null)
   }
 
-  const getButtonStyles = () => {
-    switch (mediaType) {
-      case "music":
-        return {
-          border: "border-green-600",
-          text: "text-green-400",
-          hover: "hover:bg-green-900/20",
-        }
-      case "software":
-        return {
-          border: "border-blue-600",
-          text: "text-blue-400",
-          hover: "hover:bg-blue-900/20",
-        }
-      default:
-        return {
-          border: "border-gray-600",
-          text: "text-white",
-          hover: "hover:bg-gray-700",
-        }
-    }
-  }
-
-  const styles = getButtonStyles()
-
   if (!user) {
     return (
-      <Button variant={variant} size={size} className={`${styles.border} text-gray-400 ${className}`} disabled>
-        <ListMusic className="w-4 h-4 mr-2" />
-        Playlists
+      <Button variant={variant} size={size} className={`border-gray-600 text-gray-400 ${className}`} disabled>
+        <Plus className="w-4 h-4" />
       </Button>
     )
   }
@@ -103,13 +77,8 @@ export function AddToPlaylistButtonGeneric({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button
-          variant={variant}
-          size={size}
-          className={`${styles.border} ${styles.text} ${styles.hover} ${className}`}
-        >
-          <ListMusic className="w-4 h-4 mr-2" />
-          Playlists
+        <Button variant={variant} size={size} className={`border-gray-600 text-white hover:bg-gray-700 ${className}`}>
+          <Plus className="w-4 h-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="bg-gray-800 border-gray-700 text-white">
@@ -149,7 +118,7 @@ export function AddToPlaylistButtonGeneric({
                   {adding === playlist.id ? (
                     <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <ListMusic className="w-4 h-4 text-gray-400" />
+                    <Plus className="w-4 h-4 text-gray-400" />
                   )}
                 </div>
               </Button>
