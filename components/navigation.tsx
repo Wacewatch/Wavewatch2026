@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown, Palette } from 'lucide-react'
+import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown, Palette } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import { useMobile } from "@/hooks/use-mobile"
 import { useMessaging } from "@/hooks/use-messaging"
 import { Badge } from "@/components/ui/badge"
@@ -302,7 +302,7 @@ export function Navigation() {
                 {/* Limited Themes section */}
                 <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
 
-                <DropdownMenuLabel style={{ color: "hsl(var(--nav-text))" }}>Thèmes Saisonniers</DropdownMenuLabel>
+                <DropdownMenuLabel style={{ color: "hsl(var(--nav-text))" }}>Thèmes Limités</DropdownMenuLabel>
                 <div className="grid grid-cols-2 gap-2 p-2">
                   {limitedThemes.map((t) => (
                     <button
