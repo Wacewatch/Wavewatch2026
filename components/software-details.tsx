@@ -8,7 +8,7 @@ import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { IframeModal } from "@/components/iframe-modal"
-import { AddToListSelector } from "@/components/add-to-list-selector"
+import { AddToPlaylistButtonGeneric } from "@/components/add-to-playlist-button-generic"
 import { Star, Calendar, Download, ThumbsUp, ThumbsDown, Monitor, HardDrive, Shield } from "lucide-react"
 
 interface SoftwareDetailsProps {
@@ -237,10 +237,14 @@ export function SoftwareDetails({ software }: SoftwareDetailsProps) {
                 <Download className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                 Télécharger
               </Button>
-              <AddToListSelector
-                content={{ id: software.id, title: software.name, poster_path: software.icon_url }}
-                contentType="movie"
-                className="w-full sm:w-auto"
+              <AddToPlaylistButtonGeneric
+                itemId={software.id}
+                mediaType="software"
+                title={software.name}
+                posterPath={software.icon_url}
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto border-blue-600 text-blue-400 hover:bg-blue-900/20 bg-transparent"
               />
               <Button
                 size="lg"

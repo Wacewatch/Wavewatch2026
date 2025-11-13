@@ -227,14 +227,15 @@ export function PlaylistContent({ playlist }: PlaylistContentProps) {
       case "radio":
         return { label: "Radio", url: `/radio` }
       case "game":
+        return { label: "Jeu", url: `/games/${item.tmdb_id}` }
       case "retrogaming":
         return { label: "Jeu Rétro", url: `/retrogaming` }
       case "ebook":
         return { label: "Ebook", url: `/ebooks` }
       case "music":
-        return { label: "Musique", url: `/musique` }
+        return { label: "Musique", url: `/musique/${item.tmdb_id}` }
       case "software":
-        return { label: "Logiciel", url: `/softwares` }
+        return { label: "Logiciel", url: `/logiciels/${item.tmdb_id}` }
       default:
         return { label: "Contenu", url: "#" }
     }

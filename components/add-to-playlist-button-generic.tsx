@@ -57,17 +57,7 @@ export function AddToPlaylistButtonGeneric({
   const handleAddToPlaylist = async (playlistId: string) => {
     setAdding(playlistId)
 
-    const normalizedMediaType = mediaType === "retrogaming" ? "game" : mediaType
-
-    const success = await addToPlaylist(
-      playlistId,
-      itemId,
-      normalizedMediaType as any,
-      title,
-      posterPath,
-      episodeId,
-      seriesId,
-    )
+    const success = await addToPlaylist(playlistId, itemId, mediaType, title, posterPath, episodeId, seriesId)
 
     if (success) {
       setOpen(false)
