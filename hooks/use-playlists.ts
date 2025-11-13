@@ -225,10 +225,7 @@ export function usePlaylists() {
     if (!user?.id) return false
 
     try {
-      const contentId =
-        mediaType === "music" || mediaType === "software" || mediaType === "game"
-          ? Math.floor(Math.random() * 1000000000)
-          : tmdbId
+      const contentId = tmdbId
 
       console.log("[v0] Adding to playlist:", {
         playlistId,
@@ -254,7 +251,6 @@ export function usePlaylists() {
         return false
       }
 
-      // Get current max position
       const { data: maxPos } = await supabase
         .from("playlist_items")
         .select("position")
@@ -288,10 +284,8 @@ export function usePlaylists() {
 
       console.log("[v0] Successfully added item to playlist")
 
-      // Update playlist updated_at
       await supabase.from("playlists").update({ updated_at: new Date().toISOString() }).eq("id", playlistId)
 
-      // Update local state
       setPlaylists((prev) =>
         prev.map((playlist) =>
           playlist.id === playlistId
@@ -328,10 +322,8 @@ export function usePlaylists() {
         return false
       }
 
-      // Update playlist updated_at
       await supabase.from("playlists").update({ updated_at: new Date().toISOString() }).eq("id", playlistId)
 
-      // Update local state
       setPlaylists((prev) =>
         prev.map((playlist) =>
           playlist.id === playlistId

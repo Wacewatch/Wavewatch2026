@@ -15,6 +15,7 @@ import { TrailerModal } from "@/components/trailer-modal"
 import { AddToListSelector } from "@/components/add-to-list-selector"
 import { Star, Calendar, Clock, Check, Play, Download, Youtube, ThumbsUp, ThumbsDown, Film, User } from "lucide-react"
 import { WatchProviders } from "@/components/watch-providers"
+import { useMobile } from "@/hooks/use-mobile"
 
 interface MovieDetailsProps {
   movie: any
@@ -35,6 +36,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
   const [certification, setCertification] = useState<string | null>(null)
   const { user } = useAuth()
   const { toast } = useToast()
+  const isMobile = useMobile()
 
   // Get director from credits
   const director = credits?.crew?.find((person: any) => person.job === "Director")
@@ -127,10 +129,12 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
           posterPath: movie.poster_path,
         })
 
-        toast({
-          title: "Ajouté à l'historique",
-          description: `${movie.title} a été ajouté à votre historique.`,
-        })
+        if (!isMobile) {
+          toast({
+            title: "Ajouté à l'historique",
+            description: `${movie.title} a été ajouté à votre historique.`,
+          })
+        }
       } catch (error) {
         console.error("Error tracking watch:", error)
       }
@@ -250,12 +254,14 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
       const newWatchedState = WatchTracker.isWatched("movie", movie.id)
       setIsWatched(newWatchedState)
 
-      toast({
-        title: newWatchedState ? "Film marqué comme vu" : "Film marqué comme non vu",
-        description: newWatchedState
-          ? `${movie.title} a été ajouté à votre historique.`
-          : `${movie.title} a été retiré de votre historique.`,
-      })
+      if (!isMobile) {
+        toast({
+          title: newWatchedState ? "Film marqué comme vu" : "Film marqué comme non vu",
+          description: newWatchedState
+            ? `${movie.title} a été ajouté à votre historique.`
+            : `${movie.title} a été retiré de votre historique.`,
+        })
+      }
 
       // Forcer la mise à jour des statistiques
       if (typeof window !== "undefined") {

@@ -11,7 +11,7 @@ import { RandomContent } from "@/components/random-content"
 import { SubscriptionOffer } from "@/components/subscription-offer"
 import { PublicPlaylistsRow } from "@/components/public-playlists-row"
 import { PopularCollections } from "@/components/popular-collections"
-import { supabase } from "@/lib/supabase" // Added supabase import
+import { supabase } from "@/lib/supabase"
 
 function LoadingSection() {
   return (

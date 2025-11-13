@@ -176,10 +176,11 @@ export default function AdminPage() {
     description: "",
     thumbnail_url: "",
     video_url: "",
+    streaming_url: "",
     duration: 0,
     release_year: new Date().getFullYear(),
     genre: "",
-    type: "Chanson", // Changed default type to Chanson as per the update
+    type: "Single",
     quality: "HD",
     is_active: true,
   })
@@ -219,6 +220,7 @@ export default function AdminPage() {
     description: "",
     cover_url: "",
     download_url: "",
+    reading_url: "",
     isbn: "",
     publisher: "",
     category: "",
@@ -1202,10 +1204,11 @@ export default function AdminPage() {
             description: "",
             thumbnail_url: "",
             video_url: "",
+            streaming_url: "", // Reset streaming_url
             duration: 0,
             release_year: new Date().getFullYear(),
             genre: "",
-            type: "Chanson", // Default type
+            type: "Single", // Default type
             quality: "HD",
             is_active: true,
           })
@@ -1248,6 +1251,7 @@ export default function AdminPage() {
             description: "",
             cover_url: "",
             download_url: "",
+            reading_url: "", // Reset reading_url
             isbn: "",
             publisher: "",
             category: "",
@@ -1333,10 +1337,11 @@ export default function AdminPage() {
           description: item.description || "",
           thumbnail_url: item.thumbnail_url || "",
           video_url: item.video_url || "",
+          streaming_url: item.streaming_url || "", // Load streaming_url
           duration: item.duration || 0,
           release_year: item.release_year || new Date().getFullYear(),
           genre: item.genre || "",
-          type: item.type || "Chanson", // Default type
+          type: item.type || "Single", // Default type
           quality: item.quality || "HD",
           is_active: item.is_active ?? true,
         })
@@ -1379,6 +1384,7 @@ export default function AdminPage() {
           description: item.description || "",
           cover_url: item.cover_url || "",
           download_url: item.download_url || "",
+          reading_url: item.reading_url || "", // Load reading_url
           isbn: item.isbn || "",
           publisher: item.publisher || "",
           category: item.category || "",
@@ -2754,7 +2760,7 @@ export default function AdminPage() {
                         <Input
                           value={tvChannelForm.name}
                           onChange={(e) => setTvChannelForm({ ...tvChannelForm, name: e.target.value })}
-                          placeholder="TF1, France 2, Canal+..."
+                          placeholder="TF1, France 2, Canal+"
                         />
                       </div>
                       <div className="space-y-2">
@@ -3722,10 +3728,11 @@ export default function AdminPage() {
                           description: "",
                           thumbnail_url: "",
                           video_url: "",
+                          streaming_url: "", // Reset streaming_url
                           duration: 0,
                           release_year: new Date().getFullYear(),
                           genre: "",
-                          type: "Chanson", // Changed default type
+                          type: "Single", // Changed default type
                           quality: "HD",
                           is_active: true,
                         })
@@ -3793,7 +3800,7 @@ export default function AdminPage() {
                             <SelectValue placeholder="Sélectionner un type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Chanson">Chanson</SelectItem>
+                            <SelectItem value="Single">Single</SelectItem>
                             <SelectItem value="Album">Album</SelectItem>
                             <SelectItem value="Concert">Concert</SelectItem>
                             <SelectItem value="Live Session">Live Session</SelectItem>
@@ -3846,6 +3853,15 @@ export default function AdminPage() {
                           onChange={(e) => setMusicForm({ ...musicForm, video_url: e.target.value })}
                           placeholder="https://stream.wavewatch.xyz/music/..."
                         />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL lecture directe</Label>
+                        <Input
+                          value={musicForm.streaming_url}
+                          onChange={(e) => setMusicForm({ ...musicForm, streaming_url: e.target.value })}
+                          placeholder="https://stream.wavewatch.xyz/listen/..."
+                        />
+                        <p className="text-xs text-muted-foreground">Lien pour le bouton "Écouter" (optionnel)</p>
                       </div>
                       <div className="space-y-2">
                         <Label>Durée (secondes)</Label>
@@ -4524,6 +4540,7 @@ export default function AdminPage() {
                           description: "",
                           cover_url: "",
                           download_url: "",
+                          reading_url: "", // Reset reading_url
                           isbn: "",
                           publisher: "",
                           category: "",
@@ -4628,6 +4645,7 @@ export default function AdminPage() {
                             <SelectItem value="MOBI">MOBI</SelectItem>
                             <SelectItem value="TXT">TXT</SelectItem>
                             <SelectItem value="DOCX">DOCX</SelectItem>
+                            <SelectItem value="Audio">Audio</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -4655,6 +4673,19 @@ export default function AdminPage() {
                           placeholder="https://download.example.com/ebook.pdf"
                         />
                       </div>
+                      {!ebookForm.is_audiobook && (
+                        <div className="space-y-2 col-span-2">
+                          <Label>URL de lecture directe</Label>
+                          <Input
+                            value={ebookForm.reading_url}
+                            onChange={(e) => setEbookForm({ ...ebookForm, reading_url: e.target.value })}
+                            placeholder="https://example.com/reader?book=..."
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Lien pour le bouton "Lire en ligne" (optionnel)
+                          </p>
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <Label>Nombre de pages</Label>
                         <Input

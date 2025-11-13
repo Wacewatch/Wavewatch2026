@@ -17,7 +17,17 @@ import { useToast } from "@/hooks/use-toast"
 
 interface AddToPlaylistButtonGenericProps {
   itemId: number
-  mediaType: "movie" | "tv" | "tv-channel" | "radio" | "game" | "ebook" | "episode"
+  mediaType:
+    | "movie"
+    | "tv"
+    | "tv-channel"
+    | "radio"
+    | "game"
+    | "ebook"
+    | "episode"
+    | "music"
+    | "software"
+    | "retrogaming"
   title: string
   posterPath?: string
   className?: string
@@ -47,7 +57,17 @@ export function AddToPlaylistButtonGeneric({
   const handleAddToPlaylist = async (playlistId: string) => {
     setAdding(playlistId)
 
-    const success = await addToPlaylist(playlistId, itemId, mediaType, title, posterPath, episodeId, seriesId)
+    const normalizedMediaType = mediaType === "retrogaming" ? "game" : mediaType
+
+    const success = await addToPlaylist(
+      playlistId,
+      itemId,
+      normalizedMediaType as any,
+      title,
+      posterPath,
+      episodeId,
+      seriesId,
+    )
 
     if (success) {
       setOpen(false)
