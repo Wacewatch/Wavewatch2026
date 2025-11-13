@@ -9,8 +9,8 @@ import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { IframeModal } from "@/components/iframe-modal"
-import { AddToPlaylistButtonGeneric } from "@/components/add-to-playlist-button-generic"
-import { Star, Calendar, Clock, Play, Download, ThumbsUp, ThumbsDown, Users, Music, ListMusic } from "lucide-react"
+import { AddToListSelector } from "@/components/add-to-list-selector"
+import { Star, Calendar, Clock, Play, Download, ThumbsUp, ThumbsDown, Users, Music, ListMusic } from 'lucide-react'
 
 interface MusicDetailsProps {
   music: any
@@ -241,14 +241,13 @@ export function MusicDetails({ music }: MusicDetailsProps) {
                 <Download className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                 Télécharger
               </Button>
-              <AddToPlaylistButtonGeneric
-                itemId={music.id}
-                mediaType="music"
-                title={music.title}
-                posterPath={music.thumbnail_url}
-                variant="outline"
-                size="lg"
-                className="w-full sm:w-auto border-green-600 text-green-400 hover:bg-green-900/20 bg-transparent"
+              <AddToListSelector
+                content={{
+                  id: music.id,
+                  title: music.title,
+                  thumbnail_url: music.thumbnail_url,
+                }}
+                contentType="music"
               />
               <Button
                 size="lg"

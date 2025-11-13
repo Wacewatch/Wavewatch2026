@@ -7,14 +7,12 @@ type Theme =
   | "light"
   | "system"
   | "ocean"
-  | "sunset"
   | "forest"
   | "midnight"
   | "aurora"
   | "desert"
   | "lavender"
   | "crimson"
-  | "sapphire"
   | "jade"
   | "premium"
   | "royal"
@@ -58,20 +56,20 @@ export function ThemeProvider({ children, defaultTheme = "dark", ...props }: The
       "light",
       "dark",
       "ocean",
-      "sunset",
       "forest",
       "midnight",
       "aurora",
       "desert",
       "lavender",
       "crimson",
-      "sapphire",
       "jade",
       "premium",
       "royal",
       "neon",
       "emerald",
       "cosmic",
+      "halloween",
+      "christmas",
     )
 
     if (theme === "system") {
