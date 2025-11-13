@@ -13,6 +13,8 @@ import { PublicPlaylistsRow } from "@/components/public-playlists-row"
 import { PopularCollections } from "@/components/popular-collections"
 import { supabase } from "@/lib/supabase"
 
+export const dynamic = "force-dynamic"
+
 function LoadingSection() {
   return (
     <div className="space-y-4">
@@ -28,6 +30,7 @@ function LoadingSection() {
 
 async function getHomeModulesSettings() {
   try {
+    console.log("[v0] Loading home modules settings from database...")
     const { data, error } = await supabase
       .from("site_settings")
       .select("setting_value")
@@ -35,6 +38,7 @@ async function getHomeModulesSettings() {
       .single()
 
     if (error || !data) {
+      console.log("[v0] No settings found, using defaults")
       // Return default settings if not found
       return {
         hero: true,
@@ -52,6 +56,7 @@ async function getHomeModulesSettings() {
       }
     }
 
+    console.log("[v0] Loaded modules settings:", data.setting_value)
     return data.setting_value
   } catch (error) {
     console.error("Error loading home modules settings:", error)

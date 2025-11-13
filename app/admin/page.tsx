@@ -796,9 +796,16 @@ export default function AdminPage() {
         return
       }
 
+      try {
+        await fetch("/api/revalidate?path=/", { method: "POST" })
+      } catch (revalError) {
+        console.error("Error revalidating homepage:", revalError)
+      }
+
       toast({
         title: "Paramètres sauvegardés",
-        description: "Les modules de la page d'accueil ont été mis à jour",
+        description:
+          "Les modules de la page d'accueil ont été mis à jour. Rechargez la page pour voir les changements.",
       })
     } catch (error) {
       console.error("Error saving site settings:", error)

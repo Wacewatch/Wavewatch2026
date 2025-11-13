@@ -74,9 +74,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updateAdultContentPreference(false)
       } else if (event === "USER_UPDATED" && session?.user) {
         await loadUserProfile(session.user)
-      } else if (event === "TOKEN_REFRESHED" && session?.user) {
-        await loadUserProfile(session.user)
       }
+      // Token refresh is automatic and doesn't need to reload the entire profile
       setLoading(false)
     })
 
