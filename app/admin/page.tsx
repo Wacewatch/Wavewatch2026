@@ -16,53 +16,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Plus,
-  Edit,
-  Trash2,
-  Users,
-  Tv,
-  Radio,
-  Search,
-  Eye,
-  EyeOff,
-  BarChart3,
-  FileText,
-  Zap,
-  Trophy,
-  Crown,
-  Shield,
-  UserX,
-  Clock,
-  Activity,
-  Heart,
-  UserPlus,
-  Play,
-  ThumbsUp,
-  ThumbsDown,
-  Calendar,
-  Flag as Flask,
-  TrendingUp,
-  Monitor,
-  Headphones,
-  Gamepad2,
-  Film,
-  Clapperboard,
-  Sparkles,
-  LogIn,
-  MessageSquare,
-  CheckCircle,
-  XCircle,
-  Music,
-  Download,
-  BookOpen,
-  Send,
-  SettingsIcon,
-  Save,
-} from "lucide-react"
-import { useRouter } from "next/navigation"
+import { Plus, Edit, Trash2, Users, Tv, Radio, Search, Eye, EyeOff, BarChart3, FileText, Zap, Trophy, Crown, Shield, UserX, Clock, Activity, Heart, UserPlus, Play, ThumbsUp, ThumbsDown, Calendar, FlagIcon as FlaskIcon, TrendingUp, Monitor, Headphones, Gamepad2, Film, Clapperboard, Sparkles, LogIn, MessageSquare, CheckCircle, XCircle, Music, Download, BookOpen, Send, SettingsIcon, Save, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { supabase } from "@/lib/supabase"
 import { createBrowserClient } from "@supabase/ssr" // Import for Supabase client
+
+// Constants for user pagination
+const USERS_PER_PAGE = 10
 
 export default function AdminPage() {
   const { user } = useAuth()
@@ -256,6 +216,13 @@ export default function AdminPage() {
     is_beta: false,
     is_admin: false,
   })
+  const [newPassword, setNewPassword] = useState("")
+
+  // State for user table filtering and pagination
+  const [userRoleFilter, setUserRoleFilter] = useState<string>("all")
+  const [userCurrentPage, setUserCurrentPage] = useState<number>(1)
+
+  const [editingLog, setEditingLog] = useState<any>(null)
 
   const [siteSettings, setSiteSettings] = useState({
     hero: true,
@@ -271,9 +238,6 @@ export default function AdminPage() {
     football_calendar: true,
     calendar_widget: true,
   })
-  const [newPassword, setNewPassword] = useState("")
-
-  const [editingLog, setEditingLog] = useState<any>(null)
 
   const handleUpdateRequestStatus = async (id: string, status: string) => {
     try {
@@ -359,8 +323,17 @@ export default function AdminPage() {
 
     setSendingBroadcast(true)
     try {
-      // Get all user IDs
-      const { data: allUsers, error: usersError } = await supabase.from("user_profiles").select("id")
+      // Get total count of all users first
+      const { count: totalUsers, error: countError } = await supabase
+        .from("user_profiles")
+        .select("*", { count: "exact", head: true })
+
+      if (countError) throw countError
+
+      // Get all user IDs without limit
+      const { data: allUsers, error: usersError } = await supabase
+        .from("user_profiles")
+        .select("id")
 
       if (usersError) throw usersError
 
@@ -394,7 +367,7 @@ export default function AdminPage() {
 
       toast({
         title: "Message envoyé",
-        description: `Message diffusé à ${allUsers.length} utilisateur(s)`,
+        description: `Message diffusé à ${totalUsers || allUsers.length} utilisateur(s)`,
       })
 
       setBroadcastForm({ subject: "", content: "" })
@@ -410,13 +383,6 @@ export default function AdminPage() {
       setSendingBroadcast(false)
     }
   }
-
-  useEffect(() => {
-    if (user && user.isAdmin) {
-      loadAllData()
-      loadSiteSettings() // Added
-    }
-  }, [user])
 
   const loadAllData = async () => {
     try {
@@ -1961,7 +1927,41 @@ export default function AdminPage() {
     }
   }
 
-  // Fonctions de filtrage
+  // Fonctions de filtrage et pagination pour les utilisateurs
+  const getFilteredUsers = () => {
+    const searchTerm = searchTerms.users || ""
+    return users.filter((user) => {
+      const matchesSearch =
+        user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase())
+
+      if (!matchesSearch) return false
+
+      switch (userRoleFilter) {
+        case "admin":
+          return user.is_admin
+        case "vip_plus":
+          return user.is_vip_plus
+        case "vip":
+          return user.is_vip
+        case "beta":
+          return user.is_beta
+        case "member":
+          return !user.is_admin && !user.is_vip && !user.is_vip_plus && !user.is_beta
+        case "all":
+        default:
+          return true
+      }
+    })
+  }
+
+  const getPaginatedUsers = () => {
+    const filteredUsers = getFilteredUsers()
+    const startIndex = (userCurrentPage - 1) * USERS_PER_PAGE
+    const endIndex = startIndex + USERS_PER_PAGE
+    return filteredUsers.slice(startIndex, endIndex)
+  }
+
   const getFilteredData = (data, type) => {
     const searchTerm = searchTerms[type] || ""
     if (!searchTerm) return data
@@ -3486,15 +3486,59 @@ export default function AdminPage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <Input
-                      placeholder="Rechercher un utilisateur..."
-                      value={searchTerms.users || ""}
-                      onChange={(e) => setSearchTerms({ ...searchTerms, users: e.target.value })}
-                      className="pl-10"
-                    />
+                <div className="flex flex-col gap-4 mb-4">
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                      <Input
+                        placeholder="Rechercher un utilisateur..."
+                        value={searchTerms.users || ""}
+                        onChange={(e) => setSearchTerms({ ...searchTerms, users: e.target.value })}
+                        className="pl-10"
+                      />
+                    </div>
+                    <Select
+                      value={userRoleFilter}
+                      onValueChange={(value) => setUserRoleFilter(value)}
+                    >
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Filtrer par grade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tous les grades</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="vip_plus">VIP+</SelectItem>
+                        <SelectItem value="vip">VIP</SelectItem>
+                        <SelectItem value="beta">Beta</SelectItem>
+                        <SelectItem value="member">Membre</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <span>
+                      Affichage {(userCurrentPage - 1) * USERS_PER_PAGE + 1} à {Math.min(userCurrentPage * USERS_PER_PAGE, getFilteredUsers().length)} sur {getFilteredUsers().length} utilisateurs
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setUserCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={userCurrentPage === 1}
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </Button>
+                      <span>
+                        Page {userCurrentPage} / {Math.ceil(getFilteredUsers().length / USERS_PER_PAGE)}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setUserCurrentPage((prev) => Math.min(Math.ceil(getFilteredUsers().length / USERS_PER_PAGE), prev + 1))}
+                        disabled={userCurrentPage >= Math.ceil(getFilteredUsers().length / USERS_PER_PAGE)}
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
 
@@ -3509,7 +3553,7 @@ export default function AdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {getFilteredData(users, "users").map((user) => (
+                    {getPaginatedUsers().map((user) => (
                       <TableRow key={user.id}>
                         <TableCell className="font-medium">{user.username}</TableCell>
                         <TableCell>{user.email}</TableCell>
@@ -3548,7 +3592,7 @@ export default function AdminPage() {
                             )}
                             {user.is_beta && (
                               <Badge variant="secondary" className="text-cyan-400 border-cyan-400 text-xs">
-                                <Flask className="w-3 h-3 mr-1" />
+                                <FlaskIcon className="w-3 h-3 mr-1" />
                                 BETA
                               </Badge>
                             )}
@@ -3568,7 +3612,7 @@ export default function AdminPage() {
                               <Crown className="w-4 h-4 text-purple-600" />
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => toggleUserBeta(user.id)}>
-                              <Flask className="w-4 h-4" />
+                              <FlaskIcon className="w-4 h-4" />
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => toggleUserAdmin(user.id)}>
                               <Shield className="w-4 h-4" />

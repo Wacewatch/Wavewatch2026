@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown, Palette } from "lucide-react"
+import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown, Palette } from 'lucide-react'
 import { useAuth } from "@/components/auth-provider"
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { useRouter } from "next/navigation"
+import { useRouter } from 'next/navigation'
 import { useMobile } from "@/hooks/use-mobile"
 import { useMessaging } from "@/hooks/use-messaging"
 import { Badge } from "@/components/ui/badge"
@@ -238,6 +238,18 @@ export function Navigation() {
                     Découvrir des Playlists
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
+                {user?.isAdmin ? (
+                  <DropdownMenuItem asChild>
+                    <Link href="/interactive" style={{ color: "hsl(var(--nav-text))" }}>
+                      WaveWatch World
+                    </Link>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
+                    WaveWatch World <span className="ml-auto text-xs">Bientôt</span>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -308,7 +320,7 @@ export function Navigation() {
                     <button
                       key={t.id}
                       onClick={() => handleThemeChange(t.id)}
-                      className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors ${
+                      className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-700/50 transition-colors relative ${
                         theme === t.id ? "ring-2 ring-blue-500" : ""
                       }`}
                     >
@@ -781,6 +793,27 @@ export function Navigation() {
                       Découvrir des Playlists
                     </Link>
                   </Button>
+                  {user?.isAdmin ? (
+                    <Button
+                      asChild
+                      variant="ghost"
+                      className="w-full justify-start"
+                      style={{ color: "hsl(var(--nav-text))" }}
+                    >
+                      <Link href="/interactive" onClick={() => setIsMenuOpen(false)}>
+                        WaveWatch World
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      disabled
+                      className="w-full justify-start opacity-60 cursor-not-allowed"
+                      style={{ color: "hsl(var(--nav-text-secondary))" }}
+                    >
+                      WaveWatch World <span className="ml-auto text-xs">Bientôt</span>
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getGenres, searchMulti } from "@/lib/tmdb"
-import { Search, Filter, RefreshCw } from "lucide-react"
+import { Search, Filter, RefreshCw } from 'lucide-react'
 
 export default function MoviesPage() {
   const [movies, setMovies] = useState<any[]>([])
@@ -21,6 +21,7 @@ export default function MoviesPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [refreshing, setRefreshing] = useState(false)
+  const [pageInput, setPageInput] = useState("") // Adding state for page input
 
   const platforms = [
     { id: 8, name: "Netflix" },
@@ -168,6 +169,14 @@ export default function MoviesPage() {
     }
   }
 
+  const handleGoToPage = () => { // Adding handleGoToPage function
+    const page = Number.parseInt(pageInput)
+    if (page >= 1 && page <= totalPages) {
+      handlePageChange(page)
+      setPageInput("")
+    }
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 space-y-8">
       <div className="space-y-4">
@@ -276,7 +285,7 @@ export default function MoviesPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center space-x-2">
+            <div className="flex justify-center items-center gap-3 flex-wrap">
               <Button
                 variant="outline"
                 onClick={() => handlePageChange(currentPage - 1)}
@@ -286,7 +295,7 @@ export default function MoviesPage() {
                 Précédent
               </Button>
 
-              <div className="flex items-center space-x-1">
+              <div className="flex items-center gap-2">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                   const page = currentPage <= 3 ? i + 1 : currentPage - 2 + i
                   if (page > totalPages) return null
@@ -297,11 +306,34 @@ export default function MoviesPage() {
                       variant={page === currentPage ? "default" : "outline"}
                       size="sm"
                       onClick={() => handlePageChange(page)}
+                      className={page === currentPage ? "bg-red-600 hover:bg-red-700" : ""}
                     >
                       {page}
                     </Button>
                   )
                 })}
+              </div>
+
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  Page {currentPage} sur {totalPages}
+                </span>
+                <span className="text-muted-foreground">|</span>
+                <Input
+                  type="number"
+                  min="1"
+                  max={totalPages}
+                  placeholder="Page..."
+                  value={pageInput}
+                  onChange={(e) => setPageInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleGoToPage()
+                  }}
+                  className="w-20 h-8"
+                />
+                <Button size="sm" onClick={handleGoToPage} disabled={!pageInput} variant="outline">
+                  Aller
+                </Button>
               </div>
 
               <Button

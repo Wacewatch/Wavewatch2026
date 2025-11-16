@@ -28,23 +28,37 @@ export function usePublicPlaylists() {
   const [playlists, setPlaylists] = useState<PublicPlaylist[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [itemsPerPage] = useState(30)
   const supabase = createClient()
   const isMountedRef = useRef(true)
 
-  const loadPublicPlaylists = useCallback(async () => {
+  const loadPublicPlaylists = useCallback(async (page = 1) => {
     if (!isMountedRef.current) return
 
     try {
-      console.log("[v0] Loading public playlists...")
+      console.log("[v0] Loading public playlists... page:", page)
 
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), 10000))
+
+      const { count } = await supabase
+        .from("playlists")
+        .select("*", { count: "exact", head: true })
+        .eq("is_public", true)
+
+      if (count !== null) {
+        setTotalCount(count)
+      }
+
+      const offset = (page - 1) * itemsPerPage
 
       const queryPromise = supabase
         .from("playlists")
         .select("id, user_id, title, description, theme_color, created_at, updated_at")
         .eq("is_public", true)
         .order("updated_at", { ascending: false })
-        .limit(50)
+        .range(offset, offset + itemsPerPage - 1)
 
       const { data: playlistsData, error: playlistsError } = (await Promise.race([
         queryPromise as any,
@@ -160,6 +174,7 @@ export function usePublicPlaylists() {
       )
 
       setPlaylists(processedPlaylists)
+      setCurrentPage(page)
     } catch (error) {
       if (!isMountedRef.current) return
 
@@ -188,7 +203,7 @@ export function usePublicPlaylists() {
         setLoading(false)
       }
     }
-  }, [user?.id, supabase])
+  }, [user?.id, supabase, itemsPerPage])
 
   useEffect(() => {
     return () => {
@@ -197,7 +212,7 @@ export function usePublicPlaylists() {
   }, [])
 
   useEffect(() => {
-    loadPublicPlaylists()
+    loadPublicPlaylists(1)
   }, [loadPublicPlaylists])
 
   const toggleLike = async (playlistId: string, isLike: boolean) => {
@@ -375,5 +390,11 @@ export function usePublicPlaylists() {
     toggleLike,
     toggleFavorite,
     refreshPlaylists: loadPublicPlaylists,
+    currentPage,
+    setCurrentPage,
+    totalCount,
+    itemsPerPage,
+    totalPages: Math.ceil(totalCount / itemsPerPage),
+    goToPage: (page: number) => loadPublicPlaylists(page),
   }
 }

@@ -1,0 +1,44 @@
+import { redirect } from 'next/navigation'
+import { createClient } from "@/lib/supabase/server"
+import { InteractiveWorldAdmin } from "@/components/admin/interactive-world-admin"
+
+export const metadata = {
+  title: "Gestion du Monde Interactif - WaveWatch Admin",
+  description: "Gérer le monde interactif, les salles de cinéma et les paramètres",
+}
+
+export default async function InteractiveWorldAdminPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    redirect("/")
+  }
+
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("is_admin")
+    .eq("user_id", user.id)
+    .single()
+
+  if (!profile?.is_admin) {
+    redirect("/")
+  }
+
+  // Fetch initial data
+  const [worldSettings, cinemaRooms, customizationOptions, onlineUsers] = await Promise.all([
+    supabase.from("interactive_world_settings").select("*"),
+    supabase.from("interactive_cinema_rooms").select("*").order("room_number"),
+    supabase.from("avatar_customization_options").select("*").order("category, label"),
+    supabase.from("interactive_profiles").select("*, user_profiles(username, is_vip, is_vip_plus, is_admin)").eq("is_online", true)
+  ])
+
+  return (
+    <InteractiveWorldAdmin
+      initialSettings={worldSettings.data || []}
+      initialRooms={cinemaRooms.data || []}
+      initialOptions={customizationOptions.data || []}
+      initialOnlineUsers={onlineUsers.data || []}
+    />
+  )
+}
