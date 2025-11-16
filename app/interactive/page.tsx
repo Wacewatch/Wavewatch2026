@@ -33,16 +33,6 @@ export default function InteractivePage() {
       return
     }
 
-    if (!user.isAdmin) {
-      toast({
-        title: "Accès refusé",
-        description: "Cette fonctionnalité est réservée aux administrateurs.",
-        variant: "destructive",
-      })
-      router.push("/")
-      return
-    }
-
     initializeUser()
   }, [user, authLoading, router, toast])
 
@@ -120,7 +110,7 @@ export default function InteractivePage() {
     return <LoadingScreen />
   }
 
-  if (!user || !user.isAdmin) {
+  if (!user) {
     return null
   }
 

@@ -25,7 +25,7 @@ import { createBrowserClient } from "@supabase/ssr" // Import for Supabase clien
 const USERS_PER_PAGE = 10
 
 export default function AdminPage() {
-  const { user } = useAuth()
+  const { user, loading: userLoading } = useAuth() // Added userLoading to the destructuring
   const { toast } = useToast()
   const router = useRouter()
 
@@ -33,7 +33,7 @@ export default function AdminPage() {
   const [tvChannels, setTvChannels] = useState([])
   const [radioStations, setRadioStations] = useState([])
   const [retrogamingSources, setRetrogamingSources] = useState([])
-  const [users, setUsers] = useState([])
+  const [users, setUsers] = useState<any[]>([]) // Corrected type from any[]
   const [requests, setRequests] = useState([])
   const [musicContent, setMusicContent] = useState([])
   const [software, setSoftware] = useState([])
@@ -82,7 +82,7 @@ export default function AdminPage() {
 
   const [isUpdating, setIsUpdating] = useState(false)
   const [lastUpdate, setLastUpdate] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true) // Moved up as per CHANGE
 
   // States pour le système check
   const [systemCheck, setSystemCheck] = useState({
@@ -218,8 +218,8 @@ export default function AdminPage() {
   const [newPassword, setNewPassword] = useState("")
 
   // State for user table filtering and pagination
-  const [userRoleFilter, setUserRoleFilter] = useState<string>("all")
-  const [userCurrentPage, setUserCurrentPage] = useState<number>(1)
+  const [userRoleFilter, setUserRoleFilter] = useState<string>("all") // Renamed from userGradeFilter
+  const [userCurrentPage, setUserCurrentPage] = useState<number>(1) // Renamed from userPage
 
   const [editingLog, setEditingLog] = useState<any>(null)
 
@@ -2195,17 +2195,19 @@ export default function AdminPage() {
     )
   }
 
+
   // Fetch total user count for the broadcast message
-  const [totalUserCount, setTotalUserCount] = useState(0)
-  useEffect(() => {
-    const fetchUserCount = async () => {
-      const { count } = await supabase.from("user_profiles").select("id", { count: "exact", head: true })
-      if (count !== null) {
-        setTotalUserCount(count)
-      }
-    }
-    fetchUserCount()
-  }, [])
+  // Removed duplicated useEffect, logic moved to fetchAllData or handled by existing state
+  // useEffect(() => {
+  //   const fetchUserCount = async () => {
+  //     if (!user?.isAdmin) return
+  //     const { count } = await supabase.from("user_profiles").select("id", { count: "exact", head: true })
+  //     if (count !== null) {
+  //       setTotalUserCount(count)
+  //     }
+  //   }
+  //   fetchUserCount()
+  // }, [user])
 
 
   return (

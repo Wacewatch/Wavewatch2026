@@ -1,11 +1,11 @@
-import { createBrowserClient } from "@supabase/ssr"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 /**
  * Creates a Supabase browser client for use in Client Components and client-side code.
  * This client is singleton-based and handles session persistence automatically.
  * Includes error recovery and retry logic for network issues.
  */
-let client: ReturnType<typeof createBrowserClient> | null = null
+let client: ReturnType<typeof createSupabaseClient> | null = null
 
 export function createClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -22,7 +22,16 @@ export function createClient() {
     return client
   }
 
-  client = createBrowserClient(supabaseUrl, supabaseAnonKey)
+  client = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      flowType: "pkce",
+      storage: typeof window !== "undefined" ? window.localStorage : undefined,
+      storageKey: "supabase.auth.token",
+    },
+  })
 
   return client
 }
