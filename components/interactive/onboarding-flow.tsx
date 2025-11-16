@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { Sparkles, User, Palette } from 'lucide-react'
+import { Sparkles, User, Palette, Crown } from 'lucide-react'
 
 interface AvatarStyle {
   hairStyle: string
@@ -21,10 +21,11 @@ interface AvatarStyle {
 
 interface OnboardingFlowProps {
   userId: string
+  userRole?: 'member' | 'vip' | 'vip_plus' | 'admin'
   onComplete: () => void
 }
 
-export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
+export function OnboardingFlow({ userId, userRole = 'member', onComplete }: OnboardingFlowProps) {
   const [step, setStep] = useState(1)
   const [username, setUsername] = useState("")
   const [avatarStyle, setAvatarStyle] = useState<AvatarStyle>({
@@ -78,11 +79,23 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
   ]
 
   const accessories = [
-    { id: "none", label: "Aucun" },
-    { id: "glasses", label: "Lunettes" },
-    { id: "hat", label: "Chapeau" },
-    { id: "scarf", label: "Écharpe" },
+    { id: "none", label: "Aucun", requiredRole: null },
+    { id: "glasses", label: "Lunettes", requiredRole: null },
+    { id: "hat", label: "Chapeau", requiredRole: null },
+    { id: "scarf", label: "Écharpe", requiredRole: null },
+    { id: "vip_badge", label: "Badge VIP ⭐", requiredRole: 'vip' },
+    { id: "vip_plus_crown", label: "Couronne VIP+ 👑", requiredRole: 'vip_plus' },
+    { id: "admin_crown", label: "Couronne Admin 🔥", requiredRole: 'admin' },
+    { id: "admin_aura", label: "Aura Admin ✨", requiredRole: 'admin' },
   ]
+
+  const availableAccessories = accessories.filter(acc => {
+    if (!acc.requiredRole) return true
+    if (userRole === 'admin') return true
+    if (userRole === 'vip_plus' && (acc.requiredRole === 'vip' || acc.requiredRole === 'vip_plus')) return true
+    if (userRole === 'vip' && acc.requiredRole === 'vip') return true
+    return false
+  })
 
   const handleCreateProfile = async () => {
     if (!username.trim()) {
@@ -96,7 +109,6 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
 
     setIsLoading(true)
 
-    // Check if username is taken
     const { data: existingProfile } = await supabase
       .from("interactive_profiles")
       .select("id")
@@ -120,7 +132,6 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
   const handleCompleteOnboarding = async () => {
     setIsLoading(true)
 
-    // Create or update interactive profile
     const { error } = await supabase.from("interactive_profiles").upsert({
       user_id: userId,
       username: username.trim(),
@@ -152,6 +163,17 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
     onComplete()
   }
 
+  const getRoleBadge = () => {
+    switch (userRole) {
+      case 'admin': return { icon: <Crown className="w-5 h-5 text-red-500" />, label: "ADMIN" }
+      case 'vip_plus': return { icon: <Crown className="w-5 h-5 text-purple-500" />, label: "VIP+" }
+      case 'vip': return { icon: <Crown className="w-5 h-5 text-yellow-500" />, label: "VIP" }
+      default: return null
+    }
+  }
+
+  const roleBadge = getRoleBadge()
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 flex items-center justify-center p-4">
       <Card className="w-full max-w-4xl p-8 bg-white/95 backdrop-blur">
@@ -167,6 +189,12 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
               <p className="text-lg text-muted-foreground">
                 Créez votre profil pour commencer votre aventure
               </p>
+              {roleBadge && (
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-100 to-orange-100 rounded-full border-2 border-yellow-400">
+                  {roleBadge.icon}
+                  <span className="font-bold text-gray-800">{roleBadge.label}</span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4 max-w-md mx-auto">
@@ -210,14 +238,18 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
               <p className="text-muted-foreground">
                 Créez un avatar unique qui vous représente
               </p>
+              {roleBadge && (
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-yellow-100 to-orange-100 rounded-full border-2 border-yellow-400">
+                  {roleBadge.icon}
+                  <span className="font-bold text-gray-800">Accessoires exclusifs {roleBadge.label} disponibles!</span>
+                </div>
+              )}
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
-              {/* Avatar Preview */}
               <div className="bg-gradient-to-b from-sky-400 to-sky-200 rounded-xl p-8 flex flex-col items-center justify-center min-h-[500px]">
                 <div className="text-sm font-semibold text-gray-700 mb-4">Aperçu</div>
                 <div className="space-y-3">
-                  {/* Head */}
                   <div
                     className="w-24 h-24 rounded-full mx-auto border-4 relative"
                     style={{
@@ -225,23 +257,18 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
                       borderColor: avatarStyle.hairColor,
                     }}
                   >
-                    {/* Eyes */}
                     <div className="absolute top-1/3 left-1/4 w-2 h-2 bg-black rounded-full" />
                     <div className="absolute top-1/3 right-1/4 w-2 h-2 bg-black rounded-full" />
-                    {/* Mouth */}
                     <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-8 h-1 bg-black rounded-full" />
                   </div>
-                  {/* Body - Top */}
                   <div
                     className="w-28 h-32 mx-auto rounded-lg"
                     style={{ backgroundColor: avatarStyle.topColor }}
                   />
-                  {/* Body - Bottom */}
                   <div
                     className="w-24 h-28 mx-auto rounded-lg"
                     style={{ backgroundColor: avatarStyle.bottomColor }}
                   />
-                  {/* Shoes */}
                   <div className="flex justify-center gap-3">
                     <div
                       className="w-8 h-10 rounded"
@@ -254,15 +281,13 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
                   </div>
                   {avatarStyle.accessory !== "none" && (
                     <div className="text-sm text-gray-700 mt-2 font-medium">
-                      {accessories.find((a) => a.id === avatarStyle.accessory)?.label}
+                      {availableAccessories.find((a) => a.id === avatarStyle.accessory)?.label}
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Customization Options */}
               <div className="space-y-6 max-h-[500px] overflow-y-auto pr-2">
-                {/* Hair Style */}
                 <div className="space-y-3">
                   <Label className="text-lg font-semibold">Coiffure</Label>
                   <div className="grid grid-cols-3 gap-2">
@@ -284,7 +309,6 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
                   </div>
                 </div>
 
-                {/* Hair Color */}
                 <div className="space-y-3">
                   <Label className="text-lg font-semibold">Couleur de cheveux</Label>
                   <div className="grid grid-cols-6 gap-2">
@@ -306,7 +330,6 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
                   </div>
                 </div>
 
-                {/* Skin Tone */}
                 <div className="space-y-3">
                   <Label className="text-lg font-semibold">Teint de peau</Label>
                   <div className="grid grid-cols-6 gap-2">
@@ -328,7 +351,6 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
                   </div>
                 </div>
 
-                {/* Top Color */}
                 <div className="space-y-3">
                   <Label className="text-lg font-semibold">Couleur du haut</Label>
                   <div className="grid grid-cols-7 gap-2">
@@ -350,7 +372,6 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
                   </div>
                 </div>
 
-                {/* Bottom Color */}
                 <div className="space-y-3">
                   <Label className="text-lg font-semibold">Couleur du bas</Label>
                   <div className="grid grid-cols-7 gap-2">
@@ -372,7 +393,6 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
                   </div>
                 </div>
 
-                {/* Shoe Color */}
                 <div className="space-y-3">
                   <Label className="text-lg font-semibold">Couleur des chaussures</Label>
                   <div className="grid grid-cols-7 gap-2">
@@ -394,11 +414,10 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
                   </div>
                 </div>
 
-                {/* Accessories */}
                 <div className="space-y-3">
                   <Label className="text-lg font-semibold">Accessoire</Label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {accessories.map((accessory) => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableAccessories.map((accessory) => (
                       <button
                         key={accessory.id}
                         onClick={() =>
@@ -407,6 +426,8 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
                         className={`p-3 rounded-lg border-2 text-sm transition-all ${
                           avatarStyle.accessory === accessory.id
                             ? "border-blue-500 bg-blue-50 font-semibold"
+                            : accessory.requiredRole
+                            ? "border-yellow-400 bg-yellow-50 hover:border-yellow-500"
                             : "border-gray-300 hover:border-gray-400"
                         }`}
                       >

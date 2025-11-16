@@ -12,6 +12,7 @@ interface Scene3DProps {
   playerPosition: { x: number; y: number; z: number }
   playerRotation: number
   playerAvatarStyle?: any
+  playerRole?: 'member' | 'vip' | 'vip_plus' | 'admin'
   otherUsers: OtherUser[]
   onEnterCinema?: () => void
   activeChatBubbles?: Map<string, { message: string; username: string; timestamp: number }>
@@ -22,6 +23,7 @@ export function Scene3D({
   playerPosition,
   playerRotation,
   playerAvatarStyle,
+  playerRole = 'member',
   otherUsers,
   onEnterCinema,
   activeChatBubbles = new Map(),
@@ -115,7 +117,6 @@ export function Scene3D({
         />
       </mesh>
       
-      {/* Decorative rings in plaza */}
       {[15, 20].map((radius, i) => (
         <mesh key={`ring-${i}`} position={[0, 0.04, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[radius, radius + 0.3, 64]} />
@@ -415,7 +416,8 @@ export function Scene3D({
         rotation={playerRotation} 
         color="#4dabf7" 
         isPlayer 
-        style={playerAvatarStyle} 
+        style={playerAvatarStyle}
+        userRole={playerRole}
       />
 
       {otherUsers.map((user) => (
@@ -425,10 +427,10 @@ export function Scene3D({
             rotation={user.rotation} 
             color="#51cf66" 
             isPlayer={false} 
-            style={user.avatarStyle} 
+            style={user.avatarStyle}
+            userRole={user.userRole || 'member'}
           />
           
-          {/* Username label with backdrop */}
           <mesh position={[user.position.x, user.position.y + 2.8, user.position.z]}>
             <boxGeometry args={[2.5, 0.5, 0.1]} />
             <meshBasicMaterial color="#000000" transparent opacity={0.7} />

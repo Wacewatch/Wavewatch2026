@@ -1,19 +1,22 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { Canvas } from "@react-three/fiber"
-import { OrbitControls, PerspectiveCamera, Stars } from "@react-three/drei"
+import { PerspectiveCamera, Stars } from "@react-three/drei"
 import { Scene3D } from "./scene-3d"
 import { ChatPanel } from "./chat-panel"
 import { Controls } from "./controls"
+import { AvatarCustomizer } from "./avatar-customizer"
 import { createClient } from "@/lib/supabase/client"
 import type { RealtimeChannel } from "@supabase/supabase-js"
-import { Users, Wifi } from 'lucide-react'
+import { Users, Maximize, Minimize, Settings, Crown } from 'lucide-react'
+import { Button } from "@/components/ui/button"
 
 interface InteractiveWorldProps {
   userId: string
   username: string
-  isAdmin: boolean
+  userRole: 'member' | 'vip' | 'vip_plus' | 'admin'
+  avatarStyle: any
 }
 
 export interface OtherUser {
@@ -22,26 +25,52 @@ export interface OtherUser {
   position: { x: number; y: number; z: number }
   rotation: number
   avatarStyle?: any
+  userRole?: 'member' | 'vip' | 'vip_plus' | 'admin'
 }
 
-export function InteractiveWorld({ userId, username, isAdmin }: InteractiveWorldProps) {
+export function InteractiveWorld({ userId, username, userRole, avatarStyle }: InteractiveWorldProps) {
   const [position, setPosition] = useState({ x: 0, y: 0, z: 15 })
   const [rotation, setRotation] = useState(0)
   const [otherUsers, setOtherUsers] = useState<OtherUser[]>([])
   const [activeChatBubbles, setActiveChatBubbles] = useState<Map<string, { message: string; username: string; timestamp: number }>>(new Map())
+  const [isConnected, setIsConnected] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [showCustomizer, setShowCustomizer] = useState(false)
+  const [currentAvatarStyle, setCurrentAvatarStyle] = useState(avatarStyle)
+  
   const channelRef = useRef<RealtimeChannel | null>(null)
   const lastUpdateRef = useRef<number>(0)
-  const [isConnected, setIsConnected] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen()
+      setIsFullscreen(true)
+    } else {
+      document.exitFullscreen()
+      setIsFullscreen(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
+    }
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
 
-    // Subscribe to presence channel
     const channel = supabase.channel("interactive-world", {
       config: {
         presence: {
           key: userId,
         },
+        broadcast: {
+          self: false
+        }
       },
     })
 
@@ -61,6 +90,7 @@ export function InteractiveWorld({ userId, username, isAdmin }: InteractiveWorld
                 position: presence.position || { x: 0, y: 0, z: 0 },
                 rotation: presence.rotation || 0,
                 avatarStyle: presence.avatarStyle,
+                userRole: presence.userRole || 'member',
               })
             }
           }
@@ -79,6 +109,14 @@ export function InteractiveWorld({ userId, username, isAdmin }: InteractiveWorld
             })
             return newMap
           })
+
+          setTimeout(() => {
+            setActiveChatBubbles(prev => {
+              const newMap = new Map(prev)
+              newMap.delete(payload.userId)
+              return newMap
+            })
+          }, 5000)
         }
       })
       .subscribe(async (status) => {
@@ -88,6 +126,8 @@ export function InteractiveWorld({ userId, username, isAdmin }: InteractiveWorld
             username,
             position: { x: 0, y: 0, z: 15 },
             rotation: 0,
+            avatarStyle: currentAvatarStyle,
+            userRole,
             online_at: new Date().toISOString(),
           })
         }
@@ -98,93 +138,115 @@ export function InteractiveWorld({ userId, username, isAdmin }: InteractiveWorld
     return () => {
       channel.unsubscribe()
     }
-  }, [userId, username])
+  }, [userId, username, userRole, currentAvatarStyle])
 
-  // Update position in realtime (throttled)
   useEffect(() => {
     const now = Date.now()
-    if (now - lastUpdateRef.current < 50) return
+    if (now - lastUpdateRef.current < 100) return
 
     lastUpdateRef.current = now
 
-    if (channelRef.current) {
+    if (channelRef.current && isConnected) {
       channelRef.current.track({
         username,
         position,
         rotation,
+        avatarStyle: currentAvatarStyle,
+        userRole,
         online_at: new Date().toISOString(),
       })
     }
-  }, [position, rotation, username])
+  }, [position, rotation, username, isConnected, currentAvatarStyle, userRole])
 
-  const handleMove = (direction: "forward" | "backward" | "left" | "right") => {
-    const speed = 0.5
-    const newPosition = { ...position }
+  const handleMove = useCallback((direction: "forward" | "backward" | "left" | "right") => {
+    const speed = 0.3
+    
+    setPosition(prevPos => {
+      const newPosition = { ...prevPos }
 
-    switch (direction) {
-      case "forward":
-        newPosition.z -= speed * Math.cos(rotation)
-        newPosition.x -= speed * Math.sin(rotation)
-        break
-      case "backward":
-        newPosition.z += speed * Math.cos(rotation)
-        newPosition.x += speed * Math.sin(rotation)
-        break
-      case "left":
-        setRotation((r) => r + 0.1)
-        break
-      case "right":
-        setRotation((r) => r - 0.1)
-        break
-    }
+      switch (direction) {
+        case "forward":
+          newPosition.z -= speed * Math.cos(rotation)
+          newPosition.x -= speed * Math.sin(rotation)
+          break
+        case "backward":
+          newPosition.z += speed * Math.cos(rotation)
+          newPosition.x += speed * Math.sin(rotation)
+          break
+      }
 
-    newPosition.x = Math.max(-45, Math.min(45, newPosition.x))
-    newPosition.z = Math.max(-70, Math.min(25, newPosition.z))
+      newPosition.x = Math.max(-45, Math.min(45, newPosition.x))
+      newPosition.z = Math.max(-70, Math.min(25, newPosition.z))
 
-    setPosition(newPosition)
-  }
-
-  const handleChatBubbleExpire = (userId: string) => {
-    setActiveChatBubbles(prev => {
-      const newMap = new Map(prev)
-      newMap.delete(userId)
-      return newMap
+      return newPosition
     })
+
+    if (direction === "left") {
+      setRotation(r => r + 0.05)
+    } else if (direction === "right") {
+      setRotation(r => r - 0.05)
+    }
+  }, [rotation])
+
+  const handleAvatarUpdate = useCallback(async (newStyle: any) => {
+    setCurrentAvatarStyle(newStyle)
+    
+    const supabase = createClient()
+    await supabase
+      .from("interactive_profiles")
+      .update({ avatar_style: newStyle })
+      .eq("user_id", userId)
+  }, [userId])
+
+  const getRoleBadge = () => {
+    switch (userRole) {
+      case 'admin': return <Crown className="w-4 h-4 text-yellow-400" />
+      case 'vip_plus': return <Crown className="w-4 h-4 text-purple-400" />
+      case 'vip': return <Crown className="w-4 h-4 text-blue-400" />
+      default: return null
+    }
   }
 
   return (
-    <div className="fixed inset-0" style={{ background: "linear-gradient(to bottom, #0a0a1e 0%, #1a1a2e 100%)" }}>
-      <Canvas shadows gl={{ antialias: true, alpha: false }} dpr={[1, 2]}>
+    <div ref={containerRef} className="fixed inset-0" style={{ background: "linear-gradient(to bottom, #0a0a1e 0%, #1a1a2e 100%)" }}>
+      <Canvas 
+        shadows 
+        gl={{ 
+          antialias: true, 
+          alpha: false,
+          powerPreference: "high-performance"
+        }} 
+        dpr={[1, 1.5]}
+        performance={{ min: 0.5 }}
+      >
         <PerspectiveCamera 
           makeDefault 
           position={[position.x, position.y + 8, position.z + 15]} 
           fov={75}
         />
-        <OrbitControls
-          target={[position.x, position.y + 2, position.z]}
-          enablePan={false}
-          minDistance={8}
-          maxDistance={30}
-          minPolarAngle={Math.PI / 6}
-          maxPolarAngle={Math.PI / 2.2}
-          enableDamping
-          dampingFactor={0.05}
-        />
-        <Stars radius={300} depth={60} count={5000} factor={7} saturation={0} fade speed={1} />
+        <Stars radius={300} depth={60} count={3000} factor={6} saturation={0} fade speed={0.5} />
         <Scene3D 
           playerPosition={position} 
-          playerRotation={rotation} 
+          playerRotation={rotation}
+          playerAvatarStyle={currentAvatarStyle}
+          playerRole={userRole}
           otherUsers={otherUsers}
           activeChatBubbles={activeChatBubbles}
-          onChatBubbleExpire={handleChatBubbleExpire}
         />
       </Canvas>
 
-      <div className="absolute top-6 left-6 bg-gradient-to-br from-background/90 to-background/70 backdrop-blur-md rounded-xl p-5 border-2 shadow-2xl"
+      <div className="absolute top-6 left-6 bg-gradient-to-br from-background/95 to-background/80 backdrop-blur-xl rounded-xl p-5 border-2 shadow-2xl"
            style={{ borderColor: "hsl(var(--primary))" }}>
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
-            {username[0].toUpperCase()}
+          <div className="relative">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+              {username[0].toUpperCase()}
+            </div>
+            {getRoleBadge() && (
+              <div className="absolute -top-1 -right-1 bg-background rounded-full p-1">
+                {getRoleBadge()}
+              </div>
+            )}
           </div>
           <div>
             <h3 className="font-bold text-xl bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
@@ -197,7 +259,7 @@ export function InteractiveWorld({ userId, username, isAdmin }: InteractiveWorld
           </div>
         </div>
         
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex items-center gap-3 text-sm mb-3">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/20 rounded-full">
             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
             <span className="font-medium">{isConnected ? 'Connecté' : 'Connexion...'}</span>
@@ -205,20 +267,41 @@ export function InteractiveWorld({ userId, username, isAdmin }: InteractiveWorld
           <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/20 rounded-full">
             <Users className="w-4 h-4" />
             <span className="font-bold">{otherUsers.length + 1}</span>
-            <span className="text-muted-foreground">en ligne</span>
           </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setShowCustomizer(true)}
+            size="sm"
+            variant="outline"
+            className="flex-1"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Avatar
+          </Button>
+          <Button
+            onClick={toggleFullscreen}
+            size="sm"
+            variant="outline"
+          >
+            {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+          </Button>
         </div>
       </div>
 
-      {/* Chat Panel */}
       <ChatPanel userId={userId} username={username} />
-
-      {/* Controls */}
       <Controls onMove={handleMove} />
 
-      <div className="absolute top-6 right-6 bg-background/80 backdrop-blur-md rounded-lg px-4 py-2 border text-xs text-muted-foreground">
-        Position: X:{position.x.toFixed(1)} Z:{position.z.toFixed(1)}
-      </div>
+      {showCustomizer && (
+        <AvatarCustomizer
+          userId={userId}
+          userRole={userRole}
+          currentStyle={currentAvatarStyle}
+          onClose={() => setShowCustomizer(false)}
+          onSave={handleAvatarUpdate}
+        />
+      )}
     </div>
   )
 }

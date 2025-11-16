@@ -13,16 +13,15 @@ export default function InteractivePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [username, setUsername] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<'member' | 'vip' | 'vip_plus' | 'admin'>('member')
   const [needsOnboarding, setNeedsOnboarding] = useState(false)
-  const [profileId, setProfileId] = useState<string | null>(null)
+  const [profileData, setProfileData] = useState<any>(null)
   const router = useRouter()
   const { toast } = useToast()
   const { user, loading: authLoading } = useAuth()
 
   useEffect(() => {
-    if (authLoading) {
-      return
-    }
+    if (authLoading) return
 
     if (!user) {
       toast({
@@ -44,14 +43,12 @@ export default function InteractivePage() {
       return
     }
 
-    // User is admin, proceed with initialization
     initializeUser()
   }, [user, authLoading, router, toast])
 
   const initializeUser = async () => {
     const supabase = createClient()
 
-    // Get current user
     const {
       data: { user: currentUser },
       error: authError,
@@ -67,6 +64,19 @@ export default function InteractivePage() {
       return
     }
 
+    const { data: userProfile } = await supabase
+      .from("user_profiles")
+      .select("*")
+      .eq("user_id", currentUser.id)
+      .single()
+
+    let role: 'member' | 'vip' | 'vip_plus' | 'admin' = 'member'
+    if (userProfile) {
+      if (userProfile.is_admin) role = 'admin'
+      else if (userProfile.is_vip_plus) role = 'vip_plus'
+      else if (userProfile.is_vip) role = 'vip'
+    }
+
     const { data: profile, error: profileError } = await supabase
       .from("interactive_profiles")
       .select("*")
@@ -74,20 +84,19 @@ export default function InteractivePage() {
       .single()
 
     if (profileError && profileError.code === "PGRST116") {
-      // No profile exists - need full onboarding
       setNeedsOnboarding(true)
       setUserId(currentUser.id)
+      setUserRole(role)
       setIsLoading(false)
       return
     } else if (profile && !profile.avatar_style) {
-      // Profile exists but no avatar customization - need onboarding
       setNeedsOnboarding(true)
       setUserId(currentUser.id)
-      setProfileId(profile.id)
+      setUserRole(role)
+      setProfileData(profile)
       setIsLoading(false)
       return
     } else if (profile) {
-      // Profile complete, update online status
       await supabase
         .from("interactive_profiles")
         .update({ is_online: true, last_seen: new Date().toISOString() })
@@ -95,14 +104,14 @@ export default function InteractivePage() {
 
       setUsername(profile.username)
       setUserId(currentUser.id)
-      setProfileId(profile.id)
+      setUserRole(role)
+      setProfileData(profile)
     }
 
     setIsLoading(false)
   }
 
   const handleOnboardingComplete = async () => {
-    // Reload profile after onboarding
     await initializeUser()
     setNeedsOnboarding(false)
   }
@@ -112,25 +121,21 @@ export default function InteractivePage() {
   }
 
   if (!user || !user.isAdmin) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Accès refusé</h1>
-          <p className="text-muted-foreground">
-            Cette fonctionnalité est réservée aux administrateurs.
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  if (needsOnboarding && userId) {
-    return <OnboardingFlow userId={userId} onComplete={handleOnboardingComplete} />
-  }
-
-  if (!userId || !username) {
     return null
   }
 
-  return <InteractiveWorld userId={userId} username={username} />
+  if (needsOnboarding && userId) {
+    return <OnboardingFlow userId={userId} userRole={userRole} onComplete={handleOnboardingComplete} />
+  }
+
+  if (!userId || !username || !profileData) {
+    return null
+  }
+
+  return <InteractiveWorld 
+    userId={userId} 
+    username={username} 
+    userRole={userRole}
+    avatarStyle={profileData.avatar_style}
+  />
 }
