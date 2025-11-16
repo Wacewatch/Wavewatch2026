@@ -2,6 +2,11 @@
 
 import * as React from "react"
 
+if (typeof window !== 'undefined' && typeof self !== 'undefined') {
+  self.__v0_$RefreshReg$ = () => {}
+  self.__v0_$RefreshSig$ = () => (type: any) => type
+}
+
 type Theme =
   | "dark"
   | "light"

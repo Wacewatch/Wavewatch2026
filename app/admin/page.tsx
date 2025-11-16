@@ -16,10 +16,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Edit, Trash2, Users, Tv, Radio, Search, Eye, EyeOff, BarChart3, FileText, Zap, Trophy, Crown, Shield, UserX, Clock, Activity, Heart, UserPlus, Play, ThumbsUp, ThumbsDown, Calendar, FlagIcon as FlaskIcon, TrendingUp, Monitor, Headphones, Gamepad2, Film, Clapperboard, Sparkles, LogIn, MessageSquare, CheckCircle, XCircle, Music, Download, BookOpen, Send, SettingsIcon, Save, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Plus, Edit, Trash2, Users, Tv, Radio, Search, Eye, EyeOff, BarChart3, FileText, Zap, Trophy, Crown, Shield, UserX, Clock, Activity, Heart, UserPlus, Play, ThumbsUp, ThumbsDown, Calendar, FlagIcon as FlaskIcon, TrendingUp, Monitor, Headphones, Gamepad2, Film, Clapperboard, Sparkles, LogIn, MessageSquare, CheckCircle, XCircle, Music, Download, BookOpen, Send, SettingsIcon, Save, ChevronLeft, ChevronRight, Globe } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { supabase } from "@/lib/supabase"
+// REMOVED: import { supabase } from "@/lib/supabase" // Removed incorrect Supabase import
 import { createBrowserClient } from "@supabase/ssr" // Import for Supabase client
+import { Separator } from "@/components/ui/separator" // Import Separator
 
 // Constants for user pagination
 const USERS_PER_PAGE = 10
@@ -39,6 +40,7 @@ export default function AdminPage() {
   const [software, setSoftware] = useState([])
   const [games, setGames] = useState([])
   const [ebooks, setEbooks] = useState([])
+  const [totalUserCount, setTotalUserCount] = useState(0)
 
   // States pour les modals
   const [activeModal, setActiveModal] = useState(null)
@@ -238,7 +240,20 @@ export default function AdminPage() {
     calendar_widget: true,
   })
 
+  // ADDED: State for Interactive World settings
+  const [worldSettings, setWorldSettings] = useState({
+    maxCapacity: 100,
+    worldMode: "day",
+    voiceChatEnabled: true,
+    playerInteractionsEnabled: true,
+    showStatusBadges: true,
+  });
+
   const handleUpdateRequestStatus = async (id: string, status: string) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       const { error } = await supabase.from("requests").update({ status }).eq("id", id)
       if (error) throw error
@@ -255,6 +270,10 @@ export default function AdminPage() {
   }
 
   const handleDeleteRequest = async (id: string) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       const { error } = await supabase.from("requests").delete().eq("id", id)
       if (error) throw error
@@ -267,6 +286,10 @@ export default function AdminPage() {
   }
 
   const loadMusicContent = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       const { data, error } = await supabase.from("music_content").select("*").order("created_at", { ascending: false })
       if (error) throw error
@@ -278,6 +301,10 @@ export default function AdminPage() {
   }
 
   const loadSoftware = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       const { data, error } = await supabase.from("software").select("*").order("created_at", { ascending: false })
       if (error) throw error
@@ -289,6 +316,10 @@ export default function AdminPage() {
   }
 
   const loadGames = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       const { data, error } = await supabase.from("games").select("*").order("created_at", { ascending: false })
       if (error) throw error
@@ -300,6 +331,10 @@ export default function AdminPage() {
   }
 
   const loadEbooks = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       const { data, error } = await supabase.from("ebooks").select("*").order("created_at", { ascending: false })
       if (error) throw error
@@ -311,6 +346,10 @@ export default function AdminPage() {
   }
 
   const handleSendBroadcast = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     if (!broadcastForm.subject || !broadcastForm.content) {
       toast({
         title: "Erreur",
@@ -384,14 +423,18 @@ export default function AdminPage() {
   }
 
   const loadAllData = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       console.log("🔄 Chargement de toutes les données...")
       const results = await Promise.allSettled([
-        loadRealTVChannels(),
-        loadRealRadioStations(),
-        loadRealRetrogamingSources(),
-        loadRealUsers(),
-        loadRequests(),
+        loadRealTVChannels(supabase),
+        loadRealRadioStations(supabase),
+        loadRealRetrogamingSources(supabase),
+        loadRealUsers(supabase),
+        loadRequests(supabase),
         loadMusicContent(),
         loadSoftware(),
         loadGames(),
@@ -422,7 +465,7 @@ export default function AdminPage() {
     }
   }
 
-  const loadRealTVChannels = async () => {
+  const loadRealTVChannels = async (supabase) => {
     try {
       console.log("🔄 Chargement des chaînes TV...")
       const { data, error } = await supabase.from("tv_channels").select("*").order("created_at", { ascending: false })
@@ -442,7 +485,7 @@ export default function AdminPage() {
     }
   }
 
-  const loadRealRadioStations = async () => {
+  const loadRealRadioStations = async (supabase) => {
     try {
       console.log("🔄 Chargement des stations radio...")
       const { data, error } = await supabase
@@ -465,7 +508,7 @@ export default function AdminPage() {
     }
   }
 
-  const loadRealRetrogamingSources = async () => {
+  const loadRealRetrogamingSources = async (supabase) => {
     try {
       console.log("🔄 Chargement des sources retrogaming...")
       const { data, error } = await supabase
@@ -488,7 +531,7 @@ export default function AdminPage() {
     }
   }
 
-  const loadRealUsers = async () => {
+  const loadRealUsers = async (supabase) => {
     try {
       console.log("🔄 Chargement des utilisateurs...")
 
@@ -529,7 +572,7 @@ export default function AdminPage() {
     }
   }
 
-  const loadRequests = async () => {
+  const loadRequests = async (supabase) => {
     try {
       console.log("🔄 Chargement des demandes...")
       const { data, error } = await supabase
@@ -561,6 +604,10 @@ export default function AdminPage() {
 
   const loadRecentActivities = async () => {
     setActivityLoading(true)
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       console.log("🔄 Chargement des activités récentes...")
 
@@ -720,6 +767,10 @@ export default function AdminPage() {
   }
 
   const loadSiteSettings = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       const { data, error } = await supabase
         .from("site_settings")
@@ -741,6 +792,10 @@ export default function AdminPage() {
   }
 
   const handleSaveSiteSettings = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       const { error } = await supabase
         .from("site_settings")
@@ -782,7 +837,51 @@ export default function AdminPage() {
     }
   }
 
+  // ADDED: Function to handle saving World settings
+  const handleSaveWorldSettings = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    try {
+      const { error } = await supabase
+        .from("site_settings")
+        .update({
+          setting_value: worldSettings,
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id,
+        })
+        .eq("setting_key", "interactive_world_settings") // Assuming a new setting_key for world settings
+
+      if (error) {
+        console.error("Error saving world settings:", error)
+        toast({
+          title: "Erreur",
+          description: "Impossible de sauvegarder les paramètres du monde interactif",
+          variant: "destructive",
+        })
+        return
+      }
+
+      toast({
+        title: "Paramètres sauvegardés",
+        description: "Les paramètres du monde interactif ont été mis à jour.",
+      })
+    } catch (error) {
+      console.error("Error saving world settings:", error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la sauvegarde des paramètres du monde interactif",
+        variant: "destructive",
+      })
+    }
+  }
+
   const loadStatistics = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       console.log("🔄 Calcul des statistiques...")
 
@@ -1026,6 +1125,10 @@ export default function AdminPage() {
 
   // Fonctions CRUD avec vraie base de données
   const handleAdd = async (type, formData) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       console.log(`🔄 Ajout d'un ${type}:`, formData)
       let result
@@ -1375,6 +1478,10 @@ export default function AdminPage() {
   }
 
   const handleUpdate = async (type, formData) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     if (!editingItem) {
       console.error("❌ Aucun élément en cours d'édition")
       return
@@ -1506,6 +1613,10 @@ export default function AdminPage() {
   }
 
   const handleDelete = async (type, id) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       console.log(`🔄 Suppression d'un ${type} avec l'ID:`, id)
       let tableName
@@ -1591,6 +1702,10 @@ export default function AdminPage() {
   }
 
   const toggleStatus = async (type, id) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       console.log(`🔄 Changement de statut pour ${type} avec l'ID:`, id)
       let currentItem
@@ -1696,6 +1811,10 @@ export default function AdminPage() {
 
   // Fonctions pour les utilisateurs
   const toggleUserVIP = async (id) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       console.log(`🔄 Changement de statut VIP pour l'utilisateur:`, id)
       const currentUser = users.find((user) => user.id === id)
@@ -1736,6 +1855,10 @@ export default function AdminPage() {
   }
 
   const toggleUserAdmin = async (id) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       console.log(`🔄 Changement de statut Admin pour l'utilisateur:`, id)
       const currentUser = users.find((user) => user.id === id)
@@ -1773,6 +1896,10 @@ export default function AdminPage() {
   }
 
   const toggleUserVIPPlus = async (id) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       console.log(`🔄 Changement de statut VIP+ pour l'utilisateur:`, id)
       const currentUser = users.find((user) => user.id === id)
@@ -1813,6 +1940,10 @@ export default function AdminPage() {
   }
 
   const toggleUserBeta = async (id) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       console.log(`🔄 Changement de statut Beta pour l'utilisateur:`, id)
       const currentUser = users.find((user) => user.id === id)
@@ -1850,6 +1981,10 @@ export default function AdminPage() {
   }
 
   const banUser = async (id) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
       console.log(`🔄 Bannissement/débannissement de l'utilisateur:`, id)
       const currentUser = users.find((user) => user.id === id)
@@ -1890,6 +2025,10 @@ export default function AdminPage() {
   }
 
   const handleDeleteUser = async (userId: string) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     if (!confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.")) {
       return
     }
@@ -1998,6 +2137,10 @@ export default function AdminPage() {
   }
 
   const handleCreateChangelog = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     if (!newChangelog.version || !newChangelog.title || !newChangelog.description) {
       toast({
         title: "Erreur",
@@ -2006,11 +2149,6 @@ export default function AdminPage() {
       })
       return
     }
-
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
 
     const { error } = await supabase.from("changelogs").insert([
       {
@@ -2068,12 +2206,11 @@ export default function AdminPage() {
   // Replaced loadAllData with fetchAllData to include changelogs
   const fetchAllData = async () => {
     setLoading(true)
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      )
-
       const [tvData, radioData, retroData, usersData, changelogsData] = await Promise.all([
         supabase.from("tv_channels").select("*").order("name"),
         supabase.from("radio_stations").select("*").order("name"),
@@ -2091,6 +2228,7 @@ export default function AdminPage() {
       // Load statistics and activities after fetching all data
       await loadStatistics()
       await loadRecentActivities()
+      await loadSiteSettings() // Load site settings here
     } catch (error) {
       console.error("❌ Erreur lors du chargement des données admin:", error)
       toast({
@@ -2117,6 +2255,10 @@ export default function AdminPage() {
 
   // Add update log handler
   const handleUpdateLog = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     if (!editingLog) return
 
     try {
@@ -2151,11 +2293,11 @@ export default function AdminPage() {
 
   // Add loadChangelogs function to be called by fetchAllData
   const loadChangelogs = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
     try {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      )
       const { data, error } = await supabase.from("changelogs").select("*").order("release_date", { ascending: false })
       if (error) throw error
       setChangelogs(data || [])
@@ -2201,6 +2343,10 @@ export default function AdminPage() {
   // useEffect(() => {
   //   const fetchUserCount = async () => {
   //     if (!user?.isAdmin) return
+  //     const supabase = createBrowserClient(
+  //       process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  //       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  //     )
   //     const { count } = await supabase.from("user_profiles").select("id", { count: "exact", head: true })
   //     if (count !== null) {
   //       setTotalUserCount(count)
@@ -2325,6 +2471,14 @@ export default function AdminPage() {
               >
                 <SettingsIcon className="w-4 h-4" />
                 <span className="hidden sm:inline">Paramètres</span>
+              </TabsTrigger>
+              {/* Added new Interactive World tab to the TabsList */}
+              <TabsTrigger
+                value="world"
+                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              >
+                <Globe className="w-4 h-4" />
+                <span className="hidden sm:inline">Monde Interactif</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -5160,11 +5314,14 @@ export default function AdminPage() {
             </DialogContent>
           </Dialog>
 
-          {/* Add new Settings tab content at the end before closing </Tabs> */}
+          {/* Added new Settings tab content at the end before closing </Tabs> */}
           <TabsContent value="settings" className="space-y-6">
-            <Card>
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>Paramètres du Site</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <SettingsIcon className="w-5 h-5" />
+                  Paramètres du Site
+                </CardTitle>
                 <CardDescription>Gérez les modules affichés sur la page d'accueil</CardDescription>
               </CardHeader>
               <CardContent>
@@ -5374,6 +5531,113 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          <TabsContent value="world" className="space-y-6">
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-xl text-white flex items-center gap-2">
+                  <Globe className="w-5 h-5" />
+                  Paramètres du Monde Interactif
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Gérez les paramètres globaux de WaveWatch World
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* World Settings */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white">Paramètres Généraux</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-300">Capacité Maximale</label>
+                      <Input
+                        type="number"
+                        defaultValue={worldSettings.maxCapacity}
+                        onChange={(e) => setWorldSettings({ ...worldSettings, maxCapacity: parseInt(e.target.value, 10) })}
+                        className="bg-gray-700 border-gray-600 text-white"
+                        placeholder="Nombre max d'utilisateurs"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-300">Mode du Monde</label>
+                      <select 
+                        value={worldSettings.worldMode}
+                        onChange={(e) => setWorldSettings({ ...worldSettings, worldMode: e.target.value })}
+                        className="w-full px-3 py-2 bg-gray-700 border-gray-600 rounded-md text-white">
+                        <option value="day">Jour</option>
+                        <option value="night">Nuit</option>
+                        <option value="sunset">Coucher de soleil</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input 
+                        type="checkbox" 
+                        className="rounded" 
+                        checked={worldSettings.voiceChatEnabled} 
+                        onChange={(e) => setWorldSettings({ ...worldSettings, voiceChatEnabled: e.target.checked })}
+                      />
+                      Activer le chat vocal
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input 
+                        type="checkbox" 
+                        className="rounded" 
+                        checked={worldSettings.playerInteractionsEnabled} 
+                        onChange={(e) => setWorldSettings({ ...worldSettings, playerInteractionsEnabled: e.target.checked })}
+                      />
+                      Activer les interactions entre joueurs
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input 
+                        type="checkbox" 
+                        className="rounded" 
+                        checked={worldSettings.showStatusBadges} 
+                        onChange={(e) => setWorldSettings({ ...worldSettings, showStatusBadges: e.target.checked })}
+                      />
+                      Afficher les badges de statut
+                    </label>
+                  </div>
+                </div>
+
+                <Separator className="bg-gray-700" />
+
+                {/* Cinema Rooms Quick Access */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Film className="w-5 h-5" />
+                    Salles de Cinéma
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    Gérez les salles de cinéma depuis la page dédiée: <a href="/admin/cinema-rooms" className="text-blue-400 hover:underline">/admin/cinema-rooms</a>
+                  </p>
+                </div>
+
+                <Separator className="bg-gray-700" />
+
+                {/* Online Users Monitor */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Utilisateurs en Ligne
+                  </h3>
+                  <div className="bg-gray-900 p-4 rounded-lg">
+                    <p className="text-2xl font-bold text-green-400">0</p>
+                    <p className="text-sm text-gray-400">utilisateurs connectés actuellement</p>
+                  </div>
+                </div>
+
+                <Button onClick={handleSaveWorldSettings} className="w-full bg-blue-600 hover:bg-blue-700">
+                  Sauvegarder les Paramètres
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
         </Tabs>
       </div>
     </div>

@@ -65,6 +65,9 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
   }, [])
 
   useEffect(() => {
+    console.log("[v0] InteractiveWorld mounted", { userId, username, userRole })
+    console.log("[v0] Avatar style:", avatarStyle)
+    
     const supabase = createClient()
 
     const channel = supabase.channel("interactive-world", {
@@ -80,6 +83,7 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
 
     channel
       .on("presence", { event: "sync" }, () => {
+        console.log("[v0] Presence sync event")
         const state = channel.presenceState()
         const users: OtherUser[] = []
 
@@ -100,6 +104,7 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
           }
         })
 
+        console.log("[v0] Updated other users:", users.length)
         setOtherUsers(users)
       })
       .on("broadcast", { event: "chat_message" }, ({ payload }) => {
@@ -124,8 +129,10 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
         }
       })
       .subscribe(async (status) => {
+        console.log("[v0] Channel subscription status:", status)
         if (status === "SUBSCRIBED") {
           setIsConnected(true)
+          console.log("[v0] Successfully connected to interactive world")
           await channel.track({
             username,
             position: { x: 0, y: 0, z: 15 },
@@ -140,6 +147,7 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
     channelRef.current = channel
 
     return () => {
+      console.log("[v0] Cleaning up channel")
       channel.unsubscribe()
     }
   }, [userId, username, userRole, currentAvatarStyle])

@@ -37,6 +37,7 @@ export default function InteractivePage() {
   }, [user, authLoading, router, toast])
 
   const initializeUser = async () => {
+    console.log("[v0] Initializing user...")
     const supabase = createClient()
 
     const {
@@ -44,7 +45,10 @@ export default function InteractivePage() {
       error: authError,
     } = await supabase.auth.getUser()
 
+    console.log("[v0] Current user:", currentUser?.id)
+
     if (authError || !currentUser) {
+      console.error("[v0] Auth error:", authError)
       toast({
         title: "Erreur d'authentification",
         description: "Impossible de charger votre profil",
@@ -60,6 +64,8 @@ export default function InteractivePage() {
       .eq("user_id", currentUser.id)
       .single()
 
+    console.log("[v0] User profile:", userProfile)
+
     let role: 'member' | 'vip' | 'vip_plus' | 'admin' = 'member'
     if (userProfile) {
       if (userProfile.is_admin) role = 'admin'
@@ -67,19 +73,26 @@ export default function InteractivePage() {
       else if (userProfile.is_vip) role = 'vip'
     }
 
+    console.log("[v0] User role:", role)
+
     const { data: profile, error: profileError } = await supabase
       .from("interactive_profiles")
       .select("*")
       .eq("user_id", currentUser.id)
       .single()
 
+    console.log("[v0] Interactive profile:", profile)
+    console.log("[v0] Profile error:", profileError)
+
     if (profileError && profileError.code === "PGRST116") {
+      console.log("[v0] No profile found, showing onboarding")
       setNeedsOnboarding(true)
       setUserId(currentUser.id)
       setUserRole(role)
       setIsLoading(false)
       return
     } else if (profile && !profile.avatar_style) {
+      console.log("[v0] Profile exists but no avatar, showing onboarding")
       setNeedsOnboarding(true)
       setUserId(currentUser.id)
       setUserRole(role)
@@ -87,6 +100,7 @@ export default function InteractivePage() {
       setIsLoading(false)
       return
     } else if (profile) {
+      console.log("[v0] Profile found, updating online status")
       await supabase
         .from("interactive_profiles")
         .update({ is_online: true, last_seen: new Date().toISOString() })
@@ -96,6 +110,7 @@ export default function InteractivePage() {
       setUserId(currentUser.id)
       setUserRole(role)
       setProfileData(profile)
+      console.log("[v0] User initialized successfully")
     }
 
     setIsLoading(false)

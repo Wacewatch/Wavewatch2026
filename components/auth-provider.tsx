@@ -72,11 +72,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (event === "SIGNED_OUT") {
         setUser(null)
         updateAdultContentPreference(false)
+        setLoading(false)
       } else if (event === "USER_UPDATED" && session?.user) {
         await loadUserProfile(session.user)
+      } else if (event === "TOKEN_REFRESHED") {
+        // Token refresh is automatic and doesn't need to reload the profile
+        // Just ensure loading is false
+        setLoading(false)
       }
-      // Token refresh is automatic and doesn't need to reload the entire profile
-      setLoading(false)
     })
 
     return () => {
@@ -90,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { data: profile, error } = await withTimeout(
         supabase.from("user_profiles").select("*").eq("id", supabaseUser.id).single(),
-        8000,
+        5000,
       )
 
       // If profile exists, use it
@@ -109,6 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(userData)
         updateAdultContentPreference(userData.showAdultContent || false)
+        setLoading(false)
         return
       }
 
@@ -163,9 +167,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         setUser(fallbackUser)
       }
+      
+      setLoading(false)
     } catch (error) {
-      console.error("[v0] Exception in loadUserProfile:", error)
-      // Fallback user data on exception
       const username = supabaseUser.email?.split("@")[0] || "User"
       setUser({
         id: supabaseUser.id,
@@ -176,6 +180,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAdmin: username.toLowerCase() === "wwadmin",
         showAdultContent: false,
       })
+      setLoading(false)
     }
   }
 
