@@ -29,205 +29,122 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs = 30000): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("Request timeout")), timeoutMs)),
-  ])
-}
+const supabase = createClient()
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
-  const supabase = createClient()
-
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const {
-          data: { session },
-        } = await withTimeout(supabase.auth.getSession(), 20000)
-
-        if (session?.user) {
-          await loadUserProfile(session.user)
-        } else {
-          setLoading(false)
-        }
-      } catch (error) {
-        console.error("[v0] Auth initialization error:", error)
-        setLoading(false)
-      }
-    }
-
-    initAuth()
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("[v0] Auth state change:", event)
-
-      if (event === "SIGNED_IN" && session?.user) {
-        await loadUserProfile(session.user)
-      } else if (event === "SIGNED_OUT") {
-        setUser(null)
-        updateAdultContentPreference(false)
-        setLoading(false)
-      } else if (event === "USER_UPDATED" && session?.user) {
-        await loadUserProfile(session.user)
-      } else if (event === "TOKEN_REFRESHED" && session?.user) {
-        console.log("[v0] Token refreshed, reloading profile")
-        await loadUserProfile(session.user)
-      }
-    })
-
-    return () => {
-      subscription?.unsubscribe()
-    }
-  }, [])
 
   const loadUserProfile = async (supabaseUser: SupabaseUser) => {
     try {
-      console.log("[v0] Loading profile for user:", supabaseUser.id)
+      console.log("[v0] Loading profile for user ID:", supabaseUser.id)
 
-      const { data: profile, error } = await withTimeout(
-        supabase.from("user_profiles").select("*").eq("id", supabaseUser.id).single(),
-        15000,
-      )
+      const { data: profile, error } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("id", supabaseUser.id)
+        .single()
 
-      if (profile && !error) {
-        console.log("[v0] Profile found:", profile.username)
-        
-        const now = new Date()
-        let isVip = Boolean(profile.is_vip)
-        let vipExpiresAt = profile.vip_expires_at
-        
-        if (isVip && vipExpiresAt) {
-          const expiryDate = new Date(vipExpiresAt)
-          if (expiryDate < now) {
-            // VIP expired, update in database
-            console.log("[v0] VIP expired, updating status")
-            await supabase.from("user_profiles").update({
-              is_vip: false,
-              is_vip_plus: false,
-            }).eq("id", supabaseUser.id)
-            
-            isVip = false
-            vipExpiresAt = null
-          }
+      if (error) {
+        console.error("[v0] Profile error:", error)
+        if (error.code === "PGRST116") {
+          const username = supabaseUser.user_metadata?.username || supabaseUser.email?.split("@")[0] || "User"
+          
+          await supabase.from("user_profiles").insert({
+            id: supabaseUser.id,
+            username,
+            email: supabaseUser.email || "",
+            is_admin: false,
+            is_vip: false,
+            is_vip_plus: false,
+          })
+
+          setUser({
+            id: supabaseUser.id,
+            username,
+            email: supabaseUser.email || "",
+            isVip: false,
+            isVipPlus: false,
+            isAdmin: false,
+          })
         }
-        
-        const userData: User = {
-          id: supabaseUser.id,
-          username: profile.username || supabaseUser.email?.split("@")[0] || "User",
-          email: supabaseUser.email || "",
-          isVip: isVip,
-          isVipPlus: Boolean(profile.is_vip_plus),
-          isAdmin: Boolean(profile.is_admin),
-          vipExpiresAt: vipExpiresAt,
-          showAdultContent: Boolean(profile.show_adult_content),
-        }
-
-        setUser(userData)
-        updateAdultContentPreference(userData.showAdultContent || false)
         setLoading(false)
         return
       }
 
-      if (error?.code === "PGRST116") {
-        console.log("[v0] Profile not found, creating new profile")
-        const username = supabaseUser.user_metadata?.username || supabaseUser.email?.split("@")[0] || "User"
-        
-        const isAdmin = false // Admin status should be set manually in database
-
-        const userData: User = {
-          id: supabaseUser.id,
-          username: username,
-          email: supabaseUser.email || "",
-          isVip: false,
-          isVipPlus: false,
-          isAdmin: isAdmin,
-          showAdultContent: false,
-        }
-
-        const { error: upsertError } = await supabase.from("user_profiles").insert({
-          id: supabaseUser.id,
-          username: userData.username,
-          email: userData.email,
-          is_admin: userData.isAdmin,
-          is_vip: false,
-          is_vip_plus: false,
-          show_adult_content: false,
-        })
-
-        if (upsertError) {
-          console.error("[v0] Error creating profile:", upsertError)
-        } else {
-          console.log("[v0] Profile created successfully")
-        }
-
-        setUser(userData)
-        updateAdultContentPreference(false)
-      } else {
-        console.error("[v0] Error loading profile:", error)
-        const username = supabaseUser.email?.split("@")[0] || "User"
-        const fallbackUser: User = {
-          id: supabaseUser.id,
-          username: username,
-          email: supabaseUser.email || "",
-          isVip: false,
-          isVipPlus: false,
-          isAdmin: false,
-          showAdultContent: false,
-        }
-        setUser(fallbackUser)
-      }
+      const now = new Date()
+      let isVip = Boolean(profile.is_vip)
       
+      if (isVip && profile.vip_expires_at) {
+        const expiryDate = new Date(profile.vip_expires_at)
+        if (expiryDate < now) {
+          await supabase
+            .from("user_profiles")
+            .update({ is_vip: false, is_vip_plus: false })
+            .eq("id", supabaseUser.id)
+          isVip = false
+        }
+      }
+
+      const userData: User = {
+        id: supabaseUser.id,
+        username: profile.username || "User",
+        email: supabaseUser.email || "",
+        isVip,
+        isVipPlus: Boolean(profile.is_vip_plus),
+        isAdmin: Boolean(profile.is_admin),
+        vipExpiresAt: profile.vip_expires_at,
+        showAdultContent: Boolean(profile.show_adult_content),
+      }
+
+      console.log("[v0] User loaded:", userData.username, "Admin:", userData.isAdmin)
+      setUser(userData)
+      updateAdultContentPreference(userData.showAdultContent || false)
       setLoading(false)
     } catch (error) {
-      console.error("[v0] Exception in loadUserProfile:", error)
-      const username = supabaseUser.email?.split("@")[0] || "User"
-      setUser({
-        id: supabaseUser.id,
-        username: username,
-        email: supabaseUser.email || "",
-        isVip: false,
-        isVipPlus: false,
-        isAdmin: false,
-        showAdultContent: false,
-      })
+      console.error("[v0] Load profile exception:", error)
       setLoading(false)
     }
   }
 
-  const refreshUser = async () => {
-    try {
-      const {
-        data: { session },
-      } = await withTimeout(supabase.auth.getSession(), 15000)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        await loadUserProfile(session.user)
+        loadUserProfile(session.user)
+      } else {
+        setLoading(false)
       }
-    } catch (error) {
-      console.error("[v0] Error refreshing user:", error)
+    })
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("[v0] Auth state:", _event)
+      if (session?.user) {
+        loadUserProfile(session.user)
+      } else {
+        setUser(null)
+        setLoading(false)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const refreshUser = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session?.user) {
+      await loadUserProfile(session.user)
     }
   }
 
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true)
-
-      const { error } = await withTimeout(
-        supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        }),
-        15000,
-      )
-
-      if (error) {
-        throw new Error(error.message)
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      
+      if (error) throw error
 
       toast({
         title: "Connexion réussie",
@@ -249,42 +166,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true)
 
-      if (!username || username.length < 2) {
-        throw new Error("Le nom d'utilisateur doit contenir au moins 2 caractères")
-      }
-      if (!email || !email.includes("@")) {
-        throw new Error("Format d'email invalide")
-      }
-      if (!password || password.length < 6) {
-        throw new Error("Le mot de passe doit contenir au moins 6 caractères")
-      }
-
-      const { data, error } = await withTimeout(
-        supabase.auth.signUp({
-          email: email.trim(),
-          password,
-          options: {
-            emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
-            data: {
-              username: username.trim(),
-            },
-          },
-        }),
-        15000,
-      )
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
+          data: { username },
+        },
+      })
 
       if (error) throw error
 
       if (data.user) {
         toast({
-          title: "Compte créé avec succès !",
-          description: `Bienvenue ${username} sur WaveWatch !`,
+          title: "Compte créé !",
+          description: `Bienvenue ${username} !`,
         })
       }
     } catch (error: any) {
       toast({
         title: "Erreur d'inscription",
-        description: error.message || "Une erreur est survenue lors de la création du compte",
+        description: error.message,
         variant: "destructive",
       })
       throw error
@@ -294,20 +196,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const signOut = async () => {
-    try {
-      await withTimeout(supabase.auth.signOut(), 10000)
-      setUser(null)
-      updateAdultContentPreference(false)
-
-      toast({
-        title: "Déconnexion réussie",
-        description: "À bientôt!",
-      })
-    } catch (error: any) {
-      console.error("[v0] Signout error:", error)
-      setUser(null)
-      updateAdultContentPreference(false)
-    }
+    await supabase.auth.signOut()
+    setUser(null)
+    updateAdultContentPreference(false)
+    toast({
+      title: "Déconnexion réussie",
+      description: "À bientôt!",
+    })
   }
 
   return (

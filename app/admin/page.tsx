@@ -25,6 +25,16 @@ import { Separator } from "@/components/ui/separator" // Import Separator
 // Constants for user pagination
 const USERS_PER_PAGE = 10
 
+// Interface for Cinema Room
+interface CinemaRoom {
+  id: string;
+  name: string;
+  capacity: number;
+  start_time: string | null;
+  embed_url: string | null;
+  is_active: boolean;
+}
+
 export default function AdminPage() {
   const { user, loading: userLoading } = useAuth() // Added userLoading to the destructuring
   const { toast } = useToast()
@@ -249,6 +259,9 @@ export default function AdminPage() {
     playerInteractionsEnabled: true,
     showStatusBadges: true,
   });
+
+  // ADDED: State for Cinema Rooms Management
+  const [cinemaRooms, setCinemaRooms] = useState<CinemaRoom[]>([]);
 
   const handleUpdateRequestStatus = async (id: string, status: string) => {
     const supabase = createBrowserClient(
@@ -895,6 +908,62 @@ export default function AdminPage() {
       })
     }
   }
+
+  // ADDED: Function to fetch Cinema Rooms
+  const loadCinemaRooms = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    try {
+      const { data, error } = await supabase.from("cinema_rooms").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      setCinemaRooms(data || []);
+    } catch (error) {
+      console.error("Error loading cinema rooms:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les salles de cinéma.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ADDED: Function to update a Cinema Room
+  const handleUpdateCinemaRoom = async (room: CinemaRoom) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    try {
+      const { error } = await supabase
+        .from("cinema_rooms")
+        .update({
+          name: room.name,
+          capacity: room.capacity,
+          start_time: room.start_time,
+          embed_url: room.embed_url,
+          is_active: room.is_active,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", room.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Salle mise à jour",
+        description: `La salle '${room.name}' a été mise à jour avec succès.`,
+      });
+      loadCinemaRooms(); // Reload to reflect changes
+    } catch (error) {
+      console.error("Error updating cinema room:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour la salle de cinéma.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const loadStatistics = async () => {
     const supabase = createBrowserClient(
@@ -2247,6 +2316,7 @@ export default function AdminPage() {
       await loadStatistics()
       await loadRecentActivities()
       await loadSiteSettings() // Load site settings here
+      await loadCinemaRooms(); // Load cinema rooms data
     } catch (error) {
       console.error("❌ Erreur lors du chargement des données admin:", error)
       toast({
@@ -5506,7 +5576,7 @@ export default function AdminPage() {
                       <label className="text-sm text-gray-300">Capacité Maximale</label>
                       <Input
                         type="number"
-                        defaultValue={worldSettings.maxCapacity}
+                        value={worldSettings.maxCapacity}
                         onChange={(e) => setWorldSettings({ ...worldSettings, maxCapacity: parseInt(e.target.value, 10) })}
                         className="bg-gray-700 border-gray-600 text-white"
                         placeholder="Nombre max d'utilisateurs"
@@ -5555,19 +5625,114 @@ export default function AdminPage() {
                       Afficher les badges de statut
                     </label>
                   </div>
+                  
+                  <div className="flex justify-end pt-4">
+                    <Button onClick={handleSaveWorldSettings} className="bg-blue-600 hover:bg-blue-700">
+                      <Save className="w-4 h-4 mr-2" />
+                      Sauvegarder les Paramètres
+                    </Button>
+                  </div>
                 </div>
 
                 <Separator className="bg-gray-700" />
 
-                {/* Cinema Rooms Quick Access */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                     <Film className="w-5 h-5" />
-                    Salles de Cinéma
+                    Gestion des Salles de Cinéma
                   </h3>
-                  <p className="text-sm text-gray-400">
-                    Gérez les salles de cinéma depuis la page dédiée: <a href="/admin/cinema-rooms" className="text-blue-400 hover:underline">/admin/cinema-rooms</a>
-                  </p>
+                  
+                  <div className="space-y-4">
+                    {cinemaRooms.map((room) => (
+                      <div key={room.id} className="p-4 bg-gray-700 rounded-lg border border-gray-600">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Nom de la Salle</label>
+                            <Input
+                              value={room.name}
+                              onChange={(e) => {
+                                setCinemaRooms(cinemaRooms.map(r => 
+                                  r.id === room.id ? { ...r, name: e.target.value } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Capacité</label>
+                            <Input
+                              type="number"
+                              value={room.capacity}
+                              onChange={(e) => {
+                                setCinemaRooms(cinemaRooms.map(r => 
+                                  r.id === room.id ? { ...r, capacity: parseInt(e.target.value) } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Heure de Départ</label>
+                            <Input
+                              type="time"
+                              value={room.start_time || ''}
+                              onChange={(e) => {
+                                setCinemaRooms(cinemaRooms.map(r => 
+                                  r.id === room.id ? { ...r, start_time: e.target.value } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                              placeholder="19:30"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">URL Embed (Lecture)</label>
+                            <Input
+                              type="url"
+                              value={room.embed_url || ''}
+                              onChange={(e) => {
+                                setCinemaRooms(cinemaRooms.map(r => 
+                                  r.id === room.id ? { ...r, embed_url: e.target.value } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                              placeholder="https://..."
+                            />
+                          </div>
+                          
+                          <div className="space-y-2 md:col-span-2">
+                            <label className="flex items-center gap-2 text-sm text-gray-300">
+                              <input 
+                                type="checkbox" 
+                                className="rounded" 
+                                checked={room.is_active}
+                                onChange={(e) => {
+                                  setCinemaRooms(cinemaRooms.map(r => 
+                                    r.id === room.id ? { ...r, is_active: e.target.checked } : r
+                                  ))
+                                }}
+                              />
+                              Salle Active
+                            </label>
+                          </div>
+                          
+                          <div className="md:col-span-2 flex justify-end">
+                            <Button 
+                              onClick={() => handleUpdateCinemaRoom(room)}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Save className="w-4 h-4 mr-2" />
+                              Sauvegarder la Salle
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <Separator className="bg-gray-700" />
@@ -5583,10 +5748,6 @@ export default function AdminPage() {
                     <p className="text-sm text-gray-400">utilisateurs connectés actuellement</p>
                   </div>
                 </div>
-
-                <Button onClick={handleSaveWorldSettings} className="w-full bg-blue-600 hover:bg-blue-700">
-                  Sauvegarder les Paramètres
-                </Button>
               </CardContent>
             </Card>
           </TabsContent>

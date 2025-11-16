@@ -34,7 +34,6 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
   const [rotation, setRotation] = useState(0)
   const [otherUsers, setOtherUsers] = useState<OtherUser[]>([])
   const [activeChatBubbles, setActiveChatBubbles] = useState<Map<string, { message: string; username: string; timestamp: number }>>(new Map())
-  const [isConnected, setIsConnected] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showCustomizer, setShowCustomizer] = useState(false)
   const [currentAvatarStyle, setCurrentAvatarStyle] = useState(avatarStyle)
@@ -45,6 +44,7 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
   const channelRef = useRef<RealtimeChannel | null>(null)
   const lastUpdateRef = useRef<number>(0)
   const containerRef = useRef<HTMLDivElement>(null)
+  const supabase = createClient()
 
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
@@ -68,22 +68,10 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
     console.log("[v0] InteractiveWorld mounted", { userId, username, userRole })
     console.log("[v0] Avatar style:", avatarStyle)
     
-    const supabase = createClient()
-
-    const channel = supabase.channel("interactive-world", {
-      config: {
-        presence: {
-          key: userId,
-        },
-        broadcast: {
-          self: false
-        }
-      },
-    })
+    const channel = supabase.channel("interactive-world")
 
     channel
       .on("presence", { event: "sync" }, () => {
-        console.log("[v0] Presence sync")
         const state = channel.presenceState()
         const users: OtherUser[] = []
 
@@ -130,11 +118,10 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
       .subscribe(async (status) => {
         console.log("[v0] Channel status:", status)
         if (status === "SUBSCRIBED") {
-          console.log("[v0] Channel subscribed successfully")
           await channel.track({
             username,
-            position: { x: 0, y: 0, z: 15 },
-            rotation: 0,
+            position,
+            rotation,
             avatarStyle: currentAvatarStyle,
             userRole,
             online_at: new Date().toISOString(),
@@ -145,7 +132,6 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
     channelRef.current = channel
 
     return () => {
-      console.log("[v0] Cleaning up channel")
       channel.unsubscribe()
     }
   }, [userId, username, userRole, currentAvatarStyle])
@@ -156,7 +142,7 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
 
     lastUpdateRef.current = now
 
-    if (channelRef.current && isConnected) {
+    if (channelRef.current) {
       channelRef.current.track({
         username,
         position,
@@ -166,7 +152,7 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
         online_at: new Date().toISOString(),
       })
     }
-  }, [position, rotation, username, isConnected, currentAvatarStyle, userRole])
+  }, [position, rotation, username, currentAvatarStyle, userRole])
 
   const handleMove = useCallback((direction: "forward" | "backward" | "left" | "right") => {
     const speed = 0.3
@@ -201,7 +187,6 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
   const handleAvatarUpdate = useCallback(async (newStyle: any) => {
     setCurrentAvatarStyle(newStyle)
     
-    const supabase = createClient()
     await supabase
       .from("interactive_profiles")
       .update({ avatar_style: newStyle })
@@ -220,48 +205,30 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
   return (
     <div 
       ref={containerRef} 
-      className="fixed inset-0 w-full h-full"
-      style={{ 
-        background: "linear-gradient(to bottom, #0a0a1e 0%, #1a1a2e 100%)",
-        width: '100vw',
-        height: '100vh',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        overflow: 'hidden'
-      }}
+      className="fixed inset-0 w-full h-full bg-gradient-to-b from-slate-900 to-slate-950"
     >
-      <div style={{ 
-        position: 'absolute', 
-        inset: 0, 
-        width: '100%', 
-        height: '100%',
-        touchAction: 'none'
-      }}>
+      <div className="absolute inset-0 w-full h-full" style={{ touchAction: 'none' }}>
         <Canvas 
-          shadows 
+          shadows={false}
+          dpr={[1, 2]}
           gl={{ 
-            antialias: quality === 'high', 
+            antialias: quality !== 'low',
             alpha: false,
-            powerPreference: quality === 'low' ? 'low-power' : 'high-performance',
+            powerPreference: 'high-performance',
             failIfMajorPerformanceCaveat: false,
-            preserveDrawingBuffer: true
           }} 
-          dpr={quality === 'low' ? [0.5, 1] : quality === 'medium' ? [1, 1.5] : [1, 2]}
-          performance={{ min: quality === 'low' ? 0.3 : quality === 'medium' ? 0.5 : 0.7 }}
           camera={{ 
-            position: [position.x, position.y + 8, position.z + 15],
+            position: [0, 8, 30],
             fov: 75,
             near: 0.1,
-            far: 1000
+            far: 1000,
           }}
           style={{ 
             width: '100%', 
             height: '100%',
             display: 'block',
-            touchAction: 'none'
+            position: 'absolute',
+            inset: 0
           }}
         >
           <Stars radius={300} depth={60} count={3000} factor={6} saturation={0} fade speed={0.5} />
@@ -272,6 +239,7 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
             playerRole={userRole}
             otherUsers={otherUsers}
             activeChatBubbles={activeChatBubbles}
+            quality={quality}
           />
         </Canvas>
       </div>
@@ -302,8 +270,8 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
         
         <div className="flex items-center gap-3 text-sm mb-3">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/20 rounded-full">
-            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-            <span className="font-medium">{isConnected ? 'Connecté' : 'Connexion...'}</span>
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="font-medium">Connecté</span>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/20 rounded-full">
             <Users className="w-4 h-4" />
