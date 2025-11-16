@@ -1,20 +1,18 @@
-import { createServerClient } from "@supabase/ssr"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 
 export async function GET() {
   try {
-    const cookieStore = await cookies()
-    const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
+    const supabase = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          persistSession: false,
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-        },
-      },
-    })
+      }
+    )
 
     // Get all feedback data
     const { data, error } = await supabase.from("user_feedback").select("*")
@@ -63,7 +61,6 @@ export async function GET() {
     
     console.log("[v0] Loading profiles for", userIds.length, "users")
 
-    // ✅ CORRECTION: Utiliser 'id' au lieu de 'user_id'
     const { data: profiles, error: profilesError } = await supabase
       .from("user_profiles")
       .select("id, username, email")
@@ -75,7 +72,6 @@ export async function GET() {
 
     console.log("[v0] Loaded", profiles?.length || 0, "user profiles")
 
-    // ✅ CORRECTION: Mapper sur profile.id au lieu de profile.user_id
     const usernameMap = new Map(
       (profiles || []).map((p) => {
         const displayName = p.username || (p.email ? p.email.split("@")[0] : "Utilisateur")

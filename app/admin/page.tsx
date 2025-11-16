@@ -51,7 +51,6 @@ export default function AdminPage() {
   const [stats, setStats] = useState({
     totalContent: 0,
     totalUsers: 0,
-    totalViews: 0,
     totalRevenue: 0,
     activeUsers: 0,
     vipUsers: 0,
@@ -2196,6 +2195,19 @@ export default function AdminPage() {
     )
   }
 
+  // Fetch total user count for the broadcast message
+  const [totalUserCount, setTotalUserCount] = useState(0)
+  useEffect(() => {
+    const fetchUserCount = async () => {
+      const { count } = await supabase.from("user_profiles").select("id", { count: "exact", head: true })
+      if (count !== null) {
+        setTotalUserCount(count)
+      }
+    }
+    fetchUserCount()
+  }, [])
+
+
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       <div className="container mx-auto px-4 py-8 space-y-8">
@@ -2765,7 +2777,7 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
                     <Users className="w-5 h-5 text-blue-400" />
                     <span className="text-sm text-blue-300">
-                      Ce message sera envoyé à {users.length} utilisateur(s) inscrit(s)
+                      Ce message sera envoyé à {totalUserCount > 0 ? totalUserCount : users.length} utilisateur(s) inscrit(s)
                     </span>
                   </div>
                   <Button

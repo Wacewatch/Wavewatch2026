@@ -247,41 +247,55 @@ export function OnboardingFlow({ userId, userRole = 'member', onComplete }: Onbo
             </div>
 
             <div className="grid md:grid-cols-2 gap-8">
-              <div className="bg-gradient-to-b from-sky-400 to-sky-200 rounded-xl p-8 flex flex-col items-center justify-center min-h-[500px]">
-                <div className="text-sm font-semibold text-gray-700 mb-4">Aperçu</div>
-                <div className="space-y-3">
+              <div className="bg-gradient-to-b from-sky-400 to-sky-200 rounded-xl p-8 flex flex-col items-center justify-center min-h-[500px] border-4 border-white/30">
+                <div className="text-sm font-semibold text-gray-700 mb-4 bg-white/50 px-4 py-1 rounded-full">Aperçu de votre avatar</div>
+                <div className="space-y-4 scale-110">
+                  {/* Tête avec teint de peau */}
                   <div
-                    className="w-24 h-24 rounded-full mx-auto border-4 relative"
+                    className="w-24 h-24 rounded-full mx-auto border-4 relative shadow-lg"
                     style={{
                       backgroundColor: avatarStyle.skinTone,
                       borderColor: avatarStyle.hairColor,
+                      borderWidth: '6px'
                     }}
                   >
-                    <div className="absolute top-1/3 left-1/4 w-2 h-2 bg-black rounded-full" />
-                    <div className="absolute top-1/3 right-1/4 w-2 h-2 bg-black rounded-full" />
-                    <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-8 h-1 bg-black rounded-full" />
+                    {/* Yeux */}
+                    <div className="absolute top-8 left-5 w-3 h-3 bg-gray-800 rounded-full" />
+                    <div className="absolute top-8 right-5 w-3 h-3 bg-gray-800 rounded-full" />
+                    {/* Sourire */}
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-10 h-2 bg-gray-800 rounded-full" />
                   </div>
+                  
+                  {/* Corps - Haut */}
                   <div
-                    className="w-28 h-32 mx-auto rounded-lg"
+                    className="w-28 h-32 mx-auto rounded-lg shadow-md border-2 border-white/30"
                     style={{ backgroundColor: avatarStyle.topColor }}
                   />
+                  
+                  {/* Corps - Bas */}
                   <div
-                    className="w-24 h-28 mx-auto rounded-lg"
+                    className="w-24 h-28 mx-auto rounded-lg shadow-md border-2 border-white/30"
                     style={{ backgroundColor: avatarStyle.bottomColor }}
                   />
-                  <div className="flex justify-center gap-3">
+                  
+                  {/* Chaussures */}
+                  <div className="flex justify-center gap-4">
                     <div
-                      className="w-8 h-10 rounded"
+                      className="w-10 h-12 rounded shadow-md border-2 border-white/30"
                       style={{ backgroundColor: avatarStyle.shoeColor }}
                     />
                     <div
-                      className="w-8 h-10 rounded"
+                      className="w-10 h-12 rounded shadow-md border-2 border-white/30"
                       style={{ backgroundColor: avatarStyle.shoeColor }}
                     />
                   </div>
+                  
+                  {/* Accessoire badge */}
                   {avatarStyle.accessory !== "none" && (
-                    <div className="text-sm text-gray-700 mt-2 font-medium">
-                      {availableAccessories.find((a) => a.id === avatarStyle.accessory)?.label}
+                    <div className="text-center mt-3 bg-white/70 px-3 py-1 rounded-full mx-auto inline-block">
+                      <div className="text-sm text-gray-800 font-semibold">
+                        {availableAccessories.find((a) => a.id === avatarStyle.accessory)?.label}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -297,10 +311,10 @@ export function OnboardingFlow({ userId, userRole = 'member', onComplete }: Onbo
                         onClick={() =>
                           setAvatarStyle({ ...avatarStyle, hairStyle: style.id })
                         }
-                        className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                        className={`p-3 rounded-lg border-2 text-sm transition-all font-medium ${
                           avatarStyle.hairStyle === style.id
-                            ? "border-blue-500 bg-blue-50 font-semibold"
-                            : "border-gray-300 hover:border-gray-400"
+                            ? "border-blue-500 bg-blue-100 text-blue-900 shadow-md scale-105"
+                            : "border-gray-300 bg-white hover:border-gray-400 hover:shadow"
                         }`}
                       >
                         {style.label}
@@ -311,16 +325,16 @@ export function OnboardingFlow({ userId, userRole = 'member', onComplete }: Onbo
 
                 <div className="space-y-3">
                   <Label className="text-lg font-semibold">Couleur de cheveux</Label>
-                  <div className="grid grid-cols-6 gap-2">
+                  <div className="grid grid-cols-6 gap-3">
                     {hairColors.map((color) => (
                       <button
                         key={color.id}
                         onClick={() =>
                           setAvatarStyle({ ...avatarStyle, hairColor: color.id })
                         }
-                        className={`w-12 h-12 rounded-full border-4 transition-all ${
+                        className={`w-14 h-14 rounded-full border-4 transition-all shadow-md hover:scale-110 ${
                           avatarStyle.hairColor === color.id
-                            ? "border-blue-500 scale-110"
+                            ? "border-blue-500 scale-110 ring-4 ring-blue-200"
                             : "border-gray-300 hover:border-gray-400"
                         }`}
                         style={{ backgroundColor: color.id }}
@@ -332,16 +346,16 @@ export function OnboardingFlow({ userId, userRole = 'member', onComplete }: Onbo
 
                 <div className="space-y-3">
                   <Label className="text-lg font-semibold">Teint de peau</Label>
-                  <div className="grid grid-cols-6 gap-2">
+                  <div className="grid grid-cols-6 gap-3">
                     {skinTones.map((tone) => (
                       <button
                         key={tone.id}
                         onClick={() =>
                           setAvatarStyle({ ...avatarStyle, skinTone: tone.id })
                         }
-                        className={`w-12 h-12 rounded-full border-4 transition-all ${
+                        className={`w-14 h-14 rounded-full border-4 transition-all shadow-md hover:scale-110 ${
                           avatarStyle.skinTone === tone.id
-                            ? "border-blue-500 scale-110"
+                            ? "border-blue-500 scale-110 ring-4 ring-blue-200"
                             : "border-gray-300 hover:border-gray-400"
                         }`}
                         style={{ backgroundColor: tone.id }}
@@ -360,12 +374,15 @@ export function OnboardingFlow({ userId, userRole = 'member', onComplete }: Onbo
                         onClick={() =>
                           setAvatarStyle({ ...avatarStyle, topColor: color.id })
                         }
-                        className={`w-12 h-12 rounded-lg border-4 transition-all ${
+                        className={`w-12 h-12 rounded-lg border-4 transition-all shadow-md hover:scale-110 ${
                           avatarStyle.topColor === color.id
-                            ? "border-blue-500 scale-110"
+                            ? "border-blue-500 scale-110 ring-4 ring-blue-200"
                             : "border-gray-300 hover:border-gray-400"
                         }`}
-                        style={{ backgroundColor: color.id }}
+                        style={{ 
+                          backgroundColor: color.id,
+                          border: color.id === "#ffffff" ? "4px solid #e5e7eb" : undefined
+                        }}
                         title={color.label}
                       />
                     ))}
@@ -381,12 +398,15 @@ export function OnboardingFlow({ userId, userRole = 'member', onComplete }: Onbo
                         onClick={() =>
                           setAvatarStyle({ ...avatarStyle, bottomColor: color.id })
                         }
-                        className={`w-12 h-12 rounded-lg border-4 transition-all ${
+                        className={`w-12 h-12 rounded-lg border-4 transition-all shadow-md hover:scale-110 ${
                           avatarStyle.bottomColor === color.id
-                            ? "border-blue-500 scale-110"
+                            ? "border-blue-500 scale-110 ring-4 ring-blue-200"
                             : "border-gray-300 hover:border-gray-400"
                         }`}
-                        style={{ backgroundColor: color.id }}
+                        style={{ 
+                          backgroundColor: color.id,
+                          border: color.id === "#ffffff" ? "4px solid #e5e7eb" : undefined
+                        }}
                         title={color.label}
                       />
                     ))}
@@ -402,12 +422,15 @@ export function OnboardingFlow({ userId, userRole = 'member', onComplete }: Onbo
                         onClick={() =>
                           setAvatarStyle({ ...avatarStyle, shoeColor: color.id })
                         }
-                        className={`w-12 h-12 rounded-lg border-4 transition-all ${
+                        className={`w-12 h-12 rounded-lg border-4 transition-all shadow-md hover:scale-110 ${
                           avatarStyle.shoeColor === color.id
-                            ? "border-blue-500 scale-110"
+                            ? "border-blue-500 scale-110 ring-4 ring-blue-200"
                             : "border-gray-300 hover:border-gray-400"
                         }`}
-                        style={{ backgroundColor: color.id }}
+                        style={{ 
+                          backgroundColor: color.id,
+                          border: color.id === "#ffffff" ? "4px solid #e5e7eb" : undefined
+                        }}
                         title={color.label}
                       />
                     ))}
@@ -423,12 +446,12 @@ export function OnboardingFlow({ userId, userRole = 'member', onComplete }: Onbo
                         onClick={() =>
                           setAvatarStyle({ ...avatarStyle, accessory: accessory.id })
                         }
-                        className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                        className={`p-3 rounded-lg border-2 text-sm transition-all font-medium ${
                           avatarStyle.accessory === accessory.id
-                            ? "border-blue-500 bg-blue-50 font-semibold"
+                            ? "border-blue-500 bg-blue-100 text-blue-900 shadow-md scale-105"
                             : accessory.requiredRole
-                            ? "border-yellow-400 bg-yellow-50 hover:border-yellow-500"
-                            : "border-gray-300 hover:border-gray-400"
+                            ? "border-yellow-400 bg-yellow-50 hover:border-yellow-500 hover:shadow"
+                            : "border-gray-300 bg-white hover:border-gray-400 hover:shadow"
                         }`}
                       >
                         {accessory.label}
@@ -451,7 +474,7 @@ export function OnboardingFlow({ userId, userRole = 'member', onComplete }: Onbo
               <Button
                 onClick={handleCompleteOnboarding}
                 disabled={isLoading}
-                className="flex-1 text-lg"
+                className="flex-1 text-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                 size="lg"
               >
                 {isLoading ? "Création..." : "Entrer dans le monde"}

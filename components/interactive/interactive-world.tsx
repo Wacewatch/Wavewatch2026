@@ -7,6 +7,7 @@ import { Scene3D } from "./scene-3d"
 import { ChatPanel } from "./chat-panel"
 import { Controls } from "./controls"
 import { AvatarCustomizer } from "./avatar-customizer"
+import { WorldSettings } from "./world-settings"
 import { createClient } from "@/lib/supabase/client"
 import type { RealtimeChannel } from "@supabase/supabase-js"
 import { Users, Maximize, Minimize, Settings, Crown } from 'lucide-react'
@@ -37,6 +38,9 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showCustomizer, setShowCustomizer] = useState(false)
   const [currentAvatarStyle, setCurrentAvatarStyle] = useState(avatarStyle)
+  const [showSettings, setShowSettings] = useState(false)
+  const [controlMode, setControlMode] = useState<'keyboard' | 'joystick'>('keyboard')
+  const [quality, setQuality] = useState<'low' | 'medium' | 'high'>('medium')
   
   const channelRef = useRef<RealtimeChannel | null>(null)
   const lastUpdateRef = useRef<number>(0)
@@ -212,12 +216,12 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
       <Canvas 
         shadows 
         gl={{ 
-          antialias: true, 
+          antialias: quality === 'high', 
           alpha: false,
-          powerPreference: "high-performance"
+          powerPreference: quality === 'low' ? 'low-power' : 'high-performance'
         }} 
-        dpr={[1, 1.5]}
-        performance={{ min: 0.5 }}
+        dpr={quality === 'low' ? [0.5, 1] : quality === 'medium' ? [1, 1.5] : [1, 2]}
+        performance={{ min: quality === 'low' ? 0.3 : quality === 'medium' ? 0.5 : 0.7 }}
       >
         <PerspectiveCamera 
           makeDefault 
@@ -272,6 +276,15 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
 
         <div className="flex gap-2">
           <Button
+            onClick={() => setShowSettings(true)}
+            size="sm"
+            variant="outline"
+            className="flex-1"
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            Paramètres
+          </Button>
+          <Button
             onClick={() => setShowCustomizer(true)}
             size="sm"
             variant="outline"
@@ -291,7 +304,7 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
       </div>
 
       <ChatPanel userId={userId} username={username} />
-      <Controls onMove={handleMove} />
+      <Controls onMove={handleMove} mode={controlMode} />
 
       {showCustomizer && (
         <AvatarCustomizer
@@ -302,6 +315,15 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
           onSave={handleAvatarUpdate}
         />
       )}
+
+      <WorldSettings
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        controlMode={controlMode}
+        onControlModeChange={setControlMode}
+        quality={quality}
+        onQualityChange={setQuality}
+      />
     </div>
   )
 }

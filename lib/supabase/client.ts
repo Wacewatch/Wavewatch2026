@@ -22,16 +22,7 @@ export function createClient() {
     return client
   }
 
-  client = createBrowserClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      autoRefreshToken: true,
-      persistSession: true,
-      detectSessionInUrl: true,
-      flowType: "pkce",
-      storage: typeof window !== "undefined" ? window.localStorage : undefined,
-      storageKey: "supabase.auth.token",
-    },
-  })
+  client = createBrowserClient(supabaseUrl, supabaseAnonKey)
 
   return client
 }
