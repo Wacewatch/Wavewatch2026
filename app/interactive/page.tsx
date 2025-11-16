@@ -21,9 +21,26 @@ export default function InteractivePage() {
   const { user, loading: authLoading } = useAuth()
 
   useEffect(() => {
-    if (authLoading) return
+    const loadingTimeout = setTimeout(() => {
+      if (isLoading && user) {
+        console.log("[v0] Loading timeout - showing onboarding")
+        setIsLoading(false)
+        setNeedsOnboarding(true)
+        setUserId(user.id)
+      }
+    }, 8000) // Increased timeout for slower connections
+
+    return () => clearTimeout(loadingTimeout)
+  }, [isLoading, user])
+
+  useEffect(() => {
+    if (authLoading) {
+      console.log("[v0] Auth still loading...")
+      return
+    }
 
     if (!user) {
+      console.log("[v0] No user found after auth loaded")
       toast({
         title: "Connexion requise",
         description: "Vous devez être connecté pour accéder au monde interactif",
@@ -33,22 +50,13 @@ export default function InteractivePage() {
       return
     }
 
+    console.log("[v0] User authenticated, initializing...")
     initializeUser()
-  }, [user, authLoading, router, toast])
+  }, [user, authLoading])
 
   const initializeUser = async () => {
-    console.log("[v0] Initializing user...")
-    const supabase = createClient()
-
-    const {
-      data: { user: currentUser },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    console.log("[v0] Current user:", currentUser?.id)
-
-    if (authError || !currentUser) {
-      console.error("[v0] Auth error:", authError)
+    if (!user) {
+      console.error("[v0] Auth error: Auth session missing!")
       toast({
         title: "Erreur d'authentification",
         description: "Impossible de charger votre profil",
@@ -58,62 +66,80 @@ export default function InteractivePage() {
       return
     }
 
-    const { data: userProfile } = await supabase
-      .from("user_profiles")
-      .select("*")
-      .eq("user_id", currentUser.id)
-      .single()
+    console.log("[v0] Initializing user:", user.id)
+    const supabase = createClient()
 
-    console.log("[v0] User profile:", userProfile)
+    try {
+      const { data: userProfile } = await supabase
+        .from("user_profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .single()
 
-    let role: 'member' | 'vip' | 'vip_plus' | 'admin' = 'member'
-    if (userProfile) {
-      if (userProfile.is_admin) role = 'admin'
-      else if (userProfile.is_vip_plus) role = 'vip_plus'
-      else if (userProfile.is_vip) role = 'vip'
-    }
+      console.log("[v0] User profile loaded:", userProfile?.username)
 
-    console.log("[v0] User role:", role)
+      let role: 'member' | 'vip' | 'vip_plus' | 'admin' = 'member'
+      if (userProfile) {
+        if (userProfile.is_admin) role = 'admin'
+        else if (userProfile.is_vip_plus) role = 'vip_plus'
+        else if (userProfile.is_vip) role = 'vip'
+      }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("interactive_profiles")
-      .select("*")
-      .eq("user_id", currentUser.id)
-      .single()
+      console.log("[v0] User role:", role)
 
-    console.log("[v0] Interactive profile:", profile)
-    console.log("[v0] Profile error:", profileError)
-
-    if (profileError && profileError.code === "PGRST116") {
-      console.log("[v0] No profile found, showing onboarding")
-      setNeedsOnboarding(true)
-      setUserId(currentUser.id)
-      setUserRole(role)
-      setIsLoading(false)
-      return
-    } else if (profile && !profile.avatar_style) {
-      console.log("[v0] Profile exists but no avatar, showing onboarding")
-      setNeedsOnboarding(true)
-      setUserId(currentUser.id)
-      setUserRole(role)
-      setProfileData(profile)
-      setIsLoading(false)
-      return
-    } else if (profile) {
-      console.log("[v0] Profile found, updating online status")
-      await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("interactive_profiles")
-        .update({ is_online: true, last_seen: new Date().toISOString() })
-        .eq("user_id", currentUser.id)
+        .select("*")
+        .eq("user_id", user.id)
+        .single()
 
-      setUsername(profile.username)
-      setUserId(currentUser.id)
-      setUserRole(role)
-      setProfileData(profile)
-      console.log("[v0] User initialized successfully")
+      console.log("[v0] Interactive profile found:", !!profile)
+
+      if (profileError && profileError.code === "PGRST116") {
+        console.log("[v0] No interactive profile - showing onboarding")
+        setNeedsOnboarding(true)
+        setUserId(user.id)
+        setUserRole(role)
+        setIsLoading(false)
+        return
+      }
+
+      if (profile && !profile.avatar_style) {
+        console.log("[v0] Profile exists but missing avatar - showing onboarding")
+        setNeedsOnboarding(true)
+        setUserId(user.id)
+        setUserRole(role)
+        setProfileData(profile)
+        setIsLoading(false)
+        return
+      }
+
+      if (profile) {
+        console.log("[v0] Complete profile found - loading world")
+        await supabase
+          .from("interactive_profiles")
+          .update({ 
+            is_online: true, 
+            last_seen: new Date().toISOString() 
+          })
+          .eq("user_id", user.id)
+
+        setUsername(profile.username)
+        setUserId(user.id)
+        setUserRole(role)
+        setProfileData(profile)
+      }
+
+      setIsLoading(false)
+    } catch (error) {
+      console.error("[v0] Error initializing user:", error)
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors du chargement",
+        variant: "destructive",
+      })
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   const handleOnboardingComplete = async () => {

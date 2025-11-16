@@ -4,8 +4,8 @@ import { Avatar } from "./avatar"
 import { CinemaBuilding } from "./cinema-building"
 import { ChatBubble3D } from "./chat-bubble-3d"
 import type { OtherUser } from "./interactive-world"
-import { useFrame } from "@react-three/fiber"
-import { useRef, useMemo } from "react"
+import { useFrame, useThree } from "@react-three/fiber"
+import { useRef, useMemo, useEffect } from "react"
 import * as THREE from "three"
 
 interface Scene3DProps {
@@ -31,8 +31,23 @@ export function Scene3D({
 }: Scene3DProps) {
   const cloudsRef = useRef<THREE.Group>(null)
   const fogRef = useRef<THREE.Fog | null>(null)
+  const { gl, camera } = useThree()
   
-  // Animate clouds
+  useEffect(() => {
+    if (camera) {
+      camera.position.set(playerPosition.x, playerPosition.y + 8, playerPosition.z + 15)
+      camera.lookAt(playerPosition.x, playerPosition.y, playerPosition.z)
+    }
+  }, [playerPosition, camera])
+
+  useEffect(() => {
+    console.log("[v0] WebGL Renderer initialized:", {
+      renderer: gl.domElement.width + 'x' + gl.domElement.height,
+      pixelRatio: gl.getPixelRatio(),
+      capabilities: gl.capabilities
+    })
+  }, [gl])
+  
   useFrame((state) => {
     if (cloudsRef.current) {
       cloudsRef.current.children.forEach((cloud, i) => {
@@ -43,7 +58,6 @@ export function Scene3D({
     }
   })
 
-  // Create cloud meshes
   const clouds = useMemo(() => {
     const cloudPositions = []
     for (let i = 0; i < 20; i++) {
@@ -62,16 +76,16 @@ export function Scene3D({
   return (
     <>
       <color attach="background" args={["#0a0a1e"]} />
-      <fog attach="fog" args={["#0a0a1e", 40, 120]} ref={fogRef} />
+      <fog attach="fog" args={["#0a0a1e", 60, 150]} ref={fogRef} />
       
-      <ambientLight intensity={0.4} />
+      <ambientLight intensity={0.6} />
       <directionalLight 
         position={[50, 50, 25]} 
-        intensity={1.2} 
+        intensity={1.5} 
         castShadow 
-        shadow-mapSize={[2048, 2048]}
+        shadow-mapSize={[1024, 1024]}
       />
-      <hemisphereLight args={["#6a7aa5", "#1a1a2e", 0.5]} />
+      <hemisphereLight args={["#6a7aa5", "#1a1a2e", 0.6]} />
       
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[200, 200]} />

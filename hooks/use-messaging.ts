@@ -54,15 +54,27 @@ export function useMessaging() {
         .eq("recipient_id", user.id)
         .order("created_at", { ascending: false })
 
-      if (messagesError) throw messagesError
+      if (messagesError) {
+        console.error("Error loading messages:", messagesError)
+        return
+      }
 
       const senderIds = [...new Set(messagesData?.map((msg) => msg.sender_id) || [])]
+      
+      if (senderIds.length === 0) {
+        setMessages([])
+        return
+      }
+
       const { data: sendersData, error: sendersError } = await supabase
         .from("user_profiles")
         .select("id, username")
         .in("id", senderIds)
 
-      if (sendersError) throw sendersError
+      if (sendersError) {
+        console.error("Error loading senders:", sendersError)
+        return
+      }
 
       const sendersMap = new Map(sendersData?.map((sender) => [sender.id, sender.username]) || [])
 
@@ -75,11 +87,7 @@ export function useMessaging() {
       setMessages(messagesWithUsernames)
     } catch (error) {
       console.error("Error loading messages:", error)
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les messages",
-        variant: "destructive",
-      })
+      setMessages([])
     }
   }
 
@@ -93,15 +101,27 @@ export function useMessaging() {
         .eq("sender_id", user.id)
         .order("created_at", { ascending: false })
 
-      if (messagesError) throw messagesError
+      if (messagesError) {
+        console.error("Error loading sent messages:", messagesError)
+        return
+      }
 
       const recipientIds = [...new Set(messagesData?.map((msg) => msg.recipient_id) || [])]
+      
+      if (recipientIds.length === 0) {
+        setSentMessages([])
+        return
+      }
+
       const { data: recipientsData, error: recipientsError } = await supabase
         .from("user_profiles")
         .select("id, username")
         .in("id", recipientIds)
 
-      if (recipientsError) throw recipientsError
+      if (recipientsError) {
+        console.error("Error loading recipients:", recipientsError)
+        return
+      }
 
       const recipientsMap = new Map(recipientsData?.map((recipient) => [recipient.id, recipient.username]) || [])
 
@@ -114,6 +134,7 @@ export function useMessaging() {
       setSentMessages(messagesWithUsernames)
     } catch (error) {
       console.error("Error loading sent messages:", error)
+      setSentMessages([])
     }
   }
 
@@ -123,11 +144,15 @@ export function useMessaging() {
     try {
       const { data, error } = await supabase.from("blocked_users").select("blocked_id").eq("blocker_id", user.id)
 
-      if (error) throw error
+      if (error) {
+        console.error("Error loading blocked users:", error)
+        return
+      }
 
       setBlockedUsers(data?.map((b) => b.blocked_id) || [])
     } catch (error) {
       console.error("Error loading blocked users:", error)
+      setBlockedUsers([])
     }
   }
 

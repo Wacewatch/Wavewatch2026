@@ -29,7 +29,7 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-function withTimeout<T>(promise: Promise<T>, timeoutMs = 15000): Promise<T> {
+function withTimeout<T>(promise: Promise<T>, timeoutMs = 30000): Promise<T> {
   return Promise.race([
     promise,
     new Promise<T>((_, reject) => setTimeout(() => reject(new Error("Request timeout")), timeoutMs)),
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const {
           data: { session },
-        } = await withTimeout(supabase.auth.getSession(), 10000)
+        } = await withTimeout(supabase.auth.getSession(), 20000)
 
         if (session?.user) {
           await loadUserProfile(session.user)
@@ -76,8 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (event === "USER_UPDATED" && session?.user) {
         await loadUserProfile(session.user)
       } else if (event === "TOKEN_REFRESHED") {
-        // Token refresh is automatic and doesn't need to reload the profile
-        // Just ensure loading is false
+        console.log("[v0] Token refreshed successfully")
         setLoading(false)
       }
     })
@@ -93,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { data: profile, error } = await withTimeout(
         supabase.from("user_profiles").select("*").eq("id", supabaseUser.id).single(),
-        5000,
+        10000,
       )
 
       // If profile exists, use it

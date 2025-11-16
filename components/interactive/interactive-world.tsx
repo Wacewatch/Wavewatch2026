@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Canvas } from "@react-three/fiber"
-import { PerspectiveCamera, Stars } from "@react-three/drei"
+import { Stars } from "@react-three/drei"
 import { Scene3D } from "./scene-3d"
 import { ChatPanel } from "./chat-panel"
 import { Controls } from "./controls"
@@ -69,86 +69,114 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
     console.log("[v0] Avatar style:", avatarStyle)
     
     const supabase = createClient()
+    let retryCount = 0
+    const maxRetries = 3
 
-    const channel = supabase.channel("interactive-world", {
-      config: {
-        presence: {
-          key: userId,
+    const connectChannel = async () => {
+      const channel = supabase.channel("interactive-world", {
+        config: {
+          presence: {
+            key: userId,
+          },
+          broadcast: {
+            self: false
+          }
         },
-        broadcast: {
-          self: false
-        }
-      },
-    })
+      })
 
-    channel
-      .on("presence", { event: "sync" }, () => {
-        console.log("[v0] Presence sync event")
-        const state = channel.presenceState()
-        const users: OtherUser[] = []
+      channel
+        .on("presence", { event: "sync" }, () => {
+          console.log("[v0] Presence sync event")
+          const state = channel.presenceState()
+          const users: OtherUser[] = []
 
-        Object.keys(state).forEach((key) => {
-          if (key !== userId) {
-            const presences = state[key] as any[]
-            if (presences && presences.length > 0) {
-              const presence = presences[0]
-              users.push({
-                userId: key,
-                username: presence.username || "Utilisateur",
-                position: presence.position || { x: 0, y: 0, z: 0 },
-                rotation: presence.rotation || 0,
-                avatarStyle: presence.avatarStyle,
-                userRole: presence.userRole || 'member',
+          Object.keys(state).forEach((key) => {
+            if (key !== userId) {
+              const presences = state[key] as any[]
+              if (presences && presences.length > 0) {
+                const presence = presences[0]
+                users.push({
+                  userId: key,
+                  username: presence.username || "Utilisateur",
+                  position: presence.position || { x: 0, y: 0, z: 0 },
+                  rotation: presence.rotation || 0,
+                  avatarStyle: presence.avatarStyle,
+                  userRole: presence.userRole || 'member',
+                })
+              }
+            }
+          })
+
+          console.log("[v0] Updated other users:", users.length)
+          setOtherUsers(users)
+        })
+        .on("broadcast", { event: "chat_message" }, ({ payload }) => {
+          if (payload.userId !== userId) {
+            setActiveChatBubbles(prev => {
+              const newMap = new Map(prev)
+              newMap.set(payload.userId, {
+                message: payload.message,
+                username: payload.username,
+                timestamp: Date.now()
               })
+              return newMap
+            })
+
+            setTimeout(() => {
+              setActiveChatBubbles(prev => {
+                const newMap = new Map(prev)
+                newMap.delete(payload.userId)
+                return newMap
+              })
+            }, 5000)
+          }
+        })
+        .subscribe(async (status) => {
+          console.log("[v0] Channel subscription status:", status)
+          if (status === "SUBSCRIBED") {
+            setIsConnected(true)
+            console.log("[v0] Successfully connected to interactive world")
+            await channel.track({
+              username,
+              position: { x: 0, y: 0, z: 15 },
+              rotation: 0,
+              avatarStyle: currentAvatarStyle,
+              userRole,
+              online_at: new Date().toISOString(),
+            })
+          }
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+            console.log("[v0] Connection issue:", status)
+            retryCount++
+            if (retryCount < maxRetries) {
+              console.log(`[v0] Retrying connection (${retryCount}/${maxRetries})...`)
+              setTimeout(() => {
+                channel.unsubscribe()
+                connectChannel()
+              }, 2000)
+            } else {
+              console.log("[v0] Max retries reached, continuing in offline mode")
+              setIsConnected(true)
             }
           }
         })
 
-        console.log("[v0] Updated other users:", users.length)
-        setOtherUsers(users)
-      })
-      .on("broadcast", { event: "chat_message" }, ({ payload }) => {
-        if (payload.userId !== userId) {
-          setActiveChatBubbles(prev => {
-            const newMap = new Map(prev)
-            newMap.set(payload.userId, {
-              message: payload.message,
-              username: payload.username,
-              timestamp: Date.now()
-            })
-            return newMap
-          })
+      channelRef.current = channel
+    }
 
-          setTimeout(() => {
-            setActiveChatBubbles(prev => {
-              const newMap = new Map(prev)
-              newMap.delete(payload.userId)
-              return newMap
-            })
-          }, 5000)
-        }
-      })
-      .subscribe(async (status) => {
-        console.log("[v0] Channel subscription status:", status)
-        if (status === "SUBSCRIBED") {
-          setIsConnected(true)
-          console.log("[v0] Successfully connected to interactive world")
-          await channel.track({
-            username,
-            position: { x: 0, y: 0, z: 15 },
-            rotation: 0,
-            avatarStyle: currentAvatarStyle,
-            userRole,
-            online_at: new Date().toISOString(),
-          })
-        }
-      })
+    connectChannel()
 
-    channelRef.current = channel
+    const forceConnectTimeout = setTimeout(() => {
+      if (!isConnected) {
+        console.log("[v0] Forcing connection after timeout")
+        setIsConnected(true)
+      }
+    }, 5000)
 
     return () => {
       console.log("[v0] Cleaning up channel")
-      channel.unsubscribe()
+      clearTimeout(forceConnectTimeout)
+      channelRef.current?.unsubscribe()
     }
   }, [userId, username, userRole, currentAvatarStyle])
 
@@ -219,33 +247,75 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
     }
   }
 
+  useEffect(() => {
+    const connectionTimeout = setTimeout(() => {
+      if (!isConnected) {
+        console.log("[v0] Connection timeout - forcing connection")
+        setIsConnected(true)
+      }
+    }, 3000)
+
+    return () => clearTimeout(connectionTimeout)
+  }, [isConnected])
+
   return (
-    <div ref={containerRef} className="fixed inset-0" style={{ background: "linear-gradient(to bottom, #0a0a1e 0%, #1a1a2e 100%)" }}>
-      <Canvas 
-        shadows 
-        gl={{ 
-          antialias: quality === 'high', 
-          alpha: false,
-          powerPreference: quality === 'low' ? 'low-power' : 'high-performance'
-        }} 
-        dpr={quality === 'low' ? [0.5, 1] : quality === 'medium' ? [1, 1.5] : [1, 2]}
-        performance={{ min: quality === 'low' ? 0.3 : quality === 'medium' ? 0.5 : 0.7 }}
-      >
-        <PerspectiveCamera 
-          makeDefault 
-          position={[position.x, position.y + 8, position.z + 15]} 
-          fov={75}
-        />
-        <Stars radius={300} depth={60} count={3000} factor={6} saturation={0} fade speed={0.5} />
-        <Scene3D 
-          playerPosition={position} 
-          playerRotation={rotation}
-          playerAvatarStyle={currentAvatarStyle}
-          playerRole={userRole}
-          otherUsers={otherUsers}
-          activeChatBubbles={activeChatBubbles}
-        />
-      </Canvas>
+    <div 
+      ref={containerRef} 
+      className="fixed inset-0 w-full h-full"
+      style={{ 
+        background: "linear-gradient(to bottom, #0a0a1e 0%, #1a1a2e 100%)",
+        width: '100vw',
+        height: '100vh',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        overflow: 'hidden'
+      }}
+    >
+      <div style={{ 
+        position: 'absolute', 
+        inset: 0, 
+        width: '100%', 
+        height: '100%',
+        touchAction: 'none'
+      }}>
+        <Canvas 
+          shadows 
+          gl={{ 
+            antialias: quality === 'high', 
+            alpha: false,
+            powerPreference: quality === 'low' ? 'low-power' : 'high-performance',
+            failIfMajorPerformanceCaveat: false,
+            preserveDrawingBuffer: true
+          }} 
+          dpr={quality === 'low' ? [0.5, 1] : quality === 'medium' ? [1, 1.5] : [1, 2]}
+          performance={{ min: quality === 'low' ? 0.3 : quality === 'medium' ? 0.5 : 0.7 }}
+          camera={{ 
+            position: [position.x, position.y + 8, position.z + 15],
+            fov: 75,
+            near: 0.1,
+            far: 1000
+          }}
+          style={{ 
+            width: '100%', 
+            height: '100%',
+            display: 'block',
+            touchAction: 'none'
+          }}
+        >
+          <Stars radius={300} depth={60} count={3000} factor={6} saturation={0} fade speed={0.5} />
+          <Scene3D 
+            playerPosition={position} 
+            playerRotation={rotation}
+            playerAvatarStyle={currentAvatarStyle}
+            playerRole={userRole}
+            otherUsers={otherUsers}
+            activeChatBubbles={activeChatBubbles}
+          />
+        </Canvas>
+      </div>
 
       <div className="absolute top-6 left-6 bg-gradient-to-br from-background/95 to-background/80 backdrop-blur-xl rounded-xl p-5 border-2 shadow-2xl"
            style={{ borderColor: "hsl(var(--primary))" }}>
