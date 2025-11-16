@@ -34,7 +34,7 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
   const [rotation, setRotation] = useState(0)
   const [otherUsers, setOtherUsers] = useState<OtherUser[]>([])
   const [activeChatBubbles, setActiveChatBubbles] = useState<Map<string, { message: string; username: string; timestamp: number }>>(new Map())
-  const [isConnected, setIsConnected] = useState(false)
+  const [isConnected, setIsConnected] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showCustomizer, setShowCustomizer] = useState(false)
   const [currentAvatarStyle, setCurrentAvatarStyle] = useState(avatarStyle)
@@ -69,114 +69,84 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
     console.log("[v0] Avatar style:", avatarStyle)
     
     const supabase = createClient()
-    let retryCount = 0
-    const maxRetries = 3
 
-    const connectChannel = async () => {
-      const channel = supabase.channel("interactive-world", {
-        config: {
-          presence: {
-            key: userId,
-          },
-          broadcast: {
-            self: false
-          }
+    const channel = supabase.channel("interactive-world", {
+      config: {
+        presence: {
+          key: userId,
         },
-      })
+        broadcast: {
+          self: false
+        }
+      },
+    })
 
-      channel
-        .on("presence", { event: "sync" }, () => {
-          console.log("[v0] Presence sync event")
-          const state = channel.presenceState()
-          const users: OtherUser[] = []
+    channel
+      .on("presence", { event: "sync" }, () => {
+        console.log("[v0] Presence sync")
+        const state = channel.presenceState()
+        const users: OtherUser[] = []
 
-          Object.keys(state).forEach((key) => {
-            if (key !== userId) {
-              const presences = state[key] as any[]
-              if (presences && presences.length > 0) {
-                const presence = presences[0]
-                users.push({
-                  userId: key,
-                  username: presence.username || "Utilisateur",
-                  position: presence.position || { x: 0, y: 0, z: 0 },
-                  rotation: presence.rotation || 0,
-                  avatarStyle: presence.avatarStyle,
-                  userRole: presence.userRole || 'member',
-                })
-              }
+        Object.keys(state).forEach((key) => {
+          if (key !== userId) {
+            const presences = state[key] as any[]
+            if (presences && presences.length > 0) {
+              const presence = presences[0]
+              users.push({
+                userId: key,
+                username: presence.username || "Utilisateur",
+                position: presence.position || { x: 0, y: 0, z: 0 },
+                rotation: presence.rotation || 0,
+                avatarStyle: presence.avatarStyle,
+                userRole: presence.userRole || 'member',
+              })
             }
+          }
+        })
+
+        setOtherUsers(users)
+      })
+      .on("broadcast", { event: "chat_message" }, ({ payload }) => {
+        if (payload.userId !== userId) {
+          setActiveChatBubbles(prev => {
+            const newMap = new Map(prev)
+            newMap.set(payload.userId, {
+              message: payload.message,
+              username: payload.username,
+              timestamp: Date.now()
+            })
+            return newMap
           })
 
-          console.log("[v0] Updated other users:", users.length)
-          setOtherUsers(users)
-        })
-        .on("broadcast", { event: "chat_message" }, ({ payload }) => {
-          if (payload.userId !== userId) {
+          setTimeout(() => {
             setActiveChatBubbles(prev => {
               const newMap = new Map(prev)
-              newMap.set(payload.userId, {
-                message: payload.message,
-                username: payload.username,
-                timestamp: Date.now()
-              })
+              newMap.delete(payload.userId)
               return newMap
             })
+          }, 5000)
+        }
+      })
+      .subscribe(async (status) => {
+        console.log("[v0] Channel status:", status)
+        if (status === "SUBSCRIBED") {
+          console.log("[v0] Channel subscribed successfully")
+          await channel.track({
+            username,
+            position: { x: 0, y: 0, z: 15 },
+            rotation: 0,
+            avatarStyle: currentAvatarStyle,
+            userRole,
+            online_at: new Date().toISOString(),
+          })
+        }
+      })
 
-            setTimeout(() => {
-              setActiveChatBubbles(prev => {
-                const newMap = new Map(prev)
-                newMap.delete(payload.userId)
-                return newMap
-              })
-            }, 5000)
-          }
-        })
-        .subscribe(async (status) => {
-          console.log("[v0] Channel subscription status:", status)
-          if (status === "SUBSCRIBED") {
-            setIsConnected(true)
-            console.log("[v0] Successfully connected to interactive world")
-            await channel.track({
-              username,
-              position: { x: 0, y: 0, z: 15 },
-              rotation: 0,
-              avatarStyle: currentAvatarStyle,
-              userRole,
-              online_at: new Date().toISOString(),
-            })
-          }
-          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-            console.log("[v0] Connection issue:", status)
-            retryCount++
-            if (retryCount < maxRetries) {
-              console.log(`[v0] Retrying connection (${retryCount}/${maxRetries})...`)
-              setTimeout(() => {
-                channel.unsubscribe()
-                connectChannel()
-              }, 2000)
-            } else {
-              console.log("[v0] Max retries reached, continuing in offline mode")
-              setIsConnected(true)
-            }
-          }
-        })
-
-      channelRef.current = channel
-    }
-
-    connectChannel()
-
-    const forceConnectTimeout = setTimeout(() => {
-      if (!isConnected) {
-        console.log("[v0] Forcing connection after timeout")
-        setIsConnected(true)
-      }
-    }, 5000)
+    channelRef.current = channel
 
     return () => {
       console.log("[v0] Cleaning up channel")
-      clearTimeout(forceConnectTimeout)
-      channelRef.current?.unsubscribe()
+      channel.unsubscribe()
     }
   }, [userId, username, userRole, currentAvatarStyle])
 
@@ -246,17 +216,6 @@ export function InteractiveWorld({ userId, username, userRole, avatarStyle }: In
       default: return null
     }
   }
-
-  useEffect(() => {
-    const connectionTimeout = setTimeout(() => {
-      if (!isConnected) {
-        console.log("[v0] Connection timeout - forcing connection")
-        setIsConnected(true)
-      }
-    }, 3000)
-
-    return () => clearTimeout(connectionTimeout)
-  }, [isConnected])
 
   return (
     <div 

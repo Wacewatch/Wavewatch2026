@@ -78,27 +78,25 @@ export async function POST(request: Request) {
     if (prize !== "none") {
       const { data: profile } = await supabase
         .from("user_profiles")
-        .select("username, email, vip_expires_at")
+        .select("username, email, vip_expires_at, is_vip_plus")
         .eq("id", user.id)
         .maybeSingle()
 
       const username = profile?.username || profile?.email?.split("@")[0] || "Utilisateur"
 
-      // Calcule la nouvelle date d'expiration
       const currentExpiry = profile?.vip_expires_at ? new Date(profile.vip_expires_at) : new Date()
       const baseDate = currentExpiry > now ? currentExpiry : now
       const newExpiry = new Date(baseDate.getTime() + vipDuration)
 
-      // Met à jour le profil
       await supabase
         .from("user_profiles")
         .update({
           is_vip: true,
+          is_vip_plus: profile?.is_vip_plus || false,
           vip_expires_at: newExpiry.toISOString(),
         })
         .eq("id", user.id)
 
-      // Enregistre le gagnant
       await supabase.from("vip_game_winners").insert({
         user_id: user.id,
         username,

@@ -40,7 +40,8 @@ export default function AdminPage() {
   const [software, setSoftware] = useState([])
   const [games, setGames] = useState([])
   const [ebooks, setEbooks] = useState([])
-  const [totalUserCount, setTotalUserCount] = useState(0)
+  const [totalUsersInDB, setTotalUsersInDB] = useState(0)
+  const [totalUserCount, setTotalUserCount] = useState(0) // Keep for compatibility if needed
 
   // States pour les modals
   const [activeModal, setActiveModal] = useState(null)
@@ -361,12 +362,13 @@ export default function AdminPage() {
 
     setSendingBroadcast(true)
     try {
-      // Get total count of all users first
       const { count: totalUsers, error: countError } = await supabase
         .from("user_profiles")
         .select("*", { count: "exact", head: true })
 
       if (countError) throw countError
+
+      setTotalUserCount(totalUsers || 0)
 
       // Get all user IDs without limit
       const { data: allUsers, error: usersError } = await supabase
@@ -534,6 +536,17 @@ export default function AdminPage() {
   const loadRealUsers = async (supabase) => {
     try {
       console.log("🔄 Chargement des utilisateurs...")
+
+      const { count: totalCount, error: countError } = await supabase
+        .from("user_profiles")
+        .select("*", { count: "exact", head: true })
+        
+      if (countError) {
+        console.error("❌ Erreur lors du comptage des utilisateurs:", countError)
+      } else {
+        setTotalUsersInDB(totalCount || 0)
+        console.log(`[v0] Total users in DB: ${totalCount}`)
+      }
 
       const {
         data: allUsers,
@@ -843,18 +856,23 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
+    
     try {
+      console.log('[v0] Saving world settings:', worldSettings)
+      
       const { error } = await supabase
-        .from("site_settings")
-        .update({
+        .from("interactive_world_settings")
+        .upsert({
+          setting_key: "world_config",
           setting_value: worldSettings,
           updated_at: new Date().toISOString(),
           updated_by: user?.id,
+        }, {
+          onConflict: "setting_key"
         })
-        .eq("setting_key", "interactive_world_settings") // Assuming a new setting_key for world settings
 
       if (error) {
-        console.error("Error saving world settings:", error)
+        console.error("[v0] Error saving world settings:", error)
         toast({
           title: "Erreur",
           description: "Impossible de sauvegarder les paramètres du monde interactif",
@@ -863,12 +881,13 @@ export default function AdminPage() {
         return
       }
 
+      console.log('[v0] World settings saved successfully')
       toast({
         title: "Paramètres sauvegardés",
         description: "Les paramètres du monde interactif ont été mis à jour.",
       })
     } catch (error) {
-      console.error("Error saving world settings:", error)
+      console.error("[v0] Error saving world settings:", error)
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la sauvegarde des paramètres du monde interactif",
@@ -1003,7 +1022,6 @@ export default function AdminPage() {
           totalGames + // Added new content types
           totalEbooks, // Added new content types
         totalUsers,
-        totalViews,
         totalRevenue: vipUsers * 1.99 * 12,
         activeUsers,
         vipUsers,
@@ -2316,10 +2334,12 @@ export default function AdminPage() {
 
   if (!user || !user.isAdmin) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Accès refusé</h1>
-          <p>Vous n'avez pas les permissions d'administrateur.</p>
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Accès refusé</h1>
+            <p>Vous n'avez pas les permissions d'administrateur.</p>
+          </div>
         </div>
       </div>
     )
@@ -2327,11 +2347,13 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
-          <h1 className="text-2xl font-bold mb-4 mt-4">Chargement...</h1>
-          <p>Chargement des données d'administration...</p>
+      <div className="min-h-screen bg-gray-900 text-white">
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
+            <h1 className="text-2xl font-bold mb-4 mt-4">Chargement...</h1>
+            <p>Chargement des données d'administration...</p>
+          </div>
         </div>
       </div>
     )
@@ -2933,7 +2955,7 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
                     <Users className="w-5 h-5 text-blue-400" />
                     <span className="text-sm text-blue-300">
-                      Ce message sera envoyé à {totalUserCount > 0 ? totalUserCount : users.length} utilisateur(s) inscrit(s)
+                      Ce message sera envoyé à {totalUsersInDB} utilisateur(s) inscrit(s) (filtré: {getFilteredUsers().length})
                     </span>
                   </div>
                   <Button
@@ -3684,7 +3706,7 @@ export default function AdminPage() {
                   </div>
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>
-                      Affichage {(userCurrentPage - 1) * USERS_PER_PAGE + 1} à {Math.min(userCurrentPage * USERS_PER_PAGE, getFilteredUsers().length)} sur {getFilteredUsers().length} utilisateurs
+                      Affichage {(userCurrentPage - 1) * USERS_PER_PAGE + 1} à {Math.min(userCurrentPage * USERS_PER_PAGE, getFilteredUsers().length)} sur {totalUsersInDB} utilisateurs (filtré: {getFilteredUsers().length})
                     </span>
                     <div className="flex items-center gap-2">
                       <Button
@@ -5246,75 +5268,6 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          <Dialog open={activeModal === "edit-log"} onOpenChange={(open) => !open && setActiveModal(null)}>
-            <DialogContent className="bg-blue-900 border-blue-700 max-w-2xl">
-              <DialogHeader>
-                <DialogTitle className="text-white">Modifier le Changelog</DialogTitle>
-                <DialogDescription className="text-blue-300">
-                  Modifiez les informations de cette version
-                </DialogDescription>
-              </DialogHeader>
-              {editingLog && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-white mb-2 block">Version</label>
-                      <Input
-                        placeholder="1.0.0"
-                        value={editingLog.version}
-                        onChange={(e) => setEditingLog({ ...editingLog, version: e.target.value })}
-                        className="bg-blue-800 border-blue-600 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-white mb-2 block">Date de sortie</label>
-                      <Input
-                        type="date"
-                        value={editingLog.release_date}
-                        onChange={(e) => setEditingLog({ ...editingLog, release_date: e.target.value })}
-                        className="bg-blue-800 border-blue-600 text-white"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-white mb-2 block">Titre</label>
-                    <Input
-                      placeholder="Nouvelle fonctionnalité"
-                      value={editingLog.title}
-                      onChange={(e) => setEditingLog({ ...editingLog, title: e.target.value })}
-                      className="bg-blue-800 border-blue-600 text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-white mb-2 block">Description</label>
-                    <textarea
-                      placeholder="Décrivez les changements de cette version..."
-                      value={editingLog.description}
-                      onChange={(e) => setEditingLog({ ...editingLog, description: e.target.value })}
-                      className="w-full min-h-[200px] bg-blue-800 border-blue-600 text-white rounded-md p-3"
-                    />
-                  </div>
-                </div>
-              )}
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setActiveModal(null)
-                    setEditingLog(null)
-                  }}
-                  className="border-blue-600"
-                >
-                  Annuler
-                </Button>
-                <Button onClick={handleUpdateLog} className="bg-blue-600 hover:bg-blue-700">
-                  Enregistrer
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Added new Settings tab content at the end before closing </Tabs> */}
           <TabsContent value="settings" className="space-y-6">
             <Card className="bg-card border-border">
               <CardHeader>

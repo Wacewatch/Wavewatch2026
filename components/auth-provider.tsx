@@ -75,9 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false)
       } else if (event === "USER_UPDATED" && session?.user) {
         await loadUserProfile(session.user)
-      } else if (event === "TOKEN_REFRESHED") {
-        console.log("[v0] Token refreshed successfully")
-        setLoading(false)
+      } else if (event === "TOKEN_REFRESHED" && session?.user) {
+        console.log("[v0] Token refreshed, reloading profile")
+        await loadUserProfile(session.user)
       }
     })
 
@@ -92,20 +92,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const { data: profile, error } = await withTimeout(
         supabase.from("user_profiles").select("*").eq("id", supabaseUser.id).single(),
-        10000,
+        15000,
       )
 
-      // If profile exists, use it
       if (profile && !error) {
         console.log("[v0] Profile found:", profile.username)
+        
+        const now = new Date()
+        let isVip = Boolean(profile.is_vip)
+        let vipExpiresAt = profile.vip_expires_at
+        
+        if (isVip && vipExpiresAt) {
+          const expiryDate = new Date(vipExpiresAt)
+          if (expiryDate < now) {
+            // VIP expired, update in database
+            console.log("[v0] VIP expired, updating status")
+            await supabase.from("user_profiles").update({
+              is_vip: false,
+              is_vip_plus: false,
+            }).eq("id", supabaseUser.id)
+            
+            isVip = false
+            vipExpiresAt = null
+          }
+        }
+        
         const userData: User = {
           id: supabaseUser.id,
           username: profile.username || supabaseUser.email?.split("@")[0] || "User",
           email: supabaseUser.email || "",
-          isVip: Boolean(profile.is_vip),
+          isVip: isVip,
           isVipPlus: Boolean(profile.is_vip_plus),
           isAdmin: Boolean(profile.is_admin),
-          vipExpiresAt: profile.vip_expires_at,
+          vipExpiresAt: vipExpiresAt,
           showAdultContent: Boolean(profile.show_adult_content),
         }
 
@@ -115,30 +134,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
-      // Only create profile if it genuinely doesn't exist (not on other errors)
       if (error?.code === "PGRST116") {
-        // PostgreSQL "no rows" error
         console.log("[v0] Profile not found, creating new profile")
         const username = supabaseUser.user_metadata?.username || supabaseUser.email?.split("@")[0] || "User"
-        const isAdmin = username.toLowerCase() === "wwadmin"
+        
+        const isAdmin = false // Admin status should be set manually in database
 
         const userData: User = {
           id: supabaseUser.id,
           username: username,
           email: supabaseUser.email || "",
-          isVip: isAdmin,
+          isVip: false,
           isVipPlus: false,
           isAdmin: isAdmin,
           showAdultContent: false,
         }
 
-        // Create profile in database
         const { error: upsertError } = await supabase.from("user_profiles").insert({
           id: supabaseUser.id,
           username: userData.username,
           email: userData.email,
           is_admin: userData.isAdmin,
-          is_vip: userData.isVip,
+          is_vip: false,
           is_vip_plus: false,
           show_adult_content: false,
         })
@@ -152,7 +169,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData)
         updateAdultContentPreference(false)
       } else {
-        // For other errors, log but still set user with fallback data
         console.error("[v0] Error loading profile:", error)
         const username = supabaseUser.email?.split("@")[0] || "User"
         const fallbackUser: User = {
@@ -161,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: supabaseUser.email || "",
           isVip: false,
           isVipPlus: false,
-          isAdmin: username.toLowerCase() === "wwadmin",
+          isAdmin: false,
           showAdultContent: false,
         }
         setUser(fallbackUser)
@@ -169,6 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setLoading(false)
     } catch (error) {
+      console.error("[v0] Exception in loadUserProfile:", error)
       const username = supabaseUser.email?.split("@")[0] || "User"
       setUser({
         id: supabaseUser.id,
@@ -176,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: supabaseUser.email || "",
         isVip: false,
         isVipPlus: false,
-        isAdmin: username.toLowerCase() === "wwadmin",
+        isAdmin: false,
         showAdultContent: false,
       })
       setLoading(false)
@@ -187,7 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const {
         data: { session },
-      } = await withTimeout(supabase.auth.getSession(), 10000)
+      } = await withTimeout(supabase.auth.getSession(), 15000)
       if (session?.user) {
         await loadUserProfile(session.user)
       }

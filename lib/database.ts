@@ -1,3 +1,4 @@
+import { createClient as createBrowserClient } from "@/lib/supabase/client"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 
 // Singleton client for browser usage only
@@ -10,22 +11,7 @@ export function createClient() {
     )
   }
 
-  if (browserClient) {
-    return browserClient
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      "Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and/or NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    )
-  }
-
-  browserClient = createSupabaseClient(supabaseUrl, supabaseAnonKey)
-
-  return browserClient
+  return createBrowserClient()
 }
 
 export function createAdminClient() {
