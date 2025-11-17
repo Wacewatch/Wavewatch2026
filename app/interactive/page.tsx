@@ -8,7 +8,6 @@ import InteractiveWorld from "@/components/interactive/world-3d"
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { User } from 'lucide-react'
-import { v4 as uuidv4 } from 'uuid';
 
 export default function InteractivePage() {
   const [hasProfile, setHasProfile] = useState(false)
@@ -24,7 +23,7 @@ export default function InteractivePage() {
     hairStyle: 'short',
     hairColor: '#1f2937',
     accessory: 'none',
-    faceSmiley: '😊' // Added default face smiley
+    faceSmiley: '😊'
   })
 
   const router = useRouter()
@@ -55,24 +54,28 @@ export default function InteractivePage() {
           .maybeSingle(),
         supabase
           .from("user_profiles")
-          .select("user_id, username, is_admin, is_vip, is_vip_plus")
-          .eq("user_id", user.id)
+          .select("id, username, is_admin, is_vip, is_vip_plus")
+          .eq("id", user.id)
           .maybeSingle()
       ])
 
-      const interactiveProfile = interactiveResult.data
-      const userProfile = userProfileResult.data
+      console.log('[v0] Interactive profile:', interactiveResult.data)
+      console.log('[v0] User profile from DB:', userProfileResult.data)
 
-      console.log('[v0] Interactive profile:', interactiveProfile)
-      console.log('[v0] User profile:', userProfile)
-
-      if (!userProfile) {
-        alert('Vous devez créer un compte sur le site avant d\'accéder au monde interactif.')
-        router.push('/register')
-        return
+      const fallbackUserProfile = {
+        id: user.id,
+        username: user.email?.split('@')[0] || `user_${user.id.substring(0, 8)}`,
+        is_admin: false,
+        is_vip: false,
+        is_vip_plus: false
       }
 
-      setUserProfile(userProfile)
+      const effectiveUserProfile = userProfileResult.data || fallbackUserProfile
+      setUserProfile(effectiveUserProfile)
+
+      console.log('[v0] Effective user profile:', effectiveUserProfile)
+
+      const interactiveProfile = interactiveResult.data
 
       if (interactiveProfile && interactiveProfile.username && interactiveProfile.username.trim() !== '') {
         console.log('[v0] Found existing interactive profile')
@@ -81,10 +84,11 @@ export default function InteractivePage() {
       } else {
         console.log('[v0] No interactive profile found, showing username input')
         setHasProfile(false)
-        setUsername(userProfile.username || '')
+        setUsername(effectiveUserProfile.username || '')
       }
     } catch (err) {
       console.error('[v0] Error checking profiles:', err)
+      alert(`Erreur lors de la vérification des profils: ${err}`)
       setHasProfile(false)
     } finally {
       setCheckingProfile(false)
@@ -95,12 +99,6 @@ export default function InteractivePage() {
     if (!user || !username.trim()) {
       console.error('[v0] Cannot create profile: missing user or username')
       alert('Erreur: Nom d\'utilisateur manquant')
-      return
-    }
-
-    if (!userProfile) {
-      alert('Erreur: Profil utilisateur introuvable. Veuillez vous inscrire sur le site.')
-      router.push('/register')
       return
     }
 

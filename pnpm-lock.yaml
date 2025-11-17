@@ -189,7 +189,7 @@ importers:
         specifier: latest
         version: 0.181.1
       uuid:
-        specifier: latest
+        specifier: 13.0.0
         version: 13.0.0
       vaul:
         specifier: latest

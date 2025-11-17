@@ -876,8 +876,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const sendMessage = async () => {
-    if (!userProfile) {
-      console.log('[v0] Cannot send message: userProfile is null')
+    if (!userProfile || !userProfile.id) {
+      console.log('[v0] Cannot send message: userProfile is missing')
       return
     }
 
@@ -888,14 +888,29 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     if (chatInput.trim()) {
       const message = {
-        user_id: userProfile.user_id,
-        username: userProfile.username,
+        user_id: userProfile.id, // Use id instead of user_id
+        username: myProfile?.username || userProfile.username || 'Joueur',
         message: chatInput.trim(),
         room: currentCinemaRoom ? `cinema_${currentCinemaRoom.id}` : 'world',
         created_at: new Date().toISOString()
       }
 
-      await supabase.from('interactive_chat_messages').insert(message)
+      console.log('[v0] Sending message:', message)
+      
+      const { error } = await supabase.from('interactive_chat_messages').insert(message)
+      
+      if (error) {
+        console.error('[v0] Error sending message:', error)
+      } else {
+        console.log('[v0] Message sent successfully')
+        setPlayerChatBubbles(prev => ({
+          ...prev,
+          [userProfile.id]: {
+            message: chatInput.trim(),
+            timestamp: Date.now()
+          }
+        }))
+      }
 
       setChatInput('')
     }
@@ -1280,17 +1295,26 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
             {/* Removed yellow road markings for dirt road */}
 
-            {/* Building Info Labels */}
-            <Html position={[-15, 3, -15]} center depthTest={false} zIndexRange={[100, 0]}>
-              <div className="bg-purple-600/95 backdrop-blur-md text-white px-4 py-2 rounded-lg shadow-xl font-bold border-2 border-white/30">
-                🎮 ARCADE
-              </div>
-            </Html>
-            <Html position={[-15, 1.5, -15]} center depthTest={false} zIndexRange={[100, 0]}>
-              <div className="bg-yellow-400/95 backdrop-blur-md text-black px-3 py-1 rounded-lg shadow-xl text-sm font-semibold border-2 border-black/20">
-                Ouverture Prochainement
-              </div>
-            </Html>
+            {/* Arcade Building with proper info panel */}
+            <group position={[-15, 0, -15]}>
+              {/* Building */}
+              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
+                <boxGeometry args={[5, 5, 5]} />
+                <meshStandardMaterial color="#7c2d12" />
+              </mesh>
+              {/* Roof */}
+              <mesh position={[0, 5.2, 0]} castShadow>
+                <coneGeometry args={[3.5, 1.5, 4]} />
+                <meshStandardMaterial color="#92400e" />
+              </mesh>
+              {/* Arcade Info Panel - only on arcade building */}
+              <Html position={[0, 4, 2.6]} center depthTest={false} zIndexRange={[100, 0]}>
+                <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
+                  <div className="text-xl">🕹️ ARCADE 🕹️</div>
+                  <div className="text-sm mt-1">Ouverture Prochainement</div>
+                </div>
+              </Html>
+            </group>
 
             <group position={[15, 0, -5]}>
               {/* Building */}
@@ -1302,11 +1326,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <mesh position={[0, 5.2, 0]} castShadow>
                 <coneGeometry args={[4, 1.5, 4]} />
                 <meshStandardMaterial color="#7e22ce" />
-              </mesh>
-              {/* Door */}
-              <mesh position={[0, 1.5, 2.51]} castShadow>
-                <boxGeometry args={[1.5, 3, 0.1]} />
-                <meshStandardMaterial color="#581c87" />
               </mesh>
               {/* Sign */}
               <Html position={[0, 4, 2.6]} center depthTest={false} zIndexRange={[100, 0]}>
@@ -1401,7 +1420,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </Html>
             </group>
 
-            {/* Added more decorative closed buildings to fill the world */}
+            {/* Additional decorative closed buildings */}
             <group position={[-25, 0, 0]}>
               <mesh position={[0, 3, 0]} castShadow>
                 <boxGeometry args={[8, 6, 8]} />
@@ -2258,6 +2277,143 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           </div>
         </div>
       )}
+
+      {showCinema && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border-2 border-blue-500/30">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+                🎬 Salles de Cinéma
+              </h2>
+              <button
+                onClick={() => setShowCinema(false)}
+                className="text-white/80 hover:text-white transition-colors bg-white/10 rounded-full p-2"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              {cinemaRooms.length === 0 ? (
+                <div className="text-center text-white/60 py-12">
+                  <p className="text-xl">Aucune salle disponible pour le moment</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {cinemaRooms.map((room) => (
+                    <div
+                      key={room.id}
+                      className="bg-gradient-to-br from-indigo-900/50 to-purple-900/50 rounded-xl overflow-hidden border-2 border-white/10 hover:border-blue-500/50 transition-all shadow-lg"
+                    >
+                      {room.poster_url && (
+                        <div className="relative w-full h-64 bg-gray-800">
+                          <img
+                            src={room.poster_url || "/placeholder.svg"}
+                            alt={room.movie_title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/abstract-movie-poster.png'
+                            }}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="p-6">
+                        <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                          Salle {room.room_number} - {room.theme}
+                        </h3>
+                        <p className="text-white/80 font-medium mb-1">{room.movie_title}</p>
+                        <p className="text-white/60 text-sm mb-4">Capacité: {room.capacity}</p>
+                        
+                        {room.showtime && (
+                          <p className="text-blue-300 text-sm mb-4">
+                            🕐 Séance: {new Date(room.showtime).toLocaleString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        )}
+
+                        <div className="mb-4">
+                          {room.access_level === 'vip' && (
+                            <span className="inline-block bg-yellow-500/20 text-yellow-300 px-3 py-1 rounded-full text-sm font-medium">
+                              👑 VIP
+                            </span>
+                          )}
+                          {room.access_level === 'vip_plus' && (
+                            <span className="inline-block bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-medium">
+                              💎 VIP+
+                            </span>
+                          )}
+                          {room.access_level === 'admin' && (
+                            <span className="inline-block bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-sm font-medium">
+                              🛡️ Admin
+                            </span>
+                          )}
+                          {room.access_level === 'public' && (
+                            <span className="inline-block bg-green-500/20 text-green-300 px-3 py-1 rounded-full text-sm font-medium">
+                              🌍 Public
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => handleEnterRoom(room)}
+                          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
+                        >
+                          Entrer dans la Salle
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showChatInput && !isFullscreen && (
+        <div className="absolute top-20 right-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-white font-bold text-sm">Envoyer un message</h3>
+            <button
+              onClick={() => setShowChatInput(false)}
+              className="text-white/60 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  sendMessage()
+                  setShowChatInput(false)
+                }
+              }}
+              placeholder="Votre message..."
+              className="flex-1 bg-white/10 text-white px-3 py-2 rounded-lg outline-none text-sm"
+              autoFocus
+            />
+            <button
+              onClick={() => {
+                sendMessage()
+                setShowChatInput(false)
+              }}
+              className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2347,6 +2503,10 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
       <div className="absolute inset-0 flex items-center justify-center text-white/50 text-xs font-medium">
         Déplacer
       </div>
+    </div>
+  )
+}
+
     </div>
   )
 }
