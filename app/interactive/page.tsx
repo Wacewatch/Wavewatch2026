@@ -4,83 +4,104 @@ import { useEffect, useState } from "react"
 import { useRouter } from 'next/navigation'
 import { useAuth } from "@/components/auth-provider"
 import { createClient } from "@/lib/supabase/client"
-import { LoadingScreen } from "@/components/interactive/loading-screen"
-import { SimpleOnboarding } from "@/components/interactive/simple-onboarding"
-import { SimpleWorld } from "@/components/interactive/simple-world"
+import InteractiveWorld from "@/components/interactive/world-3d" // Import the InteractiveWorld component
 
 export default function InteractivePage() {
-  const [isLoading, setIsLoading] = useState(true)
   const [hasProfile, setHasProfile] = useState(false)
-  const [profile, setProfile] = useState<any>(null)
+  const [username, setUsername] = useState("")
+  const [showWorld, setShowWorld] = useState(false)
+  const [userProfile, setUserProfile] = useState<any>(null)
   
   const router = useRouter()
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading } = useAuth()
   const supabase = createClient()
 
   useEffect(() => {
-    console.log("[v0] Interactive page mounted")
-    console.log("[v0] Auth loading:", authLoading, "User:", user?.id)
-  }, [])
-
-  useEffect(() => {
-    if (authLoading) {
-      console.log("[v0] Still loading auth...")
-      return
-    }
+    if (loading) return
     if (!user) {
-      console.log("[v0] No user, redirecting to login")
       router.push("/login")
       return
     }
-    console.log("[v0] User authenticated, checking profile...")
     checkProfile()
-  }, [user, authLoading])
+  }, [user, loading])
 
   const checkProfile = async () => {
     if (!user) return
 
-    try {
-      console.log("[v0] Fetching interactive profile for user:", user.id)
-      const { data, error } = await supabase
-        .from("interactive_profiles")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle()
+    const { data: interactiveProfile } = await supabase
+      .from("interactive_profiles")
+      .select("*")
+      .eq("user_id", user.id)
+      .maybeSingle()
 
-      if (error) {
-        console.error("[v0] Error fetching profile:", error)
-      }
+    const { data: profile } = await supabase
+      .from("user_profiles")
+      .select("username, is_admin, is_vip, is_vip_plus")
+      .eq("user_id", user.id)
+      .single()
 
-      if (data && data.username) {
-        console.log("[v0] Profile found:", data.username)
-        setProfile(data)
-        setHasProfile(true)
-      } else {
-        console.log("[v0] No profile found, showing onboarding")
-      }
-    } catch (error) {
-      console.error("[v0] Exception in checkProfile:", error)
-    } finally {
-      console.log("[v0] Check profile complete, setting loading to false")
-      setIsLoading(false)
+    if (interactiveProfile?.username) {
+      setHasProfile(true)
+      setUserProfile(profile)
+      setShowWorld(true)
     }
   }
 
-  if (authLoading || isLoading) {
-    console.log("[v0] Showing loading screen")
-    return <LoadingScreen />
+  const handleCreateProfile = async () => {
+    if (!user || !username.trim()) return
+
+    const { error } = await supabase
+      .from("interactive_profiles")
+      .insert({
+        user_id: user.id,
+        username: username.trim(),
+        position_x: 0,
+        position_y: 0,
+        position_z: 0
+      })
+
+    if (!error) {
+      setHasProfile(true)
+      setShowWorld(true)
+    }
   }
 
-  if (!user) {
-    console.log("[v0] No user after loading, showing loading screen")
-    return <LoadingScreen />
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black flex items-center justify-center">
+        <div className="text-white text-2xl">Chargement...</div>
+      </div>
+    )
   }
 
   if (!hasProfile) {
-    console.log("[v0] No profile, showing onboarding")
-    return <SimpleOnboarding userId={user.id} onComplete={checkProfile} />
+    return (
+      <div className="fixed inset-0 bg-gradient-to-b from-blue-900 to-purple-900 flex items-center justify-center">
+        <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl max-w-md w-full mx-4">
+          <h1 className="text-3xl font-bold text-white mb-6">Bienvenue dans WaveWatch World</h1>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Choisissez votre nom d'utilisateur"
+            className="w-full px-4 py-3 rounded-lg bg-white/20 text-white placeholder-white/60 border-2 border-white/30 mb-4"
+            maxLength={20}
+          />
+          <button
+            onClick={handleCreateProfile}
+            disabled={!username.trim()}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50"
+          >
+            Entrer dans le monde
+          </button>
+        </div>
+      </div>
+    )
   }
 
-  console.log("[v0] Everything ready, loading SimpleWorld")
-  return <SimpleWorld profile={profile} />
+  if (showWorld) {
+    return <InteractiveWorld userId={user!.id} userProfile={userProfile} />
+  }
+
+  return null
 }
