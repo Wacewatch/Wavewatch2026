@@ -88,45 +88,58 @@ export default function InteractivePage() {
   const handleCreateProfile = async () => {
     if (!user || !username.trim()) {
       console.error('[v0] Cannot create profile: missing user or username')
+      alert('Erreur: Nom d\'utilisateur manquant')
       return
     }
 
     console.log('[v0] Creating interactive profile with username:', username.trim())
+    console.log('[v0] Avatar style:', avatarStyle)
 
-    const { error } = await supabase
-      .from("interactive_profiles")
-      .upsert({
-        user_id: user.id,
-        username: username.trim(),
-        position_x: 0,
-        position_y: 0.5,
-        position_z: 0,
-        is_online: true,
-        last_seen: new Date().toISOString(),
-        avatar_style: avatarStyle,
-        current_room: null
-      }, {
-        onConflict: 'user_id'
-      })
+    try {
+      const { data, error } = await supabase
+        .from("interactive_profiles")
+        .upsert({
+          user_id: user.id,
+          username: username.trim(),
+          position_x: 0,
+          position_y: 0.5,
+          position_z: 0,
+          is_online: true,
+          last_seen: new Date().toISOString(),
+          avatar_style: avatarStyle,
+          current_room: null
+        }, {
+          onConflict: 'user_id'
+        })
+        .select()
 
-    if (error) {
-      console.error('[v0] Error creating interactive profile:', error)
-      return
+      if (error) {
+        console.error('[v0] Error creating interactive profile:', error)
+        alert(`Erreur lors de la création du profil: ${error.message}`)
+        return
+      }
+
+      console.log('[v0] Interactive profile created successfully:', data)
+      
+      const { data: userProfile, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("username, is_admin, is_vip, is_vip_plus")
+        .eq("user_id", user.id)
+        .maybeSingle()
+
+      if (profileError) {
+        console.error('[v0] Error loading user profile:', profileError)
+      }
+
+      console.log('[v0] Loaded user profile for badges:', userProfile)
+      setUserProfile(userProfile)
+      setHasProfile(true)
+      setShowOnboarding(false) // Close onboarding
+      setShowWorld(true) // Show the world
+    } catch (err) {
+      console.error('[v0] Unexpected error during profile creation:', err)
+      alert(`Erreur inattendue: ${err}`)
     }
-
-    console.log('[v0] Interactive profile created successfully')
-    
-    const { data: userProfile } = await supabase
-      .from("user_profiles")
-      .select("username, is_admin, is_vip, is_vip_plus")
-      .eq("user_id", user.id)
-      .maybeSingle()
-
-    console.log('[v0] Loaded user profile for badges:', userProfile)
-    setUserProfile(userProfile)
-    setHasProfile(true)
-    setShowOnboarding(false) // Close onboarding
-    setShowWorld(true) // Show the world
   }
 
   useEffect(() => {
@@ -382,7 +395,7 @@ export default function InteractivePage() {
                       className={`p-3 md:p-4 rounded-xl border-2 transition-all active:scale-95 ${
                         avatarStyle.faceSmiley === face.emoji 
                           ? 'bg-orange-500 border-white scale-105' 
-                          : 'bg-white/10 border-white/20'
+                          : 'bg-white/10 border-white/20 text-white/80'
                       }`}
                       title={face.label}
                     >

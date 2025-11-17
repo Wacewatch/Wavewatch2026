@@ -64,7 +64,7 @@ function RealisticAvatar({
       </mesh>
 
       {avatarStyle.faceSmiley && (
-        <Html position={[0, 0.85, 0.32]} center>
+        <Html position={[0, 0.85, 0.32]} center depthTest={false} zIndexRange={[100, 0]}>
           <div className="text-2xl pointer-events-none">
             {avatarStyle.faceSmiley}
           </div>
@@ -237,6 +237,7 @@ function RealisticLamppost({ position }: { position: [number, number, number] })
 }
 
 export default function InteractiveWorld({ userId, userProfile }: InteractiveWorldProps) {
+  const [myProfile, setMyProfile] = useState<any>(null)
   const [otherPlayers, setOtherPlayers] = useState<any[]>([])
   const [onlineCount, setOnlineCount] = useState(0)
   const [myPosition, setMyPosition] = useState({ x: 0, y: 0.5, z: 0 })
@@ -296,12 +297,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const keysPressed = useRef<Set<string>>(new Set())
   const supabase = createClient()
+  const [myRotation, setMyRotation] = useState(0) // Added for rotation
 
   const [showMenu, setShowMenu] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => {
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouch
       const isSmallScreen = window.innerWidth < 1024
       setIsMobileMode(isTouchDevice || isSmallScreen)
       console.log('[v0] Mobile mode:', isTouchDevice || isSmallScreen, 'Touch:', isTouchDevice, 'Screen:', isSmallScreen)
@@ -823,6 +825,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }, [])
 
   const handleEmoji = (emoji: string) => {
+    if (!userProfile) {
+      console.log('[v0] Cannot send emoji: userProfile is null')
+      return
+    }
+
     setCurrentEmoji(emoji)
     setShowQuickActions(false)
 
@@ -841,11 +848,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const handleJump = () => {
-    if (!worldSettings.enableJumping) return
-
-    // if (isJumping || mySeat !== null) return // Removed seat check
-    if (isJumping) return
-
+    if (!userProfile) {
+      console.log('[v0] Cannot jump: userProfile is null')
+      return
+    }
 
     setIsJumping(true)
 
@@ -864,6 +870,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const sendMessage = async () => {
+    if (!userProfile) {
+      console.log('[v0] Cannot send message: userProfile is null')
+      return
+    }
+
     if (!worldSettings.enableChat) {
       console.log('[v0] Chat is disabled by admin')
       return
@@ -872,7 +883,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     if (chatInput.trim()) {
       const message = {
         user_id: userProfile.user_id,
-        username: userProfile.username, // Corrected from profile.username to userProfile.username
+        username: userProfile.username,
         message: chatInput.trim(),
         room: currentCinemaRoom ? `cinema_${currentCinemaRoom.id}` : 'world',
         created_at: new Date().toISOString()
@@ -1117,9 +1128,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   // Handle quick actions (emotes, jumps)
   const handleQuickAction = (action: string) => {
-    if (!worldSettings.enableEmojis) return
+    if (!userProfile) {
+      console.log('[v0] Cannot perform quick action: userProfile is null')
+      return
+    }
 
     setQuickAction(action)
+    setShowQuickActions(false)
 
     // Broadcast quick action to other players
     supabase.channel('world-actions').send({
@@ -1134,6 +1149,33 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     setTimeout(() => setQuickAction(null), 3000)
   }
+
+  useEffect(() => {
+    if (!userId) return
+    
+    const loadMyProfile = async () => {
+      const { data, error } = await supabase
+        .from('interactive_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single()
+      
+      if (error) {
+        console.error('[v0] Error loading my profile:', error)
+        return
+      }
+      
+      console.log('[v0] Loaded my profile:', data)
+      setMyProfile(data)
+      
+      if (data) {
+        setMyPosition({ x: data.position_x, y: data.position_y, z: data.position_z })
+        setMyRotation(data.rotation || 0)
+      }
+    }
+    
+    loadMyProfile()
+  }, [userId])
 
   return (
     <div className="fixed inset-0 bg-black z-50">
@@ -1252,6 +1294,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <meshStandardMaterial color="#ffff00" />
             </mesh>
 
+            {/* Added depthTest={false} and proper zIndex to all Html elements to prevent transparency issues */}
+            {/* Building Info Labels */}
+            <Html position={[-15, 3, -15]} center depthTest={false} zIndexRange={[100, 0]}>
+              <div className="bg-purple-600/95 backdrop-blur-md text-white px-4 py-2 rounded-lg shadow-xl font-bold border-2 border-white/30">
+                🎮 ARCADE
+              </div>
+            </Html>
+            <Html position={[-15, 1.5, -15]} center depthTest={false} zIndexRange={[100, 0]}>
+              <div className="bg-yellow-400/95 backdrop-blur-md text-black px-3 py-1 rounded-lg shadow-xl text-sm font-semibold border-2 border-black/20">
+                Ouverture Prochainement
+              </div>
+            </Html>
+
             <group position={[15, 0, -5]}>
               {/* Building */}
               <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
@@ -1269,7 +1324,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <meshStandardMaterial color="#581c87" />
               </mesh>
               {/* Sign */}
-              <Html position={[0, 4, 2.6]} center>
+              <Html position={[0, 4, 2.6]} center depthTest={false} zIndexRange={[100, 0]}>
                 <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
                   <div className="text-xl">🕹️ ARCADE 🕹️</div>
                   <div className="text-sm mt-1">Ouverture Prochainement</div>
@@ -1351,7 +1406,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
               </mesh>
 
-              <Html position={[0, 7, 0]} center>
+              <Html position={[0, 7, 0]} center depthTest={false} zIndexRange={[100, 0]}>
                 <button
                   onClick={() => setShowCinema(true)}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
@@ -1469,7 +1524,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   {/* Movie Info and Countdown - Display before movie starts */}
                   {!isMovieStarted && (
                     <>
-                      <Html position={[0, 1, 0.2]} center>
+                      <Html position={[0, 1, 0.2]} center depthTest={false} zIndexRange={[100, 0]}>
                         <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
                           <h2 className="text-3xl font-bold mb-2">{room.movie_title}</h2>
                           <p className="text-lg text-gray-300 mb-4">
@@ -1511,7 +1566,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                     <boxGeometry args={[1, 0.8, 0.9]} />
                     <meshStandardMaterial color={isMySeat ? '#ef4444' : seat.color} />
                   </mesh>
-                  <Html position={[0, 1.2, 0]} center>
+                  <Html position={[0, 1.2, 0]} center depthTest={false} zIndexRange={[100, 0]}>
                     <button
                       onClick={() => handleSitInSeat(seat.seat_number)}
                       className={`text-xs px-3 py-2 rounded-lg ${
@@ -1528,7 +1583,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             })}
 
 
-            <Html position={[0, 2, 19]} center>
+            <Html position={[0, 2, 19]} center depthTest={false} zIndexRange={[100, 0]}>
               <button
                 onClick={handleLeaveRoom}
                 className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 whitespace-nowrap shadow-lg flex items-center gap-2"
@@ -1548,7 +1603,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             isMoving={movement.x !== 0 || movement.z !== 0}
           />
 
-          <Html position={[myPosition.x, myPosition.y + 1.8, myPosition.z]} center>
+          <Html position={[myPosition.x, myPosition.y + 1.8, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
             <div className="flex items-center gap-1 bg-black/70 px-3 py-1 rounded-full backdrop-blur-sm shadow-lg">
               <span className="text-white text-sm font-bold">{myProfile?.username || 'Vous'}</span>
               {userProfile?.is_admin && (
@@ -1564,7 +1619,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           </Html>
 
           {currentEmoji && (
-            <Html position={[myPosition.x, myPosition.y + 2.5, myPosition.z]} center>
+            <Html position={[myPosition.x, myPosition.y + 2.5, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
               <div className="text-5xl animate-bounce">
                 {currentEmoji}
               </div>
@@ -1572,7 +1627,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           )}
 
           {playerChatBubbles[userId] && (
-            <Html position={[myPosition.x, myPosition.y + 2.2, myPosition.z]} center>
+            <Html position={[myPosition.x, myPosition.y + 2.2, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
               <div className="bg-white/95 text-black px-3 py-2 rounded-lg shadow-xl max-w-xs text-sm border-2 border-blue-500">
                 {playerChatBubbles[userId].message}
               </div>
@@ -1597,7 +1652,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 />
 
                 {worldSettings.showStatusBadges && (
-                  <Html position={[player.position_x || 0, 2.3, player.position_z || 0]} center>
+                  <Html position={[player.position_x || 0, 2.3, player.position_z || 0]} center depthTest={false} zIndexRange={[100, 0]}>
                     <div className="flex flex-col items-center gap-1">
                       <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
                         <span className="text-white text-xs font-medium">{player.username || playerProfile?.username || 'Joueur'}</span>
@@ -1645,7 +1700,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             <div className="text-white mb-3 pb-3 border-b border-white/20">
               <div className="font-bold text-lg flex items-center gap-2">
                 <User className="w-5 h-5" />
-                {userProfile?.username || 'Joueur'}
+                {myProfile?.username || 'Joueur'}
               </div>
               <div className="flex items-center gap-2 text-sm text-white/60 mt-1">
                 <Users className="w-4 h-4" />
@@ -1692,23 +1747,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       </div>
 
       {(!isFullscreen || isMobileMode) && (
-        <div className="absolute top-4 right-4 z-10 flex gap-2">
+        <div className="absolute top-4 right-4 z-10 flex gap-3">
           {worldSettings.enableChat && !isFullscreen && !showChatInput && (
             <button
               onClick={() => setShowChatInput(true)}
-              className="bg-white/20 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/30 transition-colors"
+              className="bg-white/20 backdrop-blur-lg text-white p-3 rounded-lg hover:bg-white/30 transition-colors shadow-lg"
               title="Écrire un message"
             >
-              <MessageCircle className="w-5 h-5" />
+              <MessageCircle className="w-6 h-6" />
             </button>
           )}
 
           <button
             onClick={handleFullscreen}
-            className="bg-white/20 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/30 transition-colors"
+            className="bg-white/20 backdrop-blur-lg text-white p-3 rounded-lg hover:bg-white/30 transition-colors shadow-lg"
             title="Mode Immersif"
           >
-            <Maximize2 className="w-5 h-5" />
+            <Maximize2 className="w-6 h-6" />
           </button>
         </div>
       )}
@@ -2033,30 +2088,30 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
-      {isMobileMode && worldSettings.enableEmojis && (
+      {worldSettings.enableEmojis && (
         <button
           onClick={() => setShowQuickActions(!showQuickActions)}
-          className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30"
+          className="fixed bottom-6 right-6 w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
         >
-          <Smile className="w-8 h-8 text-white" />
+          <Smile className="w-10 h-10 text-white" />
         </button>
       )}
 
       {showQuickActions && (
-        <div className="fixed bottom-28 right-28 z-20 flex flex-col gap-2">
-          <button onClick={() => handleQuickAction('jump')} className="bg-gray-800 text-white p-3 rounded-full shadow-lg">
+        <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-3 bg-black/80 backdrop-blur-lg p-3 rounded-2xl border-2 border-white/20">
+          <button onClick={() => handleQuickAction('jump')} className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors">
             <ArrowUp className="w-6 h-6" />
           </button>
-          <button onClick={() => handleEmoji('😂')} className="bg-gray-800 text-white p-3 rounded-full shadow-lg">
+          <button onClick={() => handleEmoji('😂')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
             😂
           </button>
-          <button onClick={() => handleEmoji('👍')} className="bg-gray-800 text-white p-3 rounded-full shadow-lg">
+          <button onClick={() => handleEmoji('👍')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
             👍
           </button>
-          <button onClick={() => handleEmoji('❤️')} className="bg-gray-800 text-white p-3 rounded-full shadow-lg">
+          <button onClick={() => handleEmoji('❤️')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
             ❤️
           </button>
-          <button onClick={() => handleEmoji('😭')} className="bg-gray-800 text-white p-3 rounded-full shadow-lg">
+          <button onClick={() => handleEmoji('😭')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
             😭
           </button>
         </div>
@@ -2064,35 +2119,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       {isMobileMode && !isFullscreen && (
         <button
-          onClick={() => {
-            // Toggle POV mode
-            setPovMode(!povMode)
-          }}
-          className="fixed bottom-4 right-4 z-20 w-16 h-16 bg-purple-600 rounded-full shadow-2xl flex items-center justify-center"
+          onClick={() => setPovMode(!povMode)}
+          className="fixed bottom-6 left-6 z-20 w-20 h-20 bg-blue-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30"
         >
-          {povMode ? <Maximize className="w-8 h-8 text-white" /> : <EyeOff className="w-8 h-8 text-white" />}
+          {povMode ? <Eye className="w-10 h-10 text-white" /> : <EyeOff className="w-10 h-10 text-white" />}
         </button>
       )}
 
-
-      {isMobileMode && !isFullscreen && (
-        <button
-          onClick={() => {
-            // Toggle POV mode
-            setPovMode(!povMode)
-          }}
-          className="fixed bottom-4 left-4 z-20 w-16 h-16 bg-blue-600 rounded-full shadow-2xl flex items-center justify-center"
-        >
-          {povMode ? <Maximize className="w-8 h-8 text-white" /> : <Eye className="w-8 h-8 text-white" />}
-        </button>
-      )}
-
-      {isMobileMode && (
+      {isMobileMode && worldSettings.enableChat && (
         <button
           onClick={() => setShowChatInput(true)}
-          className="fixed bottom-24 right-24 z-20 w-16 h-16 bg-green-500 rounded-full shadow-2xl flex items-center justify-center"
+          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20 w-20 h-20 bg-green-500 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30"
         >
-          <MessageCircle className="w-8 h-8 text-white" />
+          <MessageCircle className="w-10 h-10 text-white" />
         </button>
       )}
 
