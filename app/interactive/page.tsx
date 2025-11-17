@@ -8,6 +8,7 @@ import InteractiveWorld from "@/components/interactive/world-3d"
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { User } from 'lucide-react'
+import { v4 as uuidv4 } from 'uuid';
 
 export default function InteractivePage() {
   const [hasProfile, setHasProfile] = useState(false)
@@ -54,7 +55,7 @@ export default function InteractivePage() {
           .maybeSingle(),
         supabase
           .from("user_profiles")
-          .select("username, is_admin, is_vip, is_vip_plus")
+          .select("user_id, username, is_admin, is_vip, is_vip_plus")
           .eq("user_id", user.id)
           .maybeSingle()
       ])
@@ -65,17 +66,22 @@ export default function InteractivePage() {
       console.log('[v0] Interactive profile:', interactiveProfile)
       console.log('[v0] User profile:', userProfile)
 
+      if (!userProfile) {
+        alert('Vous devez créer un compte sur le site avant d\'accéder au monde interactif.')
+        router.push('/register')
+        return
+      }
+
+      setUserProfile(userProfile)
+
       if (interactiveProfile && interactiveProfile.username && interactiveProfile.username.trim() !== '') {
         console.log('[v0] Found existing interactive profile')
         setHasProfile(true)
-        setUserProfile(userProfile)
         setShowWorld(true)
       } else {
         console.log('[v0] No interactive profile found, showing username input')
         setHasProfile(false)
-        if (userProfile?.username) {
-          setUsername(userProfile.username)
-        }
+        setUsername(userProfile.username || '')
       }
     } catch (err) {
       console.error('[v0] Error checking profiles:', err)
@@ -89,6 +95,12 @@ export default function InteractivePage() {
     if (!user || !username.trim()) {
       console.error('[v0] Cannot create profile: missing user or username')
       alert('Erreur: Nom d\'utilisateur manquant')
+      return
+    }
+
+    if (!userProfile) {
+      alert('Erreur: Profil utilisateur introuvable. Veuillez vous inscrire sur le site.')
+      router.push('/register')
       return
     }
 
@@ -121,21 +133,9 @@ export default function InteractivePage() {
 
       console.log('[v0] Interactive profile created successfully:', data)
       
-      const { data: userProfile, error: profileError } = await supabase
-        .from("user_profiles")
-        .select("username, is_admin, is_vip, is_vip_plus")
-        .eq("user_id", user.id)
-        .maybeSingle()
-
-      if (profileError) {
-        console.error('[v0] Error loading user profile:', profileError)
-      }
-
-      console.log('[v0] Loaded user profile for badges:', userProfile)
-      setUserProfile(userProfile)
       setHasProfile(true)
-      setShowOnboarding(false) // Close onboarding
-      setShowWorld(true) // Show the world
+      setShowOnboarding(false)
+      setShowWorld(true)
     } catch (err) {
       console.error('[v0] Unexpected error during profile creation:', err)
       alert(`Erreur inattendue: ${err}`)
@@ -144,7 +144,6 @@ export default function InteractivePage() {
 
   useEffect(() => {
     const preventUnload = (e: BeforeUnloadEvent) => {
-      // Only prevent if user is in the world
       if (showWorld) {
         e.preventDefault()
         e.returnValue = ''
@@ -152,7 +151,6 @@ export default function InteractivePage() {
     }
 
     const handleVisibilityChange = () => {
-      // Don't reload when tab becomes visible again
       if (document.visibilityState === 'visible' && showWorld) {
         console.log('[v0] Tab became visible, maintaining state')
       }

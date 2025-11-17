@@ -388,10 +388,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       { x: -12, z: -5, width: 2, depth: 2 },
 
       // Arcade building
-      { x: 15, z: -5, width: 6, depth: 5 },
+      { x: -15, z: -15, width: 5, depth: 5 },
       // Additional buildings
       { x: -15, z: 5, width: 5, depth: 4 },
       { x: -15, z: -8, width: 4, depth: 4 },
+      // Decorative closed buildings
+      { x: -25, z: 0, width: 8, depth: 8 },
+      { x: 25, z: -10, width: 10, depth: 10 },
+      { x: -20, z: 15, width: 9, depth: 9 },
+      { x: 20, z: 10, width: 7, depth: 7 },
+      { x: 0, z: 25, width: 12, depth: 12 },
     ]
 
     for (const zone of collisionZones) {
@@ -1266,35 +1272,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               />
             </mesh>
 
-            {/* Main road */}
+            {/* Main dirt road */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
               <planeGeometry args={[5, 50]} />
-              <meshStandardMaterial color="#444444" />
+              <meshStandardMaterial color="#8B7355" roughness={0.95} />
             </mesh>
 
-            {/* Road markings */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -10]} receiveShadow>
-              <planeGeometry args={[0.2, 2]} />
-              <meshStandardMaterial color="#ffff00" />
-            </mesh>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -5]} receiveShadow>
-              <planeGeometry args={[0.2, 2]} />
-              <meshStandardMaterial color="#ffff00" />
-            </mesh>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
-              <planeGeometry args={[0.2, 2]} />
-              <meshStandardMaterial color="#ffff00" />
-            </mesh>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 5]} receiveShadow>
-              <planeGeometry args={[0.2, 2]} />
-              <meshStandardMaterial color="#ffff00" />
-            </mesh>
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 10]} receiveShadow>
-              <planeGeometry args={[0.2, 2]} />
-              <meshStandardMaterial color="#ffff00" />
-            </mesh>
+            {/* Removed yellow road markings for dirt road */}
 
-            {/* Added depthTest={false} and proper zIndex to all Html elements to prevent transparency issues */}
             {/* Building Info Labels */}
             <Html position={[-15, 3, -15]} center depthTest={false} zIndexRange={[100, 0]}>
               <div className="bg-purple-600/95 backdrop-blur-md text-white px-4 py-2 rounded-lg shadow-xl font-bold border-2 border-white/30">
@@ -1413,6 +1398,67 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 >
                   🎬 Entrer au Cinéma
                 </button>
+              </Html>
+            </group>
+
+            {/* Added more decorative closed buildings to fill the world */}
+            <group position={[-25, 0, 0]}>
+              <mesh position={[0, 3, 0]} castShadow>
+                <boxGeometry args={[8, 6, 8]} />
+                <meshStandardMaterial color="#8b5cf6" roughness={0.7} />
+              </mesh>
+              <Html position={[0, 7, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
+                  🔒 FERMÉ
+                </div>
+              </Html>
+            </group>
+
+            <group position={[25, 0, -10]}>
+              <mesh position={[0, 4, 0]} castShadow>
+                <boxGeometry args={[10, 8, 10]} />
+                <meshStandardMaterial color="#10b981" roughness={0.7} />
+              </mesh>
+              <Html position={[0, 9, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
+                  🔒 EN CONSTRUCTION
+                </div>
+              </Html>
+            </group>
+
+            <group position={[-20, 0, 15]}>
+              <mesh position={[0, 3.5, 0]} castShadow>
+                <boxGeometry args={[9, 7, 9]} />
+                <meshStandardMaterial color="#f59e0b" roughness={0.7} />
+              </mesh>
+              <Html position={[0, 7.5, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
+                  🔒 BIENTÔT
+                </div>
+              </Html>
+            </group>
+
+            <group position={[20, 0, 10]}>
+              <mesh position={[0, 2.5, 0]} castShadow>
+                <boxGeometry args={[7, 5, 7]} />
+                <meshStandardMaterial color="#ef4444" roughness={0.7} />
+              </mesh>
+              <Html position={[0, 5.5, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
+                  🔒 FERMÉ
+                </div>
+              </Html>
+            </group>
+
+            <group position={[0, 0, 25]}>
+              <mesh position={[0, 4, 0]} castShadow>
+                <boxGeometry args={[12, 8, 12]} />
+                <meshStandardMaterial color="#3b82f6" roughness={0.7} />
+              </mesh>
+              <Html position={[0, 9, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
+                  🔒 PROCHAINEMENT
+                </div>
               </Html>
             </group>
 
@@ -2150,6 +2196,65 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             <h2 className="text-2xl font-bold mb-4">Déconnexion AFK</h2>
             <p className="mb-4">Vous avez été inactif pendant plus de 3 heures.</p>
             <p>Redirection en cours...</p>
+          </div>
+        </div>
+      )}
+
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full border-2 border-blue-500/30">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Settings className="w-6 h-6" />
+                Paramètres
+              </h2>
+              <button
+                onClick={() => setShowSettings(false)}
+                className="text-white/60 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-white font-medium block mb-2">
+                  Qualité Graphique
+                </label>
+                <select
+                  value={graphicsQuality}
+                  onChange={(e) => setGraphicsQuality(e.target.value)}
+                  className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 outline-none"
+                >
+                  <option value="low">Basse</option>
+                  <option value="medium">Moyenne</option>
+                  <option value="high">Haute</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <label className="text-white font-medium">Mode POV</label>
+                <button
+                  onClick={() => setPovMode(!povMode)}
+                  className={`w-12 h-6 rounded-full transition-colors ${
+                    povMode ? 'bg-blue-500' : 'bg-gray-600'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      povMode ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowSettings(false)}
+                className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors font-medium mt-6"
+              >
+                Fermer
+              </button>
+            </div>
           </div>
         </div>
       )}
