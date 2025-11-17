@@ -31,6 +31,18 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   const keysPressed = useRef<Set<string>>(new Set())
   const supabase = createClient()
 
+  const handleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen()
+      } else {
+        await document.exitFullscreen()
+      }
+    } catch (err) {
+      console.error('Fullscreen error:', err)
+    }
+  }
+
   useEffect(() => {
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
     
@@ -39,17 +51,17 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         try {
           await document.documentElement.requestFullscreen()
         } catch (err) {
-          console.log('Fullscreen request failed:', err)
+          console.log('Fullscreen not available')
         }
       }
       
       const enterLandscape = async () => {
         try {
-          if (screen.orientation && screen.orientation.lock) {
-            await screen.orientation.lock('landscape')
+          if ('orientation' in screen && 'lock' in screen.orientation) {
+            await (screen.orientation as any).lock('landscape')
           }
         } catch (err) {
-          console.log('Orientation lock failed:', err)
+          console.log('Orientation lock not available')
         }
       }
       
@@ -243,6 +255,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
       <Canvas
         camera={{ position: [0, 5, 10], fov: 60 }}
         style={{ width: '100vw', height: '100vh' }}
+        gl={{ antialias: true, alpha: false }}
       >
         <Sky sunPosition={[100, 20, 100]} />
         <ambientLight intensity={0.6} />
@@ -254,7 +267,25 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           <meshStandardMaterial color="#4ade80" />
         </mesh>
         
-        <CinemaBuilding position={[15, 0, 0]} onEnter={handleEnterCinema} />
+        {/* Simple bâtiment */}
+        <group position={[15, 0, 0]}>
+          <mesh position={[0, 2, 0]}>
+            <boxGeometry args={[5, 4, 5]} />
+            <meshStandardMaterial color="#1e40af" />
+          </mesh>
+          <mesh position={[0, 4.5, 0]}>
+            <boxGeometry args={[6, 0.5, 0.5]} />
+            <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={1} />
+          </mesh>
+          <Html position={[0, 5, 0]} center>
+            <button
+              onClick={handleEnterCinema}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 whitespace-nowrap"
+            >
+              🎬 Cinéma
+            </button>
+          </Html>
+        </group>
         
         {/* Arbres */}
         {[-15, -5, 5, 15].map((x) => (
