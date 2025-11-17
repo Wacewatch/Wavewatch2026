@@ -1,23 +1,19 @@
-import { createClient } from "@/lib/supabase/server"
+import { supabase } from "@/lib/supabase-client"
 import { EbookDetails } from "@/components/ebook-details"
-import { notFound } from 'next/navigation'
+import { notFound } from "next/navigation"
 
 interface EbookPageProps {
-  params: Promise<{
+  params: {
     id: string
-  }>
+  }
 }
 
 export default async function EbookPage({ params }: EbookPageProps) {
-  const { id } = await params
-  
   try {
-    const supabase = await createClient()
-    
     const { data: ebook, error } = await supabase
       .from("ebooks")
       .select("*")
-      .eq("id", Number.parseInt(id))
+      .eq("id", Number.parseInt(params.id))
       .eq("is_active", true)
       .single()
 
