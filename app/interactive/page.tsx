@@ -18,11 +18,21 @@ export default function InteractivePage() {
   const supabase = createClient()
 
   useEffect(() => {
-    if (authLoading) return
+    console.log("[v0] Interactive page mounted")
+    console.log("[v0] Auth loading:", authLoading, "User:", user?.id)
+  }, [])
+
+  useEffect(() => {
+    if (authLoading) {
+      console.log("[v0] Still loading auth...")
+      return
+    }
     if (!user) {
+      console.log("[v0] No user, redirecting to login")
       router.push("/login")
       return
     }
+    console.log("[v0] User authenticated, checking profile...")
     checkProfile()
   }, [user, authLoading])
 
@@ -30,34 +40,47 @@ export default function InteractivePage() {
     if (!user) return
 
     try {
-      const { data } = await supabase
+      console.log("[v0] Fetching interactive profile for user:", user.id)
+      const { data, error } = await supabase
         .from("interactive_profiles")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle()
 
+      if (error) {
+        console.error("[v0] Error fetching profile:", error)
+      }
+
       if (data && data.username) {
+        console.log("[v0] Profile found:", data.username)
         setProfile(data)
         setHasProfile(true)
+      } else {
+        console.log("[v0] No profile found, showing onboarding")
       }
     } catch (error) {
-      console.error("Error:", error)
+      console.error("[v0] Exception in checkProfile:", error)
     } finally {
+      console.log("[v0] Check profile complete, setting loading to false")
       setIsLoading(false)
     }
   }
 
   if (authLoading || isLoading) {
+    console.log("[v0] Showing loading screen")
     return <LoadingScreen />
   }
 
   if (!user) {
+    console.log("[v0] No user after loading, showing loading screen")
     return <LoadingScreen />
   }
 
   if (!hasProfile) {
+    console.log("[v0] No profile, showing onboarding")
     return <SimpleOnboarding userId={user.id} onComplete={checkProfile} />
   }
 
+  console.log("[v0] Everything ready, loading SimpleWorld")
   return <SimpleWorld profile={profile} />
 }

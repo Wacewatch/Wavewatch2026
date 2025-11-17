@@ -15,12 +15,10 @@ interface SimpleWorldProps {
 function Player({ position, color, username, isCurrentUser }: any) {
   return (
     <group position={position}>
-      {/* Avatar cube */}
       <mesh castShadow>
         <boxGeometry args={[0.8, 1.8, 0.8]} />
         <meshStandardMaterial color={isCurrentUser ? "#4a9eff" : color} />
       </mesh>
-      {/* Username label */}
       {username && (
         <mesh position={[0, 2.2, 0]}>
           <sphereGeometry args={[0.1, 8, 8]} />
@@ -74,7 +72,7 @@ function Joystick({ onMove }: { onMove: (x: number, z: number) => void }) {
   }, [dragging, onMove])
 
   return (
-    <div className="md:hidden absolute bottom-24 left-4">
+    <div className="md:hidden absolute bottom-24 left-4 z-20">
       <div
         ref={containerRef}
         className="relative w-32 h-32 bg-black/50 rounded-full border-2 border-white/30"
@@ -92,9 +90,8 @@ function Joystick({ onMove }: { onMove: (x: number, z: number) => void }) {
   )
 }
 
-function Scene({ profile, otherPlayers, onPositionUpdate }: any) {
+function Scene({ profile, otherPlayers, onPositionUpdate, movement }: any) {
   const playerRef = useRef<THREE.Group>(null)
-  const [movement, setMovement] = useState({ x: 0, z: 0 })
   const keysPressed = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -135,11 +132,9 @@ function Scene({ profile, otherPlayers, onPositionUpdate }: any) {
       playerRef.current.position.x += x * speed
       playerRef.current.position.z += z * speed
 
-      // Limiter aux bordures
       playerRef.current.position.x = Math.max(-20, Math.min(20, playerRef.current.position.x))
       playerRef.current.position.z = Math.max(-20, Math.min(20, playerRef.current.position.z))
 
-      // Update position in database
       onPositionUpdate(playerRef.current.position.x, playerRef.current.position.z)
     }
   })
@@ -151,13 +146,11 @@ function Scene({ profile, otherPlayers, onPositionUpdate }: any) {
       <ambientLight intensity={0.5} />
       <directionalLight position={[10, 10, 5]} intensity={1} />
       
-      {/* Sol */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[50, 50]} />
         <meshStandardMaterial color="#2a4858" />
       </mesh>
 
-      {/* Current player */}
       <group ref={playerRef} position={[0, 0, 0]}>
         <Player 
           position={[0, 1, 0]} 
@@ -177,7 +170,6 @@ function Scene({ profile, otherPlayers, onPositionUpdate }: any) {
         />
       ))}
 
-      {/* Quelques cubes décoratifs */}
       <mesh position={[-5, 0.5, -5]} castShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial color="#888" />
@@ -203,19 +195,29 @@ export function SimpleWorld({ profile }: SimpleWorldProps) {
   const lastUpdateRef = useRef<number>(0)
 
   useEffect(() => {
+    console.log("[v0] SimpleWorld mounted for user:", profile.username)
+  }, [])
+
+  useEffect(() => {
     const loadPlayers = async () => {
-      const { data } = await supabase
+      console.log("[v0] Loading other players...")
+      const { data, error } = await supabase
         .from('interactive_profiles')
         .select('*')
         .neq('id', profile.id)
         .limit(20)
       
-      if (data) setOtherPlayers(data)
+      if (error) {
+        console.error("[v0] Error loading players:", error)
+      } else {
+        console.log("[v0] Loaded", data?.length || 0, "other players")
+        if (data) setOtherPlayers(data)
+      }
     }
 
     loadPlayers()
 
-    // Subscribe to player position changes
+    console.log("[v0] Setting up Realtime subscription...")
     const channel = supabase
       .channel('world-positions')
       .on('postgres_changes', {
@@ -224,6 +226,7 @@ export function SimpleWorld({ profile }: SimpleWorldProps) {
         table: 'interactive_profiles',
         filter: `id=neq.${profile.id}`
       }, (payload) => {
+        console.log("[v0] Realtime update received:", payload.eventType)
         if (payload.eventType === 'UPDATE') {
           setOtherPlayers(prev => {
             const index = prev.findIndex(p => p.id === payload.new.id)
@@ -236,16 +239,19 @@ export function SimpleWorld({ profile }: SimpleWorldProps) {
           })
         }
       })
-      .subscribe()
+      .subscribe((status) => {
+        console.log("[v0] Realtime subscription status:", status)
+      })
 
     return () => {
+      console.log("[v0] Cleaning up Realtime channel")
       supabase.removeChannel(channel)
     }
   }, [profile.id])
 
   const updatePosition = async (x: number, z: number) => {
     const now = Date.now()
-    if (now - lastUpdateRef.current < 100) return // Throttle to 10Hz
+    if (now - lastUpdateRef.current < 100) return
     lastUpdateRef.current = now
 
     await supabase
@@ -319,11 +325,36 @@ export function SimpleWorld({ profile }: SimpleWorldProps) {
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange)
   }, [])
 
+  console.log("[v0] Rendering SimpleWorld component")
+
   return (
     <div ref={containerRef} className="fixed inset-0 bg-black">
-      {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-10 p-4 bg-gradient-to-b from-black/80 to-transparent">
-        <div className="flex items-center justify-between">
+      <Canvas
+        shadows
+        style={{ 
+          width: "100%", 
+          height: "100%", 
+          position: "fixed", 
+          top: 0, 
+          left: 0,
+          zIndex: 0
+        }}
+        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
+        onCreated={(state) => {
+          console.log("[v0] Canvas created successfully")
+          state.gl.setClearColor('#1a1a1a')
+        }}
+      >
+        <Scene 
+          profile={profile} 
+          otherPlayers={otherPlayers}
+          onPositionUpdate={updatePosition}
+          movement={movement}
+        />
+      </Canvas>
+
+      <div className="absolute top-0 left-0 right-0 z-20 p-4 bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
+        <div className="flex items-center justify-between pointer-events-auto">
           <div>
             <h1 className="text-white text-2xl font-bold">WaveWatch World</h1>
             <p className="text-gray-400 text-sm">
@@ -352,23 +383,8 @@ export function SimpleWorld({ profile }: SimpleWorldProps) {
         </div>
       </div>
 
-      {/* Canvas 3D */}
-      <Canvas
-        shadows
-        style={{ width: "100%", height: "100%" }}
-        gl={{ antialias: true }}
-      >
-        <Scene 
-          profile={profile} 
-          otherPlayers={otherPlayers}
-          onPositionUpdate={updatePosition}
-        />
-      </Canvas>
-
-      <Joystick onMove={(x, z) => setMovement({ x, z })} />
-
       {showChat && (
-        <div className="absolute right-4 top-20 w-80 h-96 bg-black/90 border border-gray-700 rounded-lg flex flex-col">
+        <div className="absolute right-4 top-20 w-80 h-96 bg-black/90 border border-gray-700 rounded-lg flex flex-col z-30">
           <div className="p-3 border-b border-gray-700">
             <h3 className="text-white font-semibold">Chat Global</h3>
           </div>
@@ -396,8 +412,7 @@ export function SimpleWorld({ profile }: SimpleWorldProps) {
         </div>
       )}
 
-      {/* Contrôles info */}
-      <div className="absolute bottom-4 left-4 bg-black/70 text-white p-4 rounded-lg border border-gray-700">
+      <div className="absolute bottom-4 left-4 bg-black/70 text-white p-4 rounded-lg border border-gray-700 z-20 pointer-events-none">
         <p className="text-sm font-semibold mb-2">Contrôles:</p>
         <p className="text-xs text-gray-400 hidden md:block">WASD ou Flèches = Déplacement</p>
         <p className="text-xs text-gray-400 md:hidden">Joystick = Déplacement</p>
