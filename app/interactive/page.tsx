@@ -22,7 +22,8 @@ export default function InteractivePage() {
     skinTone: '#fbbf24',
     hairStyle: 'short',
     hairColor: '#1f2937',
-    accessory: 'none'
+    accessory: 'none',
+    faceSmiley: '😊' // Added default face smiley
   })
 
   const router = useRouter()
@@ -128,6 +129,31 @@ export default function InteractivePage() {
     setShowWorld(true) // Show the world
   }
 
+  useEffect(() => {
+    const preventUnload = (e: BeforeUnloadEvent) => {
+      // Only prevent if user is in the world
+      if (showWorld) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      // Don't reload when tab becomes visible again
+      if (document.visibilityState === 'visible' && showWorld) {
+        console.log('[v0] Tab became visible, maintaining state')
+      }
+    }
+
+    window.addEventListener('beforeunload', preventUnload)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('beforeunload', preventUnload)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [showWorld])
+
   if (loading || checkingProfile) {
     return (
       <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
@@ -152,28 +178,28 @@ export default function InteractivePage() {
                   <pointLight position={[-5, 5, -5]} intensity={0.5} color="#60a5fa" />
                   
                   <group position={[0, 0, 0]} rotation={[0, Math.PI * 0.15, 0]}>
-                    <mesh position={[0, 0.8, 0]}>
-                      <boxGeometry args={[0.6, 0.9, 0.35]} />
+                    <mesh position={[0, 0.575, 0]}>
+                      <boxGeometry args={[0.6, 0.45, 0.35]} />
                       <meshStandardMaterial color={avatarStyle.bodyColor} />
                     </mesh>
-                    <mesh position={[0, 1.55, 0]}>
+                    <mesh position={[0, 1.05, 0]}>
                       <sphereGeometry args={[0.32, 32, 32]} />
                       <meshStandardMaterial color={avatarStyle.skinTone} />
                     </mesh>
                     
                     {avatarStyle.hairStyle === 'short' && (
-                      <mesh position={[0, 1.75, 0]}>
+                      <mesh position={[0, 1.25, 0]}>
                         <sphereGeometry args={[0.34, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
                         <meshStandardMaterial color={avatarStyle.hairColor} />
                       </mesh>
                     )}
                     {avatarStyle.hairStyle === 'long' && (
                       <>
-                        <mesh position={[0, 1.75, 0]}>
+                        <mesh position={[0, 1.25, 0]}>
                           <sphereGeometry args={[0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.5]} />
                           <meshStandardMaterial color={avatarStyle.hairColor} />
                         </mesh>
-                        <mesh position={[0, 1.3, -0.3]}>
+                        <mesh position={[0, 0.8, -0.3]}>
                           <boxGeometry args={[0.5, 0.6, 0.2]} />
                           <meshStandardMaterial color={avatarStyle.hairColor} />
                         </mesh>
@@ -183,15 +209,15 @@ export default function InteractivePage() {
                     
                     {avatarStyle.accessory === 'glasses' && (
                       <>
-                        <mesh position={[-0.15, 1.55, 0.28]}>
+                        <mesh position={[-0.15, 1.05, 0.28]}>
                           <torusGeometry args={[0.08, 0.02, 8, 16]} />
                           <meshStandardMaterial color="#1f2937" metalness={0.8} />
                         </mesh>
-                        <mesh position={[0.15, 1.55, 0.28]}>
+                        <mesh position={[0.15, 1.05, 0.28]}>
                           <torusGeometry args={[0.08, 0.02, 8, 16]} />
                           <meshStandardMaterial color="#1f2937" metalness={0.8} />
                         </mesh>
-                        <mesh position={[0, 1.55, 0.28]}>
+                        <mesh position={[0, 1.05, 0.28]}>
                           <boxGeometry args={[0.12, 0.02, 0.02]} />
                           <meshStandardMaterial color="#1f2937" metalness={0.8} />
                         </mesh>
@@ -199,36 +225,36 @@ export default function InteractivePage() {
                     )}
                     {avatarStyle.accessory === 'hat' && (
                       <>
-                        <mesh position={[0, 1.85, 0]}>
+                        <mesh position={[0, 1.35, 0]}>
                           <cylinderGeometry args={[0.35, 0.35, 0.15, 16]} />
                           <meshStandardMaterial color="#ef4444" />
                         </mesh>
-                        <mesh position={[0, 1.95, 0]}>
+                        <mesh position={[0, 1.45, 0]}>
                           <cylinderGeometry args={[0.25, 0.35, 0.2, 16]} />
                           <meshStandardMaterial color="#ef4444" />
                         </mesh>
                       </>
                     )}
                     
-                    <group position={[-0.45, 0.7, 0]}>
+                    <group position={[-0.45, 0.5, 0]}>
                       <mesh position={[0, -0.25, 0]}>
                         <boxGeometry args={[0.2, 0.7, 0.2]} />
                         <meshStandardMaterial color={avatarStyle.bodyColor} />
                       </mesh>
                     </group>
-                    <group position={[0.45, 0.7, 0]}>
+                    <group position={[0.45, 0.5, 0]}>
                       <mesh position={[0, -0.25, 0]}>
                         <boxGeometry args={[0.2, 0.7, 0.2]} />
                         <meshStandardMaterial color={avatarStyle.bodyColor} />
                       </mesh>
                     </group>
-                    <group position={[-0.2, 0.35, 0]}>
+                    <group position={[-0.2, 0.15, 0]}>
                       <mesh position={[0, -0.35, 0]}>
                         <boxGeometry args={[0.22, 0.7, 0.22]} />
                         <meshStandardMaterial color="#2563eb" />
                       </mesh>
                     </group>
-                    <group position={[0.2, 0.35, 0]}>
+                    <group position={[0.2, 0.15, 0]}>
                       <mesh position={[0, -0.35, 0]}>
                         <boxGeometry args={[0.22, 0.7, 0.22]} />
                         <meshStandardMaterial color="#2563eb" />
@@ -334,7 +360,41 @@ export default function InteractivePage() {
 
               <div>
                 <label className="text-white font-semibold mb-2 md:mb-3 block flex items-center gap-2 text-sm md:text-base">
-                  <div className="w-5 h-5 md:w-6 md:h-6 bg-red-500 rounded-full flex items-center justify-center text-xs">5</div>
+                  <div className="w-5 h-5 md:w-6 md:h-6 bg-orange-500 rounded-full flex items-center justify-center text-xs">5</div>
+                  Visage (Smiley)
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {[
+                    { emoji: '😊', label: 'Souriant' },
+                    { emoji: '😎', label: 'Cool' },
+                    { emoji: '🤓', label: 'Intello' },
+                    { emoji: '😇', label: 'Ange' },
+                    { emoji: '🤩', label: 'Star' },
+                    { emoji: '😈', label: 'Diable' },
+                    { emoji: '🤖', label: 'Robot' },
+                    { emoji: '👽', label: 'Alien' },
+                    { emoji: '🔥', label: 'Feu' },
+                    { emoji: '⭐', label: 'Étoile' }
+                  ].map((face) => (
+                    <button
+                      key={face.emoji}
+                      onClick={() => setAvatarStyle({ ...avatarStyle, faceSmiley: face.emoji })}
+                      className={`p-3 md:p-4 rounded-xl border-2 transition-all active:scale-95 ${
+                        avatarStyle.faceSmiley === face.emoji 
+                          ? 'bg-orange-500 border-white scale-105' 
+                          : 'bg-white/10 border-white/20'
+                      }`}
+                      title={face.label}
+                    >
+                      <div className="text-2xl md:text-3xl">{face.emoji}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-white font-semibold mb-2 md:mb-3 block flex items-center gap-2 text-sm md:text-base">
+                  <div className="w-5 h-5 md:w-6 md:h-6 bg-red-500 rounded-full flex items-center justify-center text-xs">6</div>
                   Accessoires
                 </label>
                 <div className="grid grid-cols-3 gap-2 md:gap-3">

@@ -51,46 +51,58 @@ function RealisticAvatar({
 
   return (
     <group ref={groupRef} position={position}>
-      <mesh position={[0, 0.6, 0]} castShadow>
-        <boxGeometry args={[0.6, 0.9, 0.35]} />
+      {/* Torso - height divided by 2 */}
+      <mesh position={[0, 0.375, 0]} castShadow>
+        <boxGeometry args={[0.6, 0.45, 0.35]} />
         <meshStandardMaterial color={avatarStyle.bodyColor} metalness={0.1} roughness={0.8} />
       </mesh>
 
-      <mesh position={[0, 1.2, 0]} castShadow>
+      {/* Head */}
+      <mesh position={[0, 0.85, 0]} castShadow>
         <sphereGeometry args={[0.32, 32, 32]} />
         <meshStandardMaterial color={avatarStyle.skinTone || avatarStyle.headColor} metalness={0.1} roughness={0.6} />
       </mesh>
 
+      {avatarStyle.faceSmiley && (
+        <Html position={[0, 0.85, 0.32]} center>
+          <div className="text-2xl pointer-events-none">
+            {avatarStyle.faceSmiley}
+          </div>
+        </Html>
+      )}
+
+      {/* Hair styles */}
       {avatarStyle.hairStyle === 'short' && (
-        <mesh position={[0, 1.4, 0]} castShadow>
+        <mesh position={[0, 1.05, 0]} castShadow>
           <sphereGeometry args={[0.34, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
           <meshStandardMaterial color={avatarStyle.hairColor || '#3d2817'} metalness={0} roughness={1} />
         </mesh>
       )}
       {avatarStyle.hairStyle === 'long' && (
         <>
-          <mesh position={[0, 1.4, 0]} castShadow>
+          <mesh position={[0, 1.05, 0]} castShadow>
             <sphereGeometry args={[0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.5]} />
             <meshStandardMaterial color={avatarStyle.hairColor || '#3d2817'} metalness={0} roughness={1} />
           </mesh>
-          <mesh position={[0, 0.95, -0.3]} castShadow>
+          <mesh position={[0, 0.6, -0.3]} castShadow>
             <boxGeometry args={[0.5, 0.6, 0.2]} />
             <meshStandardMaterial color={avatarStyle.hairColor || '#3d2817'} metalness={0} roughness={1} />
           </mesh>
         </>
       )}
 
+      {/* Accessories */}
       {avatarStyle.accessory === 'glasses' && (
         <>
-          <mesh position={[-0.15, 1.2, 0.28]}>
+          <mesh position={[-0.15, 0.85, 0.28]}>
             <torusGeometry args={[0.08, 0.02, 8, 16]} />
             <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
           </mesh>
-          <mesh position={[0.15, 1.2, 0.28]}>
+          <mesh position={[0.15, 0.85, 0.28]}>
             <torusGeometry args={[0.08, 0.02, 8, 16]} />
             <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
           </mesh>
-          <mesh position={[0, 1.2, 0.28]}>
+          <mesh position={[0, 0.85, 0.28]}>
             <boxGeometry args={[0.12, 0.02, 0.02]} />
             <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
           </mesh>
@@ -98,18 +110,19 @@ function RealisticAvatar({
       )}
       {avatarStyle.accessory === 'hat' && (
         <>
-          <mesh position={[0, 1.5, 0]} castShadow>
+          <mesh position={[0, 1.15, 0]} castShadow>
             <cylinderGeometry args={[0.35, 0.35, 0.15, 16]} />
             <meshStandardMaterial color="#ef4444" metalness={0.2} roughness={0.8} />
           </mesh>
-          <mesh position={[0, 1.6, 0]} castShadow>
+          <mesh position={[0, 1.25, 0]} castShadow>
             <cylinderGeometry args={[0.25, 0.35, 0.2, 16]} />
             <meshStandardMaterial color="#ef4444" metalness={0.2} roughness={0.8} />
           </mesh>
         </>
       )}
 
-      <group position={[-0.45, 0.5, 0]}>
+      {/* Left Arm */}
+      <group position={[-0.45, 0.3, 0]}>
         <mesh position={[0, -0.25, 0]} castShadow>
           <boxGeometry args={[0.2, 0.7, 0.2]} />
           <meshStandardMaterial color={avatarStyle.bodyColor} metalness={0.1} roughness={0.8} />
@@ -120,7 +133,8 @@ function RealisticAvatar({
         </mesh>
       </group>
 
-      <group position={[0.45, 0.5, 0]}>
+      {/* Right Arm */}
+      <group position={[0.45, 0.3, 0]}>
         <mesh position={[0, -0.25, 0]} castShadow>
           <boxGeometry args={[0.2, 0.7, 0.2]} />
           <meshStandardMaterial color={avatarStyle.bodyColor} metalness={0.1} roughness={0.8} />
@@ -131,26 +145,26 @@ function RealisticAvatar({
         </mesh>
       </group>
 
-      {/* Legs - unchanged */}
-      <group position={[-0.2, 0.35, 0]}>
+      {/* Legs - unchanged position */}
+      <group position={[-0.2, 0.15, 0]}>
         <mesh position={[0, -0.35, 0]} castShadow>
           <boxGeometry args={[0.22, 0.7, 0.22]} />
           <meshStandardMaterial color="#2563eb" metalness={0.1} roughness={0.9} />
         </mesh>
         <mesh position={[0, -0.7, 0.1]}>
-          <boxGeometry args={[0.24, 0.16, 0.32]} />
-          <meshStandardMaterial color="#1e3a8a" metalness={0.1} roughness={0.9} />
+          <boxGeometry args={[0.24, 0.15, 0.3]} />
+          <meshStandardMaterial color="#1e3a8a" metalness={0.2} roughness={0.8} />
         </mesh>
       </group>
 
-      <group position={[0.2, 0.35, 0]}>
+      <group position={[0.2, 0.15, 0]}>
         <mesh position={[0, -0.35, 0]} castShadow>
           <boxGeometry args={[0.22, 0.7, 0.22]} />
           <meshStandardMaterial color="#2563eb" metalness={0.1} roughness={0.9} />
         </mesh>
         <mesh position={[0, -0.7, 0.1]}>
-          <boxGeometry args={[0.24, 0.16, 0.32]} />
-          <meshStandardMaterial color="#1e3a8a" metalness={0.1} roughness={0.9} />
+          <boxGeometry args={[0.24, 0.15, 0.3]} />
+          <meshStandardMaterial color="#1e3a8a" metalness={0.2} roughness={0.8} />
         </mesh>
       </group>
     </group>
@@ -222,7 +236,7 @@ function RealisticLamppost({ position }: { position: [number, number, number] })
   )
 }
 
-export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
+export default function InteractiveWorld({ userId, userProfile }: InteractiveWorldProps) {
   const [otherPlayers, setOtherPlayers] = useState<any[]>([])
   const [onlineCount, setOnlineCount] = useState(0)
   const [myPosition, setMyPosition] = useState({ x: 0, y: 0.5, z: 0 })
@@ -232,7 +246,8 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
     hairStyle: 'short',
     hairColor: '#1f2937',
     skinTone: '#fbbf24',
-    accessory: 'none'
+    accessory: 'none',
+    faceSmiley: '😊' // Added default face smiley
   })
   const [customizationOptions, setCustomizationOptions] = useState<any[]>([])
   const [showQuickActions, setShowQuickActions] = useState(false)
@@ -284,6 +299,60 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
 
   const [showMenu, setShowMenu] = useState(false)
 
+  useEffect(() => {
+    const checkMobile = () => {
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+      const isSmallScreen = window.innerWidth < 1024
+      setIsMobileMode(isTouchDevice || isSmallScreen)
+      console.log('[v0] Mobile mode:', isTouchDevice || isSmallScreen, 'Touch:', isTouchDevice, 'Screen:', isSmallScreen)
+    }
+
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    window.addEventListener('orientationchange', checkMobile)
+
+    return () => {
+      window.removeEventListener('resize', checkMobile)
+      window.removeEventListener('orientationchange', checkMobile)
+    }
+  }, [])
+
+  const [lastActivity, setLastActivity] = useState(Date.now())
+  const [showAFKWarning, setShowAFKWarning] = useState(false)
+
+  useEffect(() => {
+    const updateActivity = () => {
+      setLastActivity(Date.now())
+      setShowAFKWarning(false)
+    }
+
+    const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'touchmove', 'wheel']
+    events.forEach(event => window.addEventListener(event, updateActivity))
+
+    const checkAFK = setInterval(() => {
+      const inactiveTime = Date.now() - lastActivity
+      const threeHours = 3 * 60 * 60 * 1000 // 3 hours in milliseconds
+
+      if (inactiveTime > threeHours) {
+        setShowAFKWarning(true)
+        // Disconnect user
+        supabase
+          .from('interactive_profiles')
+          .update({ is_online: false, last_seen: new Date().toISOString() })
+          .eq('user_id', userId)
+          .then(() => {
+            console.log('[v0] User disconnected due to AFK')
+            window.location.href = '/'
+          })
+      }
+    }, 60000) // Check every minute
+
+    return () => {
+      events.forEach(event => window.removeEventListener(event, updateActivity))
+      clearInterval(checkAFK)
+    }
+  }, [lastActivity, userId])
+
   const checkCollision = (newX: number, newZ: number): boolean => {
     // Collision zones for objects in the world
     const collisionZones = [
@@ -315,6 +384,12 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
       { x: -10, z: 5, width: 2, depth: 2 },
       { x: 12, z: -5, width: 2, depth: 2 },
       { x: -12, z: -5, width: 2, depth: 2 },
+
+      // Arcade building
+      { x: 15, z: -5, width: 6, depth: 5 },
+      // Additional buildings
+      { x: -15, z: 5, width: 5, depth: 4 },
+      { x: -15, z: -8, width: 4, depth: 4 },
     ]
 
     for (const zone of collisionZones) {
@@ -750,6 +825,18 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   const handleEmoji = (emoji: string) => {
     setCurrentEmoji(emoji)
     setShowQuickActions(false)
+
+    // Broadcast emoji to other players
+    supabase.channel('world-actions').send({
+      type: 'broadcast',
+      event: 'player-emoji',
+      payload: {
+        userId: userProfile.user_id,
+        emoji: emoji,
+        timestamp: Date.now()
+      }
+    })
+
     setTimeout(() => setCurrentEmoji(null), 3000)
   }
 
@@ -839,7 +926,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
     setCurrentCinemaRoom(room)
     setShowCinema(false)
 
-    setMyPosition({ x: 0, y: 0.5, z: -5 })
+    setMyPosition({ x: 0, y: 0.5, z: 0 })
 
     await supabase
       .from('interactive_profiles')
@@ -847,9 +934,33 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         current_room: `cinema_${room.id}`,
         position_x: 0,
         position_y: 0.5,
-        position_z: -5
+        position_z: 0
       })
       .eq('user_id', userId)
+
+    const capacity = room.capacity || 50
+    const seatsPerRow = 10
+    const rows = Math.ceil(capacity / seatsPerRow)
+
+    const generatedSeats = []
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < seatsPerRow; col++) {
+        const seatNumber = row * seatsPerRow + col
+        if (seatNumber >= capacity) break
+
+        generatedSeats.push({
+          seat_number: seatNumber,
+          row_number: row,
+          position_x: (col - 4.5) * 1.5,
+          position_y: 0.4,
+          position_z: row * 2 + 2,
+          color: '#374151',
+          is_occupied: false
+        })
+      }
+    }
+
+    setCinemaSeats(generatedSeats)
   }
 
   const handleLeaveRoom = async () => {
@@ -866,7 +977,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
     setIsSeatsLocked(false) // Ensure seats are unlocked when leaving
     setCountdown('') // Clear countdown when leaving room
 
-    setMyPosition({ x: 0, y: 0.5, z: 0 })
+    setMyPosition({ x: 0, y: 0.5, z: 0 }) // Reset position to world origin
 
     await supabase
       .from('interactive_profiles')
@@ -893,13 +1004,12 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         .eq('user_id', userId)
 
       setMySeat(null)
-      setMyPosition({ x: 0, y: 0.5, z: 5 })
+      setMyPosition({ x: 0, y: 0.5, z: 0 }) // Reset position to world origin
     } else {
       // Sit down - Calculate position based on seat number
-      const row = Math.floor(seatNumber / 10)
-      const col = seatNumber % 10
-      const seatX = (col - 4.5) * 2
-      const seatZ = row * 2 + 5
+      // Get the seat data from the generatedSeats array
+      const seatData = cinemaSeats.find(s => s.seat_number === seatNumber)
+      if (!seatData) return // Should not happen if cinemaSeats is populated correctly
 
       const { error } = await supabase
         .from('interactive_cinema_seats')
@@ -907,22 +1017,25 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           room_id: currentCinemaRoom.id,
           user_id: userId,
           seat_number: seatNumber,
-          row_number: row,
+          row_number: seatData.row_number,
           is_occupied: true,
           // Add a default color if not specified
-          color: '#374151', 
+          color: '#374151',
+          position_x: seatData.position_x,
+          position_y: seatData.position_y,
+          position_z: seatData.position_z
         })
 
       if (!error) {
         setMySeat(seatNumber)
-        setMyPosition({ x: seatX, y: 0.5, z: seatZ })
+        setMyPosition({ x: seatData.position_x, y: seatData.position_y, z: seatData.position_z })
 
         await supabase
           .from('interactive_profiles')
           .update({
-            position_x: seatX,
-            position_y: 0.5,
-            position_z: seatZ
+            position_x: seatData.position_x,
+            position_y: seatData.position_y,
+            position_z: seatData.position_z
           })
           .eq('user_id', userId)
       }
@@ -946,18 +1059,29 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   }, [worldSettings.maxCapacity])
 
   useEffect(() => {
-    // This useEffect seems to be related to Clerk's useAuth, which is now removed.
-    // If it's not needed for Supabase auth, it can be removed or adapted.
-    // For now, it's kept as it was in the original code, but flagged for review.
-    // If user object is needed for Supabase, ensure it's correctly obtained.
-    // const { user } = useAuth() // Assuming you are using Clerk for authentication
+    const channel = supabase.channel('world-actions')
+      .on('broadcast', { event: 'player-emoji' }, (payload: any) => {
+        if (payload.userId && payload.userId !== userId) {
+          setPlayerActions(prev => ({
+            ...prev,
+            [payload.userId]: {
+              action: 'emoji',
+              emoji: payload.emoji,
+              timestamp: Date.now()
+            }
+          }))
 
-    const channel = supabase
-      .channel('player-actions')
-      .on('broadcast', { event: 'action' }, (payload: any) => {
-        console.log('[v0] Received action:', payload)
-        // Check if payload.userId is available before comparing
-        if (payload.userId && payload.userId !== userId) { // Compare with the current user's ID
+          setTimeout(() => {
+            setPlayerActions(prev => {
+              const newActions = { ...prev }
+              delete newActions[payload.userId]
+              return newActions
+            })
+          }, 3000)
+        }
+      })
+      .on('broadcast', { event: 'player-action' }, (payload: any) => {
+        if (payload.userId && payload.userId !== userId) {
           setPlayerActions(prev => ({
             ...prev,
             [payload.userId]: {
@@ -966,7 +1090,6 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
             }
           }))
 
-          // Clear action after 2 seconds
           setTimeout(() => {
             setPlayerActions(prev => {
               const newActions = { ...prev }
@@ -981,7 +1104,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId]) // Added userId to dependencies
+  }, [userId])
 
   const broadcastAction = async (action: string) => {
     console.log('[v0] Broadcasting action:', action)
@@ -1028,7 +1151,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         {povMode && (
           <PerspectiveCamera
             makeDefault
-            position={[myPosition.x, myPosition.y + 1.6, myPosition.z + 0.5]}
+            position={[myPosition.x, myPosition.y + 1.5, myPosition.z]}
             fov={75}
           />
         )}
@@ -1101,11 +1224,81 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               />
             </mesh>
 
-            {/* Path */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
-              <planeGeometry args={[3, 40]} />
-              <meshStandardMaterial color="#8b7355" roughness={1} metalness={0} />
+            {/* Main road */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+              <planeGeometry args={[5, 50]} />
+              <meshStandardMaterial color="#444444" />
             </mesh>
+
+            {/* Road markings */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -10]} receiveShadow>
+              <planeGeometry args={[0.2, 2]} />
+              <meshStandardMaterial color="#ffff00" />
+            </mesh>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -5]} receiveShadow>
+              <planeGeometry args={[0.2, 2]} />
+              <meshStandardMaterial color="#ffff00" />
+            </mesh>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
+              <planeGeometry args={[0.2, 2]} />
+              <meshStandardMaterial color="#ffff00" />
+            </mesh>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 5]} receiveShadow>
+              <planeGeometry args={[0.2, 2]} />
+              <meshStandardMaterial color="#ffff00" />
+            </mesh>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 10]} receiveShadow>
+              <planeGeometry args={[0.2, 2]} />
+              <meshStandardMaterial color="#ffff00" />
+            </mesh>
+
+            <group position={[15, 0, -5]}>
+              {/* Building */}
+              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
+                <boxGeometry args={[6, 5, 5]} />
+                <meshStandardMaterial color="#9333ea" />
+              </mesh>
+              {/* Roof */}
+              <mesh position={[0, 5.2, 0]} castShadow>
+                <coneGeometry args={[4, 1.5, 4]} />
+                <meshStandardMaterial color="#7e22ce" />
+              </mesh>
+              {/* Door */}
+              <mesh position={[0, 1.5, 2.51]} castShadow>
+                <boxGeometry args={[1.5, 3, 0.1]} />
+                <meshStandardMaterial color="#581c87" />
+              </mesh>
+              {/* Sign */}
+              <Html position={[0, 4, 2.6]} center>
+                <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
+                  <div className="text-xl">🕹️ ARCADE 🕹️</div>
+                  <div className="text-sm mt-1">Ouverture Prochainement</div>
+                </div>
+              </Html>
+            </group>
+
+            {/* Additional decorative buildings */}
+            <group position={[-15, 0, 5]}>
+              <mesh position={[0, 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[5, 4, 4]} />
+                <meshStandardMaterial color="#0ea5e9" />
+              </mesh>
+              <mesh position={[0, 4.5, 0]} castShadow>
+                <boxGeometry args={[5.2, 1, 4.2]} />
+                <meshStandardMaterial color="#0284c7" />
+              </mesh>
+            </group>
+
+            <group position={[-15, 0, -8]}>
+              <mesh position={[0, 3, 0]} castShadow receiveShadow>
+                <boxGeometry args={[4, 6, 4]} />
+                <meshStandardMaterial color="#f97316" />
+              </mesh>
+              <mesh position={[0, 6.5, 0]} castShadow>
+                <coneGeometry args={[3, 1.5, 4]} />
+                <meshStandardMaterial color="#ea580c" />
+              </mesh>
+            </group>
 
             {/* Cinema Building */}
             <group position={[15, 0, 0]}>
@@ -1254,22 +1447,22 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
             </mesh>
 
             {currentCinemaRoom && currentCinemaRoom !== 'world' && (() => {
-              const room = cinemaRooms.find(r => r.id === currentCinemaRoom.id) // Use currentCinemaRoom directly
+              const room = cinemaRooms.find(r => r.id === currentCinemaRoom.id)
               if (!room) return null
 
               const isMovieStarted = room.schedule_start && new Date(room.schedule_start).getTime() < Date.now()
 
               return (
-                <group position={[0, 3, -8]}>
+                <group position={[0, 3, -19]}>
                   {/* Cinema Screen Background */}
                   <mesh>
-                    <planeGeometry args={[12, 7]} />
+                    <planeGeometry args={[14, 8]} />
                     <meshStandardMaterial color="#1a1a1a" />
                   </mesh>
 
                   {/* Screen Border */}
                   <mesh position={[0, 0, 0.1]}>
-                    <planeGeometry args={[11.5, 6.5]} />
+                    <planeGeometry args={[13.5, 7.5]} />
                     <meshStandardMaterial color="#000000" />
                   </mesh>
 
@@ -1296,7 +1489,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
 
                   {/* Movie Iframe - Display when movie has started */}
                   {isMovieStarted && room.embed_url && (
-                    <Html transform style={{ width: '1100px', height: '600px' }}>
+                    <Html transform style={{ width: '1300px', height: '720px' }}>
                       <iframe
                         src={room.embed_url}
                         className="w-full h-full rounded"
@@ -1309,42 +1502,27 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               )
             })()}
 
-            {cinemaSeats.map((seat, i) => {
-              const isMySeat = mySeat === i
+            {cinemaSeats.map((seat) => {
+              const isMySeat = mySeat === seat.seat_number // Use seat.seat_number for comparison
 
               return (
-                <group key={i} position={[seat.position_x, seat.position_y, seat.position_z]}>
-                  <mesh>
-                    <boxGeometry args={[0.6, 0.8, 0.6]} />
-                    <meshStandardMaterial color={isMySeat ? '#ff4444' : seat.color} />
+                <group key={seat.seat_number} position={[seat.position_x, seat.position_y, seat.position_z]}>
+                  <mesh castShadow>
+                    <boxGeometry args={[1, 0.8, 0.9]} />
+                    <meshStandardMaterial color={isMySeat ? '#ef4444' : seat.color} />
                   </mesh>
-                  {/* Original condition: isMySeat || (!mySeat && i < 10) */}
-                  {/* Modified condition to always show if not my seat OR if I'm not seated */}
-                  {!isMySeat ? (
-                    <Html position={[0, 1.2, 0]} center>
-                      <button
-                        onClick={() => handleSitInSeat(seat.seat_number)}
-                        className={`text-xs px-2 py-1 rounded ${
-                          isMySeat
-                            ? 'bg-red-500 hover:bg-red-600'
-                            : 'bg-blue-500 hover:bg-blue-600'
-                        } text-white whitespace-nowrap`}
-                      >
-                        {isMySeat ? '🚶 Se lever' : '💺 S\'asseoir'}
-                      </button>
-                    </Html>
-                  ) : ( // If it is my seat, show the "Stand Up" button
-                    <Html position={[0, 1.2, 0]} center>
-                      <button
-                        onClick={() => handleSitInSeat(seat.seat_number)}
-                        className={`text-xs px-2 py-1 rounded ${
-                           'bg-red-500 hover:bg-red-600'
-                        } text-white whitespace-nowrap`}
-                      >
-                        {'🚶 Se lever'}
-                      </button>
-                    </Html>
-                  )}
+                  <Html position={[0, 1.2, 0]} center>
+                    <button
+                      onClick={() => handleSitInSeat(seat.seat_number)}
+                      className={`text-xs px-3 py-2 rounded-lg ${
+                        isMySeat
+                          ? 'bg-red-500 hover:bg-red-600'
+                          : 'bg-blue-500 hover:bg-blue-600'
+                      } text-white whitespace-nowrap font-medium shadow-lg`}
+                    >
+                      {isMySeat ? '🚶 Se lever' : '💺 S\'asseoir'}
+                    </button>
+                  </Html>
                 </group>
               )
             })}
@@ -1362,40 +1540,31 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           </>
         )}
 
-        <RealisticAvatar
-          position={[myPosition.x, myPosition.y + (isJumping ? 1 : 0), myPosition.z]}
-          avatarStyle={myAvatarStyle}
-          isMoving={movement.x !== 0 || movement.z !== 0}
-        />
+        {/* My avatar with username and badge */}
+        <group>
+          <RealisticAvatar
+            position={[myPosition.x, myPosition.y + (isJumping ? 1 : 0), myPosition.z]}
+            avatarStyle={myAvatarStyle}
+            isMoving={movement.x !== 0 || movement.z !== 0}
+          />
 
-        <group position={[myPosition.x, myPosition.y, myPosition.z]}>
-          {userProfile?.is_admin && (
-            <Html position={[0, 2.2, 0]} center>
-              <div className="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs flex items-center gap-1 whitespace-nowrap shadow-lg">
-                <Shield className="w-3 h-3" />
-                Admin
-              </div>
-            </Html>
-          )}
-          {userProfile?.is_vip_plus && !userProfile?.is_admin && (
-            <Html position={[0, 2.2, 0]} center>
-              <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full text-xs flex items-center gap-1 whitespace-nowrap shadow-lg">
-                <Crown className="w-3 h-3" />
-                VIP+
-              </div>
-            </Html>
-          )}
-          {userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin && (
-            <Html position={[0, 2.2, 0]} center>
-              <div className="bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs flex items-center gap-1 whitespace-nowrap shadow-lg">
-                <Crown className="w-3 h-3" />
-                VIP
-              </div>
-            </Html>
-          )}
+          <Html position={[myPosition.x, myPosition.y + 1.8, myPosition.z]} center>
+            <div className="flex items-center gap-1 bg-black/70 px-3 py-1 rounded-full backdrop-blur-sm shadow-lg">
+              <span className="text-white text-sm font-bold">{myProfile?.username || 'Vous'}</span>
+              {userProfile?.is_admin && (
+                <Shield className="w-4 h-4 text-red-500" title="Admin" />
+              )}
+              {userProfile?.is_vip_plus && !userProfile?.is_admin && (
+                <Crown className="w-4 h-4 text-purple-400" title="VIP+" />
+              )}
+              {userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin && (
+                <Star className="w-4 h-4 text-yellow-400" title="VIP" />
+              )}
+            </div>
+          </Html>
 
           {currentEmoji && (
-            <Html position={[0, 3, 0]} center>
+            <Html position={[myPosition.x, myPosition.y + 2.5, myPosition.z]} center>
               <div className="text-5xl animate-bounce">
                 {currentEmoji}
               </div>
@@ -1403,7 +1572,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           )}
 
           {playerChatBubbles[userId] && (
-            <Html position={[0, 2.8, 0]} center>
+            <Html position={[myPosition.x, myPosition.y + 2.2, myPosition.z]} center>
               <div className="bg-white/95 text-black px-3 py-2 rounded-lg shadow-xl max-w-xs text-sm border-2 border-blue-500">
                 {playerChatBubbles[userId].message}
               </div>
@@ -1416,37 +1585,34 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           .filter(p => !currentCinemaRoom || p.current_room === `cinema_${currentCinemaRoom.id}`)
           .map((player) => {
             const playerProfile = player.user_profiles
-            const avatarStyle = player.avatar_style || { bodyColor: '#ef4444', headColor: '#fbbf24' }
-
-            // Construct the 'players' array for rendering other players' data
-            const players = [{
-              ...player,
-              username: player.username || playerProfile?.username || 'Joueur',
-              is_admin: playerProfile?.is_admin || false,
-              is_vip_plus: playerProfile?.is_vip_plus || false,
-              is_vip: playerProfile?.is_vip || false
-            }];
+            const avatarStyle = player.avatar_style || { bodyColor: '#ef4444', headColor: '#fbbf24', faceSmiley: '😊' }
+            const playerAction = playerActions[player.user_id]
 
             return (
               <group key={player.user_id}>
                 <RealisticAvatar
                   position={[player.position_x || 0, 0.5, player.position_z || 0]}
                   avatarStyle={avatarStyle}
-                  isMoving={movement.x !== 0 || movement.z !== 0}
+                  isMoving={false}
                 />
 
-                {worldSettings.showStatusBadges && player.user_id !== userId && (
-                  <Html position={[player.position_x || 0, 2.8, player.position_z || 0]} center>
+                {worldSettings.showStatusBadges && (
+                  <Html position={[player.position_x || 0, 2.3, player.position_z || 0]} center>
                     <div className="flex flex-col items-center gap-1">
                       <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
                         <span className="text-white text-xs font-medium">{player.username || playerProfile?.username || 'Joueur'}</span>
                         {playerProfile?.is_admin && <Shield className="w-3 h-3 text-red-500" />}
-                        {playerProfile?.is_vip_plus && <Crown className="w-3 h-3 text-purple-400" />}
-                        {playerProfile?.is_vip && !playerProfile?.is_vip_plus && <Star className="w-3 h-3 text-yellow-400" />}
+                        {playerProfile?.is_vip_plus && !playerProfile?.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
+                        {playerProfile?.is_vip && !playerProfile?.is_vip_plus && !playerProfile?.is_admin && <Star className="w-3 h-3 text-yellow-400" />}
                       </div>
                       {playerChatBubbles[player.user_id] && Date.now() - playerChatBubbles[player.user_id].timestamp < 5000 && (
                         <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
                           {playerChatBubbles[player.user_id].message}
+                        </div>
+                      )}
+                      {playerAction && playerAction.action === 'emoji' && (
+                        <div className="text-4xl animate-bounce">
+                          {playerAction.emoji}
                         </div>
                       )}
                     </div>
@@ -1466,7 +1632,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         )}
       </Canvas>
 
-      <div className="fixed top-4 left-4 z-50"> {/* Removed isFullscreen condition */}
+      <div className="fixed top-4 left-4 z-50">
         <button
           onClick={() => setShowMenu(!showMenu)}
           className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-4 border-white/40 active:scale-95"
@@ -1629,206 +1795,325 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         </div>
       )}
 
-      {showChat && !isFullscreen && (
-        <div className="absolute top-20 right-4 w-80 h-96 bg-black/70 backdrop-blur-lg rounded-lg z-10 flex flex-col p-4">
-          <h3 className="text-white font-bold mb-2">
-            {currentCinemaRoom ? `Chat - Salle ${currentCinemaRoom.room_number}` : 'Chat Global'}
-          </h3>
-
-          <div className="flex-1 overflow-y-auto space-y-2 mb-3">
-            {(currentCinemaRoom ? roomMessages : messages).map((msg, i) => (
-              <div key={i} className="bg-white/10 rounded p-2 text-sm">
-                <div className="text-blue-400 font-semibold">{msg.username || 'Anonyme'}</div>
-                <div className="text-white">{msg.message}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-              placeholder="Votre message..."
-              className="flex-1 bg-white/10 text-white px-3 py-2 rounded-lg outline-none"
-            />
-            <button
-              onClick={sendMessage}
-              className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
-            >
-              <Send className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showSettings && !isFullscreen && (
-        <div className="absolute top-20 left-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 flex flex-col p-4 max-h-[500px] overflow-y-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-white font-bold">Paramètres</h3>
-            <button
-              onClick={() => setShowSettings(false)}
-              className="text-white/60 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="text-white text-sm mb-2 block">Qualité Graphique</label>
-              <select
-                value={graphicsQuality}
-                onChange={(e) => setGraphicsQuality(e.target.value)}
-                className="w-full bg-white/10 text-white px-3 py-2 rounded-lg outline-none"
-              >
-                <option value="low" className="bg-black">Basse (Performance)</option>
-                <option value="medium" className="bg-black">Moyenne (Équilibre)</option>
-                <option value="high" className="bg-black">Haute (Qualité)</option>
-              </select>
-              <p className="text-white/50 text-xs mt-1">
-                Basse qualité: Moins d'éléments 3D, meilleure performance
-              </p>
-            </div>
-
-            <div>
-              <label className="text-white text-sm mb-2 block">Mode d'affichage</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setIsMobileMode(false)}
-                  className={`flex-1 py-2 rounded-lg ${
-                    !isMobileMode ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/60'
-                  }`}
-                >
-                  PC
-                </button>
-                <button
-                  onClick={() => setIsMobileMode(true)}
-                  className={`flex-1 py-2 rounded-lg ${
-                    isMobileMode ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/60'
-                  }`}
-                >
-                  Mobile
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="text-white text-sm mb-2 block">Mode Caméra</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPovMode(false)}
-                  className={`flex-1 py-2 rounded-lg ${
-                    !povMode ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/60'
-                  }`}
-                >
-                  <Eye className="w-4 h-4 inline mr-1" />
-                  Vue Extérieure
-                </button>
-                <button
-                  onClick={() => setPovMode(true)}
-                  className={`flex-1 py-2 rounded-lg ${
-                    povMode ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/60'
-                  }`}
-                >
-                  <Eye className="w-4 h-4 inline mr-1" />
-                  POV
-                </button>
-              </div>
-              <p className="text-white/50 text-xs mt-1">
-                POV: Vue à la première personne
-              </p>
-            </div>
-
-            <div className="pt-4 border-t border-white/20">
-              <p className="text-white/60 text-xs">
-                Ces paramètres permettent d'optimiser l'expérience selon votre appareil.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showCinema && (
-        <div className="fixed inset-0 bg-black z-40 flex items-center justify-center p-4">
-          <button
-            onClick={() => setShowCinema(false)}
-            className="absolute top-4 right-4 z-50 bg-red-500 text-white p-3 rounded-full hover:bg-red-600 transition-all"
-          >
-            <X className="w-6 h-6" />
-          </button>
-
-          <div className="bg-gradient-to-b from-blue-900 to-purple-900 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold text-white">Salles de Cinéma</h2>
+      {showChat && (
+        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+          <div className="bg-black/90 backdrop-blur-xl rounded-xl w-full max-w-md h-[600px] flex flex-col border-2 border-white/30 shadow-2xl">
+            <div className="flex justify-between items-center p-4 border-b border-white/20">
+              <h3 className="text-white font-bold text-lg">
+                {currentCinemaRoom ? `Chat - Salle ${currentCinemaRoom.room_number}` : 'Chat Global'}
+              </h3>
               <button
-                onClick={() => setShowCinema(false)}
-                className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600"
+                onClick={() => setShowChat(false)}
+                className="text-white/60 hover:text-white transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {cinemaRooms.length === 0 ? (
-                <div className="col-span-2 text-center text-white/60 py-12">
-                  Aucune salle disponible pour le moment
+            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              {(currentCinemaRoom ? roomMessages : messages).map((msg, i) => (
+                <div key={i} className="bg-white/10 rounded-lg p-3">
+                  <div className="text-blue-400 font-semibold text-sm">{msg.username || 'Anonyme'}</div>
+                  <div className="text-white text-sm mt-1">{msg.message}</div>
                 </div>
-              ) : (
-                cinemaRooms.map((room) => (
-                  <div
-                    key={room.id}
-                    className="bg-white/10 backdrop-blur rounded-lg p-4 hover:bg-white/20 transition-all"
-                  >
-                    {room.movie_poster && (
-                      <img
-                        src={`https://image.tmdb.org/t/p/w500${room.movie_poster}`}
-                        alt={room.movie_title}
-                        className="w-full h-48 object-cover rounded-lg mb-3"
-                      />
-                    )}
-                    <h3 className="text-white font-bold text-lg mb-1">
-                      Salle {room.room_number} - {room.name}
-                    </h3>
-                    <p className="text-white/80 text-sm mb-2">{room.movie_title}</p>
-                    <div className="flex items-center justify-between text-xs text-white/60 mb-3">
-                      <span>Capacité: {room.capacity}</span>
-                      <span className={`px-2 py-1 rounded ${
-                        room.access_level === 'vip' ? 'bg-yellow-500' :
-                        room.access_level === 'vip_plus' ? 'bg-purple-500' :
-                        'bg-green-500'
-                      }`}>
-                        {room.access_level === 'vip' ? 'VIP' :
-                         room.access_level === 'vip_plus' ? 'VIP+' :
-                         'Public'}
-                      </span>
-                    </div>
-                    {room.schedule_start && (
-                      <p className="text-white/60 text-xs mb-3">
-                        Séance: {new Date(room.schedule_start).toLocaleString('fr-FR')}
-                      </p>
-                    )}
-                    <button
-                      onClick={() => handleEnterRoom(room)}
-                      className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                      Entrer dans la Salle
-                    </button>
-                  </div>
-                ))
-              )}
+              ))}
+            </div>
+
+            <div className="p-4 border-t border-white/20">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && chatInput.trim()) {
+                      sendMessage()
+                    }
+                  }}
+                  placeholder="Votre message..."
+                  className="flex-1 bg-white/10 text-white px-4 py-3 rounded-lg outline-none placeholder-white/40"
+                  autoFocus
+                />
+                <button
+                  onClick={sendMessage}
+                  disabled={!chatInput.trim()}
+                  className="bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      <div className="absolute bottom-4 left-4 z-10 bg-black/50 backdrop-blur-lg text-white p-3 rounded-lg text-sm hidden md:block">
-        <div>Contrôles: WASD ou Flèches</div>
-        <div>Souris: Rotation caméra</div>
-      </div>
+      {showAvatarCustomizer && (
+        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+          <div className="bg-black/90 backdrop-blur-xl rounded-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto border-2 border-white/30 shadow-2xl">
+            <div className="flex justify-between items-center p-6 border-b border-white/20">
+              <h3 className="text-white font-bold text-2xl">Personnaliser Avatar</h3>
+              <button
+                onClick={() => setShowAvatarCustomizer(false)}
+                className="text-white/60 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Skin Tone */}
+              <div>
+                <label className="text-white font-semibold mb-3 block">Teinte de peau</label>
+                <div className="grid grid-cols-6 gap-3">
+                  {['#fbbf24', '#f59e0b', '#d97706', '#92400e', '#7c2d12', '#451a03'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => saveAvatarStyle({ ...myAvatarStyle, skinTone: color })}
+                      className={`w-12 h-12 rounded-full border-4 transition-all ${
+                        myAvatarStyle.skinTone === color ? 'border-white scale-110' : 'border-transparent'
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Body Color */}
+              <div>
+                <label className="text-white font-semibold mb-3 block">Couleur du corps</label>
+                <div className="grid grid-cols-6 gap-3">
+                  {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => saveAvatarStyle({ ...myAvatarStyle, bodyColor: color })}
+                      className={`w-12 h-12 rounded-full border-4 transition-all ${
+                        myAvatarStyle.bodyColor === color ? 'border-white scale-110' : 'border-transparent'
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Hair Style */}
+              <div>
+                <label className="text-white font-semibold mb-3 block">Style de cheveux</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {['short', 'long', 'none'].map((style) => {
+                    const option = customizationOptions.find(
+                      (o) => o.category === 'hair_style' && o.value === style
+                    )
+                    const isLocked = option?.is_premium && !userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin
+
+                    return (
+                      <button
+                        key={style}
+                        onClick={() => !isLocked && saveAvatarStyle({ ...myAvatarStyle, hairStyle: style })}
+                        disabled={isLocked}
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          myAvatarStyle.hairStyle === style
+                            ? 'border-blue-500 bg-blue-500/20'
+                            : 'border-white/20 bg-white/5'
+                        } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
+                      >
+                        <div className="text-white font-medium flex items-center justify-center gap-2">
+                          {isLocked && <Crown className="w-4 h-4 text-yellow-400" />}
+                          {option?.label || style}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Hair Color */}
+              <div>
+                <label className="text-white font-semibold mb-3 block">Couleur des cheveux</label>
+                <div className="grid grid-cols-6 gap-3">
+                  {['#1f2937', '#92400e', '#fbbf24', '#ef4444', '#8b5cf6', '#ec4899'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => saveAvatarStyle({ ...myAvatarStyle, hairColor: color })}
+                      className={`w-12 h-12 rounded-full border-4 transition-all ${
+                        myAvatarStyle.hairColor === color ? 'border-white scale-110' : 'border-transparent'
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Face Smiley */}
+              <div>
+                <label className="text-white font-semibold mb-3 block">Visage (Smiley)</label>
+                <div className="grid grid-cols-5 gap-3">
+                  {[
+                    { emoji: '😊', label: 'Souriant', premium: false },
+                    { emoji: '😎', label: 'Cool', premium: false },
+                    { emoji: '🤓', label: 'Intello', premium: false },
+                    { emoji: '😇', label: 'Ange', premium: true, level: 'vip' },
+                    { emoji: '🤩', label: 'Star', premium: true, level: 'vip' },
+                    { emoji: '😈', label: 'Diable', premium: true, level: 'vip_plus' },
+                    { emoji: '🤖', label: 'Robot', premium: true, level: 'vip_plus' },
+                    { emoji: '👽', label: 'Alien', premium: true, level: 'vip_plus' },
+                    { emoji: '🔥', label: 'Feu', premium: true, level: 'admin' },
+                    { emoji: '⭐', label: 'Étoile', premium: true, level: 'admin' }
+                  ].map((face) => {
+                    const isLocked = face.premium && (
+                      (face.level === 'vip' && !userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin) ||
+                      (face.level === 'vip_plus' && !userProfile?.is_vip_plus && !userProfile?.is_admin) ||
+                      (face.level === 'admin' && !userProfile?.is_admin)
+                    )
+
+                    return (
+                      <button
+                        key={face.emoji}
+                        onClick={() => !isLocked && saveAvatarStyle({ ...myAvatarStyle, faceSmiley: face.emoji })}
+                        disabled={isLocked}
+                        className={`p-3 rounded-lg border-2 transition-all relative ${
+                          myAvatarStyle.faceSmiley === face.emoji
+                            ? 'border-blue-500 bg-blue-500/20 scale-110'
+                            : 'border-white/20 bg-white/5'
+                        } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
+                        title={face.label}
+                      >
+                        <div className="text-3xl">{face.emoji}</div>
+                        {isLocked && (
+                          <div className="absolute top-1 right-1">
+                            <Crown className="w-3 h-3 text-yellow-400" />
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Accessory */}
+              <div>
+                <label className="text-white font-semibold mb-3 block">Accessoire</label>
+                <div className="grid grid-cols-3 gap-3">
+                  {['none', 'glasses', 'hat'].map((acc) => {
+                    const option = customizationOptions.find(
+                      (o) => o.category === 'accessory' && o.value === acc
+                    )
+                    const isLocked = option?.is_premium && !userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin
+
+                    return (
+                      <button
+                        key={acc}
+                        onClick={() => !isLocked && saveAvatarStyle({ ...myAvatarStyle, accessory: acc })}
+                        disabled={isLocked}
+                        className={`p-4 rounded-lg border-2 transition-all ${
+                          myAvatarStyle.accessory === acc
+                            ? 'border-blue-500 bg-blue-500/20'
+                            : 'border-white/20 bg-white/5'
+                        } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
+                      >
+                        <div className="text-white font-medium flex items-center justify-center gap-2">
+                          {isLocked && <Crown className="w-4 h-4 text-yellow-400" />}
+                          {option?.label || acc}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-white/20">
+              <button
+                onClick={() => setShowAvatarCustomizer(false)}
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-bold text-lg"
+              >
+                Sauvegarder
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isMobileMode && worldSettings.enableEmojis && (
+        <button
+          onClick={() => setShowQuickActions(!showQuickActions)}
+          className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30"
+        >
+          <Smile className="w-8 h-8 text-white" />
+        </button>
+      )}
+
+      {showQuickActions && (
+        <div className="fixed bottom-28 right-28 z-20 flex flex-col gap-2">
+          <button onClick={() => handleQuickAction('jump')} className="bg-gray-800 text-white p-3 rounded-full shadow-lg">
+            <ArrowUp className="w-6 h-6" />
+          </button>
+          <button onClick={() => handleEmoji('😂')} className="bg-gray-800 text-white p-3 rounded-full shadow-lg">
+            😂
+          </button>
+          <button onClick={() => handleEmoji('👍')} className="bg-gray-800 text-white p-3 rounded-full shadow-lg">
+            👍
+          </button>
+          <button onClick={() => handleEmoji('❤️')} className="bg-gray-800 text-white p-3 rounded-full shadow-lg">
+            ❤️
+          </button>
+          <button onClick={() => handleEmoji('😭')} className="bg-gray-800 text-white p-3 rounded-full shadow-lg">
+            😭
+          </button>
+        </div>
+      )}
+
+      {isMobileMode && !isFullscreen && (
+        <button
+          onClick={() => {
+            // Toggle POV mode
+            setPovMode(!povMode)
+          }}
+          className="fixed bottom-4 right-4 z-20 w-16 h-16 bg-purple-600 rounded-full shadow-2xl flex items-center justify-center"
+        >
+          {povMode ? <Maximize className="w-8 h-8 text-white" /> : <EyeOff className="w-8 h-8 text-white" />}
+        </button>
+      )}
+
+
+      {isMobileMode && !isFullscreen && (
+        <button
+          onClick={() => {
+            // Toggle POV mode
+            setPovMode(!povMode)
+          }}
+          className="fixed bottom-4 left-4 z-20 w-16 h-16 bg-blue-600 rounded-full shadow-2xl flex items-center justify-center"
+        >
+          {povMode ? <Maximize className="w-8 h-8 text-white" /> : <Eye className="w-8 h-8 text-white" />}
+        </button>
+      )}
+
+      {isMobileMode && (
+        <button
+          onClick={() => setShowChatInput(true)}
+          className="fixed bottom-24 right-24 z-20 w-16 h-16 bg-green-500 rounded-full shadow-2xl flex items-center justify-center"
+        >
+          <MessageCircle className="w-8 h-8 text-white" />
+        </button>
+      )}
+
+
+      {!isMobileMode && (
+        <div className="absolute bottom-4 left-4 bg-black/50 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-sm">
+          ⌨️ Touches ZQSD ou Flèches pour se déplacer
+        </div>
+      )}
 
       {isMobileMode && <MobileJoystick onMove={handleJoystickMove} />}
+
+      {showAFKWarning && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+          <div className="bg-red-600 text-white p-8 rounded-2xl max-w-md text-center">
+            <h2 className="text-2xl font-bold mb-4">Déconnexion AFK</h2>
+            <p className="mb-4">Vous avez été inactif pendant plus de 3 heures.</p>
+            <p>Redirection en cours...</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
