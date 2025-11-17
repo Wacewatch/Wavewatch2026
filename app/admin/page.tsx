@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Edit, Trash2, Users, Tv, Radio, Search, Eye, EyeOff, BarChart3, FileText, Zap, Trophy, Crown, Shield, UserX, Clock, Activity, Heart, UserPlus, Play, ThumbsUp, ThumbsDown, Calendar, FlagIcon as FlaskIcon, TrendingUp, Monitor, Headphones, Gamepad2, Film, Clapperboard, Sparkles, LogIn, MessageSquare, CheckCircle, XCircle, Music, Download, BookOpen, Send, SettingsIcon, Save, ChevronLeft, ChevronRight, Globe } from 'lucide-react'
+import { Plus, Edit, Trash2, Users, Tv, Radio, Search, Eye, EyeOff, BarChart3, FileText, Zap, Trophy, Crown, Shield, UserX, Clock, Activity, Heart, UserPlus, Play, ThumbsUp, ThumbsDown, Calendar, FlagIcon as FlaskIcon, TrendingUp, Monitor, Headphones, Gamepad2, Film, Clapperboard, Sparkles, LogIn, MessageSquare, CheckCircle, XCircle, Music, Download, BookOpen, Send, SettingsIcon, Save, ChevronLeft, ChevronRight, Globe, UserCircle, RefreshCw } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 // REMOVED: import { supabase } from "@/lib/supabase" // Removed incorrect Supabase import
 import { createBrowserClient } from "@supabase/ssr" // Import for Supabase client
@@ -25,14 +25,31 @@ import { Separator } from "@/components/ui/separator" // Import Separator
 // Constants for user pagination
 const USERS_PER_PAGE = 10
 
-// Interface for Cinema Room
 interface CinemaRoom {
-  id: string;
-  name: string;
-  capacity: number;
-  start_time: string | null;
-  embed_url: string | null;
-  is_active: boolean;
+  id: string
+  room_number: number
+  name: string
+  capacity: number
+  theme: string
+  movie_title: string
+  movie_tmdb_id: number | null
+  movie_poster: string | null
+  schedule_start: string | null
+  schedule_end: string | null
+  access_level: string
+  is_open: boolean
+  embed_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface AvatarOption {
+  id: string
+  category: string
+  label: string
+  value: string
+  is_premium: boolean
+  created_at: string
 }
 
 export default function AdminPage() {
@@ -251,17 +268,49 @@ export default function AdminPage() {
     calendar_widget: true,
   })
 
-  // ADDED: State for Interactive World settings
   const [worldSettings, setWorldSettings] = useState({
     maxCapacity: 100,
     worldMode: "day",
     voiceChatEnabled: true,
     playerInteractionsEnabled: true,
     showStatusBadges: true,
-  });
+    enableChat: true, // Added new properties
+    enableEmojis: true, // Added new properties
+    enableJumping: true, // Added new properties
+  })
 
-  // ADDED: State for Cinema Rooms Management
+  const [avatarOptions, setAvatarOptions] = useState<AvatarOption[]>([])
+  const [newOption, setNewOption] = useState({
+    category: 'hair_style',
+    label: '',
+    value: '',
+    is_premium: false
+  })
+
+  // Added state for Cinema Rooms Management
   const [cinemaRooms, setCinemaRooms] = useState<CinemaRoom[]>([]);
+
+  // Added state for Online Users count
+  const [onlineUsersCount, setOnlineUsersCount] = useState(0);
+
+  const [activeTab, setActiveTab] = useState("dashboard"); // State to track active tab
+
+  // useEffect moved inside the AdminPage component if it depends on user state
+  useEffect(() => {
+    // Check if user is available and an admin before loading data
+    if (user?.isAdmin) {
+      fetchAllData(); // Initial load
+      // Load specific data based on active tab (or defer until tab is active)
+      if (activeTab === "interactive-world") {
+        loadWorldSettings();
+        loadCinemaRooms();
+        loadAvatarOptions();
+        loadOnlineUsers();
+      }
+    }
+    // Ensure dependency array includes user and activeTab if they affect the effect's execution
+  }, [user, activeTab]); // Added activeTab dependency
+
 
   const handleUpdateRequestStatus = async (id: string, status: string) => {
     const supabase = createBrowserClient(
@@ -863,6 +912,31 @@ export default function AdminPage() {
     }
   }
 
+  const loadWorldSettings = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    
+    try {
+      const { data, error } = await supabase
+        .from("interactive_world_settings")
+        .select("*")
+        .eq("setting_key", "world_config")
+        .maybeSingle() // Use maybeSingle to avoid error if no row exists
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "No Row Found" error, which is ok
+        throw error
+      }
+
+      if (data && data.setting_value) {
+        setWorldSettings(data.setting_value as any) // Cast to any as setting_value is likely JSONB
+      }
+    } catch (error) {
+      console.error("[v0] Error loading world settings:", error)
+    }
+  }
+
   // ADDED: Function to handle saving World settings
   const handleSaveWorldSettings = async () => {
     const supabase = createBrowserClient(
@@ -916,7 +990,11 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     );
     try {
-      const { data, error } = await supabase.from("cinema_rooms").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("interactive_cinema_rooms")
+        .select("*")
+        .order("room_number", { ascending: true }) // Order by room number for consistency
+        
       if (error) throw error;
       setCinemaRooms(data || []);
     } catch (error) {
@@ -929,41 +1007,213 @@ export default function AdminPage() {
     }
   };
 
+  // ADDED: Function to create a new cinema room
+  const handleCreateCinemaRoom = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    try {
+      // Determine the next room number
+      const maxRoomNumber = cinemaRooms.length > 0 
+        ? Math.max(...cinemaRooms.map(r => r.room_number)) 
+        : 0
+
+      const { error } = await supabase
+        .from("interactive_cinema_rooms")
+        .insert({
+          room_number: maxRoomNumber + 1, // Assign next available number
+          name: `Salle ${maxRoomNumber + 1}`, // Default name
+          capacity: 50, // Default capacity
+          theme: 'default', // Default theme
+          movie_title: '', // Default empty movie title
+          access_level: 'public', // Default access level
+          is_open: true, // Default to open
+          embed_url: '', // Initialize embed_url
+          // created_at and updated_at are handled by Supabase defaults
+        })
+
+      if (error) throw error
+
+      toast({
+        title: "Salle créée",
+        description: "Une nouvelle salle de cinéma a été créée.",
+      })
+      loadCinemaRooms() // Reload the list to include the new room
+    } catch (error) {
+      console.error("Error creating cinema room:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer la salle de cinéma.",
+        variant: "destructive",
+      })
+    }
+  }
+
   // ADDED: Function to update a Cinema Room
   const handleUpdateCinemaRoom = async (room: CinemaRoom) => {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
+    )
     try {
       const { error } = await supabase
-        .from("cinema_rooms")
+        .from("interactive_cinema_rooms")
         .update({
+          room_number: room.room_number,
           name: room.name,
           capacity: room.capacity,
-          start_time: room.start_time,
-          embed_url: room.embed_url,
-          is_active: room.is_active,
-          updated_at: new Date().toISOString(),
+          theme: room.theme,
+          movie_title: room.movie_title,
+          movie_tmdb_id: room.movie_tmdb_id,
+          movie_poster: room.movie_poster,
+          embed_url: room.embed_url, // Update embed_url
+          schedule_start: room.schedule_start,
+          schedule_end: room.schedule_end,
+          access_level: room.access_level,
+          is_open: room.is_open,
+          updated_at: new Date().toISOString(), // Supabase can also handle this with RLS policies
         })
-        .eq("id", room.id);
+        .eq("id", room.id)
 
-      if (error) throw error;
+      if (error) throw error
 
       toast({
         title: "Salle mise à jour",
         description: `La salle '${room.name}' a été mise à jour avec succès.`,
-      });
-      loadCinemaRooms(); // Reload to reflect changes
+      })
+      loadCinemaRooms() // Reload to reflect changes
     } catch (error) {
-      console.error("Error updating cinema room:", error);
+      console.error("Error updating cinema room:", error)
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour la salle de cinéma.",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
+
+  const loadAvatarOptions = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    try {
+      const { data, error } = await supabase
+        .from("avatar_customization_options")
+        .select("*")
+        .order("category", { ascending: true }) // Order by category
+        
+      if (error) throw error
+      setAvatarOptions(data || [])
+    } catch (error) {
+      console.error("Error loading avatar options:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les options de personnalisation.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleAddAvatarOption = async () => {
+    // Basic validation
+    if (!newOption.label || !newOption.value) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir tous les champs requis (Label et Valeur).",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    try {
+      const { error } = await supabase
+        .from("avatar_customization_options")
+        .insert({
+          category: newOption.category,
+          label: newOption.label,
+          value: newOption.value,
+          is_premium: newOption.is_premium,
+          // created_at will be set by Supabase
+        })
+
+      if (error) throw error
+
+      toast({
+        title: "Option ajoutée",
+        description: "L'option de personnalisation a été ajoutée avec succès.",
+      })
+      // Reset the form
+      setNewOption({
+        category: 'hair_style', // Reset to default category
+        label: '',
+        value: '',
+        is_premium: false
+      })
+      loadAvatarOptions() // Refresh the list
+    } catch (error) {
+      console.error("Error adding avatar option:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter l'option de personnalisation. Vérifiez les logs.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleDeleteAvatarOption = async (id: string) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    try {
+      const { error } = await supabase
+        .from("avatar_customization_options")
+        .delete()
+        .eq("id", id)
+
+      if (error) throw error
+
+      toast({
+        title: "Option supprimée",
+        description: "L'option de personnalisation a été supprimée avec succès.",
+      })
+      loadAvatarOptions() // Refresh the list
+    } catch (error) {
+      console.error("Error deleting avatar option:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer l'option. Vérifiez les logs.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const loadOnlineUsers = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    try {
+      // Query for users that are marked as online in the interactive_profiles table
+      const { count, error } = await supabase
+        .from("interactive_profiles")
+        .select("*", { count: 'exact', head: true }) // count: 'exact' and head: true optimizes for count only
+        .eq("is_online", true) // Filter for online users
+        
+      if (error) throw error
+      setOnlineUsersCount(count || 0) // Update the state with the count
+    } catch (error) {
+      console.error("Error loading online users:", error)
+      // Optionally show a toast for error
+    }
+  }
+
 
   const loadStatistics = async () => {
     const supabase = createBrowserClient(
@@ -2298,25 +2548,59 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      const [tvData, radioData, retroData, usersData, changelogsData] = await Promise.all([
+      // Fetch all necessary data
+      const [
+        tvData,
+        radioData,
+        retroData,
+        usersData,
+        changelogsData,
+        requestsData, // Added requestsData
+        musicData, // Added musicData
+        softwareData, // Added softwareData
+        gamesData, // Added gamesData
+        ebooksData, // Added ebooksData
+      ] = await Promise.all([
         supabase.from("tv_channels").select("*").order("name"),
         supabase.from("radio_stations").select("*").order("name"),
         supabase.from("retrogaming_sources").select("*").order("name"),
         supabase.from("user_profiles").select("*", { count: "exact" }),
         supabase.from("changelogs").select("*").order("release_date", { ascending: false }),
+        supabase.from("requests").select(`*, user_profiles(username, email)`).order("created_at", { ascending: false }), // Added request loading
+        supabase.from("music_content").select("*").order("created_at", { ascending: false }), // Added music content loading
+        supabase.from("software").select("*").order("created_at", { ascending: false }), // Added software loading
+        supabase.from("games").select("*").order("created_at", { ascending: false }), // Added games loading
+        supabase.from("ebooks").select("*").order("created_at", { ascending: false }), // Added ebooks loading
       ])
 
+      // Update states
       if (tvData.data) setTvChannels(tvData.data)
       if (radioData.data) setRadioStations(radioData.data)
       if (retroData.data) setRetrogamingSources(retroData.data)
       if (usersData.data) setUsers(usersData.data)
       if (changelogsData.data) setChangelogs(changelogsData.data)
+      if (requestsData.data) setRequests(requestsData.data.map((req) => ({ // Map requests to include username
+        ...req,
+        username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
+      })))
+      if (musicData.data) setMusicContent(musicData.data)
+      if (softwareData.data) setSoftware(softwareData.data)
+      if (gamesData.data) setGames(gamesData.data)
+      if (ebooksData.data) setEbooks(ebooksData.data)
 
-      // Load statistics and activities after fetching all data
+      // Load statistics, activities, site settings, and interactive world settings after fetching all basic data
       await loadStatistics()
       await loadRecentActivities()
-      await loadSiteSettings() // Load site settings here
-      await loadCinemaRooms(); // Load cinema rooms data
+      await loadSiteSettings()
+
+      // Load interactive world related data only if the tab is active or on initial load if it's the default
+      if (activeTab === "interactive-world") {
+        await loadWorldSettings();
+        await loadCinemaRooms();
+        await loadAvatarOptions();
+        await loadOnlineUsers();
+      }
+
     } catch (error) {
       console.error("❌ Erreur lors du chargement des données admin:", error)
       toast({
@@ -2338,7 +2622,7 @@ export default function AdminPage() {
       title: log.title,
       description: log.description,
     })
-    setActiveModal("edit-log")
+    setActiveModal("edit-log") // Use a distinct modal name for editing logs
   }
 
   // Add update log handler
@@ -2347,7 +2631,7 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
-    if (!editingLog) return
+    if (!editingLog) return // Should not happen if called correctly
 
     try {
       const { error } = await supabase
@@ -2362,9 +2646,9 @@ export default function AdminPage() {
 
       if (error) throw error
 
-      await fetchAllData() // Reload changelogs
+      await fetchAllData() // Reload changelogs and other data
       setActiveModal(null)
-      setEditingLog(null)
+      setEditingLog(null) // Clear editing state
       toast({
         title: "Log modifié",
         description: "Le log a été mis à jour avec succès",
@@ -2373,34 +2657,32 @@ export default function AdminPage() {
       console.error("Error updating log:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de modifier le log",
+        description: "Impossible de modifier le log.",
         variant: "destructive",
       })
     }
   }
 
   // Add loadChangelogs function to be called by fetchAllData
-  const loadChangelogs = async () => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
-    try {
-      const { data, error } = await supabase.from("changelogs").select("*").order("release_date", { ascending: false })
-      if (error) throw error
-      setChangelogs(data || [])
-    } catch (error) {
-      console.error("Error loading changelogs:", error)
-      setChangelogs([])
-    }
-  }
+  // This function is now integrated within fetchAllData for efficiency
+  // const loadChangelogs = async () => { ... }
 
   // Use fetchAllData for the initial load if user is admin
   useEffect(() => {
     if (user?.isAdmin) {
-      fetchAllData()
+      fetchAllData() // Initial load when component mounts and user is admin
+      // Reload online users periodically if the interactive-world tab is active
+      const intervalId = setInterval(() => {
+        if (activeTab === "interactive-world") {
+          loadOnlineUsers();
+        }
+      }, 15000); // Refresh every 15 seconds
+
+      // Cleanup interval on component unmount
+      return () => clearInterval(intervalId);
     }
-  }, [user])
+  }, [user, activeTab]) // Re-run if user or activeTab changes
+
 
   if (!user || !user.isAdmin) {
     return (
@@ -2459,7 +2741,7 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="dashboard" className="space-y-6">
+        <Tabs defaultValue="dashboard" className="space-y-6" onValueChange={(value) => setActiveTab(value)}>
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="inline-flex w-auto min-w-full bg-gray-800 border-gray-700 flex-nowrap">
               <TabsTrigger
@@ -2566,7 +2848,7 @@ export default function AdminPage() {
               </TabsTrigger>
               {/* Added new Interactive World tab to the TabsList */}
               <TabsTrigger
-                value="world"
+                value="interactive-world"
                 className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
               >
                 <Globe className="w-4 h-4" />
@@ -5555,21 +5837,21 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="world" className="space-y-6">
+          {/* Interactive World Tab Content */}
+          <TabsContent value="interactive-world">
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
-                <CardTitle className="text-xl text-white flex items-center gap-2">
+                <CardTitle className="text-white flex items-center gap-2">
                   <Globe className="w-5 h-5" />
-                  Paramètres du Monde Interactif
+                  Monde Interactif - Configuration Complète
                 </CardTitle>
                 <CardDescription className="text-gray-400">
-                  Gérez les paramètres globaux de WaveWatch World
+                  Gérez tous les paramètres du monde interactif, salles de cinéma et options de personnalisation
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* World Settings */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Paramètres Généraux</h3>
+                  <h3 className="text-lg font-semibold text-white">Paramètres Généraux du Monde</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
@@ -5596,7 +5878,7 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <label className="flex items-center gap-2 text-sm text-gray-300">
                       <input 
                         type="checkbox" 
@@ -5624,6 +5906,33 @@ export default function AdminPage() {
                       />
                       Afficher les badges de statut
                     </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input 
+                        type="checkbox" 
+                        className="rounded" 
+                        checked={worldSettings.enableChat} 
+                        onChange={(e) => setWorldSettings({ ...worldSettings, enableChat: e.target.checked })}
+                      />
+                      Activer le chat texte
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input 
+                        type="checkbox" 
+                        className="rounded" 
+                        checked={worldSettings.enableEmojis} 
+                        onChange={(e) => setWorldSettings({ ...worldSettings, enableEmojis: e.target.checked })}
+                      />
+                      Activer les émojis
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input 
+                        type="checkbox" 
+                        className="rounded" 
+                        checked={worldSettings.enableJumping} 
+                        onChange={(e) => setWorldSettings({ ...worldSettings, enableJumping: e.target.checked })}
+                      />
+                      Activer le saut
+                    </label>
                   </div>
                   
                   <div className="flex justify-end pt-4">
@@ -5637,15 +5946,39 @@ export default function AdminPage() {
                 <Separator className="bg-gray-700" />
 
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Film className="w-5 h-5" />
-                    Gestion des Salles de Cinéma
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Film className="w-5 h-5" />
+                      Gestion des Salles de Cinéma
+                    </h3>
+                    <Button 
+                      onClick={handleCreateCinemaRoom}
+                      size="sm"
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Créer une Salle
+                    </Button>
+                  </div>
                   
                   <div className="space-y-4">
                     {cinemaRooms.map((room) => (
                       <div key={room.id} className="p-4 bg-gray-700 rounded-lg border border-gray-600">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Numéro de Salle</label>
+                            <Input
+                              type="number"
+                              value={room.room_number}
+                              onChange={(e) => {
+                                setCinemaRooms(cinemaRooms.map(r => 
+                                  r.id === room.id ? { ...r, room_number: parseInt(e.target.value) } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
                           <div className="space-y-2">
                             <label className="text-sm text-gray-300">Nom de la Salle</label>
                             <Input
@@ -5672,61 +6005,149 @@ export default function AdminPage() {
                               className="bg-gray-600 border-gray-500 text-white"
                             />
                           </div>
-                          
+
                           <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Heure de Départ</label>
-                            <Input
-                              type="time"
-                              value={room.start_time || ''}
+                            <label className="text-sm text-gray-300">Thème</label>
+                            <select
+                              value={room.theme}
                               onChange={(e) => {
                                 setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, start_time: e.target.value } : r
+                                  r.id === room.id ? { ...r, theme: e.target.value } : r
+                                ))
+                              }}
+                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                            >
+                              <option value="default">Par défaut</option>
+                              <option value="luxury">Luxe</option>
+                              <option value="retro">Rétro</option>
+                              <option value="modern">Moderne</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Titre du Film</label>
+                            <Input
+                              value={room.movie_title}
+                              onChange={(e) => {
+                                setCinemaRooms(cinemaRooms.map(r => 
+                                  r.id === room.id ? { ...r, movie_title: e.target.value } : r
                                 ))
                               }}
                               className="bg-gray-600 border-gray-500 text-white"
-                              placeholder="19:30"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">ID TMDB du Film</label>
+                            <Input
+                              type="number"
+                              value={room.movie_tmdb_id || ''}
+                              onChange={(e) => {
+                                setCinemaRooms(cinemaRooms.map(r => 
+                                  r.id === room.id ? { ...r, movie_tmdb_id: parseInt(e.target.value) || null } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">URL Affiche</label>
+                            <Input
+                              value={room.movie_poster || ''}
+                              onChange={(e) => {
+                                setCinemaRooms(cinemaRooms.map(r => 
+                                  r.id === room.id ? { ...r, movie_poster: e.target.value } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
                             />
                           </div>
                           
                           <div className="space-y-2">
-                            <label className="text-sm text-gray-300">URL Embed (Lecture)</label>
+                            <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
                             <Input
-                              type="url"
                               value={room.embed_url || ''}
                               onChange={(e) => {
                                 setCinemaRooms(cinemaRooms.map(r => 
                                   r.id === room.id ? { ...r, embed_url: e.target.value } : r
                                 ))
                               }}
+                              placeholder="https://www.youtube.com/embed/..."
                               className="bg-gray-600 border-gray-500 text-white"
-                              placeholder="https://..."
                             />
                           </div>
                           
-                          <div className="space-y-2 md:col-span-2">
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Heure de Début</label>
+                            <Input
+                              type="datetime-local"
+                              value={room.schedule_start ? new Date(room.schedule_start).toISOString().slice(0, 16) : ''}
+                              onChange={(e) => {
+                                setCinemaRooms(cinemaRooms.map(r => 
+                                  r.id === room.id ? { ...r, schedule_start: e.target.value } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Heure de Fin</label>
+                            <Input
+                              type="datetime-local"
+                              value={room.schedule_end ? new Date(room.schedule_end).toISOString().slice(0, 16) : ''}
+                              onChange={(e) => {
+                                setCinemaRooms(cinemaRooms.map(r => 
+                                  r.id === room.id ? { ...r, schedule_end: e.target.value } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Niveau d'Accès</label>
+                            <select
+                              value={room.access_level}
+                              onChange={(e) => {
+                                setCinemaRooms(cinemaRooms.map(r => 
+                                  r.id === room.id ? { ...r, access_level: e.target.value } : r
+                                ))
+                              }}
+                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                            >
+                              <option value="public">Public</option>
+                              <option value="vip">VIP</option>
+                              <option value="vip_plus">VIP+</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </div>
+                          
+                          <div className="space-y-2 flex items-center">
                             <label className="flex items-center gap-2 text-sm text-gray-300">
                               <input 
                                 type="checkbox" 
                                 className="rounded" 
-                                checked={room.is_active}
+                                checked={room.is_open}
                                 onChange={(e) => {
                                   setCinemaRooms(cinemaRooms.map(r => 
-                                    r.id === room.id ? { ...r, is_active: e.target.checked } : r
+                                    r.id === room.id ? { ...r, is_open: e.target.checked } : r
                                   ))
                                 }}
                               />
-                              Salle Active
+                              Salle Ouverte
                             </label>
                           </div>
                           
-                          <div className="md:col-span-2 flex justify-end">
+                          <div className="lg:col-span-3 flex justify-end gap-2">
                             <Button 
                               onClick={() => handleUpdateCinemaRoom(room)}
                               size="sm"
                               className="bg-green-600 hover:bg-green-700"
                             >
                               <Save className="w-4 h-4 mr-2" />
-                              Sauvegarder la Salle
+                              Sauvegarder
                             </Button>
                           </div>
                         </div>
@@ -5744,8 +6165,17 @@ export default function AdminPage() {
                     Utilisateurs en Ligne
                   </h3>
                   <div className="bg-gray-900 p-4 rounded-lg">
-                    <p className="text-2xl font-bold text-green-400">0</p>
+                    <p className="text-4xl font-bold text-green-400">{onlineUsersCount}</p>
                     <p className="text-sm text-gray-400">utilisateurs connectés actuellement</p>
+                    <Button 
+                      onClick={loadOnlineUsers}
+                      size="sm"
+                      variant="outline"
+                      className="mt-4"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Actualiser
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -5754,6 +6184,10 @@ export default function AdminPage() {
 
         </Tabs>
       </div>
+    </div>
+  )
+}
+</div>
     </div>
   )
 }

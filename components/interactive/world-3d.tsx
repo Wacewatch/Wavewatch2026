@@ -258,6 +258,8 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   const [povMode, setPovMode] = useState(false)
   const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
   const [showChatInput, setShowChatInput] = useState(false)
+  
+  const [countdown, setCountdown] = useState<string>('')
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -345,8 +347,6 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   }, [userId])
 
   useEffect(() => {
-    if (!currentCinemaRoom || !currentCinemaRoom.schedule_start) return
-
     const checkSeatsLock = () => {
       const now = new Date()
       const startTime = new Date(currentCinemaRoom.schedule_start)
@@ -361,11 +361,40 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
       }
     }
 
+    if (!currentCinemaRoom || !currentCinemaRoom.schedule_start) {
+      setIsSeatsLocked(false) // Ensure seats are not locked if there's no current room or start time
+      return
+    }
+
     checkSeatsLock()
     const interval = setInterval(checkSeatsLock, 10000)
 
     return () => clearInterval(interval)
   }, [currentCinemaRoom])
+  
+  useEffect(() => {
+    if (!currentCinemaRoom || currentCinemaRoom === 'world') return
+
+    const room = cinemaRooms.find(r => r.id === currentCinemaRoom.id) // Use currentCinemaRoom directly
+    if (!room || !room.schedule_start) return
+
+    const interval = setInterval(() => {
+      const now = new Date().getTime()
+      const start = new Date(room.schedule_start!).getTime()
+      const distance = start - now
+
+      if (distance < 0) {
+        setCountdown('Film en cours')
+      } else {
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000)
+        setCountdown(`${hours}h ${minutes}m ${seconds}s`)
+      }
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [currentCinemaRoom, cinemaRooms]) // Added currentCinemaRoom to dependencies
   
   const handleFullscreen = async () => {
     try {
@@ -728,6 +757,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
 
     setCurrentCinemaRoom(null)
     setIsSeatsLocked(false)
+    setCountdown('') // Clear countdown when leaving room
 
     setMyPosition({ x: 0, y: 0.5, z: 0 })
 
@@ -989,32 +1019,61 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               <meshStandardMaterial color="#1a0f0a" />
             </mesh>
 
-            <group position={[0, 3, -19]}>
-              <mesh>
-                <planeGeometry args={[20, 10]} />
-                <meshStandardMaterial color="#111111" />
-              </mesh>
+            {currentCinemaRoom && currentCinemaRoom !== 'world' && (() => {
+              const room = cinemaRooms.find(r => r.id === currentCinemaRoom.id) // Use currentCinemaRoom directly
+              if (!room) return null
               
-              {currentCinemaRoom.embed_url && mySeat !== null && (
-                <Html
-                  transform
-                  occlude
-                  position={[0, 0, 0.1]}
-                  style={{
-                    width: '2000px',
-                    height: '1000px',
-                    pointerEvents: 'auto'
-                  }}
-                >
-                  <iframe
-                    src={currentCinemaRoom.embed_url}
-                    className="w-full h-full rounded-lg"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </Html>
-              )}
-            </group>
+              const isMovieStarted = room.schedule_start && new Date(room.schedule_start).getTime() < Date.now()
+              
+              return (
+                <group position={[0, 3, -8]}>
+                  {/* Cinema Screen Background */}
+                  <mesh>
+                    <planeGeometry args={[12, 7]} />
+                    <meshStandardMaterial color="#1a1a1a" />
+                  </mesh>
+                  
+                  {/* Screen Border */}
+                  <mesh position={[0, 0, 0.1]}>
+                    <planeGeometry args={[11.5, 6.5]} />
+                    <meshStandardMaterial color="#000000" />
+                  </mesh>
+                  
+                  {/* Movie Info and Countdown - Display before movie starts */}
+                  {!isMovieStarted && (
+                    <>
+                      <Html position={[0, 1, 0.2]} center>
+                        <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
+                          <h2 className="text-3xl font-bold mb-2">{room.movie_title}</h2>
+                          <p className="text-lg text-gray-300 mb-4">
+                            Début dans: <span className="text-yellow-400 font-bold">{countdown}</span>
+                          </p>
+                          {room.movie_poster && (
+                            <img 
+                              src={`https://image.tmdb.org/t/p/w500${room.movie_poster}`}
+                              alt={room.movie_title}
+                              className="w-40 h-60 object-cover rounded mx-auto"
+                            />
+                          )}
+                        </div>
+                      </Html>
+                    </>
+                  )}
+                  
+                  {/* Movie Iframe - Display when movie has started */}
+                  {isMovieStarted && room.embed_url && (
+                    <Html position={[0, 0, 0.2]} transform style={{ width: '1100px', height: '600px' }}>
+                      <iframe
+                        src={room.embed_url}
+                        className="w-full h-full rounded"
+                        allowFullScreen
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      />
+                    </Html>
+                  )}
+                </group>
+              )
+            })()}
 
             {/* Seats */}
             {Array.from({ length: Math.min(currentCinemaRoom.capacity || 30, 60) }).map((_, i) => {
@@ -1187,64 +1246,62 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         )}
       </Canvas>
       
-      {!isFullscreen && (
-        <div className="absolute top-4 left-4 z-10 flex gap-2">
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="bg-white/20 backdrop-blur-lg text-white p-3 rounded-lg hover:bg-white/30 transition-colors shadow-lg"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
-          
-          {showMenu && (
-            <div className="absolute top-14 left-0 mt-2 bg-black/90 backdrop-blur-lg rounded-lg p-4 w-72 space-y-3 shadow-2xl border border-white/20">
-              <div className="text-white mb-3 pb-3 border-b border-white/20">
-                <div className="font-bold text-lg flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  {userProfile?.username || 'Joueur'}
-                </div>
-                <div className="flex items-center gap-2 text-sm text-white/60 mt-1">
-                  <Users className="w-4 h-4" />
-                  <span>{onlineCount} en ligne</span>
-                </div>
+      <div className="absolute top-4 left-4 z-50 flex gap-2">
+        <button
+          onClick={() => setShowMenu(!showMenu)}
+          className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-xl hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-2 border-white/30 active:scale-95"
+        >
+          <Menu className="w-7 h-7" />
+        </button>
+        
+        {showMenu && (
+          <div className="absolute top-0 left-20 mt-0 bg-black/95 backdrop-blur-xl rounded-xl p-4 w-80 space-y-3 shadow-2xl border-2 border-white/30">
+            <div className="text-white mb-3 pb-3 border-b border-white/20">
+              <div className="font-bold text-lg flex items-center gap-2">
+                <User className="w-5 h-5" />
+                {userProfile?.username || 'Joueur'}
               </div>
-              
-              <button
-                onClick={() => {
-                  setShowSettings(true)
-                  setShowMenu(false)
-                }}
-                className="w-full bg-blue-500/80 text-white py-2.5 rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2 text-sm"
-              >
-                <Settings className="w-4 h-4" />
-                Paramètres
-              </button>
-              
-              <button
-                onClick={() => {
-                  setShowAvatarCustomizer(true)
-                  setShowMenu(false)
-                }}
-                className="w-full bg-purple-500/80 text-white py-2.5 rounded-lg hover:bg-purple-600 flex items-center justify-center gap-2 text-sm"
-              >
-                <Palette className="w-4 h-4" />
-                Avatar
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowChat(true)
-                  setShowMenu(false)
-                }}
-                className="w-full bg-green-500/80 text-white py-2.5 rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 text-sm"
-              >
-                <MessageSquare className="w-4 h-4" />
-                Chat
-              </button>
+              <div className="flex items-center gap-2 text-sm text-white/60 mt-1">
+                <Users className="w-4 h-4" />
+                <span>{onlineCount} en ligne</span>
+              </div>
             </div>
-          )}
-        </div>
-      )}
+            
+            <button
+              onClick={() => {
+                setShowSettings(true)
+                setShowMenu(false)
+              }}
+              className="w-full bg-blue-500/90 text-white py-3 rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+            >
+              <Settings className="w-5 h-5" />
+              Paramètres
+            </button>
+            
+            <button
+              onClick={() => {
+                setShowAvatarCustomizer(true)
+                setShowMenu(false)
+              }}
+              className="w-full bg-purple-500/90 text-white py-3 rounded-lg hover:bg-purple-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+            >
+              <Palette className="w-5 h-5" />
+              Avatar
+            </button>
+
+            <button
+              onClick={() => {
+                setShowChat(true)
+                setShowMenu(false)
+              }}
+              className="w-full bg-green-500/90 text-white py-3 rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+            >
+              <MessageSquare className="w-5 h-5" />
+              Chat
+            </button>
+          </div>
+        )}
+      </div>
       
       {!isFullscreen && (
         <div className="absolute top-4 right-4 z-10 flex gap-2">
@@ -1469,75 +1526,6 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         </div>
       )}
       
-      {showAvatarCustomizer && !isFullscreen && (
-        <div className="absolute top-20 left-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 flex flex-col p-4 max-h-[500px] overflow-y-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-white font-bold">Personnaliser Avatar</h3>
-            <button
-              onClick={() => setShowAvatarCustomizer(false)}
-              className="text-white/60 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          
-          <div className="space-y-4">
-            {['body_color', 'skin_tone', 'hair_style', 'hair_color', 'accessory'].map((category) => {
-              const options = customizationOptions.filter(opt => opt.category === category)
-              if (options.length === 0) return null
-              
-              const availableOptions = options.filter(opt => {
-                if (!opt.is_premium) return true
-                if (userProfile?.is_admin) return true
-                if (userProfile?.is_vip_plus && opt.label?.includes('VIP+')) return true
-                if (userProfile?.is_vip && opt.label?.includes('VIP') && !opt.label?.includes('VIP+')) return true
-                return false
-              })
-              
-              return (
-                <div key={category}>
-                  <label className="text-white text-sm mb-2 block capitalize">{category.replace('_', ' ')}</label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {availableOptions.map(option => (
-                      <button
-                        key={option.id}
-                        onClick={() => {
-                          const key = category === 'body_color' ? 'bodyColor' :
-                                      category === 'skin_tone' ? 'skinTone' :
-                                      category === 'hair_style' ? 'hairStyle' :
-                                      category === 'hair_color' ? 'hairColor' :
-                                      'accessory'
-                          saveAvatarStyle({ ...myAvatarStyle, [key]: option.value })
-                        }}
-                        className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs ${
-                          myAvatarStyle[category === 'body_color' ? 'bodyColor' : 
-                                       category === 'skin_tone' ? 'skinTone' : 
-                                       category === 'hair_style' ? 'hairStyle' : 
-                                       category === 'hair_color' ? 'hairColor' : 'accessory'] === option.value
-                            ? 'border-white' 
-                            : 'border-transparent'
-                        }`}
-                        style={category.includes('color') || category === 'skin_tone' ? { backgroundColor: option.value } : {}}
-                        title={`${option.label}${opt.is_premium ? ' (Premium)' : ''}`}
-                      >
-                        {!category.includes('color') && !category.includes('skin') && option.label?.slice(0, 3)}
-                        {option.is_premium && <Crown className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-            
-            <div className="pt-4 border-t border-white/20">
-              <p className="text-white/60 text-xs">
-                Options avec couronne: réservées VIP/VIP+/Admin
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {showCinema && (
         <div className="absolute inset-0 bg-black/90 backdrop-blur-lg z-30 flex items-center justify-center p-4">
           <div className="bg-gradient-to-b from-blue-900 to-purple-900 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
@@ -1667,7 +1655,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
       {/* Existing UI code... */}
       
       {showAvatarCustomizer && !isFullscreen && (
-        <div className="absolute top-20 left-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 flex flex-col p-4 max-h-[500px] overflow-y-auto">
+        <div className="absolute top-20 left-4 w-80 bg-black/90 backdrop-blur-xl rounded-lg z-10 flex flex-col p-4 max-h-[500px] overflow-y-auto border-2 border-white/20">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-white font-bold">Personnaliser Avatar</h3>
             <button
@@ -1683,42 +1671,91 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               const options = customizationOptions.filter(opt => opt.category === category)
               if (options.length === 0) return null
               
-              const availableOptions = options.filter(opt => {
-                if (!opt.is_premium) return true
+              const availableOptions = options.filter(option => {
+                // Non-premium items available to everyone
+                if (!option.is_premium) return true
+                
+                // Admin sees everything
                 if (userProfile?.is_admin) return true
-                if (userProfile?.is_vip_plus && opt.label?.includes('VIP+')) return true
-                if (userProfile?.is_vip && opt.label?.includes('VIP') && !opt.label?.includes('VIP+')) return true
+                
+                // VIP+ sees VIP+ and VIP items
+                if (userProfile?.is_vip_plus) return true
+                
+                // VIP sees only VIP items (not VIP+ or Admin-only)
+                if (userProfile?.is_vip && option.label && !option.label.includes('VIP+') && !option.label.includes('Admin')) return true
+                
                 return false
+              })
+              
+              const lockedOptions = options.filter(option => {
+                if (!option.is_premium) return false
+                if (userProfile?.is_admin) return false
+                if (userProfile?.is_vip_plus) return false
+                if (userProfile?.is_vip && option.label && !option.label.includes('VIP+') && !option.label.includes('Admin')) return false
+                return true
               })
               
               return (
                 <div key={category}>
-                  <label className="text-white text-sm mb-2 block capitalize">{category.replace('_', ' ')}</label>
+                  <label className="text-white text-sm mb-2 block capitalize font-semibold">{category.replace('_', ' ')}</label>
                   <div className="grid grid-cols-5 gap-2">
-                    {availableOptions.map(option => (
+                    {availableOptions.map(option => {
+                      const isSelected = myAvatarStyle[
+                        category === 'body_color' ? 'bodyColor' : 
+                        category === 'skin_tone' ? 'skinTone' : 
+                        category === 'hair_style' ? 'hairStyle' : 
+                        category === 'hair_color' ? 'hairColor' : 
+                        'accessory'
+                      ] === option.value
+                      
+                      return (
+                        <button
+                          key={option.id}
+                          onClick={() => {
+                            const key = category === 'body_color' ? 'bodyColor' :
+                                        category === 'skin_tone' ? 'skinTone' :
+                                        category === 'hair_style' ? 'hairStyle' :
+                                        category === 'hair_color' ? 'hairColor' :
+                                        'accessory'
+                            saveAvatarStyle({ ...myAvatarStyle, [key]: option.value })
+                          }}
+                          className={`relative w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs font-bold transition-all ${
+                            isSelected
+                              ? 'border-white ring-2 ring-blue-500 scale-110' 
+                              : 'border-white/30 hover:border-white/60'
+                          }`}
+                          style={category.includes('color') || category === 'skin_tone' ? { backgroundColor: option.value } : {}}
+                          title={option.label || option.value}
+                        >
+                          {!category.includes('color') && !category.includes('skin') && (
+                            <span className="text-white drop-shadow-lg">{option.label?.slice(0, 3)}</span>
+                          )}
+                          {option.is_premium && (
+                            <Crown className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1 drop-shadow-lg" />
+                          )}
+                        </button>
+                      )
+                    })}
+                    
+                    {/* Show locked options with visual feedback */}
+                    {lockedOptions.map(option => (
                       <button
                         key={option.id}
-                        onClick={() => {
-                          const key = category === 'body_color' ? 'bodyColor' :
-                                      category === 'skin_tone' ? 'skinTone' :
-                                      category === 'hair_style' ? 'hairStyle' :
-                                      category === 'hair_color' ? 'hairColor' :
-                                      'accessory'
-                          saveAvatarStyle({ ...myAvatarStyle, [key]: option.value })
-                        }}
-                        className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs ${
-                          myAvatarStyle[category === 'body_color' ? 'bodyColor' : 
-                                       category === 'skin_tone' ? 'skinTone' : 
-                                       category === 'hair_style' ? 'hairStyle' : 
-                                       category === 'hair_color' ? 'hairColor' : 'accessory'] === option.value
-                            ? 'border-white' 
-                            : 'border-transparent'
-                        }`}
+                        disabled
+                        className="relative w-10 h-10 rounded-lg border-2 border-white/20 flex items-center justify-center text-xs font-bold opacity-40 cursor-not-allowed"
                         style={category.includes('color') || category === 'skin_tone' ? { backgroundColor: option.value } : {}}
-                        title={`${option.label}${opt.is_premium ? ' (Premium)' : ''}`}
+                        title={`${option.label || option.value} - ${
+                          option.label?.includes('Admin') ? 'Réservé Admin' :
+                          option.label?.includes('VIP+') ? 'Réservé VIP+' :
+                          'Réservé VIP'
+                        }`}
                       >
-                        {!category.includes('color') && !category.includes('skin') && option.label?.slice(0, 3)}
-                        {option.is_premium && <Crown className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />}
+                        {!category.includes('color') && !category.includes('skin') && (
+                          <span className="text-white drop-shadow-lg">{option.label?.slice(0, 3)}</span>
+                        )}
+                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                          <Crown className="w-4 h-4 text-yellow-400" />
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -1727,9 +1764,15 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
             })}
             
             <div className="pt-4 border-t border-white/20">
-              <p className="text-white/60 text-xs">
-                Options avec couronne: réservées VIP/VIP+/Admin
-              </p>
+              <div className="text-white/80 text-xs space-y-1">
+                <div className="flex items-center gap-2">
+                  <Crown className="w-3 h-3 text-yellow-400" />
+                  <span>Options avec couronne: réservées</span>
+                </div>
+                {!userProfile?.is_admin && !userProfile?.is_vip && !userProfile?.is_vip_plus && (
+                  <div className="text-white/60">Devenez VIP pour débloquer plus d'options!</div>
+                )}
+              </div>
             </div>
           </div>
         </div>

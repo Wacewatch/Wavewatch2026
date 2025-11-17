@@ -134,14 +134,14 @@ export default function InteractivePage() {
 
   if (showOnboarding) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-b from-blue-900 via-purple-900 to-black flex items-center justify-center p-4 overflow-y-auto">
-        <div className="bg-black/40 backdrop-blur-2xl p-4 md:p-8 rounded-3xl max-w-6xl w-full my-4 border-2 border-white/20 shadow-2xl max-h-[95vh] overflow-y-auto">
-          <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 text-center">Créez Votre Avatar</h1>
-          <p className="text-white/60 text-center mb-4 md:mb-6 text-sm md:text-base">Personnalisez votre apparence</p>
+      <div className="fixed inset-0 bg-gradient-to-b from-blue-900 via-purple-900 to-black flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+        <div className="bg-black/40 backdrop-blur-2xl p-3 sm:p-4 md:p-8 rounded-3xl max-w-6xl w-full my-2 sm:my-4 border-2 border-white/20 shadow-2xl max-h-[98vh] overflow-y-auto">
+          <h1 className="text-xl sm:text-2xl md:text-4xl font-bold text-white mb-1 sm:mb-2 text-center">Créez Votre Avatar</h1>
+          <p className="text-white/60 text-center mb-3 sm:mb-4 md:mb-6 text-xs sm:text-sm md:text-base">Personnalisez votre apparence</p>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <div className="bg-gradient-to-b from-blue-500/20 to-purple-500/20 rounded-2xl p-4 md:p-6 flex flex-col items-center justify-center min-h-[300px] md:min-h-[400px] border-2 border-white/10">
-              <div className="w-full h-64 md:h-80 bg-black/30 rounded-xl mb-4 overflow-hidden">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
+            <div className="bg-gradient-to-b from-blue-500/20 to-purple-500/20 rounded-2xl p-3 sm:p-4 md:p-6 flex flex-col items-center justify-center min-h-[250px] sm:min-h-[300px] md:min-h-[400px] border-2 border-white/10">
+              <div className="w-full h-48 sm:h-64 md:h-80 bg-black/30 rounded-xl mb-2 sm:mb-4 overflow-hidden">
                 <Canvas camera={{ position: [0, 1.5, 4], fov: 50 }}>
                   <ambientLight intensity={0.5} />
                   <directionalLight position={[5, 5, 5]} intensity={1} />
@@ -238,18 +238,18 @@ export default function InteractivePage() {
               <p className="text-white/80 text-xs md:text-sm text-center">Votre avatar tourne automatiquement</p>
             </div>
 
-            <div className="space-y-4 md:space-y-6 max-h-none lg:max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-3 sm:space-y-4 md:space-y-6 max-h-none lg:max-h-[600px] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
               <div>
-                <label className="text-white font-semibold mb-2 md:mb-3 block flex items-center gap-2 text-sm md:text-base">
-                  <div className="w-5 h-5 md:w-6 md:h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs">1</div>
+                <label className="text-white font-semibold mb-2 block flex items-center gap-2 text-xs sm:text-sm md:text-base">
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs">1</div>
                   Couleur du Corps
                 </label>
-                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 gap-1.5 sm:gap-2">
                   {['#3b82f6', '#ef4444', '#22c55e', '#a855f7', '#f59e0b', '#06b6d4', '#ec4899', '#8b5cf6', '#10b981', '#f43f5e', '#84cc16', '#f97316', '#14b8a6', '#eab308', '#6366f1', '#d946ef'].map((color) => (
                     <button
                       key={color}
                       onClick={() => setAvatarStyle({ ...avatarStyle, bodyColor: color })}
-                      className={`w-12 h-12 md:w-14 md:h-14 rounded-xl border-4 transition-all active:scale-95 shadow-lg ${
+                      className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl border-4 transition-all active:scale-95 shadow-lg ${
                         avatarStyle.bodyColor === color ? 'border-white scale-105 ring-4 ring-white/50' : 'border-white/20'
                       }`}
                       style={{ backgroundColor: color }}
@@ -359,9 +359,9 @@ export default function InteractivePage() {
 
           <button
             onClick={handleCreateProfile}
-            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 md:py-4 rounded-xl font-bold text-base md:text-lg hover:from-green-600 hover:to-emerald-700 transition-all mt-4 md:mt-6 shadow-2xl hover:shadow-green-500/50 flex items-center justify-center gap-2 active:scale-95"
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 sm:py-3 md:py-4 rounded-xl font-bold text-sm sm:text-base md:text-lg hover:from-green-600 hover:to-emerald-700 transition-all mt-3 sm:mt-4 md:mt-6 shadow-2xl hover:shadow-green-500/50 flex items-center justify-center gap-2 active:scale-95"
           >
-            <User className="w-5 h-5 md:w-6 md:h-6" />
+            <User className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
             Entrer dans le Monde
           </button>
         </div>
