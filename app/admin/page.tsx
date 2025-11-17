@@ -424,18 +424,14 @@ export default function AdminPage() {
 
     setSendingBroadcast(true)
     try {
-      const { count: totalUsers, error: countError } = await supabase
-        .from("user_profiles")
-        .select("*", { count: "exact", head: true })
-
-      if (countError) throw countError
-
-      setTotalUserCount(totalUsers || 0)
-
       // Get all user IDs without limit
-      const { data: allUsers, error: usersError } = await supabase
+      const {
+        data: allUsers,
+        error: usersError,
+        count: totalUsersCount,
+      } = await supabase
         .from("user_profiles")
-        .select("id")
+        .select("id", { count: "exact" })
 
       if (usersError) throw usersError
 
@@ -469,7 +465,7 @@ export default function AdminPage() {
 
       toast({
         title: "Message envoyé",
-        description: `Message diffusé à ${totalUsers || allUsers.length} utilisateur(s)`,
+        description: `Message diffusé à ${allUsers.length} utilisateur(s)`,
       })
 
       setBroadcastForm({ subject: "", content: "" })
@@ -651,7 +647,7 @@ export default function AdminPage() {
     try {
       console.log("🔄 Chargement des demandes...")
       const { data, error } = await supabase
-        .from("requests")
+        .from("content_requests")
         .select(`
           *,
           user_profiles(username, email)
@@ -659,7 +655,7 @@ export default function AdminPage() {
         .order("created_at", { ascending: false })
 
       if (error) {
-        console.error("❌ Erreur Supabase requests:", error)
+        console.error("❌ Erreur Supabase content_requests:", error)
         throw error
       }
 
@@ -2342,7 +2338,7 @@ export default function AdminPage() {
         throw error
       }
 
-      console.log(`✅ Statut utilisateur changé: ${newStatus}`)
+      console.log(`✅ Statut utilisateur changed: ${newStatus}`)
 
       const updatedUser = { ...currentUser, status: newStatus }
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))
@@ -5265,6 +5261,9 @@ export default function AdminPage() {
                             <SelectItem value="Science-Fiction">Science-Fiction</SelectItem>
                             <SelectItem value="Thriller">Thriller</SelectItem>
                             <SelectItem value="Romance">Romance</SelectItem>
+                            {/* Adding Magazine and Journal categories to ebooks */}
+                            <SelectItem value="Magazine">Magazine</SelectItem>
+                            <SelectItem value="Journal">Journal</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -5936,7 +5935,11 @@ export default function AdminPage() {
                   </div>
                   
                   <div className="flex justify-end pt-4">
-                    <Button onClick={handleSaveWorldSettings} className="bg-blue-600 hover:bg-blue-700">
+                    {/* CHANGE: Renamed handleSaveWorldSettings to handleSaveInteractiveSettings */}
+                    <Button 
+                      onClick={handleSaveWorldSettings}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
                       <Save className="w-4 h-4 mr-2" />
                       Sauvegarder les Paramètres
                     </Button>

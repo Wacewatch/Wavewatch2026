@@ -85,7 +85,10 @@ export default function InteractivePage() {
   }
 
   const handleCreateProfile = async () => {
-    if (!user || !username.trim()) return
+    if (!user || !username.trim()) {
+      console.error('[v0] Cannot create profile: missing user or username')
+      return
+    }
 
     console.log('[v0] Creating interactive profile with username:', username.trim())
 
@@ -121,12 +124,13 @@ export default function InteractivePage() {
     console.log('[v0] Loaded user profile for badges:', userProfile)
     setUserProfile(userProfile)
     setHasProfile(true)
-    setShowWorld(true)
+    setShowOnboarding(false) // Close onboarding
+    setShowWorld(true) // Show the world
   }
 
   if (loading || checkingProfile) {
     return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
+      <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
         <div className="text-white text-2xl">Chargement...</div>
       </div>
     )
@@ -134,7 +138,7 @@ export default function InteractivePage() {
 
   if (showOnboarding) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-b from-blue-900 via-purple-900 to-black flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+      <div className="fixed inset-0 bg-gradient-to-b from-blue-900 via-purple-900 to-black flex items-center justify-center p-2 sm:p-4 overflow-y-auto z-50">
         <div className="bg-black/40 backdrop-blur-2xl p-3 sm:p-4 md:p-8 rounded-3xl max-w-6xl w-full my-2 sm:my-4 border-2 border-white/20 shadow-2xl max-h-[98vh] overflow-y-auto">
           <h1 className="text-xl sm:text-2xl md:text-4xl font-bold text-white mb-1 sm:mb-2 text-center">Créez Votre Avatar</h1>
           <p className="text-white/60 text-center mb-3 sm:mb-4 md:mb-6 text-xs sm:text-sm md:text-base">Personnalisez votre apparence</p>
@@ -371,7 +375,7 @@ export default function InteractivePage() {
 
   if (!hasProfile) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-b from-blue-900 to-purple-900 flex items-center justify-center">
+      <div className="fixed inset-0 bg-gradient-to-b from-blue-900 to-purple-900 flex items-center justify-center z-50">
         <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl max-w-md w-full mx-4">
           <h1 className="text-3xl font-bold text-white mb-6">Bienvenue dans WaveWatch World</h1>
           <p className="text-white/80 mb-4">Choisissez votre nom d'utilisateur pour commencer</p>
@@ -397,7 +401,11 @@ export default function InteractivePage() {
   }
 
   if (showWorld) {
-    return <InteractiveWorld userId={user!.id} userProfile={userProfile} />
+    return (
+      <div className="fixed inset-0 z-50 bg-black">
+        <InteractiveWorld userId={user!.id} userProfile={userProfile} />
+      </div>
+    )
   }
 
   return null

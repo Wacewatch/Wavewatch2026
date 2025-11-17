@@ -1,29 +1,37 @@
 'use client'
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Sky, Html, PerspectiveCamera } from '@react-three/drei'
+import { OrbitControls, Sky, Html, PerspectiveCamera, Text } from '@react-three/drei'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff } from 'lucide-react'
+import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff, ArrowUp, Frown, ThumbsUp, Heart, Angry, ChevronLeft, Maximize2, MessageCircle, Sparkles, Star } from 'lucide-react'
 import * as THREE from 'three'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card } from '@/components/ui/card'
 
 interface WorldProps {
   userId: string
   userProfile: any
 }
 
-function RealisticAvatar({ 
-  position, 
-  avatarStyle, 
-  isMoving 
-}: { 
+interface InteractiveWorldProps {
+  userProfile: any;
+  initialProfile: any;
+}
+
+function RealisticAvatar({
+  position,
+  avatarStyle,
+  isMoving
+}: {
   position: [number, number, number]
   avatarStyle: any
   isMoving: boolean
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const [time, setTime] = useState(0)
-  
+
   useFrame((state, delta) => {
     if (isMoving && groupRef.current) {
       setTime(t => t + delta * 5)
@@ -32,7 +40,7 @@ function RealisticAvatar({
       const rightLeg = groupRef.current.children[4]
       if (leftLeg) leftLeg.rotation.x = Math.sin(time) * 0.5
       if (rightLeg) rightLeg.rotation.x = Math.sin(time + Math.PI) * 0.5
-      
+
       // Animate arms swinging
       const leftArm = groupRef.current.children[1]
       const rightArm = groupRef.current.children[2]
@@ -40,19 +48,19 @@ function RealisticAvatar({
       if (rightArm) rightArm.rotation.x = Math.sin(time) * 0.3
     }
   })
-  
+
   return (
     <group ref={groupRef} position={position}>
       <mesh position={[0, 0.6, 0]} castShadow>
         <boxGeometry args={[0.6, 0.9, 0.35]} />
         <meshStandardMaterial color={avatarStyle.bodyColor} metalness={0.1} roughness={0.8} />
       </mesh>
-      
+
       <mesh position={[0, 1.2, 0]} castShadow>
         <sphereGeometry args={[0.32, 32, 32]} />
         <meshStandardMaterial color={avatarStyle.skinTone || avatarStyle.headColor} metalness={0.1} roughness={0.6} />
       </mesh>
-      
+
       {avatarStyle.hairStyle === 'short' && (
         <mesh position={[0, 1.4, 0]} castShadow>
           <sphereGeometry args={[0.34, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
@@ -71,7 +79,7 @@ function RealisticAvatar({
           </mesh>
         </>
       )}
-      
+
       {avatarStyle.accessory === 'glasses' && (
         <>
           <mesh position={[-0.15, 1.2, 0.28]}>
@@ -100,7 +108,7 @@ function RealisticAvatar({
           </mesh>
         </>
       )}
-      
+
       <group position={[-0.45, 0.5, 0]}>
         <mesh position={[0, -0.25, 0]} castShadow>
           <boxGeometry args={[0.2, 0.7, 0.2]} />
@@ -111,7 +119,7 @@ function RealisticAvatar({
           <meshStandardMaterial color={avatarStyle.skinTone || avatarStyle.headColor} metalness={0.1} roughness={0.6} />
         </mesh>
       </group>
-      
+
       <group position={[0.45, 0.5, 0]}>
         <mesh position={[0, -0.25, 0]} castShadow>
           <boxGeometry args={[0.2, 0.7, 0.2]} />
@@ -122,7 +130,7 @@ function RealisticAvatar({
           <meshStandardMaterial color={avatarStyle.skinTone || avatarStyle.headColor} metalness={0.1} roughness={0.6} />
         </mesh>
       </group>
-      
+
       {/* Legs - unchanged */}
       <group position={[-0.2, 0.35, 0]}>
         <mesh position={[0, -0.35, 0]} castShadow>
@@ -134,7 +142,7 @@ function RealisticAvatar({
           <meshStandardMaterial color="#1e3a8a" metalness={0.1} roughness={0.9} />
         </mesh>
       </group>
-      
+
       <group position={[0.2, 0.35, 0]}>
         <mesh position={[0, -0.35, 0]} castShadow>
           <boxGeometry args={[0.22, 0.7, 0.22]} />
@@ -157,7 +165,7 @@ function RealisticTree({ position }: { position: [number, number, number] }) {
         <cylinderGeometry args={[0.25, 0.35, 3, 12]} />
         <meshStandardMaterial color="#6b4423" roughness={1} metalness={0} />
       </mesh>
-      
+
       {/* Foliage layers */}
       <mesh position={[0, 3.5, 0]} castShadow>
         <coneGeometry args={[1.5, 2, 8]} />
@@ -183,31 +191,31 @@ function RealisticLamppost({ position }: { position: [number, number, number] })
         <cylinderGeometry args={[0.3, 0.35, 0.2, 8]} />
         <meshStandardMaterial color="#1f2937" metalness={0.7} roughness={0.3} />
       </mesh>
-      
+
       {/* Pole */}
       <mesh position={[0, 2.5, 0]} castShadow>
         <cylinderGeometry args={[0.12, 0.15, 5, 12]} />
         <meshStandardMaterial color="#374151" metalness={0.8} roughness={0.2} />
       </mesh>
-      
+
       {/* Lamp holder */}
       <mesh position={[0, 4.8, 0.3]} castShadow>
         <boxGeometry args={[0.2, 0.3, 0.8]} />
         <meshStandardMaterial color="#1f2937" metalness={0.7} roughness={0.3} />
       </mesh>
-      
+
       {/* Light bulb */}
       <mesh position={[0, 4.6, 0.3]}>
         <sphereGeometry args={[0.25, 16, 16]} />
-        <meshStandardMaterial 
-          color="#fff7ed" 
-          emissive="#fbbf24" 
+        <meshStandardMaterial
+          color="#fff7ed"
+          emissive="#fbbf24"
           emissiveIntensity={2}
           metalness={0.1}
           roughness={0.2}
         />
       </mesh>
-      
+
       {/* Light */}
       <pointLight position={[0, 4.6, 0.3]} intensity={3} distance={15} color="#fbbf24" castShadow />
     </group>
@@ -247,41 +255,123 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   const [mySeat, setMySeat] = useState<number | null>(null)
   const [isSeatsLocked, setIsSeatsLocked] = useState(false)
   const [playerChatBubbles, setPlayerChatBubbles] = useState<Record<string, { message: string, timestamp: number }>>({})
-  
+
+  const [worldSettings, setWorldSettings] = useState({
+    maxCapacity: 100,
+    worldMode: 'day',
+    voiceChatEnabled: false,
+    playerInteractionsEnabled: true,
+    showStatusBadges: true,
+    enableChat: true,
+    enableEmojis: true,
+    enableJumping: true,
+  })
+
   const [graphicsQuality, setGraphicsQuality] = useState('medium')
   const [isMobileMode, setIsMobileMode] = useState(false)
-  
+  const [povMode, setPovMode] = useState(false)
+  const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
+  const [showChatInput, setShowChatInput] = useState(false)
+
+  const [countdown, setCountdown] = useState<string>('')
+
+  // Synchronized actions state
+  const [playerActions, setPlayerActions] = useState<Record<string, { action: string; timestamp: number }>>({})
+  const [quickAction, setQuickAction] = useState<string | null>(null) // State for current quick action animation
+
   const keysPressed = useRef<Set<string>>(new Set())
   const supabase = createClient()
 
   const [showMenu, setShowMenu] = useState(false)
-  const [povMode, setPovMode] = useState(false)
-  const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
-  const [showChatInput, setShowChatInput] = useState(false)
-  
-  const [countdown, setCountdown] = useState<string>('')
+
+  const checkCollision = (newX: number, newZ: number): boolean => {
+    // Collision zones for objects in the world
+    const collisionZones = [
+      // Cinema building
+      { x: 15, z: 0, width: 9, depth: 9 },
+
+      // Trees
+      { x: -15, z: -15, width: 2, depth: 2 },
+      { x: -8, z: -18, width: 2, depth: 2 },
+      { x: 8, z: -18, width: 2, depth: 2 },
+      { x: 15, z: -15, width: 2, depth: 2 },
+      { x: -18, z: 10, width: 2, depth: 2 },
+      { x: 18, z: 10, width: 2, depth: 2 },
+      { x: -10, z: 15, width: 2, depth: 2 },
+      { x: 10, z: 15, width: 2, depth: 2 },
+
+      // Lampposts
+      { x: -20, z: -10, width: 1, depth: 1 },
+      { x: -20, z: 0, width: 1, depth: 1 },
+      { x: -20, z: 10, width: 1, depth: 1 },
+
+      // Fountain
+      { x: -15, z: 0, width: 6, depth: 6 },
+
+      // Bushes
+      { x: 5, z: -10, width: 2, depth: 2 },
+      { x: -5, z: -10, width: 2, depth: 2 },
+      { x: 10, z: 5, width: 2, depth: 2 },
+      { x: -10, z: 5, width: 2, depth: 2 },
+      { x: 12, z: -5, width: 2, depth: 2 },
+      { x: -12, z: -5, width: 2, depth: 2 },
+    ]
+
+    for (const zone of collisionZones) {
+      const halfWidth = zone.width / 2
+      const halfDepth = zone.depth / 2
+
+      if (
+        newX >= zone.x - halfWidth &&
+        newX <= zone.x + halfWidth &&
+        newZ >= zone.z - halfDepth &&
+        newZ <= zone.z + halfDepth
+      ) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  useEffect(() => {
+    const loadWorldSettings = async () => {
+      const { data, error } = await supabase
+        .from('interactive_world_settings')
+        .select('setting_value')
+        .eq('setting_key', 'world_config')
+        .maybeSingle()
+
+      if (data && data.setting_value) {
+        console.log('[v0] Loaded world settings:', data.setting_value)
+        setWorldSettings(data.setting_value as any)
+      }
+    }
+
+    loadWorldSettings()
+  }, [])
 
   useEffect(() => {
     const loadPlayers = async () => {
       console.log('[v0] Loading other players...')
-      
+
       try {
         const { data: profiles, error: profilesError } = await supabase
           .from('interactive_profiles')
           .select('*')
           .eq('is_online', true)
           .neq('user_id', userId)
-        
+
         if (profilesError) {
           console.error('[v0] Error loading profiles:', profilesError)
           return
         }
-        
+
         console.log('[v0] Found profiles:', profiles?.length || 0)
-        
+
         if (profiles && profiles.length > 0) {
           const userIds = profiles.map(p => p.user_id)
-          
+
           const { data: userProfiles, error: userProfilesError } = await supabase
             .from('user_profiles')
             .select('user_id, username, is_admin, is_vip, is_vip_plus')
@@ -290,10 +380,10 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           if (userProfilesError) {
             console.error('[v0] Error loading user profiles:', userProfilesError)
           }
-          
+
           const mergedData = profiles.map(profile => ({
             ...profile,
-            user_profiles: 
+            user_profiles:
               userProfiles?.find(up => up?.user_id === profile.user_id) || {
               username: profile.username,
               is_admin: false,
@@ -301,7 +391,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               is_vip_plus: false
             }
           }))
-          
+
           console.log('[v0] Merged player data:', mergedData.length)
           setOtherPlayers(mergedData)
           setOnlineCount(mergedData.length + 1)
@@ -313,16 +403,16 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         console.error('[v0] Failed to load players:', err)
       }
     }
-    
+
     supabase
       .from('interactive_profiles')
       .update({ is_online: true, last_seen: new Date().toISOString() })
       .eq('user_id', userId)
       .then()
-    
+
     loadPlayers()
     const interval = setInterval(loadPlayers, 5000)
-    
+
     const channel = supabase
       .channel('players')
       .on('postgres_changes', {
@@ -334,7 +424,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         loadPlayers()
       })
       .subscribe()
-    
+
     return () => {
       clearInterval(interval)
       supabase.removeChannel(channel)
@@ -347,31 +437,10 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   }, [userId])
 
   useEffect(() => {
-    const checkSeatsLock = () => {
-      const now = new Date()
-      const startTime = new Date(currentCinemaRoom.schedule_start)
-      const fiveMinutesBeforeStart = new Date(startTime.getTime() - 5 * 60 * 1000)
-
-      if (now >= fiveMinutesBeforeStart && now < startTime) {
-        setIsSeatsLocked(true)
-      } else if (now >= startTime) {
-        setIsSeatsLocked(true)
-      } else {
-        setIsSeatsLocked(false)
-      }
-    }
-
-    if (!currentCinemaRoom || !currentCinemaRoom.schedule_start) {
-      setIsSeatsLocked(false) // Ensure seats are not locked if there's no current room or start time
-      return
-    }
-
-    checkSeatsLock()
-    const interval = setInterval(checkSeatsLock, 10000)
-
-    return () => clearInterval(interval)
+    // Seats are never locked anymore
+    setIsSeatsLocked(false)
   }, [currentCinemaRoom])
-  
+
   useEffect(() => {
     if (!currentCinemaRoom || currentCinemaRoom === 'world') return
 
@@ -395,7 +464,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
 
     return () => clearInterval(interval)
   }, [currentCinemaRoom, cinemaRooms]) // Added currentCinemaRoom to dependencies
-  
+
   const handleFullscreen = async () => {
     try {
       if (!document.fullscreenElement) {
@@ -409,12 +478,12 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
       console.error('Fullscreen error:', err)
     }
   }
-  
+
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement)
     }
-    
+
     document.addEventListener('fullscreenchange', handleFullscreenChange)
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange)
   }, [])
@@ -426,15 +495,15 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         .select('avatar_style')
         .eq('user_id', userId)
         .single()
-      
+
       if (data?.avatar_style) {
         setMyAvatarStyle(data.avatar_style)
       }
     }
-    
+
     loadAvatarStyle()
   }, [userId])
-  
+
   const saveAvatarStyle = async (newStyle: any) => {
     setMyAvatarStyle(newStyle)
     await supabase
@@ -449,57 +518,64 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         .from('avatar_customization_options')
         .select('*')
         .order('category')
-      
+
       if (data) {
         console.log('[v0] Loaded customization options:', data.length)
         setCustomizationOptions(data)
       }
     }
-    
+
     loadCustomizationOptions()
   }, [])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isSeatsLocked && mySeat !== null) return
+      // if (isSeatsLocked && mySeat !== null) return // Removed seat lock check
       keysPressed.current.add(e.key.toLowerCase())
     }
-    
+
     const handleKeyUp = (e: KeyboardEvent) => {
       keysPressed.current.delete(e.key.toLowerCase())
     }
-    
+
     window.addEventListener('keydown', handleKeyDown)
     window.addEventListener('keyup', handleKeyUp)
-    
+
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [isSeatsLocked, mySeat])
-  
+  }, [isSeatsLocked, mySeat]) // isSeatsLocked is now effectively unused
+
   useEffect(() => {
     const interval = setInterval(() => {
-      if (isSeatsLocked && mySeat !== null) return
-      
+      // if (isSeatsLocked && mySeat !== null) return // Removed seat lock check
+
       let dx = 0
       let dz = 0
       const speed = 0.15
-      
+
       if (keysPressed.current.has('w') || keysPressed.current.has('arrowup')) dz -= speed
       if (keysPressed.current.has('s') || keysPressed.current.has('arrowdown')) dz += speed
       if (keysPressed.current.has('a') || keysPressed.current.has('arrowleft')) dx -= speed
       if (keysPressed.current.has('d') || keysPressed.current.has('arrowright')) dx += speed
-      
+
       if (dx !== 0 || dz !== 0) {
         setMovement({ x: dx, z: dz })
         setMyPosition(prev => {
-          const newPos = {
-            x: Math.max(-20, Math.min(20, prev.x + dx)),
-            y: 0.5,
-            z: Math.max(-20, Math.min(20, prev.z + dz))
+          const newX = Math.max(-20, Math.min(20, prev.x + dx))
+          const newZ = Math.max(-20, Math.min(20, prev.z + dz))
+
+          if (checkCollision(newX, newZ)) {
+            return prev // Don't move if collision detected
           }
-          
+
+          const newPos = {
+            x: newX,
+            y: 0.5,
+            z: newZ
+          }
+
           supabase
             .from('interactive_profiles')
             .update({
@@ -509,16 +585,16 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
             })
             .eq('user_id', userId)
             .then()
-          
+
           return newPos
         })
       } else {
         setMovement({ x: 0, z: 0 })
       }
     }, 50)
-    
+
     return () => clearInterval(interval)
-  }, [userId, isSeatsLocked, mySeat])
+  }, [userId, isSeatsLocked, mySeat]) // isSeatsLocked is now effectively unused
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -528,12 +604,12 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         .eq('room', 'world')
         .order('created_at', { ascending: false })
         .limit(50)
-      
+
       if (data) setMessages(data.reverse())
     }
-    
+
     loadMessages()
-    
+
     const channel = supabase
       .channel('chat')
       .on('postgres_changes', {
@@ -552,12 +628,12 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         }))
       })
       .subscribe()
-    
+
     return () => {
       supabase.removeChannel(channel)
     }
   }, [])
-  
+
   useEffect(() => {
     const loadCinemaRooms = async () => {
       const { data } = await supabase
@@ -565,12 +641,12 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         .select('*')
         .eq('is_open', true)
         .order('room_number')
-      
+
       if (data) setCinemaRooms(data)
     }
-    
+
     loadCinemaRooms()
-    
+
     const channel = supabase
       .channel('cinema_rooms')
       .on('postgres_changes', {
@@ -579,7 +655,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         table: 'interactive_cinema_rooms'
       }, loadCinemaRooms)
       .subscribe()
-    
+
     return () => {
       supabase.removeChannel(channel)
     }
@@ -670,7 +746,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
 
     return () => clearInterval(interval)
   }, [])
-  
+
   const handleEmoji = (emoji: string) => {
     setCurrentEmoji(emoji)
     setShowQuickActions(false)
@@ -678,36 +754,67 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   }
 
   const handleJump = () => {
-    if (!isJumping) {
-      setIsJumping(true)
-      setTimeout(() => setIsJumping(false), 600)
-    }
+    if (!worldSettings.enableJumping) return
+
+    // if (isJumping || mySeat !== null) return // Removed seat check
+    if (isJumping) return
+
+
+    setIsJumping(true)
+
+    // Broadcast jump action to other players
+    supabase.channel('world-actions').send({
+      type: 'broadcast',
+      event: 'player-action',
+      payload: {
+        userId: userProfile.user_id,
+        action: 'jump',
+        timestamp: Date.now()
+      }
+    })
+
+    setTimeout(() => setIsJumping(false), 500)
   }
 
   const sendMessage = async () => {
-    if (!chatInput.trim()) return
-    
-    await supabase.from('interactive_chat_messages').insert({
-      user_id: userId,
-      username: userProfile?.username || 'Anonyme',
-      message: chatInput.trim(),
-      room: currentCinemaRoom ? `cinema_${currentCinemaRoom.id}` : 'world'
-    })
-    
-    setChatInput('')
+    if (!worldSettings.enableChat) {
+      console.log('[v0] Chat is disabled by admin')
+      return
+    }
+
+    if (chatInput.trim()) {
+      const message = {
+        user_id: userProfile.user_id,
+        username: userProfile.username, // Corrected from profile.username to userProfile.username
+        message: chatInput.trim(),
+        room: currentCinemaRoom ? `cinema_${currentCinemaRoom.id}` : 'world',
+        created_at: new Date().toISOString()
+      }
+
+      await supabase.from('interactive_chat_messages').insert(message)
+
+      setChatInput('')
+    }
   }
 
   const handleJoystickMove = useCallback((dx: number, dz: number) => {
-    if (isSeatsLocked && mySeat !== null) return
-    
+    // if (isSeatsLocked && mySeat !== null) return // Removed seat lock check
+
     setMyPosition(prev => {
       const speed = 0.15
-      const newPos = {
-        x: Math.max(-20, Math.min(20, prev.x + dx * speed)),
-        y: 0.5,
-        z: Math.max(-20, Math.min(20, prev.z + dz * speed)) // Fixed: removed negative sign
+      const newX = Math.max(-20, Math.min(20, prev.x + dx * speed))
+      const newZ = Math.max(-20, Math.min(20, prev.z + dz * speed))
+
+      if (checkCollision(newX, newZ)) {
+        return prev // Don't move if collision detected
       }
-      
+
+      const newPos = {
+        x: newX,
+        y: 0.5,
+        z: newZ
+      }
+
       supabase
         .from('interactive_profiles')
         .update({
@@ -717,16 +824,16 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         })
         .eq('user_id', userId)
         .then()
-      
+
       return newPos
     })
-    
+
     if (dx !== 0 || dz !== 0) {
       setMovement({ x: dx, z: dz })
     } else {
       setMovement({ x: 0, z: 0 })
     }
-  }, [userId, supabase, isSeatsLocked, mySeat])
+  }, [userId, supabase, isSeatsLocked, mySeat]) // isSeatsLocked and mySeat are now effectively unused here
 
   const handleEnterRoom = async (room: any) => {
     setCurrentCinemaRoom(room)
@@ -756,7 +863,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
     }
 
     setCurrentCinemaRoom(null)
-    setIsSeatsLocked(false)
+    setIsSeatsLocked(false) // Ensure seats are unlocked when leaving
     setCountdown('') // Clear countdown when leaving room
 
     setMyPosition({ x: 0, y: 0.5, z: 0 })
@@ -773,9 +880,9 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   }
 
   const handleSitInSeat = async (seatNumber: number) => {
-    if (isSeatsLocked && mySeat !== null && mySeat !== seatNumber) {
-      return
-    }
+    // if (isSeatsLocked && mySeat !== null && mySeat !== seatNumber) { // Removed seat lock check
+    //   return
+    // }
 
     if (mySeat === seatNumber) {
       // Stand up
@@ -784,7 +891,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         .delete()
         .eq('room_id', currentCinemaRoom.id)
         .eq('user_id', userId)
-      
+
       setMySeat(null)
       setMyPosition({ x: 0, y: 0.5, z: 5 })
     } else {
@@ -801,13 +908,15 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           user_id: userId,
           seat_number: seatNumber,
           row_number: row,
-          is_occupied: true
+          is_occupied: true,
+          // Add a default color if not specified
+          color: '#374151', 
         })
 
       if (!error) {
         setMySeat(seatNumber)
         setMyPosition({ x: seatX, y: 0.5, z: seatZ })
-        
+
         await supabase
           .from('interactive_profiles')
           .update({
@@ -820,14 +929,98 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
     }
   }
 
+  useEffect(() => {
+    const checkCapacity = async () => {
+      const { count } = await supabase
+        .from('interactive_profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_online', true)
+
+      if (count && count >= worldSettings.maxCapacity) {
+        console.log('[v0] World is at max capacity:', count, '/', worldSettings.maxCapacity)
+        // Could show a message to user here
+      }
+    }
+
+    checkCapacity()
+  }, [worldSettings.maxCapacity])
+
+  useEffect(() => {
+    // This useEffect seems to be related to Clerk's useAuth, which is now removed.
+    // If it's not needed for Supabase auth, it can be removed or adapted.
+    // For now, it's kept as it was in the original code, but flagged for review.
+    // If user object is needed for Supabase, ensure it's correctly obtained.
+    // const { user } = useAuth() // Assuming you are using Clerk for authentication
+
+    const channel = supabase
+      .channel('player-actions')
+      .on('broadcast', { event: 'action' }, (payload: any) => {
+        console.log('[v0] Received action:', payload)
+        // Check if payload.userId is available before comparing
+        if (payload.userId && payload.userId !== userId) { // Compare with the current user's ID
+          setPlayerActions(prev => ({
+            ...prev,
+            [payload.userId]: {
+              action: payload.action,
+              timestamp: Date.now()
+            }
+          }))
+
+          // Clear action after 2 seconds
+          setTimeout(() => {
+            setPlayerActions(prev => {
+              const newActions = { ...prev }
+              delete newActions[payload.userId]
+              return newActions
+            })
+          }, 2000)
+        }
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [userId]) // Added userId to dependencies
+
+  const broadcastAction = async (action: string) => {
+    console.log('[v0] Broadcasting action:', action)
+    await supabase.channel('player-actions').send({
+      type: 'broadcast',
+      event: 'action',
+      payload: { userId: userId, action } // Use userId from props
+    })
+  }
+
+  // Handle quick actions (emotes, jumps)
+  const handleQuickAction = (action: string) => {
+    if (!worldSettings.enableEmojis) return
+
+    setQuickAction(action)
+
+    // Broadcast quick action to other players
+    supabase.channel('world-actions').send({
+      type: 'broadcast',
+      event: 'player-action',
+      payload: {
+        userId: userProfile.user_id,
+        action,
+        timestamp: Date.now()
+      }
+    })
+
+    setTimeout(() => setQuickAction(null), 3000)
+  }
+
   return (
-    <div className="fixed inset-0 bg-black">
+    <div className="fixed inset-0 bg-black z-50">
       <Canvas
+        // Pass povMode to camera
         camera={povMode ? undefined : { position: [0, 8, 12], fov: 60 }}
         style={{ width: '100vw', height: '100vh' }}
         shadows
-        gl={{ 
-          antialias: graphicsQuality !== 'low', 
+        gl={{
+          antialias: graphicsQuality !== 'low',
           alpha: false,
           powerPreference: graphicsQuality === 'high' ? 'high-performance' : 'default'
         }}
@@ -840,67 +1033,108 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           />
         )}
 
-        <Sky 
-          sunPosition={[100, 20, 100]} 
-          inclination={0.6}
-          azimuth={0.25}
-        />
+        {worldSettings.worldMode === 'day' && (
+          <>
+            <Sky
+              sunPosition={[100, 20, 100]}
+              inclination={0.6}
+              azimuth={0.25}
+            />
+            <ambientLight intensity={0.4} />
+            <directionalLight
+              position={[10, 20, 10]}
+              intensity={1.5}
+              castShadow
+              shadow-mapSize={graphicsQuality === 'high' ? [2048, 2048] : [1024, 1024]}
+            />
+          </>
+        )}
+
+        {worldSettings.worldMode === 'night' && (
+          <>
+            <Sky
+              sunPosition={[100, -20, 100]}
+              inclination={0.1}
+              azimuth={0.25}
+            />
+            <ambientLight intensity={0.15} />
+            <directionalLight
+              position={[10, 20, 10]}
+              intensity={0.3}
+              color="#4466ff"
+              castShadow
+              shadow-mapSize={graphicsQuality === 'high' ? [2048, 2048] : [1024, 1024]}
+            />
+          </>
+        )}
+
+        {worldSettings.worldMode === 'sunset' && (
+          <>
+            <Sky
+              sunPosition={[100, 2, 100]}
+              inclination={0.3}
+              azimuth={0.1}
+            />
+            <ambientLight intensity={0.3} />
+            <directionalLight
+              position={[10, 5, 10]}
+              intensity={1.0}
+              color="#ff8844"
+              castShadow
+              shadow-mapSize={graphicsQuality === 'high' ? [2048, 2048] : [1024, 1024]}
+            />
+          </>
+        )}
+
         <fog attach="fog" args={['#87CEEB', 10, 50]} />
-        <ambientLight intensity={0.4} />
-        <directionalLight 
-          position={[10, 20, 10]} 
-          intensity={1.5} 
-          castShadow
-          shadow-mapSize={graphicsQuality === 'high' ? [2048, 2048] : [1024, 1024]}
-        />
         <hemisphereLight intensity={0.3} groundColor="#6b7280" />
-        
+
         {!currentCinemaRoom ? (
           <>
             {/* Ground */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
               <planeGeometry args={[60, 60]} />
-              <meshStandardMaterial 
-                color="#4ade80" 
+              <meshStandardMaterial
+                color="#4ade80"
                 roughness={0.95}
                 metalness={0}
               />
             </mesh>
-            
+
             {/* Path */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
               <planeGeometry args={[3, 40]} />
               <meshStandardMaterial color="#8b7355" roughness={1} metalness={0} />
             </mesh>
-            
+
             {/* Cinema Building */}
             <group position={[15, 0, 0]}>
               <mesh position={[0, 2.5, 0]} castShadow>
                 <boxGeometry args={[8, 5, 8]} />
                 <meshStandardMaterial color="#1e3a8a" roughness={0.7} metalness={0.1} />
               </mesh>
-              
+
               <mesh position={[0, 5.5, 0]} castShadow>
                 <boxGeometry args={[8.5, 0.5, 8.5]} />
                 <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.2} />
               </mesh>
-              
+
               <mesh position={[0, 6, 0]}>
                 <boxGeometry args={[7, 0.8, 0.3]} />
-                <meshStandardMaterial 
-                  color="#fbbf24" 
-                  emissive="#fbbf24" 
+                <meshStandardMaterial
+                  color="#fbbf24"
+                  emissive="#fbbf24"
                   emissiveIntensity={1.5}
                   roughness={0.3}
                   metalness={0.5}
                 />
               </mesh>
               <pointLight position={[0, 6, 0]} intensity={2} distance={10} color="#fbbf24" />
-              
+
               {[-2, 0, 2].map((x) => (
                 <mesh key={`window-${x}`} position={[x, 3, 4.1]}>
                   <planeGeometry args={[1.5, 1.8]} />
-                  <meshStandardMaterial 
+                  <meshStandardMaterial
                     color="#60a5fa"
                     emissive="#60a5fa"
                     emissiveIntensity={0.5}
@@ -909,7 +1143,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                   />
                 </mesh>
               ))}
-              
+
               <mesh position={[-3, 1.2, 4.1]} castShadow>
                 <boxGeometry args={[1.5, 2.4, 0.1]} />
                 <meshStandardMaterial color="#7c2d12" roughness={0.8} metalness={0.1} />
@@ -918,12 +1152,12 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                 <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
                 <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
               </mesh>
-              
+
               <mesh position={[-3, 0.1, 5.5]}>
                 <boxGeometry args={[2, 0.2, 2]} />
                 <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
               </mesh>
-              
+
               <Html position={[0, 7, 0]} center>
                 <button
                   onClick={() => setShowCinema(true)}
@@ -933,21 +1167,21 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                 </button>
               </Html>
             </group>
-            
-            {(graphicsQuality === 'low' 
-              ? [[-15, -15], [15, -15]] 
+
+            {(graphicsQuality === 'low'
+              ? [[-15, -15], [15, -15]]
               : [[-15, -15], [-8, -18], [8, -18], [15, -15], [-18, 10], [18, 10], [-10, 15], [10, 15]]
             ).map(([x, z], i) => (
               <RealisticTree key={`tree-${i}`} position={[x, 0, z]} />
             ))}
-            
-            {(graphicsQuality === 'low' 
-              ? [[0, -10]] 
+
+            {(graphicsQuality === 'low'
+              ? [[0, -10]]
               : [[-10, -10], [0, -10], [10, -10], [-10, 10], [10, 10]]
             ).map((z, i) => (
               <RealisticLamppost key={`lamp-${i}`} position={[-20, 0, z[1]]} />
             ))}
-            
+
             {graphicsQuality !== 'low' && [-12, 0, 12].map((z) => (
               <group key={`bench-${z}`} position={[-18, 0, z]}>
                 <mesh position={[0, 0.4, 0]} castShadow>
@@ -1022,9 +1256,9 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
             {currentCinemaRoom && currentCinemaRoom !== 'world' && (() => {
               const room = cinemaRooms.find(r => r.id === currentCinemaRoom.id) // Use currentCinemaRoom directly
               if (!room) return null
-              
+
               const isMovieStarted = room.schedule_start && new Date(room.schedule_start).getTime() < Date.now()
-              
+
               return (
                 <group position={[0, 3, -8]}>
                   {/* Cinema Screen Background */}
@@ -1032,13 +1266,13 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                     <planeGeometry args={[12, 7]} />
                     <meshStandardMaterial color="#1a1a1a" />
                   </mesh>
-                  
+
                   {/* Screen Border */}
                   <mesh position={[0, 0, 0.1]}>
                     <planeGeometry args={[11.5, 6.5]} />
                     <meshStandardMaterial color="#000000" />
                   </mesh>
-                  
+
                   {/* Movie Info and Countdown - Display before movie starts */}
                   {!isMovieStarted && (
                     <>
@@ -1049,7 +1283,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                             Début dans: <span className="text-yellow-400 font-bold">{countdown}</span>
                           </p>
                           {room.movie_poster && (
-                            <img 
+                            <img
                               src={`https://image.tmdb.org/t/p/w500${room.movie_poster}`}
                               alt={room.movie_title}
                               className="w-40 h-60 object-cover rounded mx-auto"
@@ -1059,10 +1293,10 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                       </Html>
                     </>
                   )}
-                  
+
                   {/* Movie Iframe - Display when movie has started */}
                   {isMovieStarted && room.embed_url && (
-                    <Html position={[0, 0, 0.2]} transform style={{ width: '1100px', height: '600px' }}>
+                    <Html transform style={{ width: '1100px', height: '600px' }}>
                       <iframe
                         src={room.embed_url}
                         className="w-full h-full rounded"
@@ -1075,54 +1309,46 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               )
             })()}
 
-            {/* Seats */}
-            {Array.from({ length: Math.min(currentCinemaRoom.capacity || 30, 60) }).map((_, i) => {
-              const row = Math.floor(i / 10)
-              const col = i % 10
-              const seatX = (col - 4.5) * 2
-              const seatZ = row * 2 + 5
-              const isOccupied = cinemaSeats.some(s => s.seat_number === i)
+            {cinemaSeats.map((seat, i) => {
               const isMySeat = mySeat === i
 
               return (
-                <group key={`seat-${i}`} position={[seatX, 0, seatZ]}>
-                  <mesh position={[0, 0.3, 0]}>
-                    <boxGeometry args={[0.8, 0.6, 0.8]} />
-                    <meshStandardMaterial color={isMySeat ? '#22c55e' : isOccupied ? '#ef4444' : '#374151'} />
+                <group key={i} position={[seat.position_x, seat.position_y, seat.position_z]}>
+                  <mesh>
+                    <boxGeometry args={[0.6, 0.8, 0.6]} />
+                    <meshStandardMaterial color={isMySeat ? '#ff4444' : seat.color} />
                   </mesh>
-                  <mesh position={[0, 0.8, -0.3]}>
-                    <boxGeometry args={[0.8, 0.8, 0.2]} />
-                    <meshStandardMaterial color={isMySeat ? '#22c55e' : isOccupied ? '#ef4444' : '#374151'} />
-                  </mesh>
-                  {!isOccupied || isMySeat ? (
+                  {/* Original condition: isMySeat || (!mySeat && i < 10) */}
+                  {/* Modified condition to always show if not my seat OR if I'm not seated */}
+                  {!isMySeat ? (
                     <Html position={[0, 1.2, 0]} center>
                       <button
-                        onClick={() => handleSitInSeat(i)}
-                        disabled={isSeatsLocked && mySeat !== null && mySeat !== i}
+                        onClick={() => handleSitInSeat(seat.seat_number)}
                         className={`text-xs px-2 py-1 rounded ${
-                          isSeatsLocked && mySeat !== i
-                            ? 'bg-gray-500 cursor-not-allowed' 
-                            : isMySeat 
-                            ? 'bg-red-500 hover:bg-red-600' 
+                          isMySeat
+                            ? 'bg-red-500 hover:bg-red-600'
                             : 'bg-blue-500 hover:bg-blue-600'
                         } text-white whitespace-nowrap`}
                       >
-                        {isSeatsLocked && mySeat !== i ? '🔒 Bloqué' : isMySeat ? '🚶 Se lever' : '💺 S\'asseoir'}
+                        {isMySeat ? '🚶 Se lever' : '💺 S\'asseoir'}
                       </button>
                     </Html>
-                  ) : null}
+                  ) : ( // If it is my seat, show the "Stand Up" button
+                    <Html position={[0, 1.2, 0]} center>
+                      <button
+                        onClick={() => handleSitInSeat(seat.seat_number)}
+                        className={`text-xs px-2 py-1 rounded ${
+                           'bg-red-500 hover:bg-red-600'
+                        } text-white whitespace-nowrap`}
+                      >
+                        {'🚶 Se lever'}
+                      </button>
+                    </Html>
+                  )}
                 </group>
               )
             })}
 
-            {isSeatsLocked && (
-              <Html position={[0, 5, -5]} center>
-                <div className="bg-red-500/90 text-white px-6 py-3 rounded-lg shadow-lg text-center">
-                  <div className="font-bold text-lg">🔒 Début imminent!</div>
-                  <div className="text-sm">Les places sont verrouillées</div>
-                </div>
-              </Html>
-            )}
 
             <Html position={[0, 2, 19]} center>
               <button
@@ -1136,12 +1362,12 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           </>
         )}
 
-        <RealisticAvatar 
+        <RealisticAvatar
           position={[myPosition.x, myPosition.y + (isJumping ? 1 : 0), myPosition.z]}
           avatarStyle={myAvatarStyle}
           isMoving={movement.x !== 0 || movement.z !== 0}
         />
-        
+
         <group position={[myPosition.x, myPosition.y, myPosition.z]}>
           {userProfile?.is_admin && (
             <Html position={[0, 2.2, 0]} center>
@@ -1184,58 +1410,52 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
             </Html>
           )}
         </group>
-        
+
+        {/* Player avatars with badges */}
         {otherPlayers
           .filter(p => !currentCinemaRoom || p.current_room === `cinema_${currentCinemaRoom.id}`)
           .map((player) => {
             const playerProfile = player.user_profiles
             const avatarStyle = player.avatar_style || { bodyColor: '#ef4444', headColor: '#fbbf24' }
-            
+
+            // Construct the 'players' array for rendering other players' data
+            const players = [{
+              ...player,
+              username: player.username || playerProfile?.username || 'Joueur',
+              is_admin: playerProfile?.is_admin || false,
+              is_vip_plus: playerProfile?.is_vip_plus || false,
+              is_vip: playerProfile?.is_vip || false
+            }];
+
             return (
               <group key={player.user_id}>
-                <RealisticAvatar 
+                <RealisticAvatar
                   position={[player.position_x || 0, 0.5, player.position_z || 0]}
                   avatarStyle={avatarStyle}
-                  isMoving={false}
+                  isMoving={movement.x !== 0 || movement.z !== 0}
                 />
-                
-                <Html position={[player.position_x || 0, 2.7, player.position_z || 0]} center>
-                  <div className="flex flex-col items-center gap-1">
-                    {playerProfile?.is_admin && (
-                      <div className="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs flex items-center gap-1 whitespace-nowrap shadow-lg">
-                        <Shield className="w-3 h-3" />
-                        Admin
-                      </div>
-                    )}
-                    {playerProfile?.is_vip_plus && !playerProfile?.is_admin && (
-                      <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-2 py-0.5 rounded-full text-xs flex items-center gap-1 whitespace-nowrap shadow-lg">
-                        <Crown className="w-3 h-3" />
-                        VIP+
-                      </div>
-                    )}
-                    {playerProfile?.is_vip && !playerProfile?.is_vip_plus && !playerProfile?.is_admin && (
-                      <div className="bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs flex items-center gap-1 whitespace-nowrap shadow-lg">
-                        <Crown className="w-3 h-3" />
-                        VIP
-                      </div>
-                    )}
-                    <div className="bg-black/80 text-white px-2 py-0.5 rounded text-xs whitespace-nowrap shadow-lg">
-                      {player.username || playerProfile?.username || 'Joueur'}
-                    </div>
-                  </div>
-                </Html>
 
-                {playerChatBubbles[player.user_id] && (
-                  <Html position={[player.position_x || 0, 3.3, player.position_z || 0]} center>
-                    <div className="bg-white/95 text-black px-3 py-2 rounded-lg shadow-xl max-w-xs text-sm border-2 border-green-500">
-                      {playerChatBubbles[player.user_id].message}
+                {worldSettings.showStatusBadges && player.user_id !== userId && (
+                  <Html position={[player.position_x || 0, 2.8, player.position_z || 0]} center>
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
+                        <span className="text-white text-xs font-medium">{player.username || playerProfile?.username || 'Joueur'}</span>
+                        {playerProfile?.is_admin && <Shield className="w-3 h-3 text-red-500" />}
+                        {playerProfile?.is_vip_plus && <Crown className="w-3 h-3 text-purple-400" />}
+                        {playerProfile?.is_vip && !playerProfile?.is_vip_plus && <Star className="w-3 h-3 text-yellow-400" />}
+                      </div>
+                      {playerChatBubbles[player.user_id] && Date.now() - playerChatBubbles[player.user_id].timestamp < 5000 && (
+                        <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
+                          {playerChatBubbles[player.user_id].message}
+                        </div>
+                      )}
                     </div>
                   </Html>
                 )}
               </group>
             )
           })}
-        
+
         {!povMode && (
           <OrbitControls
             target={[myPosition.x, myPosition.y, myPosition.z]}
@@ -1245,15 +1465,15 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           />
         )}
       </Canvas>
-      
-      <div className="absolute top-4 left-4 z-50 flex gap-2">
+
+      <div className="fixed top-4 left-4 z-50"> {/* Removed isFullscreen condition */}
         <button
           onClick={() => setShowMenu(!showMenu)}
-          className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-xl hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-2 border-white/30 active:scale-95"
+          className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-4 border-white/40 active:scale-95"
         >
-          <Menu className="w-7 h-7" />
+          <Menu className="w-8 h-8" />
         </button>
-        
+
         {showMenu && (
           <div className="absolute top-0 left-20 mt-0 bg-black/95 backdrop-blur-xl rounded-xl p-4 w-80 space-y-3 shadow-2xl border-2 border-white/30">
             <div className="text-white mb-3 pb-3 border-b border-white/20">
@@ -1266,7 +1486,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                 <span>{onlineCount} en ligne</span>
               </div>
             </div>
-            
+
             <button
               onClick={() => {
                 setShowSettings(true)
@@ -1277,7 +1497,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               <Settings className="w-5 h-5" />
               Paramètres
             </button>
-            
+
             <button
               onClick={() => {
                 setShowAvatarCustomizer(true)
@@ -1289,36 +1509,40 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               Avatar
             </button>
 
-            <button
-              onClick={() => {
-                setShowChat(true)
-                setShowMenu(false)
-              }}
-              className="w-full bg-green-500/90 text-white py-3 rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
-            >
-              <MessageSquare className="w-5 h-5" />
-              Chat
-            </button>
+            {worldSettings.enableChat && (
+              <button
+                onClick={() => {
+                  setShowChat(true)
+                  setShowMenu(false)
+                }}
+                className="w-full bg-green-500/90 text-white py-3 rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+              >
+                <MessageSquare className="w-5 h-5" />
+                Chat
+              </button>
+            )}
           </div>
         )}
       </div>
-      
-      {!isFullscreen && (
+
+      {(!isFullscreen || isMobileMode) && (
         <div className="absolute top-4 right-4 z-10 flex gap-2">
-          <button
-            onClick={() => setShowChatInput(!showChatInput)}
-            className="bg-white/20 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/30 transition-colors"
-            title="Écrire un message"
-          >
-            <MessageSquare className="w-5 h-5" />
-          </button>
-          
+          {worldSettings.enableChat && !isFullscreen && !showChatInput && (
+            <button
+              onClick={() => setShowChatInput(true)}
+              className="bg-white/20 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/30 transition-colors"
+              title="Écrire un message"
+            >
+              <MessageCircle className="w-5 h-5" />
+            </button>
+          )}
+
           <button
             onClick={handleFullscreen}
             className="bg-white/20 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/30 transition-colors"
             title="Mode Immersif"
           >
-            <Maximize className="w-5 h-5" />
+            <Maximize2 className="w-5 h-5" />
           </button>
         </div>
       )}
@@ -1361,7 +1585,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           </div>
         </div>
       )}
-      
+
       {isFullscreen && (
         <button
           onClick={handleFullscreen}
@@ -1404,13 +1628,13 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           </div>
         </div>
       )}
-      
+
       {showChat && !isFullscreen && (
         <div className="absolute top-20 right-4 w-80 h-96 bg-black/70 backdrop-blur-lg rounded-lg z-10 flex flex-col p-4">
           <h3 className="text-white font-bold mb-2">
             {currentCinemaRoom ? `Chat - Salle ${currentCinemaRoom.room_number}` : 'Chat Global'}
           </h3>
-          
+
           <div className="flex-1 overflow-y-auto space-y-2 mb-3">
             {(currentCinemaRoom ? roomMessages : messages).map((msg, i) => (
               <div key={i} className="bg-white/10 rounded p-2 text-sm">
@@ -1419,7 +1643,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               </div>
             ))}
           </div>
-          
+
           <div className="flex gap-2">
             <input
               type="text"
@@ -1438,7 +1662,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           </div>
         </div>
       )}
-      
+
       {showSettings && !isFullscreen && (
         <div className="absolute top-20 left-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 flex flex-col p-4 max-h-[500px] overflow-y-auto">
           <div className="flex justify-between items-center mb-4">
@@ -1450,7 +1674,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               <X className="w-5 h-5" />
             </button>
           </div>
-          
+
           <div className="space-y-4">
             <div>
               <label className="text-white text-sm mb-2 block">Qualité Graphique</label>
@@ -1467,7 +1691,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                 Basse qualité: Moins d'éléments 3D, meilleure performance
               </p>
             </div>
-            
+
             <div>
               <label className="text-white text-sm mb-2 block">Mode d'affichage</label>
               <div className="flex gap-2">
@@ -1516,7 +1740,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                 POV: Vue à la première personne
               </p>
             </div>
-            
+
             <div className="pt-4 border-t border-white/20">
               <p className="text-white/60 text-xs">
                 Ces paramètres permettent d'optimiser l'expérience selon votre appareil.
@@ -1525,261 +1749,16 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           </div>
         </div>
       )}
-      
-      {showCinema && (
-        <div className="absolute inset-0 bg-black/90 backdrop-blur-lg z-30 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-b from-blue-900 to-purple-900 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold text-white">Salles de Cinéma</h2>
-              <button
-                onClick={() => setShowCinema(false)}
-                className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {cinemaRooms.length === 0 ? (
-                <div className="col-span-2 text-center text-white/60 py-12">
-                  Aucune salle disponible pour le moment
-                </div>
-              ) : (
-                cinemaRooms.map((room) => (
-                  <div
-                    key={room.id}
-                    className="bg-white/10 backdrop-blur rounded-lg p-4 hover:bg-white/20 transition-all"
-                  >
-                    {room.movie_poster && (
-                      <img
-                        src={`https://image.tmdb.org/t/p/w500${room.movie_poster}`}
-                        alt={room.movie_title}
-                        className="w-full h-48 object-cover rounded-lg mb-3"
-                      />
-                    )}
-                    <h3 className="text-white font-bold text-lg mb-1">
-                      Salle {room.room_number} - {room.name}
-                    </h3>
-                    <p className="text-white/80 text-sm mb-2">{room.movie_title}</p>
-                    <div className="flex items-center justify-between text-xs text-white/60 mb-3">
-                      <span>Capacité: {room.capacity}</span>
-                      <span className={`px-2 py-1 rounded ${
-                        room.access_level === 'vip' ? 'bg-yellow-500' :
-                        room.access_level === 'vip_plus' ? 'bg-purple-500' :
-                        'bg-green-500'
-                      }`}>
-                        {room.access_level === 'vip' ? 'VIP' :
-                         room.access_level === 'vip_plus' ? 'VIP+' :
-                         'Public'}
-                      </span>
-                    </div>
-                    {room.schedule_start && (
-                      <p className="text-white/60 text-xs mb-3">
-                        Séance: {new Date(room.schedule_start).toLocaleString('fr-FR')}
-                      </p>
-                    )}
-                    <button
-                      onClick={() => handleEnterRoom(room)}
-                      className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors"
-                    >
-                      Entrer dans la Salle
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      
-      <div className="absolute bottom-4 left-4 z-10 bg-black/50 backdrop-blur-lg text-white p-3 rounded-lg text-sm hidden md:block">
-        <div>Contrôles: WASD ou Flèches</div>
-        <div>Souris: Rotation caméra</div>
-      </div>
-      
-      {(!isFullscreen || isMobileMode) && <MobileJoystick onMove={handleJoystickMove} />}
 
-      {!isFullscreen && !showMenu && (
-        <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+      {showCinema && (
+        <div className="fixed inset-0 bg-black z-40 flex items-center justify-center p-4">
           <button
-            onClick={() => setShowQuickActions(!showQuickActions)}
-            className="bg-yellow-500 text-white p-3 rounded-full hover:bg-yellow-600 transition-colors shadow-lg"
-            title="Actions Rapides"
+            onClick={() => setShowCinema(false)}
+            className="absolute top-4 right-4 z-50 bg-red-500 text-white p-3 rounded-full hover:bg-red-600 transition-all"
           >
-            <Smile className="w-6 h-6" />
+            <X className="w-6 h-6" />
           </button>
 
-          {showQuickActions && (
-            <div className="bg-black/80 backdrop-blur-lg rounded-lg p-3 mb-2 grid grid-cols-3 gap-2">
-              <button
-                onClick={() => handleEmoji('😊')}
-                className="text-3xl hover:scale-125 transition-transform bg-white/10 rounded-lg p-2"
-              >
-                😊
-              </button>
-              <button
-                onClick={() => handleEmoji('😢')}
-                className="text-3xl hover:scale-125 transition-transform bg-white/10 rounded-lg p-2"
-              >
-                😢
-              </button>
-              <button
-                onClick={() => handleEmoji('😡')}
-                className="text-3xl hover:scale-125 transition-transform bg-white/10 rounded-lg p-2"
-              >
-                😡
-              </button>
-              <button
-                onClick={() => handleEmoji('👍')}
-                className="text-3xl hover:scale-125 transition-transform bg-white/10 rounded-lg p-2"
-              >
-                👍
-              </button>
-              <button
-                onClick={() => handleEmoji('❤️')}
-                className="text-3xl hover:scale-125 transition-transform bg-white/10 rounded-lg p-2"
-              >
-                ❤️
-              </button>
-              <button
-                onClick={handleJump}
-                className="text-2xl hover:scale-125 transition-transform bg-green-500 rounded-lg p-2 font-bold text-white"
-              >
-                🦘
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-      
-      {/* Existing UI code... */}
-      
-      {showAvatarCustomizer && !isFullscreen && (
-        <div className="absolute top-20 left-4 w-80 bg-black/90 backdrop-blur-xl rounded-lg z-10 flex flex-col p-4 max-h-[500px] overflow-y-auto border-2 border-white/20">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-white font-bold">Personnaliser Avatar</h3>
-            <button
-              onClick={() => setShowAvatarCustomizer(false)}
-              className="text-white/60 hover:text-white"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          
-          <div className="space-y-4">
-            {['body_color', 'skin_tone', 'hair_style', 'hair_color', 'accessory'].map((category) => {
-              const options = customizationOptions.filter(opt => opt.category === category)
-              if (options.length === 0) return null
-              
-              const availableOptions = options.filter(option => {
-                // Non-premium items available to everyone
-                if (!option.is_premium) return true
-                
-                // Admin sees everything
-                if (userProfile?.is_admin) return true
-                
-                // VIP+ sees VIP+ and VIP items
-                if (userProfile?.is_vip_plus) return true
-                
-                // VIP sees only VIP items (not VIP+ or Admin-only)
-                if (userProfile?.is_vip && option.label && !option.label.includes('VIP+') && !option.label.includes('Admin')) return true
-                
-                return false
-              })
-              
-              const lockedOptions = options.filter(option => {
-                if (!option.is_premium) return false
-                if (userProfile?.is_admin) return false
-                if (userProfile?.is_vip_plus) return false
-                if (userProfile?.is_vip && option.label && !option.label.includes('VIP+') && !option.label.includes('Admin')) return false
-                return true
-              })
-              
-              return (
-                <div key={category}>
-                  <label className="text-white text-sm mb-2 block capitalize font-semibold">{category.replace('_', ' ')}</label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {availableOptions.map(option => {
-                      const isSelected = myAvatarStyle[
-                        category === 'body_color' ? 'bodyColor' : 
-                        category === 'skin_tone' ? 'skinTone' : 
-                        category === 'hair_style' ? 'hairStyle' : 
-                        category === 'hair_color' ? 'hairColor' : 
-                        'accessory'
-                      ] === option.value
-                      
-                      return (
-                        <button
-                          key={option.id}
-                          onClick={() => {
-                            const key = category === 'body_color' ? 'bodyColor' :
-                                        category === 'skin_tone' ? 'skinTone' :
-                                        category === 'hair_style' ? 'hairStyle' :
-                                        category === 'hair_color' ? 'hairColor' :
-                                        'accessory'
-                            saveAvatarStyle({ ...myAvatarStyle, [key]: option.value })
-                          }}
-                          className={`relative w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs font-bold transition-all ${
-                            isSelected
-                              ? 'border-white ring-2 ring-blue-500 scale-110' 
-                              : 'border-white/30 hover:border-white/60'
-                          }`}
-                          style={category.includes('color') || category === 'skin_tone' ? { backgroundColor: option.value } : {}}
-                          title={option.label || option.value}
-                        >
-                          {!category.includes('color') && !category.includes('skin') && (
-                            <span className="text-white drop-shadow-lg">{option.label?.slice(0, 3)}</span>
-                          )}
-                          {option.is_premium && (
-                            <Crown className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1 drop-shadow-lg" />
-                          )}
-                        </button>
-                      )
-                    })}
-                    
-                    {/* Show locked options with visual feedback */}
-                    {lockedOptions.map(option => (
-                      <button
-                        key={option.id}
-                        disabled
-                        className="relative w-10 h-10 rounded-lg border-2 border-white/20 flex items-center justify-center text-xs font-bold opacity-40 cursor-not-allowed"
-                        style={category.includes('color') || category === 'skin_tone' ? { backgroundColor: option.value } : {}}
-                        title={`${option.label || option.value} - ${
-                          option.label?.includes('Admin') ? 'Réservé Admin' :
-                          option.label?.includes('VIP+') ? 'Réservé VIP+' :
-                          'Réservé VIP'
-                        }`}
-                      >
-                        {!category.includes('color') && !category.includes('skin') && (
-                          <span className="text-white drop-shadow-lg">{option.label?.slice(0, 3)}</span>
-                        )}
-                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                          <Crown className="w-4 h-4 text-yellow-400" />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-            
-            <div className="pt-4 border-t border-white/20">
-              <div className="text-white/80 text-xs space-y-1">
-                <div className="flex items-center gap-2">
-                  <Crown className="w-3 h-3 text-yellow-400" />
-                  <span>Options avec couronne: réservées</span>
-                </div>
-                {!userProfile?.is_admin && !userProfile?.is_vip && !userProfile?.is_vip_plus && (
-                  <div className="text-white/60">Devenez VIP pour débloquer plus d'options!</div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showCinema && (
-        <div className="absolute inset-0 bg-black/90 backdrop-blur-lg z-30 flex items-center justify-center p-4">
           <div className="bg-gradient-to-b from-blue-900 to-purple-900 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-3xl font-bold text-white">Salles de Cinéma</h2>
@@ -1790,7 +1769,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {cinemaRooms.length === 0 ? (
                 <div className="col-span-2 text-center text-white/60 py-12">
@@ -1843,13 +1822,13 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           </div>
         </div>
       )}
-      
+
       <div className="absolute bottom-4 left-4 z-10 bg-black/50 backdrop-blur-lg text-white p-3 rounded-lg text-sm hidden md:block">
         <div>Contrôles: WASD ou Flèches</div>
         <div>Souris: Rotation caméra</div>
       </div>
-      
-      {(!isFullscreen || isMobileMode) && <MobileJoystick onMove={handleJoystickMove} />}
+
+      {isMobileMode && <MobileJoystick onMove={handleJoystickMove} />}
     </div>
   )
 }
@@ -1859,7 +1838,7 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<number>()
-  
+
   useEffect(() => {
     if (isDragging) {
       const animate = () => {
@@ -1874,44 +1853,44 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
       }
       onMove(0, 0)
     }
-    
+
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current)
       }
     }
   }, [isDragging, position.x, position.y, onMove])
-  
+
   const handleStart = (clientX: number, clientY: number) => {
     setIsDragging(true)
   }
-  
+
   const handleMove = (clientX: number, clientY: number) => {
     if (!containerRef.current) return
-    
+
     const rect = containerRef.current.getBoundingClientRect()
     const centerX = rect.left + rect.width / 2
     const centerY = rect.top + rect.height / 2
-    
+
     let dx = clientX - centerX
     let dy = clientY - centerY
-    
+
     const distance = Math.sqrt(dx * dx + dy * dy)
     const maxDistance = 60
-    
+
     if (distance > maxDistance) {
       dx = (dx / distance) * maxDistance
       dy = (dy / distance) * maxDistance
     }
-    
+
     setPosition({ x: dx, y: dy })
   }
-  
+
   const handleEnd = () => {
     setIsDragging(false)
     setPosition({ x: 0, y: 0 })
   }
-  
+
   return (
     <div
       ref={containerRef}
