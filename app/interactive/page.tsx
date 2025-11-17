@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from "@/components/auth-provider"
 import { createClient } from "@/lib/supabase/client"
 import InteractiveWorld from "@/components/interactive/world-3d"
+import { Canvas } from "@react-three/fiber"
+import { OrbitControls } from "@react-three/drei"
+import { User } from 'lucide-react'
 
 export default function InteractivePage() {
   const [hasProfile, setHasProfile] = useState(false)
@@ -16,7 +19,10 @@ export default function InteractivePage() {
   const [avatarStyle, setAvatarStyle] = useState({
     bodyColor: '#3b82f6',
     headColor: '#fde68a',
-    skinTone: '#fbbf24'
+    skinTone: '#fbbf24',
+    hairStyle: 'short',
+    hairColor: '#1f2937',
+    accessory: 'none'
   })
 
   const router = useRouter()
@@ -35,43 +41,53 @@ export default function InteractivePage() {
   const checkProfile = async () => {
     if (!user) return
 
-    console.log('[v0] Checking interactive profile...')
+    console.log('[v0] Checking profiles for user:', user.id)
     setCheckingProfile(true)
 
-    const { data: interactiveProfile, error: profileError } = await supabase
-      .from("interactive_profiles")
-      .select("*")
-      .eq("user_id", user.id)
-      .maybeSingle()
+    try {
+      const [interactiveResult, userProfileResult] = await Promise.all([
+        supabase
+          .from("interactive_profiles")
+          .select("*")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        supabase
+          .from("user_profiles")
+          .select("username, is_admin, is_vip, is_vip_plus")
+          .eq("user_id", user.id)
+          .maybeSingle()
+      ])
 
-    console.log('[v0] Interactive profile:', interactiveProfile)
-    console.log('[v0] Profile error:', profileError)
+      const interactiveProfile = interactiveResult.data
+      const userProfile = userProfileResult.data
 
-    const { data: profile } = await supabase
-      .from("user_profiles")
-      .select("username, is_admin, is_vip, is_vip_plus")
-      .eq("user_id", user.id)
-      .maybeSingle()
+      console.log('[v0] Interactive profile:', interactiveProfile)
+      console.log('[v0] User profile:', userProfile)
 
-    console.log('[v0] User profile:', profile)
-
-    if (interactiveProfile && interactiveProfile.username && interactiveProfile.username.trim() !== '') {
-      console.log('[v0] Found existing profile with username:', interactiveProfile.username)
-      setHasProfile(true)
-      setUserProfile(profile)
-      setShowWorld(true)
-    } else {
-      console.log('[v0] No profile or no username, showing onboarding')
+      if (interactiveProfile && interactiveProfile.username && interactiveProfile.username.trim() !== '') {
+        console.log('[v0] Found existing interactive profile')
+        setHasProfile(true)
+        setUserProfile(userProfile)
+        setShowWorld(true)
+      } else {
+        console.log('[v0] No interactive profile found, showing username input')
+        setHasProfile(false)
+        if (userProfile?.username) {
+          setUsername(userProfile.username)
+        }
+      }
+    } catch (err) {
+      console.error('[v0] Error checking profiles:', err)
       setHasProfile(false)
+    } finally {
+      setCheckingProfile(false)
     }
-
-    setCheckingProfile(false)
   }
 
   const handleCreateProfile = async () => {
     if (!user || !username.trim()) return
 
-    console.log('[v0] Creating profile with username:', username.trim())
+    console.log('[v0] Creating interactive profile with username:', username.trim())
 
     const { error } = await supabase
       .from("interactive_profiles")
@@ -83,25 +99,27 @@ export default function InteractivePage() {
         position_z: 0,
         is_online: true,
         last_seen: new Date().toISOString(),
-        avatar_style: avatarStyle
+        avatar_style: avatarStyle,
+        current_room: null
       }, {
         onConflict: 'user_id'
       })
 
     if (error) {
-      console.error('[v0] Error creating profile:', error)
+      console.error('[v0] Error creating interactive profile:', error)
       return
     }
 
-    console.log('[v0] Profile created successfully')
+    console.log('[v0] Interactive profile created successfully')
     
-    const { data: profile } = await supabase
+    const { data: userProfile } = await supabase
       .from("user_profiles")
       .select("username, is_admin, is_vip, is_vip_plus")
       .eq("user_id", user.id)
       .maybeSingle()
 
-    setUserProfile(profile)
+    console.log('[v0] Loaded user profile for badges:', userProfile)
+    setUserProfile(userProfile)
     setHasProfile(true)
     setShowWorld(true)
   }
@@ -116,55 +134,235 @@ export default function InteractivePage() {
 
   if (showOnboarding) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-b from-blue-900 to-purple-900 flex items-center justify-center">
-        <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl max-w-md w-full mx-4">
-          <h1 className="text-3xl font-bold text-white mb-6">Personnalisez votre Avatar</h1>
-
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="text-white text-sm mb-2 block">Couleur du Corps</label>
-              <div className="grid grid-cols-5 gap-2">
-                {['#3b82f6', '#ef4444', '#22c55e', '#a855f7', '#f59e0b', '#06b6d4', '#ec4899', '#8b5cf6', '#10b981', '#f43f5e'].map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setAvatarStyle({ ...avatarStyle, bodyColor: color })}
-                    className={`w-10 h-10 rounded-lg border-2 ${
-                      avatarStyle.bodyColor === color ? 'border-white' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
+      <div className="fixed inset-0 bg-gradient-to-b from-blue-900 via-purple-900 to-black flex items-center justify-center p-4 overflow-y-auto">
+        <div className="bg-black/40 backdrop-blur-2xl p-4 md:p-8 rounded-3xl max-w-6xl w-full my-4 border-2 border-white/20 shadow-2xl max-h-[95vh] overflow-y-auto">
+          <h1 className="text-2xl md:text-4xl font-bold text-white mb-2 text-center">Créez Votre Avatar</h1>
+          <p className="text-white/60 text-center mb-4 md:mb-6 text-sm md:text-base">Personnalisez votre apparence</p>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+            <div className="bg-gradient-to-b from-blue-500/20 to-purple-500/20 rounded-2xl p-4 md:p-6 flex flex-col items-center justify-center min-h-[300px] md:min-h-[400px] border-2 border-white/10">
+              <div className="w-full h-64 md:h-80 bg-black/30 rounded-xl mb-4 overflow-hidden">
+                <Canvas camera={{ position: [0, 1.5, 4], fov: 50 }}>
+                  <ambientLight intensity={0.5} />
+                  <directionalLight position={[5, 5, 5]} intensity={1} />
+                  <pointLight position={[-5, 5, -5]} intensity={0.5} color="#60a5fa" />
+                  
+                  <group position={[0, 0, 0]} rotation={[0, Math.PI * 0.15, 0]}>
+                    <mesh position={[0, 0.8, 0]}>
+                      <boxGeometry args={[0.6, 0.9, 0.35]} />
+                      <meshStandardMaterial color={avatarStyle.bodyColor} />
+                    </mesh>
+                    <mesh position={[0, 1.55, 0]}>
+                      <sphereGeometry args={[0.32, 32, 32]} />
+                      <meshStandardMaterial color={avatarStyle.skinTone} />
+                    </mesh>
+                    
+                    {avatarStyle.hairStyle === 'short' && (
+                      <mesh position={[0, 1.75, 0]}>
+                        <sphereGeometry args={[0.34, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                        <meshStandardMaterial color={avatarStyle.hairColor} />
+                      </mesh>
+                    )}
+                    {avatarStyle.hairStyle === 'long' && (
+                      <>
+                        <mesh position={[0, 1.75, 0]}>
+                          <sphereGeometry args={[0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.5]} />
+                          <meshStandardMaterial color={avatarStyle.hairColor} />
+                        </mesh>
+                        <mesh position={[0, 1.3, -0.3]}>
+                          <boxGeometry args={[0.5, 0.6, 0.2]} />
+                          <meshStandardMaterial color={avatarStyle.hairColor} />
+                        </mesh>
+                      </>
+                    )}
+                    {avatarStyle.hairStyle === 'bald' && null}
+                    
+                    {avatarStyle.accessory === 'glasses' && (
+                      <>
+                        <mesh position={[-0.15, 1.55, 0.28]}>
+                          <torusGeometry args={[0.08, 0.02, 8, 16]} />
+                          <meshStandardMaterial color="#1f2937" metalness={0.8} />
+                        </mesh>
+                        <mesh position={[0.15, 1.55, 0.28]}>
+                          <torusGeometry args={[0.08, 0.02, 8, 16]} />
+                          <meshStandardMaterial color="#1f2937" metalness={0.8} />
+                        </mesh>
+                        <mesh position={[0, 1.55, 0.28]}>
+                          <boxGeometry args={[0.12, 0.02, 0.02]} />
+                          <meshStandardMaterial color="#1f2937" metalness={0.8} />
+                        </mesh>
+                      </>
+                    )}
+                    {avatarStyle.accessory === 'hat' && (
+                      <>
+                        <mesh position={[0, 1.85, 0]}>
+                          <cylinderGeometry args={[0.35, 0.35, 0.15, 16]} />
+                          <meshStandardMaterial color="#ef4444" />
+                        </mesh>
+                        <mesh position={[0, 1.95, 0]}>
+                          <cylinderGeometry args={[0.25, 0.35, 0.2, 16]} />
+                          <meshStandardMaterial color="#ef4444" />
+                        </mesh>
+                      </>
+                    )}
+                    
+                    <group position={[-0.45, 0.7, 0]}>
+                      <mesh position={[0, -0.25, 0]}>
+                        <boxGeometry args={[0.2, 0.7, 0.2]} />
+                        <meshStandardMaterial color={avatarStyle.bodyColor} />
+                      </mesh>
+                    </group>
+                    <group position={[0.45, 0.7, 0]}>
+                      <mesh position={[0, -0.25, 0]}>
+                        <boxGeometry args={[0.2, 0.7, 0.2]} />
+                        <meshStandardMaterial color={avatarStyle.bodyColor} />
+                      </mesh>
+                    </group>
+                    <group position={[-0.2, 0.35, 0]}>
+                      <mesh position={[0, -0.35, 0]}>
+                        <boxGeometry args={[0.22, 0.7, 0.22]} />
+                        <meshStandardMaterial color="#2563eb" />
+                      </mesh>
+                    </group>
+                    <group position={[0.2, 0.35, 0]}>
+                      <mesh position={[0, -0.35, 0]}>
+                        <boxGeometry args={[0.22, 0.7, 0.22]} />
+                        <meshStandardMaterial color="#2563eb" />
+                      </mesh>
+                    </group>
+                  </group>
+                  
+                  <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={2} />
+                </Canvas>
               </div>
+              <p className="text-white/80 text-xs md:text-sm text-center">Votre avatar tourne automatiquement</p>
             </div>
 
-            <div>
-              <label className="text-white text-sm mb-2 block">Teint de Peau</label>
-              <div className="grid grid-cols-5 gap-2">
-                {['#fde68a', '#fca5a5', '#d4a373', '#c68642', '#8b6f47', '#fdba74', '#f0abfc', '#c4b5fd', '#a7f3d0', '#cbd5e1'].map((color) => (
-                  <button
-                    key={color}
-                    onClick={() =>
-                      setAvatarStyle({
-                        ...avatarStyle,
-                        headColor: color,
-                        skinTone: color
-                      })
-                    }
-                    className={`w-10 h-10 rounded-lg border-2 ${
-                      avatarStyle.headColor === color ? 'border-white' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
+            <div className="space-y-4 md:space-y-6 max-h-none lg:max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+              <div>
+                <label className="text-white font-semibold mb-2 md:mb-3 block flex items-center gap-2 text-sm md:text-base">
+                  <div className="w-5 h-5 md:w-6 md:h-6 bg-blue-500 rounded-full flex items-center justify-center text-xs">1</div>
+                  Couleur du Corps
+                </label>
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                  {['#3b82f6', '#ef4444', '#22c55e', '#a855f7', '#f59e0b', '#06b6d4', '#ec4899', '#8b5cf6', '#10b981', '#f43f5e', '#84cc16', '#f97316', '#14b8a6', '#eab308', '#6366f1', '#d946ef'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setAvatarStyle({ ...avatarStyle, bodyColor: color })}
+                      className={`w-12 h-12 md:w-14 md:h-14 rounded-xl border-4 transition-all active:scale-95 shadow-lg ${
+                        avatarStyle.bodyColor === color ? 'border-white scale-105 ring-4 ring-white/50' : 'border-white/20'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      title="Couleur du corps"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-white font-semibold mb-2 md:mb-3 block flex items-center gap-2 text-sm md:text-base">
+                  <div className="w-5 h-5 md:w-6 md:h-6 bg-purple-500 rounded-full flex items-center justify-center text-xs">2</div>
+                  Teint de Peau
+                </label>
+                <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                  {['#fde68a', '#fca5a5', '#d4a373', '#c68642', '#8b6f47', '#fdba74', '#f0abfc', '#c4b5fd', '#a7f3d0', '#cbd5e1', '#fef3c7', '#fed7aa'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setAvatarStyle({ ...avatarStyle, headColor: color, skinTone: color })}
+                      className={`w-12 h-12 md:w-14 md:h-14 rounded-xl border-4 transition-all active:scale-95 shadow-lg ${
+                        avatarStyle.skinTone === color ? 'border-white scale-105 ring-4 ring-white/50' : 'border-white/20'
+                      }`}
+                      style={{ backgroundColor: color }}
+                      title="Teint de peau"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-white font-semibold mb-2 md:mb-3 block flex items-center gap-2 text-sm md:text-base">
+                  <div className="w-5 h-5 md:w-6 md:h-6 bg-green-500 rounded-full flex items-center justify-center text-xs">3</div>
+                  Style de Cheveux
+                </label>
+                <div className="grid grid-cols-3 gap-2 md:gap-3">
+                  {[
+                    { id: 'short', label: 'Courts', emoji: '👨' },
+                    { id: 'long', label: 'Longs', emoji: '👩' },
+                    { id: 'bald', label: 'Chauve', emoji: '🧑‍🦲' }
+                  ].map((style) => (
+                    <button
+                      key={style.id}
+                      onClick={() => setAvatarStyle({ ...avatarStyle, hairStyle: style.id })}
+                      className={`p-3 md:p-4 rounded-xl border-2 transition-all active:scale-95 ${
+                        avatarStyle.hairStyle === style.id 
+                          ? 'bg-green-500 border-white text-white scale-105' 
+                          : 'bg-white/10 border-white/20 text-white/80'
+                      }`}
+                    >
+                      <div className="text-2xl md:text-3xl mb-1">{style.emoji}</div>
+                      <div className="text-xs md:text-sm font-medium">{style.label}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {avatarStyle.hairStyle !== 'bald' && (
+                <div>
+                  <label className="text-white font-semibold mb-2 md:mb-3 block flex items-center gap-2 text-sm md:text-base">
+                    <div className="w-5 h-5 md:w-6 md:h-6 bg-yellow-500 rounded-full flex items-center justify-center text-xs">4</div>
+                    Couleur de Cheveux
+                  </label>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                    {['#1f2937', '#7c2d12', '#fbbf24', '#ef4444', '#a855f7', '#06b6d4', '#ec4899', '#22c55e', '#6b7280', '#f59e0b', '#8b5cf6', '#14b8a6'].map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setAvatarStyle({ ...avatarStyle, hairColor: color })}
+                        className={`w-12 h-12 md:w-14 md:h-14 rounded-xl border-4 transition-all active:scale-95 shadow-lg ${
+                          avatarStyle.hairColor === color ? 'border-white scale-105 ring-4 ring-white/50' : 'border-white/20'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title="Couleur de cheveux"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="text-white font-semibold mb-2 md:mb-3 block flex items-center gap-2 text-sm md:text-base">
+                  <div className="w-5 h-5 md:w-6 md:h-6 bg-red-500 rounded-full flex items-center justify-center text-xs">5</div>
+                  Accessoires
+                </label>
+                <div className="grid grid-cols-3 gap-2 md:gap-3">
+                  {[
+                    { id: 'none', label: 'Aucun', emoji: '🙂' },
+                    { id: 'glasses', label: 'Lunettes', emoji: '🤓' },
+                    { id: 'hat', label: 'Chapeau', emoji: '🎩' }
+                  ].map((acc) => (
+                    <button
+                      key={acc.id}
+                      onClick={() => setAvatarStyle({ ...avatarStyle, accessory: acc.id })}
+                      className={`p-3 md:p-4 rounded-xl border-2 transition-all active:scale-95 ${
+                        avatarStyle.accessory === acc.id 
+                          ? 'bg-red-500 border-white text-white scale-105' 
+                          : 'bg-white/10 border-white/20 text-white/80'
+                      }`}
+                    >
+                      <div className="text-2xl md:text-3xl mb-1">{acc.emoji}</div>
+                      <div className="text-xs md:text-sm font-medium">{acc.label}</div>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
           <button
             onClick={handleCreateProfile}
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold hover:from-blue-600 hover:to-purple-700 transition-all"
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-3 md:py-4 rounded-xl font-bold text-base md:text-lg hover:from-green-600 hover:to-emerald-700 transition-all mt-4 md:mt-6 shadow-2xl hover:shadow-green-500/50 flex items-center justify-center gap-2 active:scale-95"
           >
-            Entrer dans le monde
+            <User className="w-5 h-5 md:w-6 md:h-6" />
+            Entrer dans le Monde
           </button>
         </div>
       </div>

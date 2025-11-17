@@ -1,10 +1,10 @@
 'use client'
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Sky, Html, useTexture } from '@react-three/drei'
+import { OrbitControls, Sky, Html, PerspectiveCamera } from '@react-three/drei'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette } from 'lucide-react'
+import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff } from 'lucide-react'
 import * as THREE from 'three'
 
 interface WorldProps {
@@ -43,49 +43,87 @@ function RealisticAvatar({
   
   return (
     <group ref={groupRef} position={position}>
-      {/* Torso/Body - centered */}
-      <mesh position={[0, 0.8, 0]} castShadow>
+      <mesh position={[0, 0.6, 0]} castShadow>
         <boxGeometry args={[0.6, 0.9, 0.35]} />
         <meshStandardMaterial color={avatarStyle.bodyColor} metalness={0.1} roughness={0.8} />
       </mesh>
       
-      {/* Head - directly on top of body, no gap */}
-      <mesh position={[0, 1.55, 0]} castShadow>
+      <mesh position={[0, 1.2, 0]} castShadow>
         <sphereGeometry args={[0.32, 32, 32]} />
-        <meshStandardMaterial color={avatarStyle.headColor} metalness={0.1} roughness={0.6} />
+        <meshStandardMaterial color={avatarStyle.skinTone || avatarStyle.headColor} metalness={0.1} roughness={0.6} />
       </mesh>
       
-      {/* Hair */}
-      <mesh position={[0, 1.75, 0]} castShadow>
-        <sphereGeometry args={[0.34, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#3d2817" metalness={0} roughness={1} />
-      </mesh>
+      {avatarStyle.hairStyle === 'short' && (
+        <mesh position={[0, 1.4, 0]} castShadow>
+          <sphereGeometry args={[0.34, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+          <meshStandardMaterial color={avatarStyle.hairColor || '#3d2817'} metalness={0} roughness={1} />
+        </mesh>
+      )}
+      {avatarStyle.hairStyle === 'long' && (
+        <>
+          <mesh position={[0, 1.4, 0]} castShadow>
+            <sphereGeometry args={[0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.5]} />
+            <meshStandardMaterial color={avatarStyle.hairColor || '#3d2817'} metalness={0} roughness={1} />
+          </mesh>
+          <mesh position={[0, 0.95, -0.3]} castShadow>
+            <boxGeometry args={[0.5, 0.6, 0.2]} />
+            <meshStandardMaterial color={avatarStyle.hairColor || '#3d2817'} metalness={0} roughness={1} />
+          </mesh>
+        </>
+      )}
       
-      {/* Left Arm */}
-      <group position={[-0.45, 0.7, 0]}>
+      {avatarStyle.accessory === 'glasses' && (
+        <>
+          <mesh position={[-0.15, 1.2, 0.28]}>
+            <torusGeometry args={[0.08, 0.02, 8, 16]} />
+            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
+          </mesh>
+          <mesh position={[0.15, 1.2, 0.28]}>
+            <torusGeometry args={[0.08, 0.02, 8, 16]} />
+            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
+          </mesh>
+          <mesh position={[0, 1.2, 0.28]}>
+            <boxGeometry args={[0.12, 0.02, 0.02]} />
+            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
+          </mesh>
+        </>
+      )}
+      {avatarStyle.accessory === 'hat' && (
+        <>
+          <mesh position={[0, 1.5, 0]} castShadow>
+            <cylinderGeometry args={[0.35, 0.35, 0.15, 16]} />
+            <meshStandardMaterial color="#ef4444" metalness={0.2} roughness={0.8} />
+          </mesh>
+          <mesh position={[0, 1.6, 0]} castShadow>
+            <cylinderGeometry args={[0.25, 0.35, 0.2, 16]} />
+            <meshStandardMaterial color="#ef4444" metalness={0.2} roughness={0.8} />
+          </mesh>
+        </>
+      )}
+      
+      <group position={[-0.45, 0.5, 0]}>
         <mesh position={[0, -0.25, 0]} castShadow>
           <boxGeometry args={[0.2, 0.7, 0.2]} />
           <meshStandardMaterial color={avatarStyle.bodyColor} metalness={0.1} roughness={0.8} />
         </mesh>
         <mesh position={[0, -0.6, 0]}>
           <sphereGeometry args={[0.13, 16, 16]} />
-          <meshStandardMaterial color={avatarStyle.headColor} metalness={0.1} roughness={0.6} />
+          <meshStandardMaterial color={avatarStyle.skinTone || avatarStyle.headColor} metalness={0.1} roughness={0.6} />
         </mesh>
       </group>
       
-      {/* Right Arm */}
-      <group position={[0.45, 0.7, 0]}>
+      <group position={[0.45, 0.5, 0]}>
         <mesh position={[0, -0.25, 0]} castShadow>
           <boxGeometry args={[0.2, 0.7, 0.2]} />
           <meshStandardMaterial color={avatarStyle.bodyColor} metalness={0.1} roughness={0.8} />
         </mesh>
         <mesh position={[0, -0.6, 0]}>
           <sphereGeometry args={[0.13, 16, 16]} />
-          <meshStandardMaterial color={avatarStyle.headColor} metalness={0.1} roughness={0.6} />
+          <meshStandardMaterial color={avatarStyle.skinTone || avatarStyle.headColor} metalness={0.1} roughness={0.6} />
         </mesh>
       </group>
       
-      {/* Left Leg */}
+      {/* Legs - unchanged */}
       <group position={[-0.2, 0.35, 0]}>
         <mesh position={[0, -0.35, 0]} castShadow>
           <boxGeometry args={[0.22, 0.7, 0.22]} />
@@ -97,7 +135,6 @@ function RealisticAvatar({
         </mesh>
       </group>
       
-      {/* Right Leg */}
       <group position={[0.2, 0.35, 0]}>
         <mesh position={[0, -0.35, 0]} castShadow>
           <boxGeometry args={[0.22, 0.7, 0.22]} />
@@ -185,8 +222,15 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
     bodyColor: '#3b82f6',
     headColor: '#fbbf24',
     hairStyle: 'short',
-    skinTone: '#fbbf24'
+    hairColor: '#1f2937',
+    skinTone: '#fbbf24',
+    accessory: 'none'
   })
+  const [customizationOptions, setCustomizationOptions] = useState<any[]>([])
+  const [showQuickActions, setShowQuickActions] = useState(false)
+  const [currentEmoji, setCurrentEmoji] = useState<string | null>(null)
+  const [isJumping, setIsJumping] = useState(false)
+
   const [movement, setMovement] = useState({ x: 0, z: 0 })
   const [showChat, setShowChat] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
@@ -209,6 +253,11 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   
   const keysPressed = useRef<Set<string>>(new Set())
   const supabase = createClient()
+
+  const [showMenu, setShowMenu] = useState(false)
+  const [povMode, setPovMode] = useState(false)
+  const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
+  const [showChatInput, setShowChatInput] = useState(false)
 
   useEffect(() => {
     const loadPlayers = async () => {
@@ -364,6 +413,22 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
       .update({ avatar_style: newStyle })
       .eq('user_id', userId)
   }
+
+  useEffect(() => {
+    const loadCustomizationOptions = async () => {
+      const { data } = await supabase
+        .from('avatar_customization_options')
+        .select('*')
+        .order('category')
+      
+      if (data) {
+        console.log('[v0] Loaded customization options:', data.length)
+        setCustomizationOptions(data)
+      }
+    }
+    
+    loadCustomizationOptions()
+  }, [])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -577,6 +642,19 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
     return () => clearInterval(interval)
   }, [])
   
+  const handleEmoji = (emoji: string) => {
+    setCurrentEmoji(emoji)
+    setShowQuickActions(false)
+    setTimeout(() => setCurrentEmoji(null), 3000)
+  }
+
+  const handleJump = () => {
+    if (!isJumping) {
+      setIsJumping(true)
+      setTimeout(() => setIsJumping(false), 600)
+    }
+  }
+
   const sendMessage = async () => {
     if (!chatInput.trim()) return
     
@@ -598,7 +676,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
       const newPos = {
         x: Math.max(-20, Math.min(20, prev.x + dx * speed)),
         y: 0.5,
-        z: Math.max(-20, Math.min(20, prev.z - dz * speed))
+        z: Math.max(-20, Math.min(20, prev.z + dz * speed)) // Fixed: removed negative sign
       }
       
       supabase
@@ -613,6 +691,12 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
       
       return newPos
     })
+    
+    if (dx !== 0 || dz !== 0) {
+      setMovement({ x: dx, z: dz })
+    } else {
+      setMovement({ x: 0, z: 0 })
+    }
   }, [userId, supabase, isSeatsLocked, mySeat])
 
   const handleEnterRoom = async (room: any) => {
@@ -659,30 +743,49 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   }
 
   const handleSitInSeat = async (seatNumber: number) => {
-    if (isSeatsLocked && mySeat !== null) {
+    if (isSeatsLocked && mySeat !== null && mySeat !== seatNumber) {
       return
     }
 
     if (mySeat === seatNumber) {
+      // Stand up
       await supabase
         .from('interactive_cinema_seats')
         .delete()
         .eq('room_id', currentCinemaRoom.id)
         .eq('user_id', userId)
+      
       setMySeat(null)
+      setMyPosition({ x: 0, y: 0.5, z: 5 })
     } else {
+      // Sit down - Calculate position based on seat number
+      const row = Math.floor(seatNumber / 10)
+      const col = seatNumber % 10
+      const seatX = (col - 4.5) * 2
+      const seatZ = row * 2 + 5
+
       const { error } = await supabase
         .from('interactive_cinema_seats')
         .upsert({
           room_id: currentCinemaRoom.id,
           user_id: userId,
           seat_number: seatNumber,
-          row_number: Math.floor(seatNumber / 10),
+          row_number: row,
           is_occupied: true
         })
 
       if (!error) {
         setMySeat(seatNumber)
+        setMyPosition({ x: seatX, y: 0.5, z: seatZ })
+        
+        await supabase
+          .from('interactive_profiles')
+          .update({
+            position_x: seatX,
+            position_y: 0.5,
+            position_z: seatZ
+          })
+          .eq('user_id', userId)
       }
     }
   }
@@ -690,7 +793,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
   return (
     <div className="fixed inset-0 bg-black">
       <Canvas
-        camera={{ position: [0, 8, 12], fov: 60 }}
+        camera={povMode ? undefined : { position: [0, 8, 12], fov: 60 }}
         style={{ width: '100vw', height: '100vh' }}
         shadows
         gl={{ 
@@ -699,6 +802,14 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           powerPreference: graphicsQuality === 'high' ? 'high-performance' : 'default'
         }}
       >
+        {povMode && (
+          <PerspectiveCamera
+            makeDefault
+            position={[myPosition.x, myPosition.y + 1.6, myPosition.z + 0.5]}
+            fov={75}
+          />
+        )}
+
         <Sky 
           sunPosition={[100, 20, 100]} 
           inclination={0.6}
@@ -716,6 +827,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         
         {!currentCinemaRoom ? (
           <>
+            {/* Ground */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
               <planeGeometry args={[60, 60]} />
               <meshStandardMaterial 
@@ -725,25 +837,24 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               />
             </mesh>
             
+            {/* Path */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
               <planeGeometry args={[3, 40]} />
               <meshStandardMaterial color="#8b7355" roughness={1} metalness={0} />
             </mesh>
             
+            {/* Cinema Building */}
             <group position={[15, 0, 0]}>
-              {/* Main structure */}
               <mesh position={[0, 2.5, 0]} castShadow>
                 <boxGeometry args={[8, 5, 8]} />
                 <meshStandardMaterial color="#1e3a8a" roughness={0.7} metalness={0.1} />
               </mesh>
               
-              {/* Roof */}
               <mesh position={[0, 5.5, 0]} castShadow>
                 <boxGeometry args={[8.5, 0.5, 8.5]} />
                 <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.2} />
               </mesh>
               
-              {/* Sign */}
               <mesh position={[0, 6, 0]}>
                 <boxGeometry args={[7, 0.8, 0.3]} />
                 <meshStandardMaterial 
@@ -756,7 +867,6 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               </mesh>
               <pointLight position={[0, 6, 0]} intensity={2} distance={10} color="#fbbf24" />
               
-              {/* Windows */}
               {[-2, 0, 2].map((x) => (
                 <mesh key={`window-${x}`} position={[x, 3, 4.1]}>
                   <planeGeometry args={[1.5, 1.8]} />
@@ -770,7 +880,6 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                 </mesh>
               ))}
               
-              {/* Door */}
               <mesh position={[-3, 1.2, 4.1]} castShadow>
                 <boxGeometry args={[1.5, 2.4, 0.1]} />
                 <meshStandardMaterial color="#7c2d12" roughness={0.8} metalness={0.1} />
@@ -780,7 +889,6 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                 <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
               </mesh>
               
-              {/* Steps */}
               <mesh position={[-3, 0.1, 5.5]}>
                 <boxGeometry args={[2, 0.2, 2]} />
                 <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
@@ -798,19 +906,19 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
             
             {(graphicsQuality === 'low' 
               ? [[-15, -15], [15, -15]] 
-              : [[-15, -15], [-8, -18], [8, -18], [15, -15], [-18, 10], [18, 10]]
+              : [[-15, -15], [-8, -18], [8, -18], [15, -15], [-18, 10], [18, 10], [-10, 15], [10, 15]]
             ).map(([x, z], i) => (
               <RealisticTree key={`tree-${i}`} position={[x, 0, z]} />
             ))}
             
             {(graphicsQuality === 'low' 
-              ? [[0]] 
-              : [[-10], [0], [10]]
+              ? [[0, -10]] 
+              : [[-10, -10], [0, -10], [10, -10], [-10, 10], [10, 10]]
             ).map((z, i) => (
-              <RealisticLamppost key={`lamp-${i}`} position={[-20, 0, z[0]]} />
+              <RealisticLamppost key={`lamp-${i}`} position={[-20, 0, z[1]]} />
             ))}
             
-            {graphicsQuality !== 'low' && [-12, 12].map((z) => (
+            {graphicsQuality !== 'low' && [-12, 0, 12].map((z) => (
               <group key={`bench-${z}`} position={[-18, 0, z]}>
                 <mesh position={[0, 0.4, 0]} castShadow>
                   <boxGeometry args={[2, 0.1, 0.8]} />
@@ -826,13 +934,46 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                 </mesh>
               </group>
             ))}
+
+            {graphicsQuality !== 'low' && (
+              <group position={[-15, 0, 0]}>
+                <mesh position={[0, 0.3, 0]} castShadow>
+                  <cylinderGeometry args={[2, 2.5, 0.6, 16]} />
+                  <meshStandardMaterial color="#6b7280" roughness={0.3} metalness={0.8} />
+                </mesh>
+                <mesh position={[0, 1, 0]}>
+                  <cylinderGeometry args={[0.3, 0.3, 1.4, 8]} />
+                  <meshStandardMaterial color="#94a3b8" roughness={0.2} metalness={0.9} />
+                </mesh>
+                <mesh position={[0, 1.8, 0]}>
+                  <sphereGeometry args={[0.4, 16, 16]} />
+                  <meshStandardMaterial color="#60a5fa" emissive="#60a5fa" emissiveIntensity={0.3} transparent opacity={0.7} />
+                </mesh>
+                <pointLight position={[0, 2, 0]} intensity={1} distance={8} color="#60a5fa" />
+              </group>
+            )}
+
+            {graphicsQuality !== 'low' && [
+              [5, -10], [-5, -10], [10, 5], [-10, 5], [12, -5], [-12, -5]
+            ].map(([x, z], i) => (
+              <group key={`bush-${i}`} position={[x, 0, z]}>
+                <mesh position={[0, 0.5, 0]} castShadow>
+                  <sphereGeometry args={[0.8, 8, 8]} />
+                  <meshStandardMaterial color="#2d5016" roughness={0.95} />
+                </mesh>
+                <mesh position={[0.4, 0.6, 0.3]} castShadow>
+                  <sphereGeometry args={[0.5, 8, 8]} />
+                  <meshStandardMaterial color="#3a6b1e" roughness={0.95} />
+                </mesh>
+              </group>
+            ))}
           </>
         ) : (
           <>
             {/* Cinema Interior */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
               <planeGeometry args={[30, 40]} />
-              <meshStandardMaterial color="#2d1810" />
+              <meshStandardMaterial color="#2d1010" />
             </mesh>
 
             <mesh position={[0, 3, -20]}>
@@ -848,11 +989,32 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               <meshStandardMaterial color="#1a0f0a" />
             </mesh>
 
-            {/* Screen */}
-            <mesh position={[0, 3, -19]}>
-              <planeGeometry args={[20, 10]} />
-              <meshStandardMaterial color="#111111" emissive="#333333" emissiveIntensity={0.5} />
-            </mesh>
+            <group position={[0, 3, -19]}>
+              <mesh>
+                <planeGeometry args={[20, 10]} />
+                <meshStandardMaterial color="#111111" />
+              </mesh>
+              
+              {currentCinemaRoom.embed_url && mySeat !== null && (
+                <Html
+                  transform
+                  occlude
+                  position={[0, 0, 0.1]}
+                  style={{
+                    width: '2000px',
+                    height: '1000px',
+                    pointerEvents: 'auto'
+                  }}
+                >
+                  <iframe
+                    src={currentCinemaRoom.embed_url}
+                    className="w-full h-full rounded-lg"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </Html>
+              )}
+            </group>
 
             {/* Seats */}
             {Array.from({ length: Math.min(currentCinemaRoom.capacity || 30, 60) }).map((_, i) => {
@@ -877,16 +1039,16 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                     <Html position={[0, 1.2, 0]} center>
                       <button
                         onClick={() => handleSitInSeat(i)}
-                        disabled={isSeatsLocked && mySeat !== null}
+                        disabled={isSeatsLocked && mySeat !== null && mySeat !== i}
                         className={`text-xs px-2 py-1 rounded ${
-                          isSeatsLocked && mySeat !== null 
+                          isSeatsLocked && mySeat !== i
                             ? 'bg-gray-500 cursor-not-allowed' 
                             : isMySeat 
                             ? 'bg-red-500 hover:bg-red-600' 
                             : 'bg-blue-500 hover:bg-blue-600'
                         } text-white whitespace-nowrap`}
                       >
-                        {isSeatsLocked && isMySeat ? '🔒 Bloqué' : isMySeat ? '🚶 Se lever' : '💺 S\'asseoir'}
+                        {isSeatsLocked && mySeat !== i ? '🔒 Bloqué' : isMySeat ? '🚶 Se lever' : '💺 S\'asseoir'}
                       </button>
                     </Html>
                   ) : null}
@@ -916,7 +1078,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         )}
 
         <RealisticAvatar 
-          position={[myPosition.x, myPosition.y, myPosition.z]}
+          position={[myPosition.x, myPosition.y + (isJumping ? 1 : 0), myPosition.z]}
           avatarStyle={myAvatarStyle}
           isMoving={movement.x !== 0 || movement.z !== 0}
         />
@@ -943,6 +1105,14 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
               <div className="bg-yellow-500 text-white px-2 py-0.5 rounded-full text-xs flex items-center gap-1 whitespace-nowrap shadow-lg">
                 <Crown className="w-3 h-3" />
                 VIP
+              </div>
+            </Html>
+          )}
+
+          {currentEmoji && (
+            <Html position={[0, 3, 0]} center>
+              <div className="text-5xl animate-bounce">
+                {currentEmoji}
               </div>
             </Html>
           )}
@@ -1007,57 +1177,70 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
             )
           })}
         
-        <OrbitControls
-          target={[myPosition.x, myPosition.y, myPosition.z]}
-          maxPolarAngle={Math.PI / 2.5}
-          minDistance={6}
-          maxDistance={25}
-        />
+        {!povMode && (
+          <OrbitControls
+            target={[myPosition.x, myPosition.y, myPosition.z]}
+            maxPolarAngle={Math.PI / 2.5}
+            minDistance={6}
+            maxDistance={25}
+          />
+        )}
       </Canvas>
       
       {!isFullscreen && (
-        <div className="absolute top-4 left-4 z-10">
+        <div className="absolute top-4 left-4 z-10 flex gap-2">
           <button
-            onClick={() => setShowUserCard(!showUserCard)}
-            className="bg-white/20 backdrop-blur-lg text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-2"
+            onClick={() => setShowMenu(!showMenu)}
+            className="bg-white/20 backdrop-blur-lg text-white p-3 rounded-lg hover:bg-white/30 transition-colors shadow-lg"
           >
-            <User className="w-5 h-5" />
-            <span className="hidden md:inline">{userProfile?.username || 'Joueur'}</span>
+            <Menu className="w-6 h-6" />
           </button>
           
-          {showUserCard && (
-            <div className="mt-2 bg-black/80 backdrop-blur-lg rounded-lg p-4 w-64 space-y-3">
-              <div className="text-white">
-                <div className="font-bold text-lg mb-1">{userProfile?.username || 'Joueur'}</div>
-                <div className="flex items-center gap-2 text-sm text-white/60">
+          {showMenu && (
+            <div className="absolute top-14 left-0 mt-2 bg-black/90 backdrop-blur-lg rounded-lg p-4 w-72 space-y-3 shadow-2xl border border-white/20">
+              <div className="text-white mb-3 pb-3 border-b border-white/20">
+                <div className="font-bold text-lg flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  {userProfile?.username || 'Joueur'}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-white/60 mt-1">
                   <Users className="w-4 h-4" />
-                  <span>{onlineCount} joueur{onlineCount > 1 ? 's' : ''} en ligne</span>
+                  <span>{onlineCount} en ligne</span>
                 </div>
               </div>
               
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setShowSettings(true)
-                    setShowUserCard(false)
-                  }}
-                  className="flex-1 bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2 text-sm"
-                >
-                  <Settings className="w-4 h-4" />
-                  Paramètres
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setShowAvatarCustomizer(true)
-                    setShowUserCard(false)
-                  }}
-                  className="flex-1 bg-purple-500 text-white py-2 rounded-lg hover:bg-purple-600 flex items-center justify-center gap-2 text-sm"
-                >
-                  <Palette className="w-4 h-4" />
-                  Avatar
-                </button>
-              </div>
+              <button
+                onClick={() => {
+                  setShowSettings(true)
+                  setShowMenu(false)
+                }}
+                className="w-full bg-blue-500/80 text-white py-2.5 rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2 text-sm"
+              >
+                <Settings className="w-4 h-4" />
+                Paramètres
+              </button>
+              
+              <button
+                onClick={() => {
+                  setShowAvatarCustomizer(true)
+                  setShowMenu(false)
+                }}
+                className="w-full bg-purple-500/80 text-white py-2.5 rounded-lg hover:bg-purple-600 flex items-center justify-center gap-2 text-sm"
+              >
+                <Palette className="w-4 h-4" />
+                Avatar
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowChat(true)
+                  setShowMenu(false)
+                }}
+                className="w-full bg-green-500/80 text-white py-2.5 rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 text-sm"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Chat
+              </button>
             </div>
           )}
         </div>
@@ -1066,8 +1249,9 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
       {!isFullscreen && (
         <div className="absolute top-4 right-4 z-10 flex gap-2">
           <button
-            onClick={() => setShowChat(!showChat)}
+            onClick={() => setShowChatInput(!showChatInput)}
             className="bg-white/20 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/30 transition-colors"
+            title="Écrire un message"
           >
             <MessageSquare className="w-5 h-5" />
           </button>
@@ -1081,6 +1265,45 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           </button>
         </div>
       )}
+
+      {showChatInput && !isFullscreen && (
+        <div className="absolute top-20 right-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-white font-bold text-sm">Envoyer un message</h3>
+            <button
+              onClick={() => setShowChatInput(false)}
+              className="text-white/60 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  sendMessage()
+                  setShowChatInput(false)
+                }
+              }}
+              placeholder="Votre message..."
+              className="flex-1 bg-white/10 text-white px-3 py-2 rounded-lg outline-none text-sm"
+              autoFocus
+            />
+            <button
+              onClick={() => {
+                sendMessage()
+                setShowChatInput(false)
+              }}
+              className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
       
       {isFullscreen && (
         <button
@@ -1090,6 +1313,39 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
         >
           <Minimize className="w-6 h-6" />
         </button>
+      )}
+
+      {mySeat !== null && currentCinemaRoom?.embed_url && !showMovieFullscreen && (
+        <button
+          onClick={() => setShowMovieFullscreen(true)}
+          className="absolute bottom-24 right-4 z-10 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 shadow-lg flex items-center gap-2"
+        >
+          <Play className="w-5 h-5" />
+          Voir le Film en Plein Écran
+        </button>
+      )}
+
+      {showMovieFullscreen && currentCinemaRoom?.embed_url && (
+        <div className="absolute inset-0 bg-black z-40 flex flex-col">
+          <div className="bg-black/90 backdrop-blur-lg px-4 py-3 flex justify-between items-center">
+            <h3 className="text-white font-bold">{currentCinemaRoom.movie_title}</h3>
+            <button
+              onClick={() => setShowMovieFullscreen(false)}
+              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center gap-2"
+            >
+              <EyeOff className="w-4 h-4" />
+              Quitter
+            </button>
+          </div>
+          <div className="flex-1">
+            <iframe
+              src={currentCinemaRoom.embed_url}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
       )}
       
       {showChat && !isFullscreen && (
@@ -1176,6 +1432,33 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
                 </button>
               </div>
             </div>
+
+            <div>
+              <label className="text-white text-sm mb-2 block">Mode Caméra</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPovMode(false)}
+                  className={`flex-1 py-2 rounded-lg ${
+                    !povMode ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/60'
+                  }`}
+                >
+                  <Eye className="w-4 h-4 inline mr-1" />
+                  Vue Extérieure
+                </button>
+                <button
+                  onClick={() => setPovMode(true)}
+                  className={`flex-1 py-2 rounded-lg ${
+                    povMode ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/60'
+                  }`}
+                >
+                  <Eye className="w-4 h-4 inline mr-1" />
+                  POV
+                </button>
+              </div>
+              <p className="text-white/50 text-xs mt-1">
+                POV: Vue à la première personne
+              </p>
+            </div>
             
             <div className="pt-4 border-t border-white/20">
               <p className="text-white/60 text-xs">
@@ -1199,47 +1482,259 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
           </div>
           
           <div className="space-y-4">
-            <div>
-              <label className="text-white text-sm mb-2 block">Couleur du Corps</label>
-              <div className="grid grid-cols-5 gap-2">
-                {['#3b82f6', '#ef4444', '#22c55e', '#a855f7', '#f59e0b', '#06b6d4', '#ec4899', '#8b5cf6', '#10b981', '#f43f5e'].map(color => (
-                  <button
-                    key={color}
-                    onClick={() => saveAvatarStyle({ ...myAvatarStyle, bodyColor: color })}
-                    className={`w-10 h-10 rounded-lg border-2 ${
-                      myAvatarStyle.bodyColor === color ? 'border-white' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </div>
-            
-            <div>
-              <label className="text-white text-sm mb-2 block">Couleur de la Tête</label>
-              <div className="grid grid-cols-5 gap-2">
-                {['#fbbf24', '#fca5a5', '#f0abfc', '#c4b5fd', '#93c5fd', '#fdba74', '#fde047', '#a7f3d0', '#fecdd3', '#cbd5e1'].map(color => (
-                  <button
-                    key={color}
-                    onClick={() => saveAvatarStyle({ ...myAvatarStyle, headColor: color })}
-                    className={`w-10 h-10 rounded-lg border-2 ${
-                      myAvatarStyle.headColor === color ? 'border-white' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </div>
+            {['body_color', 'skin_tone', 'hair_style', 'hair_color', 'accessory'].map((category) => {
+              const options = customizationOptions.filter(opt => opt.category === category)
+              if (options.length === 0) return null
+              
+              const availableOptions = options.filter(opt => {
+                if (!opt.is_premium) return true
+                if (userProfile?.is_admin) return true
+                if (userProfile?.is_vip_plus && opt.label?.includes('VIP+')) return true
+                if (userProfile?.is_vip && opt.label?.includes('VIP') && !opt.label?.includes('VIP+')) return true
+                return false
+              })
+              
+              return (
+                <div key={category}>
+                  <label className="text-white text-sm mb-2 block capitalize">{category.replace('_', ' ')}</label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {availableOptions.map(option => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          const key = category === 'body_color' ? 'bodyColor' :
+                                      category === 'skin_tone' ? 'skinTone' :
+                                      category === 'hair_style' ? 'hairStyle' :
+                                      category === 'hair_color' ? 'hairColor' :
+                                      'accessory'
+                          saveAvatarStyle({ ...myAvatarStyle, [key]: option.value })
+                        }}
+                        className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs ${
+                          myAvatarStyle[category === 'body_color' ? 'bodyColor' : 
+                                       category === 'skin_tone' ? 'skinTone' : 
+                                       category === 'hair_style' ? 'hairStyle' : 
+                                       category === 'hair_color' ? 'hairColor' : 'accessory'] === option.value
+                            ? 'border-white' 
+                            : 'border-transparent'
+                        }`}
+                        style={category.includes('color') || category === 'skin_tone' ? { backgroundColor: option.value } : {}}
+                        title={`${option.label}${opt.is_premium ? ' (Premium)' : ''}`}
+                      >
+                        {!category.includes('color') && !category.includes('skin') && option.label?.slice(0, 3)}
+                        {option.is_premium && <Crown className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
             
             <div className="pt-4 border-t border-white/20">
               <p className="text-white/60 text-xs">
-                Personnalisez votre avatar avec des couleurs uniques
+                Options avec couronne: réservées VIP/VIP+/Admin
               </p>
             </div>
           </div>
         </div>
       )}
+
+      {showCinema && (
+        <div className="absolute inset-0 bg-black/90 backdrop-blur-lg z-30 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-b from-blue-900 to-purple-900 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-3xl font-bold text-white">Salles de Cinéma</h2>
+              <button
+                onClick={() => setShowCinema(false)}
+                className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {cinemaRooms.length === 0 ? (
+                <div className="col-span-2 text-center text-white/60 py-12">
+                  Aucune salle disponible pour le moment
+                </div>
+              ) : (
+                cinemaRooms.map((room) => (
+                  <div
+                    key={room.id}
+                    className="bg-white/10 backdrop-blur rounded-lg p-4 hover:bg-white/20 transition-all"
+                  >
+                    {room.movie_poster && (
+                      <img
+                        src={`https://image.tmdb.org/t/p/w500${room.movie_poster}`}
+                        alt={room.movie_title}
+                        className="w-full h-48 object-cover rounded-lg mb-3"
+                      />
+                    )}
+                    <h3 className="text-white font-bold text-lg mb-1">
+                      Salle {room.room_number} - {room.name}
+                    </h3>
+                    <p className="text-white/80 text-sm mb-2">{room.movie_title}</p>
+                    <div className="flex items-center justify-between text-xs text-white/60 mb-3">
+                      <span>Capacité: {room.capacity}</span>
+                      <span className={`px-2 py-1 rounded ${
+                        room.access_level === 'vip' ? 'bg-yellow-500' :
+                        room.access_level === 'vip_plus' ? 'bg-purple-500' :
+                        'bg-green-500'
+                      }`}>
+                        {room.access_level === 'vip' ? 'VIP' :
+                         room.access_level === 'vip_plus' ? 'VIP+' :
+                         'Public'}
+                      </span>
+                    </div>
+                    {room.schedule_start && (
+                      <p className="text-white/60 text-xs mb-3">
+                        Séance: {new Date(room.schedule_start).toLocaleString('fr-FR')}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => handleEnterRoom(room)}
+                      className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors"
+                    >
+                      Entrer dans la Salle
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
+      <div className="absolute bottom-4 left-4 z-10 bg-black/50 backdrop-blur-lg text-white p-3 rounded-lg text-sm hidden md:block">
+        <div>Contrôles: WASD ou Flèches</div>
+        <div>Souris: Rotation caméra</div>
+      </div>
+      
+      {(!isFullscreen || isMobileMode) && <MobileJoystick onMove={handleJoystickMove} />}
+
+      {!isFullscreen && !showMenu && (
+        <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+          <button
+            onClick={() => setShowQuickActions(!showQuickActions)}
+            className="bg-yellow-500 text-white p-3 rounded-full hover:bg-yellow-600 transition-colors shadow-lg"
+            title="Actions Rapides"
+          >
+            <Smile className="w-6 h-6" />
+          </button>
+
+          {showQuickActions && (
+            <div className="bg-black/80 backdrop-blur-lg rounded-lg p-3 mb-2 grid grid-cols-3 gap-2">
+              <button
+                onClick={() => handleEmoji('😊')}
+                className="text-3xl hover:scale-125 transition-transform bg-white/10 rounded-lg p-2"
+              >
+                😊
+              </button>
+              <button
+                onClick={() => handleEmoji('😢')}
+                className="text-3xl hover:scale-125 transition-transform bg-white/10 rounded-lg p-2"
+              >
+                😢
+              </button>
+              <button
+                onClick={() => handleEmoji('😡')}
+                className="text-3xl hover:scale-125 transition-transform bg-white/10 rounded-lg p-2"
+              >
+                😡
+              </button>
+              <button
+                onClick={() => handleEmoji('👍')}
+                className="text-3xl hover:scale-125 transition-transform bg-white/10 rounded-lg p-2"
+              >
+                👍
+              </button>
+              <button
+                onClick={() => handleEmoji('❤️')}
+                className="text-3xl hover:scale-125 transition-transform bg-white/10 rounded-lg p-2"
+              >
+                ❤️
+              </button>
+              <button
+                onClick={handleJump}
+                className="text-2xl hover:scale-125 transition-transform bg-green-500 rounded-lg p-2 font-bold text-white"
+              >
+                🦘
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Existing UI code... */}
+      
+      {showAvatarCustomizer && !isFullscreen && (
+        <div className="absolute top-20 left-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 flex flex-col p-4 max-h-[500px] overflow-y-auto">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-white font-bold">Personnaliser Avatar</h3>
+            <button
+              onClick={() => setShowAvatarCustomizer(false)}
+              className="text-white/60 hover:text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            {['body_color', 'skin_tone', 'hair_style', 'hair_color', 'accessory'].map((category) => {
+              const options = customizationOptions.filter(opt => opt.category === category)
+              if (options.length === 0) return null
+              
+              const availableOptions = options.filter(opt => {
+                if (!opt.is_premium) return true
+                if (userProfile?.is_admin) return true
+                if (userProfile?.is_vip_plus && opt.label?.includes('VIP+')) return true
+                if (userProfile?.is_vip && opt.label?.includes('VIP') && !opt.label?.includes('VIP+')) return true
+                return false
+              })
+              
+              return (
+                <div key={category}>
+                  <label className="text-white text-sm mb-2 block capitalize">{category.replace('_', ' ')}</label>
+                  <div className="grid grid-cols-5 gap-2">
+                    {availableOptions.map(option => (
+                      <button
+                        key={option.id}
+                        onClick={() => {
+                          const key = category === 'body_color' ? 'bodyColor' :
+                                      category === 'skin_tone' ? 'skinTone' :
+                                      category === 'hair_style' ? 'hairStyle' :
+                                      category === 'hair_color' ? 'hairColor' :
+                                      'accessory'
+                          saveAvatarStyle({ ...myAvatarStyle, [key]: option.value })
+                        }}
+                        className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-xs ${
+                          myAvatarStyle[category === 'body_color' ? 'bodyColor' : 
+                                       category === 'skin_tone' ? 'skinTone' : 
+                                       category === 'hair_style' ? 'hairStyle' : 
+                                       category === 'hair_color' ? 'hairColor' : 'accessory'] === option.value
+                            ? 'border-white' 
+                            : 'border-transparent'
+                        }`}
+                        style={category.includes('color') || category === 'skin_tone' ? { backgroundColor: option.value } : {}}
+                        title={`${option.label}${opt.is_premium ? ' (Premium)' : ''}`}
+                      >
+                        {!category.includes('color') && !category.includes('skin') && option.label?.slice(0, 3)}
+                        {option.is_premium && <Crown className="w-3 h-3 text-yellow-400 absolute -top-1 -right-1" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+            
+            <div className="pt-4 border-t border-white/20">
+              <p className="text-white/60 text-xs">
+                Options avec couronne: réservées VIP/VIP+/Admin
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showCinema && (
         <div className="absolute inset-0 bg-black/90 backdrop-blur-lg z-30 flex items-center justify-center p-4">
           <div className="bg-gradient-to-b from-blue-900 to-purple-900 rounded-2xl p-6 max-w-4xl w-full max-h-[80vh] overflow-y-auto">
