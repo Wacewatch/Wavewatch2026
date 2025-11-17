@@ -1,13 +1,12 @@
 'use client'
 
 import { Canvas, useFrame } from '@react-three/fiber'
-import { OrbitControls, Sky, Text, Html } from '@react-three/drei'
+import { OrbitControls, Sky, Html } from '@react-three/drei'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Maximize, MessageSquare, Send, Settings, Crown, Shield } from 'lucide-react'
 import * as THREE from 'three'
-import { CinemaBuilding } from './cinema-building'
 
 interface WorldProps {
   userId: string
@@ -471,7 +470,7 @@ export default function InteractiveWorld({ userId, userProfile }: WorldProps) {
             onClick={handleEnterCinema}
             className="bg-white/20 backdrop-blur-lg text-white p-2 rounded-lg hover:bg-white/30 transition-colors"
           >
-            <Text className="w-5 h-5">Cinema</Text>
+            🎬
           </button>
           
           <button
