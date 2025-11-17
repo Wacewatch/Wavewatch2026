@@ -4,13 +4,13 @@ import { useEffect, useState } from "react"
 import { useRouter } from 'next/navigation'
 import { useAuth } from "@/components/auth-provider"
 import { createClient } from "@/lib/supabase/client"
-import { InteractiveWorld } from "@/components/interactive/interactive-world"
 import { LoadingScreen } from "@/components/interactive/loading-screen"
-import { OnboardingFlow } from "@/components/interactive/onboarding-flow"
+import { SimpleOnboarding } from "@/components/interactive/simple-onboarding"
+import { SimpleWorld } from "@/components/interactive/simple-world"
 
 export default function InteractivePage() {
   const [isLoading, setIsLoading] = useState(true)
-  const [worldReady, setWorldReady] = useState(false)
+  const [hasProfile, setHasProfile] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   
   const router = useRouter()
@@ -19,41 +19,30 @@ export default function InteractivePage() {
 
   useEffect(() => {
     if (authLoading) return
-
     if (!user) {
       router.push("/login")
       return
     }
-
-    loadProfile()
+    checkProfile()
   }, [user, authLoading])
 
-  const loadProfile = async () => {
+  const checkProfile = async () => {
     if (!user) return
 
     try {
-      const { data: profileData } = await supabase
+      const { data } = await supabase
         .from("interactive_profiles")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle()
 
-      if (!profileData || !profileData.username) {
-        setWorldReady(false)
-        setIsLoading(false)
-        return
+      if (data && data.username) {
+        setProfile(data)
+        setHasProfile(true)
       }
-
-      await supabase
-        .from("interactive_profiles")
-        .update({ is_online: true, last_seen: new Date().toISOString() })
-        .eq("user_id", user.id)
-
-      setProfile(profileData)
-      setWorldReady(true)
-      setIsLoading(false)
     } catch (error) {
-      console.error("[v0] Profile error:", error)
+      console.error("Error:", error)
+    } finally {
       setIsLoading(false)
     }
   }
@@ -66,22 +55,9 @@ export default function InteractivePage() {
     return <LoadingScreen />
   }
 
-  if (!worldReady || !profile) {
-    return (
-      <OnboardingFlow 
-        userId={user.id} 
-        userRole={user.isAdmin ? 'admin' : user.isVipPlus ? 'vip_plus' : user.isVip ? 'vip' : 'member'}
-        onComplete={loadProfile} 
-      />
-    )
+  if (!hasProfile) {
+    return <SimpleOnboarding userId={user.id} onComplete={checkProfile} />
   }
 
-  return (
-    <InteractiveWorld 
-      userId={user.id} 
-      username={profile.username} 
-      userRole={user.isAdmin ? 'admin' : user.isVipPlus ? 'vip_plus' : user.isVip ? 'vip' : 'member'}
-      avatarStyle={profile.avatar_style}
-    />
-  )
+  return <SimpleWorld profile={profile} />
 }
