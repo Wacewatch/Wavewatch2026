@@ -299,7 +299,7 @@ export default function AdminPage() {
   useEffect(() => {
     // Check if user is available and an admin before loading data
     if (user?.isAdmin) {
-      fetchAllData(); // Initial load
+      // fetchAllData(); // Initial load moved to the main useEffect below
       // Load specific data based on active tab (or defer until tab is active)
       if (activeTab === "interactive-world") {
         loadWorldSettings();
@@ -6184,10 +6184,6 @@ export default function AdminPage() {
 
         </Tabs>
       </div>
-    </div>
-  )
-}
-</div>
     </div>
   )
 }
