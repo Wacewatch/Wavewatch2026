@@ -16,8 +16,8 @@ interface WorldProps {
 }
 
 interface InteractiveWorldProps {
-  userProfile: any;
-  initialProfile: any;
+  userId: string
+  userProfile: any
 }
 
 function RealisticAvatar({
@@ -2503,10 +2503,6 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
       <div className="absolute inset-0 flex items-center justify-center text-white/50 text-xs font-medium">
         Déplacer
       </div>
-    </div>
-  )
-}
-
     </div>
   )
 }
