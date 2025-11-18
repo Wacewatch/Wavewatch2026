@@ -4,13 +4,11 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Sky, Html, PerspectiveCamera, Text } from '@react-three/drei'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff, ArrowUp, Frown, ThumbsUp, Heart, Angry, ChevronLeft, Maximize2, MessageCircle, Sparkles, Star, Map, MapPin, Film, Trophy, Gamepad2, Armchair } from 'lucide-react'
+import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff, ArrowUp, Frown, ThumbsUp, Heart, Angry, ChevronLeft, Maximize2, MessageCircle, Sparkles, Star, Map, MapPin, Film, Trophy } from 'lucide-react'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
-import { CinemaBuilding } from './cinema-building' // Assuming CinemaBuilding exists
-import { StadiumBuilding } from './stadium-building'
 
 interface WorldProps {
   userId: string
@@ -298,15 +296,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [playerActions, setPlayerActions] = useState<Record<string, { action: string; timestamp: number }>>({})
   const [quickAction, setQuickAction] = useState<string | null>(null) // State for current quick action animation
 
-  const [showCinemaModal, setShowCinemaModal] = useState(false)
-  const [showStadiumModal, setShowStadiumModal] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
-  const [showMap, setShowMap] = useState(false)
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false) // State for emoji picker
-
   const keysPressed = useRef<Set<string>>(new Set())
   const supabase = createClient()
   const [myRotation, setMyRotation] = useState(0) // Added for rotation
+
+  const [showMenu, setShowMenu] = useState(false)
+  const [showMap, setShowMap] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -369,9 +364,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     const collisionZones = [
       // Cinema building (main)
       { x: 40, z: 0, width: 12, depth: 12 },
-
-      // Stadium building
-      { x: -40, z: 40, width: 18, depth: 18 },
 
       // Arcade building
       { x: -40, z: -40, width: 10, depth: 8 },
@@ -1257,15 +1249,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     loadMyProfile()
   }, [userId])
 
-  // Function to send emoji, used by the picker
-  const sendEmoji = (emoji: string) => {
-    if (!userProfile) {
-      console.log('[v0] Cannot send emoji: userProfile is null')
-      return
-    }
-    handleEmoji(emoji) // Reuse the existing handleEmoji function
-  }
-
   return (
     <div className="fixed inset-0 bg-sky-400">
       <Canvas
@@ -1349,12 +1332,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             </group>
 
             {/* Cinema Building - Main Attraction */}
-            {/* <CinemaBuilding 
-              position={[40, 0, 0]} 
-              onEnter={() => {
-                setShowCinemaModal(true)
-              }} 
-            /> */}
             <group position={[40, 0, 0]}>
               {/* Building */}
               <mesh position={[0, 5, 0]} castShadow>
@@ -1380,33 +1357,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <boxGeometry args={[3, 4, 0.2]} />
                 <meshStandardMaterial color="#3b82f6" />
               </mesh>
-              {/* Interactive hotspot */}
-              <mesh position={[0, 4, 6.1]} rotation={[0, Math.PI, 0]} visible={false}>
-                <planeGeometry args={[3, 4]} />
-                <meshBasicMaterial transparent opacity={0} />
-                <Html 
-                  position={[0, 0, 0]} 
-                  center 
-                  distanceFactor={5} 
-                  zIndexRange={[100, 0]}
-                >
-                  <button 
-                    onClick={() => setShowCinemaModal(true)} 
-                    className="w-full h-full"
-                  >
-                    {/* Invisible button to trigger modal */}
-                  </button>
-                </Html>
-              </mesh>
             </group>
-
-
-            <StadiumBuilding 
-              position={[-40, 0, 40]} 
-              onEnter={() => {
-                setShowStadiumModal(true)
-              }} 
-            />
 
             {/* Arcade Building */}
             <group position={[-40, 0, -40]}>
@@ -1579,77 +1530,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
           </>
-        ) : currentCinemaRoom.theme === 'stadium' ? (
-          // Stadium Room Content
-          <>
-            {/* Ground */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-              <planeGeometry args={[100, 100]} />
-              <meshStandardMaterial color="#228B22" /> {/* Forest green for stadium field */}
-            </mesh>
-
-            {/* Stadium Stands */}
-            <group position={[0, 0, 0]}>
-              {/* Left Stand */}
-              <mesh position={[-15, 5, 0]} castShadow>
-                <boxGeometry args={[5, 10, 36]} />
-                <meshStandardMaterial color="#A9A9A9" /> {/* Dark gray for stands */}
-              </mesh>
-              {/* Right Stand */}
-              <mesh position={[15, 5, 0]} castShadow>
-                <boxGeometry args={[5, 10, 36]} />
-                <meshStandardMaterial color="#A9A9A9" />
-              </mesh>
-              {/* Back Stand */}
-              <mesh position={[0, 5, 18]} castShadow>
-                <boxGeometry args={[30, 10, 5]} />
-                <meshStandardMaterial color="#A9A9A9" />
-              </mesh>
-              {/* Front Stand (closer to screen) */}
-              <mesh position={[0, 5, -18]} castShadow>
-                <boxGeometry args={[30, 10, 5]} />
-                <meshStandardMaterial color="#A9A9A9" />
-              </mesh>
-            </group>
-
-            {/* Scoreboard / Screen */}
-            <group position={[0, 7, -19]}>
-              <mesh castShadow>
-                <boxGeometry args={[28, 10, 0.5]} />
-                <meshStandardMaterial color="#1f2937" />
-              </mesh>
-              <Text
-                position={[0, 0, 0.3]}
-                fontSize={1.5}
-                color="#00FF00" // Green for scoreboard text
-                anchorX="center"
-                anchorY="middle"
-              >
-                LIVE MATCH
-              </Text>
-              <Text
-                position={[0, -2, 0.3]}
-                fontSize={0.8}
-                color="#FFFFFF"
-                anchorX="center"
-                anchorY="middle"
-              >
-                Team A vs Team B
-              </Text>
-            </group>
-
-            {/* Goalposts (simplified) */}
-            <group position={[0, 0, -18]}>
-              <mesh position={[-12, 2, 0]} castShadow>
-                <boxGeometry args={[0.5, 4, 0.5]} />
-                <meshStandardMaterial color="#FFFFFF" />
-              </mesh>
-              <mesh position={[12, 2, 0]} castShadow>
-                <boxGeometry args={[0.5, 4, 0.5]} />
-                <meshStandardMaterial color="#FFFFFF" />
-              </mesh>
-            </group>
-          </>
         ) : (
           <>
             {/* Larger cinema floor */}
@@ -1783,22 +1663,20 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             isMoving={movement.x !== 0 || movement.z !== 0}
           />
 
-          {(!showMenu && !showMap && !showCinemaModal && !showStadiumModal && !showSettings && !showAvatarCustomizer && !showChat && !showCinema) && (
-            <Html position={[myPosition.x, myPosition.y + 1.8, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
-              <div className="flex items-center gap-1 bg-black/70 px-3 py-1 rounded-full backdrop-blur-sm shadow-lg">
-                <span className="text-white text-sm font-bold">{myProfile?.username || 'Vous'}</span>
-                {userProfile?.is_admin && (
-                  <Shield className="w-4 h-4 text-red-500" title="Admin" />
-                )}
-                {userProfile?.is_vip_plus && !userProfile?.is_admin && (
-                  <Crown className="w-4 h-4 text-purple-400" title="VIP+" />
-                )}
-                {userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin && (
-                  <Star className="w-4 h-4 text-yellow-400" title="VIP" />
-                )}
-              </div>
-            </Html>
-          )}
+          <Html position={[myPosition.x, myPosition.y + 1.8, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
+            <div className="flex items-center gap-1 bg-black/70 px-3 py-1 rounded-full backdrop-blur-sm shadow-lg">
+              <span className="text-white text-sm font-bold">{myProfile?.username || 'Vous'}</span>
+              {userProfile?.is_admin && (
+                <Shield className="w-4 h-4 text-red-500" title="Admin" />
+              )}
+              {userProfile?.is_vip_plus && !userProfile?.is_admin && (
+                <Crown className="w-4 h-4 text-purple-400" title="VIP+" />
+              )}
+              {userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin && (
+                <Star className="w-4 h-4 text-yellow-400" title="VIP" />
+              )}
+            </div>
+          </Html>
 
           {currentEmoji && (
             <Html position={[myPosition.x, myPosition.y + 2.5, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
@@ -1818,22 +1696,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </group>
 
         {/* Player avatars with badges */}
-        {!showMenu && !showMap && !showCinemaModal && !showStadiumModal && !showSettings && !showAvatarCustomizer && !showChat && !showCinema && otherPlayers.map((player) => {
-            const playerProfile = player.user_profiles as any
+        {otherPlayers
+          .filter(p => !currentCinemaRoom || p.current_room === `cinema_${currentCinemaRoom.id}`)
+          .map((player) => {
+            const playerProfile = player.user_profiles
+            const avatarStyle = player.avatar_style || { bodyColor: '#ef4444', headColor: '#fbbf24', faceSmiley: '😊' }
             const playerAction = playerActions[player.user_id]
 
             return (
-              <group key={player.user_id} position={[player.position_x || 0, player.position_y || 0.5, player.position_z || 0]}>
-                {/* Avatar */}
-                <RealisticAvatar 
-                  position={[0, isJumping ? 0.8 : 0, 0]} // Relative to group position
-                  avatarStyle={player.avatar_style || { bodyColor: '#ef4444', headColor: '#fbbf24', faceSmiley: '😊' }}
+              <group key={player.user_id}>
+                <RealisticAvatar
+                  position={[player.position_x || 0, 0.5, player.position_z || 0]}
+                  avatarStyle={avatarStyle}
                   isMoving={false} // Disable movement animation for other players for simplicity
                 />
 
-                {/* Player name and badges */}
                 {worldSettings.showStatusBadges && (
-                  <Html position={[0, 2.3, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+                  <Html position={[player.position_x || 0, 2.3, player.position_z || 0]} center depthTest={false} zIndexRange={[100, 0]}>
                     <div className="flex flex-col items-center gap-1">
                       <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
                         <span className="text-white text-xs font-medium">{player.username || playerProfile?.username || 'Joueur'}</span>
@@ -1868,16 +1747,76 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         )}
       </Canvas>
 
-      {!showMenu && !showMap && !showCinemaModal && !showStadiumModal && !showSettings && !showAvatarCustomizer && !showChat && !showCinema && (
-        <div className="fixed top-4 left-4 z-10">
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-4 border-white/40 active:scale-95"
-          >
-            <Menu className="w-8 h-8" />
-          </button>
-        </div>
-      )}
+      {/* Top left controls */}
+      <div className="fixed top-4 left-4 z-50 flex flex-col gap-3">
+        <button
+          onClick={() => setShowMenu(!showMenu)}
+          className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-4 border-white/40 active:scale-95"
+        >
+          <Menu className="w-8 h-8" />
+        </button>
+
+        {showMenu && (
+          <div className="absolute top-0 left-20 mt-0 bg-black/95 backdrop-blur-xl rounded-xl p-4 w-80 space-y-3 shadow-2xl border-2 border-white/30">
+            <div className="text-white mb-3 pb-3 border-b border-white/20">
+              <div className="font-bold text-lg flex items-center gap-2">
+                <User className="w-5 h-5" />
+                {myProfile?.username || 'Joueur'}
+              </div>
+              <div className="flex items-center gap-2 text-sm text-white/60 mt-1">
+                <Users className="w-4 h-4" />
+                <span>{onlineCount} en ligne</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowMap(true)
+                setShowMenu(false)
+              }}
+              className="w-full bg-emerald-500/90 text-white py-3 rounded-lg hover:bg-emerald-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+            >
+              <Map className="w-5 h-5" />
+              Carte
+            </button>
+
+            <button
+              onClick={() => {
+                setShowSettings(true)
+                setShowMenu(false)
+              }}
+              className="w-full bg-blue-500/90 text-white py-3 rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+            >
+              <Settings className="w-5 h-5" />
+              Paramètres
+            </button>
+
+            <button
+              onClick={() => {
+                setShowAvatarCustomizer(true)
+                setShowMenu(false)
+              }}
+              className="w-full bg-purple-500/90 text-white py-3 rounded-lg hover:bg-purple-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+            >
+              <Palette className="w-5 h-5" />
+              Avatar
+            </button>
+
+            {worldSettings.enableChat && (
+              <button
+                onClick={() => {
+                  setShowChat(true)
+                  setShowMenu(false)
+                }}
+                className="w-full bg-pink-500/90 text-white py-3 rounded-lg hover:bg-pink-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Chat Global
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {showMap && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-4">
@@ -1899,7 +1838,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               {/* Cinema - Open */}
               <button
                 onClick={() => {
-                  setShowCinemaModal(true)
+                  setShowCinema(true)
                   setShowMap(false)
                 }}
                 className="w-full bg-gradient-to-r from-red-600 to-red-800 text-white p-4 rounded-xl hover:from-red-700 hover:to-red-900 transition-all flex items-center justify-between group"
@@ -1918,28 +1857,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 </div>
               </button>
 
-              {/* Stadium - Open */}
-              <button
-                onClick={() => {
-                  setShowStadiumModal(true)
-                  setShowMap(false)
-                }}
-                className="w-full bg-gradient-to-r from-green-600 to-green-800 text-white p-4 rounded-xl hover:from-green-700 hover:to-green-900 transition-all flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-white/20 p-2 rounded-lg">
-                    <Trophy className="w-6 h-6" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-bold text-lg">Stade de Foot</div>
-                    <div className="text-xs text-white/80">Regardez les matchs en direct</div>
-                  </div>
-                </div>
-                <div className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                  OUVERT
-                </div>
-              </button>
-
               {/* Arcades - Closed */}
               <button
                 disabled
@@ -1947,7 +1864,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               >
                 <div className="flex items-center gap-3">
                   <div className="bg-white/10 p-2 rounded-lg">
-                    <Gamepad2 className="w-6 h-6" />
+                    <Trophy className="w-6 h-6" />
                   </div>
                   <div className="text-left">
                     <div className="font-bold text-lg">Arcades</div>
@@ -1970,135 +1887,203 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
-      {showStadiumModal && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-lg z-50 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-b from-green-900 to-black rounded-2xl p-6 max-w-2xl w-full border-2 border-green-500/30 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                <Trophy className="w-8 h-8 text-green-400" />
-                Stade de Foot
-              </h2>
-              <button
-                onClick={() => setShowStadiumModal(false)}
-                className="text-white/60 hover:text-white transition-colors"
-              >
-                <X className="w-8 h-8" />
-              </button>
-            </div>
+      {!isFullscreen && (
+        <div className="absolute top-4 right-4 z-10 flex gap-3">
+          {worldSettings.enableChat && !isFullscreen && !showChatInput && (
+            <button
+              onClick={() => setShowChatInput(true)}
+              className="bg-white/20 backdrop-blur-lg text-white p-3 rounded-lg hover:bg-white/30 transition-colors shadow-lg"
+              title="Écrire un message"
+            >
+              <MessageCircle className="w-6 h-6" />
+            </button>
+          )}
 
-            <div className="bg-gradient-to-r from-green-800/50 to-green-900/50 p-6 rounded-xl border-2 border-green-500/30">
-              <div className="flex gap-6">
-                {/* Affiche du match */}
-                <div className="w-48 h-64 bg-green-700 rounded-lg overflow-hidden flex-shrink-0">
-                  <img 
-                    src="/football-stadium-poster.jpg" 
-                    alt="Stade"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+          <button
+            onClick={handleFullscreen}
+            className="bg-white/20 backdrop-blur-lg text-white p-3 rounded-lg hover:bg-white/30 transition-colors shadow-lg"
+            title="Mode Immersif"
+          >
+            <Maximize2 className="w-6 h-6" />
+          </button>
+        </div>
+      )}
 
-                {/* Informations du stade */}
-                <div className="flex-1 space-y-4">
-                  <h3 className="text-2xl font-bold text-white">Grande Tribune</h3>
-                  <p className="text-green-200">Regardez les meilleurs matchs de football en direct sur écran géant!</p>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-green-300">
-                      <Users className="w-4 h-4" />
-                      <span>Capacité: 100 places</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-green-300">
-                      <Trophy className="w-4 h-4" />
-                      <span>Écran géant HD</span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      // Téléporter au stade et entrer directement
-                      setMyPosition({ x: -40, y: 1, z: 40 })
-                      setShowCinema(true)
-                      setCurrentCinemaRoom({
-                        id: 'stadium',
-                        name: 'Grande Tribune',
-                        theme: 'stadium',
-                        capacity: 100,
-                        movie_title: 'Match en Direct',
-                        embed_url: '' // Placeholder for embed URL if needed
-                      })
-                      setShowStadiumModal(false)
-                    }}
-                    className="w-full bg-gradient-to-r from-green-500 to-green-600 text-white py-4 px-6 rounded-lg hover:from-green-600 hover:to-green-700 transition-all font-bold text-lg flex items-center justify-center gap-2"
-                  >
-                    <Play className="w-5 h-5" />
-                    Entrer dans le Stade
-                  </button>
-                </div>
-              </div>
-            </div>
+      {showChatInput && !isFullscreen && (
+        <div className="absolute top-20 right-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 p-4">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-white font-bold text-sm">Envoyer un message</h3>
+            <button
+              onClick={() => setShowChatInput(false)}
+              className="text-white/60 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  sendMessage()
+                  setShowChatInput(false)
+                }
+              }}
+              placeholder="Votre message..."
+              className="flex-1 bg-white/10 text-white px-3 py-2 rounded-lg outline-none text-sm"
+              autoFocus
+            />
+            <button
+              onClick={() => {
+                sendMessage()
+                setShowChatInput(false)
+              }}
+              className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
+            >
+              <Send className="w-4 h-4" />
+            </button>
           </div>
         </div>
       )}
 
-      {/* Cinema Modal */}
-      {showCinemaModal && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-lg z-50 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-b from-purple-900 to-black rounded-2xl p-6 max-w-4xl w-full border-2 border-purple-500/30 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
+      {isFullscreen && (
+        <button
+          onClick={handleFullscreen}
+          className="absolute top-4 right-4 z-50 bg-red-500/80 backdrop-blur-lg text-white p-3 rounded-full hover:bg-red-600/80 transition-colors shadow-lg"
+          title="Quitter le plein écran"
+        >
+          <Minimize className="w-6 h-6" />
+        </button>
+      )}
+
+      {mySeat !== null && currentCinemaRoom?.movie_url && !showMovieFullscreen && (
+        <button
+          onClick={() => setShowMovieFullscreen(true)}
+          className="absolute bottom-24 right-4 z-10 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 shadow-lg flex items-center gap-2"
+        >
+          <Play className="w-5 h-5" />
+          Voir le Film en Plein Écran
+        </button>
+      )}
+
+      {showMovieFullscreen && currentCinemaRoom?.movie_url && (
+        <div className="absolute inset-0 bg-black z-40 flex flex-col">
+          <div className="bg-black/90 backdrop-blur-lg px-4 py-3 flex justify-between items-center">
+            <h3 className="text-white font-bold">{currentCinemaRoom.movie_title}</h3>
+            <button
+              onClick={() => setShowMovieFullscreen(false)}
+              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center gap-2"
+            >
+              <EyeOff className="w-4 h-4" />
+              Quitter
+            </button>
+          </div>
+          <div className="flex-1">
+            <iframe
+              src={currentCinemaRoom.movie_url}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        </div>
+      )}
+
+      {showCinema && (
+        <div className="fixed inset-0 bg-black/98 backdrop-blur-3xl flex items-center justify-center z-50 pointer-events-auto">
+          <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl shadow-2xl max-w-6xl w-full mx-4 shadow-2xl border border-white/20 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 flex justify-between items-center">
               <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                <Film className="w-8 h-8 text-purple-400" />
-                Cinéma
+                🎬 Salles de Cinéma
               </h2>
               <button
-                onClick={() => setShowCinemaModal(false)}
-                className="text-white/60 hover:text-white transition-colors"
+                onClick={() => setShowCinema(false)}
+                className="text-white/80 hover:text-white transition-colors bg-white/10 rounded-full p-2 pointer-events-auto"
               >
-                <X className="w-8 h-8" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {cinemaRooms.filter(room => room.is_open).map((room) => (
-                <div key={room.id} className="bg-gradient-to-br from-purple-800/50 to-purple-900/50 p-4 rounded-xl border-2 border-purple-500/30 hover:border-purple-400/50 transition-all">
-                  <div className="flex gap-4">
-                    <div className="w-24 h-32 bg-purple-700 rounded-lg overflow-hidden flex-shrink-0">
-                      {room.movie_poster ? (
-                        <img 
-                          src={room.movie_poster || "/placeholder.svg"} 
-                          alt={room.movie_title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Film className="w-8 h-8 text-purple-300" />
+            <div className="p-6 overflow-y-auto max-h-[70vh] bg-black">
+              {cinemaRooms.length === 0 ? (
+                <div className="text-center text-white/60 py-12">
+                  <p className="text-xl">Aucune salle disponible pour le moment</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {cinemaRooms.map((room) => (
+                    <div
+                      key={room.id}
+                      className="bg-gradient-to-br from-indigo-900/70 to-purple-900/70 rounded-xl overflow-hidden border-2 border-white/20 hover:border-blue-500/70 transition-all shadow-lg"
+                    >
+                      {room.poster_url && (
+                        <div className="relative w-full h-64 bg-gray-900">
+                          <img
+                            src={room.poster_url || "/placeholder.svg?height=256&width=400&query=cinema movie poster"}
+                            alt={room.movie_title || 'Affiche du film'}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/abstract-movie-poster.png'
+                            }}
+                          />
                         </div>
                       )}
-                    </div>
 
-                    <div className="flex-1 space-y-2">
-                      <h3 className="text-xl font-bold text-white">{room.name}</h3>
-                      <p className="text-purple-200 text-sm">{room.movie_title || 'Aucun film'}</p>
-                      <div className="flex items-center gap-2 text-sm text-purple-300">
-                        <Users className="w-4 h-4" />
-                        <span>Capacité: {room.capacity}</span>
+                      <div className="p-6">
+                        <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                          Salle {room.room_number} - {room.theme}
+                        </h3>
+                        <p className="text-white/80 font-medium mb-1 text-lg">{room.movie_title || 'Film sans titre'}</p>
+                        <p className="text-white/60 text-sm mb-4">Capacité: {room.capacity} places</p>
+
+                        {room.showtime && (
+                          <p className="text-blue-300 text-sm mb-4">
+                            🕐 Séance: {new Date(room.showtime).toLocaleString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        )}
+
+                        <div className="mb-4">
+                          {room.access_level === 'vip' && (
+                            <span className="inline-block bg-yellow-500/20 text-yellow-300 px-3 py-1 rounded-full text-sm font-medium">
+                              👑 VIP
+                            </span>
+                          )}
+                          {room.access_level === 'vip_plus' && (
+                            <span className="inline-block bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-medium">
+                              💎 VIP+
+                            </span>
+                          )}
+                          {room.access_level === 'admin' && (
+                            <span className="inline-block bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-sm font-medium">
+                              🛡️ Admin
+                            </span>
+                          )}
+                          {room.access_level === 'public' && (
+                            <span className="inline-block bg-green-500/20 text-green-300 px-3 py-1 rounded-full text-sm font-medium">
+                              🌍 Public
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => handleEnterRoom(room)}
+                          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
+                        >
+                          Entrer dans la Salle
+                        </button>
                       </div>
-                      
-                      <button
-                        onClick={() => {
-                          setMyPosition({ x: 40, y: 1, z: 0 })
-                          setShowCinema(true)
-                          setCurrentCinemaRoom(room)
-                          setShowCinemaModal(false)
-                        }}
-                        className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white py-2 px-4 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all font-medium flex items-center justify-center gap-2"
-                      >
-                        <Play className="w-4 h-4" />
-                        Entrer dans la Salle
-                      </button>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
@@ -2344,90 +2329,80 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       {worldSettings.enableEmojis && (
         <button
-          onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-          className="fixed bottom-6 right-6 w-20 h-20 bg-orange-500 text-white rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
+          onClick={() => setShowQuickActions(!showQuickActions)}
+          className="fixed bottom-6 right-6 w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
         >
-          <Smile className="w-10 h-10" />
+          <Smile className="w-10 h-10 text-white" />
         </button>
       )}
 
-      {showEmojiPicker && (
-        <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-2 bg-black/90 backdrop-blur-lg p-4 rounded-2xl border-2 border-white/30 shadow-2xl min-w-[280px]">
-          <div className="text-white font-bold mb-3 text-center border-b border-white/20 pb-2">Actions</div>
-          
-          {showCinema && (
-            <div className="space-y-2 mb-3">
+      {showQuickActions && (
+        <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-2 bg-black/90 backdrop-blur-xl p-4 rounded-2xl border-2 border-white/30 shadow-2xl">
+          <div className="text-white font-bold text-sm mb-2 text-center border-b border-white/20 pb-2">Actions Rapides</div>
+
+          {/* Cinema actions - only show when in cinema room */}
+          {currentCinemaRoom && (
+            <>
+              <div className="text-white/60 text-xs text-center mt-1">Actions Cinéma</div>
               <button
-                onClick={async () => {
-                  // S'asseoir logic
+                onClick={() => {
                   if (mySeat) {
-                    await handleSitInSeat(mySeat)
+                    handleSitInSeat(mySeat)
                   } else {
-                    await handleSitInSeat()
+                    handleSitInSeat()
                   }
-                  setShowEmojiPicker(false)
+                  setShowQuickActions(false)
                 }}
                 disabled={!mySeat && cinemaSeats.every(s => s.user_id)}
-                className={`w-full py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 font-medium ${
+                className={`text-white p-3 rounded-xl shadow-lg transition-all flex items-center gap-2 font-medium ${
                   mySeat
                     ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
                     : cinemaSeats.every(s => s.user_id)
                     ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700'
+                    : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
                 }`}
               >
-                {mySeat ? (
-                  <>
-                    <LogOut className="w-4 h-4" />
-                    Se Lever
-                  </>
-                ) : cinemaSeats.every(s => s.user_id) ? (
-                  <>
-                    <Lock className="w-4 h-4" />
-                    Complet
-                  </>
-                ) : (
-                  <>
-                    <Armchair className="w-4 h-4" />
-                    S'asseoir
-                  </>
-                )}
+                {mySeat ? '🚶 Se Lever' : cinemaSeats.every(s => s.user_id) ? '🔒 Complet' : '💺 S\'asseoir'}
               </button>
 
               <button
-                onClick={() => {
-                  handleLeaveRoom()
-                  setShowEmojiPicker(false)
-                }}
-                className="w-full bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors flex items-center justify-center gap-2 font-medium"
+                onClick={() => { handleLeaveRoom(); setShowQuickActions(false); }}
+                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white p-3 rounded-xl shadow-lg transition-all flex items-center gap-2 font-medium"
               >
-                <LogOut className="w-4 h-4" />
-                Sortir
+                <LogOut className="w-5 h-5" />
+                Sortir du Cinéma
               </button>
-            </div>
+
+              <div className="border-t border-white/20 my-2"></div>
+            </>
           )}
-          
-          <div className="text-white font-bold mb-2 text-sm text-center">Émojis</div>
-          <div className="grid grid-cols-4 gap-2">
-            {['😊', '😂', '😍', '😎', '🔥', '❤️', '👍', '🎉'].map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => {
-                  sendEmoji(emoji)
-                  setShowEmojiPicker(false)
-                }}
-                className="text-3xl hover:scale-125 transition-transform p-2 hover:bg-white/10 rounded-lg"
-              >
-                {emoji}
-              </button>
-            ))}
+
+          {/* Jump button */}
+          {worldSettings.enableJumping && (
+            <button
+              onClick={() => { handleJump(); setShowQuickActions(false); }}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 rounded-xl shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all flex items-center gap-2 font-medium"
+            >
+              <ArrowUp className="w-5 h-5" />
+              Sauter
+            </button>
+          )}
+
+          <div className="text-white/60 text-xs text-center mt-1">Émojis</div>
+          <div className="grid grid-cols-3 gap-2">
+            <button onClick={() => handleEmoji('😂')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">😂</button>
+            <button onClick={() => handleEmoji('👍')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">👍</button>
+            <button onClick={() => handleEmoji('❤️')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">❤️</button>
+            <button onClick={() => handleEmoji('😭')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">😭</button>
+            <button onClick={() => handleEmoji('🎉')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">🎉</button>
+            <button onClick={() => handleEmoji('🔥')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">🔥</button>
           </div>
 
-          <div className="text-white font-bold mb-2 text-sm text-center mt-3">Émotes</div>
+          <div className="text-white/60 text-xs text-center mt-2">Émotes</div>
           <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => { sendEmoji('👋'); setShowEmojiPicker(false) }} className="text-3xl hover:scale-125 transition-transform p-2 hover:bg-white/10 rounded-lg" title="Saluer">👋</button>
-            <button onClick={() => { sendEmoji('💃'); setShowEmojiPicker(false) }} className="text-3xl hover:scale-125 transition-transform p-2 hover:bg-white/10 rounded-lg" title="Danser">💃</button>
-            <button onClick={() => { sendEmoji('🤝'); setShowEmojiPicker(false) }} className="text-3xl hover:scale-125 transition-transform p-2 hover:bg-white/10 rounded-lg" title="Serrer la main">🤝</button>
+            <button onClick={() => handleEmoji('👋')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Saluer">👋</button>
+            <button onClick={() => handleEmoji('💃')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Danser">💃</button>
+            <button onClick={() => handleEmoji('🤝')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Serrer la main">🤝</button>
           </div>
         </div>
       )}
