@@ -289,7 +289,6 @@ export default function AdminPage() {
 
   // Added state for Cinema Rooms Management
   const [cinemaRooms, setCinemaRooms] = useState<CinemaRoom[]>([]);
-  const [stadiumRooms, setStadiumRooms] = useState<any[]>([]);
 
   // Added state for Online Users count
   const [onlineUsersCount, setOnlineUsersCount] = useState(0);
@@ -305,7 +304,6 @@ export default function AdminPage() {
       if (activeTab === "interactive-world") {
         loadWorldSettings();
         loadCinemaRooms();
-        loadStadiumRooms();
         loadAvatarOptions();
         loadOnlineUsers();
       }
@@ -921,21 +919,21 @@ export default function AdminPage() {
         .from("interactive_world_settings")
         .select("*")
         .eq("setting_key", "world_config")
-        .maybeSingle()
+        .maybeSingle() // Use maybeSingle to avoid error if no row exists
 
-      if (error && error.code !== 'PGRST116') {
-        console.error("[v0] Error loading world settings:", error)
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "No Row Found" error, which is ok
         throw error
       }
 
       if (data && data.setting_value) {
-        setWorldSettings(data.setting_value as any)
+        setWorldSettings(data.setting_value as any) // Cast to any as setting_value is likely JSONB
       }
     } catch (error) {
       console.error("[v0] Error loading world settings:", error)
     }
   }
 
+  // ADDED: Function to handle saving World settings
   const handleSaveWorldSettings = async () => {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -945,24 +943,13 @@ export default function AdminPage() {
     try {
       console.log('[v0] Saving world settings:', worldSettings)
       
-      // Ensure all required fields are present
-      const settingsToSave = {
-        maxCapacity: worldSettings.maxCapacity || 100,
-        worldMode: worldSettings.worldMode || 'day',
-        voiceChatEnabled: worldSettings.voiceChatEnabled ?? true,
-        playerInteractionsEnabled: worldSettings.playerInteractionsEnabled ?? true,
-        showStatusBadges: worldSettings.showStatusBadges ?? true,
-        enableChat: worldSettings.enableChat ?? true,
-        enableEmojis: worldSettings.enableEmojis ?? true,
-        enableJumping: worldSettings.enableJumping ?? true,
-      }
-      
       const { error } = await supabase
         .from("interactive_world_settings")
         .upsert({
           setting_key: "world_config",
-          setting_value: settingsToSave,
+          setting_value: worldSettings,
           updated_at: new Date().toISOString(),
+          updated_by: user?.id,
         }, {
           onConflict: "setting_key"
         })
@@ -971,7 +958,7 @@ export default function AdminPage() {
         console.error("[v0] Error saving world settings:", error)
         toast({
           title: "Erreur",
-          description: `Impossible de sauvegarder les paramètres: ${error.message}`,
+          description: "Impossible de sauvegarder les paramètres du monde interactif",
           variant: "destructive",
         })
         return
@@ -982,70 +969,11 @@ export default function AdminPage() {
         title: "Paramètres sauvegardés",
         description: "Les paramètres du monde interactif ont été mis à jour.",
       })
-    } catch (error: any) {
+    } catch (error) {
       console.error("[v0] Error saving world settings:", error)
       toast({
         title: "Erreur",
-        description: `Une erreur est survenue: ${error.message}`,
-        variant: "destructive",
-      })
-    }
-  }
-
-  const loadStadiumRooms = async () => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
-    try {
-      const { data, error } = await supabase
-        .from("interactive_stadium_rooms")
-        .select("*")
-        .order("room_number", { ascending: true })
-        
-      if (error && error.code !== 'PGRST116') throw error;
-      setStadiumRooms(data || []);
-    } catch (error) {
-      console.error("Error loading stadium rooms:", error);
-    }
-  };
-
-  const handleCreateStadiumRoom = async () => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
-    try {
-      const maxRoomNumber = stadiumRooms.length > 0 
-        ? Math.max(...stadiumRooms.map(r => r.room_number)) 
-        : 0
-
-      const { error } = await supabase
-        .from("interactive_stadium_rooms")
-        .insert({
-          room_number: maxRoomNumber + 1,
-          name: `Tribune ${maxRoomNumber + 1}`,
-          capacity: 100,
-          theme: 'stadium',
-          match_title: '',
-          access_level: 'public',
-          is_open: true,
-          embed_url: '',
-        })
-
-      if (error) throw error
-
-      toast({
-        title: "Tribune créée",
-        description: "Une nouvelle tribune de stade a été créée.",
-      })
-
-      loadStadiumRooms()
-    } catch (error) {
-      console.error("Error creating stadium room:", error)
-      toast({
-        title: "Erreur",
-        description: "Impossible de créer la tribune.",
+        description: "Une erreur est survenue lors de la sauvegarde des paramètres du monde interactif",
         variant: "destructive",
       })
     }
@@ -2665,7 +2593,6 @@ export default function AdminPage() {
       if (activeTab === "interactive-world") {
         await loadWorldSettings();
         await loadCinemaRooms();
-        loadStadiumRooms();
         await loadAvatarOptions();
         await loadOnlineUsers();
       }
@@ -5909,6 +5836,7 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
+          {/* Interactive World Tab Content */}
           <TabsContent value="interactive-world">
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
@@ -6200,7 +6128,7 @@ export default function AdminPage() {
                           </div>
                           
                           <div className="space-y-2 flex items-center">
-                            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                            <label className="flex items-center gap-2 text-sm text-gray-300">
                               <input 
                                 type="checkbox" 
                                 className="rounded" 
@@ -6233,180 +6161,6 @@ export default function AdminPage() {
 
                 <Separator className="bg-gray-700" />
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <Trophy className="w-5 h-5" />
-                      Gestion des Tribunes du Stade
-                    </h3>
-                    <Button 
-                      onClick={handleCreateStadiumRoom}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Créer une Tribune
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {stadiumRooms.map((room) => (
-                      <div key={room.id} className="p-4 bg-gray-700 rounded-lg border border-gray-600">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Numéro de Tribune</label>
-                            <Input
-                              type="number"
-                              value={room.room_number}
-                              onChange={(e) => {
-                                setStadiumRooms(stadiumRooms.map(r => 
-                                  r.id === room.id ? { ...r, room_number: parseInt(e.target.value) } : r
-                                ))
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Nom de la Tribune</label>
-                            <Input
-                              value={room.name}
-                              onChange={(e) => {
-                                setStadiumRooms(stadiumRooms.map(r => 
-                                  r.id === room.id ? { ...r, name: e.target.value } : r
-                                ))
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Capacité</label>
-                            <Input
-                              type="number"
-                              value={room.capacity}
-                              onChange={(e) => {
-                                setStadiumRooms(stadiumRooms.map(r => 
-                                  r.id === room.id ? { ...r, capacity: parseInt(e.target.value) } : r
-                                ))
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Titre du Match</label>
-                            <Input
-                              value={room.match_title || ''}
-                              onChange={(e) => {
-                                setStadiumRooms(stadiumRooms.map(r => 
-                                  r.id === room.id ? { ...r, match_title: e.target.value } : r
-                                ))
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">URL Affiche</label>
-                            <Input
-                              value={room.poster_url || ''}
-                              onChange={(e) => {
-                                setStadiumRooms(stadiumRooms.map(r => 
-                                  r.id === room.id ? { ...r, poster_url: e.target.value } : r
-                                ))
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
-                            <Input
-                              value={room.embed_url || ''}
-                              onChange={(e) => {
-                                setStadiumRooms(stadiumRooms.map(r => 
-                                  r.id === room.id ? { ...r, embed_url: e.target.value } : r
-                                ))
-                              }}
-                              placeholder="https://www.youtube.com/embed/..."
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2 flex items-center">
-                            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
-                              <input 
-                                type="checkbox" 
-                                checked={room.is_open}
-                                onChange={(e) => {
-                                  setStadiumRooms(stadiumRooms.map(r => 
-                                    r.id === room.id ? { ...r, is_open: e.target.checked } : r
-                                  ))
-                                }}
-                                className="rounded"
-                              />
-                              Tribune Ouverte
-                            </label>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2 mt-4">
-                          <Button
-                            onClick={async () => {
-                              const supabase = createBrowserClient(
-                                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-                              )
-                              const { error } = await supabase
-                                .from("interactive_stadium_rooms")
-                                .update(room)
-                                .eq("id", room.id)
-                              
-                              if (!error) {
-                                toast({ title: "Tribune mise à jour" })
-                              } else {
-                                toast({ title: "Erreur", description: error.message, variant: "destructive" })
-                              }
-                            }}
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            <Save className="w-4 h-4 mr-2" />
-                            Sauvegarder
-                          </Button>
-
-                          <Button
-                            onClick={async () => {
-                              if (!confirm("Supprimer cette tribune?")) return
-                              const supabase = createBrowserClient(
-                                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-                              )
-                              const { error } = await supabase
-                                .from("interactive_stadium_rooms")
-                                .delete()
-                                .eq("id", room.id)
-                              
-                              if (!error) {
-                                toast({ title: "Tribune supprimée" })
-                                loadStadiumRooms()
-                              } else {
-                                toast({ title: "Erreur", description: error.message, variant: "destructive" })
-                              }
-                            }}
-                            size="sm"
-                            variant="destructive"
-                          >
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Supprimer
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Online Users Monitor */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2">
@@ -6430,13 +6184,6 @@ export default function AdminPage() {
               </CardContent>
             </Card>
           </TabsContent>
-
-        </Tabs>
-      </div>
-    </div>
-  )
-}
-Content>
 
         </Tabs>
       </div>
