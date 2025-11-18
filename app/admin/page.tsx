@@ -43,6 +43,24 @@ interface CinemaRoom {
   updated_at: string
 }
 
+interface StadiumRoom {
+  id: string
+  room_number: number
+  name: string
+  capacity: number
+  theme: string
+  match_title: string
+  match_poster: string | null
+  schedule_start: string | null
+  schedule_end: string | null
+  access_level: string
+  is_open: boolean
+  embed_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+
 interface AvatarOption {
   id: string
   category: string
@@ -289,6 +307,7 @@ export default function AdminPage() {
 
   // Added state for Cinema Rooms Management
   const [cinemaRooms, setCinemaRooms] = useState<CinemaRoom[]>([]);
+  const [stadiumRooms, setStadiumRooms] = useState<StadiumRoom[]>([]);
 
   // Added state for Online Users count
   const [onlineUsersCount, setOnlineUsersCount] = useState(0);
@@ -304,6 +323,7 @@ export default function AdminPage() {
       if (activeTab === "interactive-world") {
         loadWorldSettings();
         loadCinemaRooms();
+        loadStadiumRooms();
         loadAvatarOptions();
         loadOnlineUsers();
       }
@@ -482,49 +502,81 @@ export default function AdminPage() {
     }
   }
 
-  const loadAllData = async () => {
+  // Renamed loadAllData to fetchAllData to include changelogs
+  const fetchAllData = async () => {
+    setLoading(true)
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      console.log("🔄 Chargement de toutes les données...")
-      const results = await Promise.allSettled([
-        loadRealTVChannels(supabase),
-        loadRealRadioStations(supabase),
-        loadRealRetrogamingSources(supabase),
-        loadRealUsers(supabase),
-        loadRequests(supabase),
-        loadMusicContent(),
-        loadSoftware(),
-        loadGames(),
-        loadEbooks(),
+      // Fetch all necessary data
+      const [
+        tvData,
+        radioData,
+        retroData,
+        usersData,
+        changelogsData,
+        requestsData, // Added requestsData
+        musicData, // Added musicData
+        softwareData, // Added softwareData
+        gamesData, // Added gamesData
+        ebooksData, // Added ebooksData
+      ] = await Promise.all([
+        supabase.from("tv_channels").select("*").order("name"),
+        supabase.from("radio_stations").select("*").order("name"),
+        supabase.from("retrogaming_sources").select("*").order("name"),
+        supabase.from("user_profiles").select("*", { count: "exact" }),
+        supabase.from("changelogs").select("*").order("release_date", { ascending: false }),
+        supabase.from("requests").select(`*, user_profiles(username, email)`).order("created_at", { ascending: false }), // Added request loading
+        supabase.from("music_content").select("*").order("created_at", { ascending: false }), // Added music content loading
+        supabase.from("software").select("*").order("created_at", { ascending: false }), // Added software loading
+        supabase.from("games").select("*").order("created_at", { ascending: false }), // Added games loading
+        supabase.from("ebooks").select("*").order("created_at", { ascending: false }), // Added ebooks loading
       ])
 
-      results.forEach((result, index) => {
-        const names = [
-          "TV Channels",
-          "Radio Stations",
-          "Retrogaming Sources",
-          "Users",
-          "Requests",
-          "Music Content",
-          "Software",
-          "Games",
-          "Ebooks",
-        ]
-        if (result.status === "rejected") {
-          console.error(`❌ Erreur lors du chargement de ${names[index]}:`, result.reason)
-        } else {
-          console.log(`✅ ${names[index]} chargé avec succès`)
-        }
-      })
+      // Update states
+      if (tvData.data) setTvChannels(tvData.data)
+      if (radioData.data) setRadioStations(radioData.data)
+      if (retroData.data) setRetrogamingSources(retroData.data)
+      if (usersData.data) setUsers(usersData.data)
+      if (changelogsData.data) setChangelogs(changelogsData.data)
+      if (requestsData.data) setRequests(requestsData.data.map((req) => ({ // Map requests to include username
+        ...req,
+        username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
+      })))
+      if (musicData.data) setMusicContent(musicData.data)
+      if (softwareData.data) setSoftware(softwareData.data)
+      if (gamesData.data) setGames(gamesData.data)
+      if (ebooksData.data) setEbooks(ebooksData.data)
+
+      // Load statistics, activities, site settings, and interactive world settings after fetching all basic data
+      await loadStatistics()
+      await loadRecentActivities()
+      await loadSiteSettings()
+
+      // Load interactive world related data only if the tab is active or on initial load if it's the default
+      if (activeTab === "interactive-world") {
+        await loadWorldSettings();
+        await loadCinemaRooms();
+        loadStadiumRooms(); // Load stadium rooms here as well
+        await loadAvatarOptions();
+        await loadOnlineUsers();
+      }
+
     } catch (error) {
-      console.error("❌ Erreur lors du chargement de toutes les données:", error)
-      throw error
+      console.error("❌ Erreur lors du chargement des données admin:", error)
+      toast({
+        title: "Erreur de chargement",
+        description: "Impossible de charger les données d'administration",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
     }
   }
 
+  // Renamed loadRealTVChannels, loadRealRadioStations, loadRealRetrogamingSources to use supabse client directly for consistency
   const loadRealTVChannels = async (supabase) => {
     try {
       console.log("🔄 Chargement des chaînes TV...")
@@ -919,21 +971,21 @@ export default function AdminPage() {
         .from("interactive_world_settings")
         .select("*")
         .eq("setting_key", "world_config")
-        .maybeSingle() // Use maybeSingle to avoid error if no row exists
+        .maybeSingle()
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "No Row Found" error, which is ok
+      if (error && error.code !== 'PGRST116') {
+        console.error("[v0] Error loading world settings:", error)
         throw error
       }
 
       if (data && data.setting_value) {
-        setWorldSettings(data.setting_value as any) // Cast to any as setting_value is likely JSONB
+        setWorldSettings(data.setting_value as any)
       }
     } catch (error) {
       console.error("[v0] Error loading world settings:", error)
     }
   }
 
-  // ADDED: Function to handle saving World settings
   const handleSaveWorldSettings = async () => {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -943,13 +995,24 @@ export default function AdminPage() {
     try {
       console.log('[v0] Saving world settings:', worldSettings)
       
+      // Ensure all required fields are present
+      const settingsToSave = {
+        maxCapacity: worldSettings.maxCapacity || 100,
+        worldMode: worldSettings.worldMode || 'day',
+        voiceChatEnabled: worldSettings.voiceChatEnabled ?? true,
+        playerInteractionsEnabled: worldSettings.playerInteractionsEnabled ?? true,
+        showStatusBadges: worldSettings.showStatusBadges ?? true,
+        enableChat: worldSettings.enableChat ?? true,
+        enableEmojis: worldSettings.enableEmojis ?? true,
+        enableJumping: worldSettings.enableJumping ?? true,
+      }
+      
       const { error } = await supabase
         .from("interactive_world_settings")
         .upsert({
           setting_key: "world_config",
-          setting_value: worldSettings,
+          setting_value: settingsToSave,
           updated_at: new Date().toISOString(),
-          updated_by: user?.id,
         }, {
           onConflict: "setting_key"
         })
@@ -958,7 +1021,7 @@ export default function AdminPage() {
         console.error("[v0] Error saving world settings:", error)
         toast({
           title: "Erreur",
-          description: "Impossible de sauvegarder les paramètres du monde interactif",
+          description: `Impossible de sauvegarder les paramètres: ${error.message}`,
           variant: "destructive",
         })
         return
@@ -969,11 +1032,115 @@ export default function AdminPage() {
         title: "Paramètres sauvegardés",
         description: "Les paramètres du monde interactif ont été mis à jour.",
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error("[v0] Error saving world settings:", error)
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la sauvegarde des paramètres du monde interactif",
+        description: `Une erreur est survenue: ${error.message}`,
+        variant: "destructive",
+      })
+    }
+  }
+
+  const loadStadiumRooms = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    try {
+      const { data, error } = await supabase
+        .from("interactive_stadium_rooms")
+        .select("*")
+        .order("room_number", { ascending: true })
+        
+      if (error) throw error;
+      setStadiumRooms(data || []);
+    } catch (error) {
+      console.error("Error loading stadium rooms:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les stades.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateStadiumRoom = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    try {
+      const maxRoomNumber = stadiumRooms.length > 0 
+        ? Math.max(...stadiumRooms.map(r => r.room_number)) 
+        : 0
+
+      const { error } = await supabase
+        .from("interactive_stadium_rooms")
+        .insert({
+          room_number: maxRoomNumber + 1,
+          name: `Stade ${maxRoomNumber + 1}`,
+          capacity: 100,
+          theme: 'default',
+          match_title: '',
+          access_level: 'public',
+          is_open: true,
+          embed_url: '',
+        })
+
+      if (error) throw error
+
+      toast({
+        title: "Stade créé",
+        description: "Un nouveau stade a été créé.",
+      })
+      loadStadiumRooms()
+    } catch (error) {
+      console.error("Error creating stadium room:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer le stade.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleUpdateStadiumRoom = async (room: StadiumRoom) => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    try {
+      const { error } = await supabase
+        .from("interactive_stadium_rooms")
+        .update({
+          room_number: room.room_number,
+          name: room.name,
+          capacity: room.capacity,
+          theme: room.theme,
+          match_title: room.match_title,
+          match_poster: room.match_poster,
+          embed_url: room.embed_url,
+          schedule_start: room.schedule_start,
+          schedule_end: room.schedule_end,
+          access_level: room.access_level,
+          is_open: room.is_open,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", room.id)
+
+      if (error) throw error
+
+      toast({
+        title: "Stade mis à jour",
+        description: `Le stade '${room.name}' a été mis à jour avec succès.`,
+      })
+      loadStadiumRooms()
+    } catch (error) {
+      console.error("Error updating stadium room:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour le stade.",
         variant: "destructive",
       })
     }
@@ -2535,134 +2702,6 @@ export default function AdminPage() {
     }
   }
 
-  // Modified useEffect to call fetchAllData
-  // Replaced loadAllData with fetchAllData to include changelogs
-  const fetchAllData = async () => {
-    setLoading(true)
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
-    try {
-      // Fetch all necessary data
-      const [
-        tvData,
-        radioData,
-        retroData,
-        usersData,
-        changelogsData,
-        requestsData, // Added requestsData
-        musicData, // Added musicData
-        softwareData, // Added softwareData
-        gamesData, // Added gamesData
-        ebooksData, // Added ebooksData
-      ] = await Promise.all([
-        supabase.from("tv_channels").select("*").order("name"),
-        supabase.from("radio_stations").select("*").order("name"),
-        supabase.from("retrogaming_sources").select("*").order("name"),
-        supabase.from("user_profiles").select("*", { count: "exact" }),
-        supabase.from("changelogs").select("*").order("release_date", { ascending: false }),
-        supabase.from("requests").select(`*, user_profiles(username, email)`).order("created_at", { ascending: false }), // Added request loading
-        supabase.from("music_content").select("*").order("created_at", { ascending: false }), // Added music content loading
-        supabase.from("software").select("*").order("created_at", { ascending: false }), // Added software loading
-        supabase.from("games").select("*").order("created_at", { ascending: false }), // Added games loading
-        supabase.from("ebooks").select("*").order("created_at", { ascending: false }), // Added ebooks loading
-      ])
-
-      // Update states
-      if (tvData.data) setTvChannels(tvData.data)
-      if (radioData.data) setRadioStations(radioData.data)
-      if (retroData.data) setRetrogamingSources(retroData.data)
-      if (usersData.data) setUsers(usersData.data)
-      if (changelogsData.data) setChangelogs(changelogsData.data)
-      if (requestsData.data) setRequests(requestsData.data.map((req) => ({ // Map requests to include username
-        ...req,
-        username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
-      })))
-      if (musicData.data) setMusicContent(musicData.data)
-      if (softwareData.data) setSoftware(softwareData.data)
-      if (gamesData.data) setGames(gamesData.data)
-      if (ebooksData.data) setEbooks(ebooksData.data)
-
-      // Load statistics, activities, site settings, and interactive world settings after fetching all basic data
-      await loadStatistics()
-      await loadRecentActivities()
-      await loadSiteSettings()
-
-      // Load interactive world related data only if the tab is active or on initial load if it's the default
-      if (activeTab === "interactive-world") {
-        await loadWorldSettings();
-        await loadCinemaRooms();
-        await loadAvatarOptions();
-        await loadOnlineUsers();
-      }
-
-    } catch (error) {
-      console.error("❌ Erreur lors du chargement des données admin:", error)
-      toast({
-        title: "Erreur de chargement",
-        description: "Impossible de charger les données d'administration",
-        variant: "destructive",
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Add edit log handler
-  const handleEditLog = (log: any) => {
-    setEditingLog({
-      id: log.id,
-      version: log.version,
-      release_date: log.release_date,
-      title: log.title,
-      description: log.description,
-    })
-    setActiveModal("edit-log") // Use a distinct modal name for editing logs
-  }
-
-  // Add update log handler
-  const handleUpdateLog = async () => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
-    if (!editingLog) return // Should not happen if called correctly
-
-    try {
-      const { error } = await supabase
-        .from("changelogs")
-        .update({
-          version: editingLog.version,
-          release_date: editingLog.release_date,
-          title: editingLog.title,
-          description: editingLog.description,
-        })
-        .eq("id", editingLog.id)
-
-      if (error) throw error
-
-      await fetchAllData() // Reload changelogs and other data
-      setActiveModal(null)
-      setEditingLog(null) // Clear editing state
-      toast({
-        title: "Log modifié",
-        description: "Le log a été mis à jour avec succès",
-      })
-    } catch (error) {
-      console.error("Error updating log:", error)
-      toast({
-        title: "Erreur",
-        description: "Impossible de modifier le log.",
-        variant: "destructive",
-      })
-    }
-  }
-
-  // Add loadChangelogs function to be called by fetchAllData
-  // This function is now integrated within fetchAllData for efficiency
-  // const loadChangelogs = async () => { ... }
-
   // Use fetchAllData for the initial load if user is admin
   useEffect(() => {
     if (user?.isAdmin) {
@@ -2708,7 +2747,6 @@ export default function AdminPage() {
   }
 
 
-  // Fetch total user count for the broadcast message
   // Removed duplicated useEffect, logic moved to fetchAllData or handled by existing state
   // useEffect(() => {
   //   const fetchUserCount = async () => {
@@ -5836,7 +5874,6 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Interactive World Tab Content */}
           <TabsContent value="interactive-world">
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
@@ -6128,7 +6165,7 @@ export default function AdminPage() {
                           </div>
                           
                           <div className="space-y-2 flex items-center">
-                            <label className="flex items-center gap-2 text-sm text-gray-300">
+                            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
                               <input 
                                 type="checkbox" 
                                 className="rounded" 
@@ -6161,24 +6198,200 @@ export default function AdminPage() {
 
                 <Separator className="bg-gray-700" />
 
-                {/* Online Users Monitor */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    Utilisateurs en Ligne
-                  </h3>
-                  <div className="bg-gray-900 p-4 rounded-lg">
-                    <p className="text-4xl font-bold text-green-400">{onlineUsersCount}</p>
-                    <p className="text-sm text-gray-400">utilisateurs connectés actuellement</p>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Gamepad2 className="w-5 h-5" />
+                      Gestion des Stades
+                    </h3>
                     <Button 
-                      onClick={loadOnlineUsers}
+                      onClick={handleCreateStadiumRoom}
                       size="sm"
-                      variant="outline"
-                      className="mt-4"
+                      className="bg-green-600 hover:bg-green-700"
                     >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Actualiser
+                      <Plus className="w-4 h-4 mr-2" />
+                      Créer un Stade
                     </Button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {stadiumRooms.map((room) => (
+                      <div key={room.id} className="p-4 bg-gray-700 rounded-lg border border-gray-600">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Numéro du Stade</label>
+                            <Input
+                              type="number"
+                              value={room.room_number}
+                              onChange={(e) => {
+                                setStadiumRooms(stadiumRooms.map(r => 
+                                  r.id === room.id ? { ...r, room_number: parseInt(e.target.value) } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Nom du Stade</label>
+                            <Input
+                              value={room.name}
+                              onChange={(e) => {
+                                setStadiumRooms(stadiumRooms.map(r => 
+                                  r.id === room.id ? { ...r, name: e.target.value } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Capacité</label>
+                            <Input
+                              type="number"
+                              value={room.capacity}
+                              onChange={(e) => {
+                                setStadiumRooms(stadiumRooms.map(r => 
+                                  r.id === room.id ? { ...r, capacity: parseInt(e.target.value) } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Thème</label>
+                            <select
+                              value={room.theme}
+                              onChange={(e) => {
+                                setStadiumRooms(stadiumRooms.map(r => 
+                                  r.id === room.id ? { ...r, theme: e.target.value } : r
+                                ))
+                              }}
+                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                            >
+                              <option value="default">Par défaut</option>
+                              <option value="modern">Moderne</option>
+                              <option value="classic">Classique</option>
+                              <option value="premium">Premium</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Titre du Match</label>
+                            <Input
+                              value={room.match_title}
+                              onChange={(e) => {
+                                setStadiumRooms(stadiumRooms.map(r => 
+                                  r.id === room.id ? { ...r, match_title: e.target.value } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">URL Affiche</label>
+                            <Input
+                              value={room.match_poster || ''}
+                              onChange={(e) => {
+                                setStadiumRooms(stadiumRooms.map(r => 
+                                  r.id === room.id ? { ...r, match_poster: e.target.value } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
+                            <Input
+                              value={room.embed_url || ''}
+                              onChange={(e) => {
+                                setStadiumRooms(stadiumRooms.map(r => 
+                                  r.id === room.id ? { ...r, embed_url: e.target.value } : r
+                                ))
+                              }}
+                              placeholder="https://www.youtube.com/embed/..."
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Heure de Début</label>
+                            <Input
+                              type="datetime-local"
+                              value={room.schedule_start ? new Date(room.schedule_start).toISOString().slice(0, 16) : ''}
+                              onChange={(e) => {
+                                setStadiumRooms(stadiumRooms.map(r => 
+                                  r.id === room.id ? { ...r, schedule_start: e.target.value } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Heure de Fin</label>
+                            <Input
+                              type="datetime-local"
+                              value={room.schedule_end ? new Date(room.schedule_end).toISOString().slice(0, 16) : ''}
+                              onChange={(e) => {
+                                setStadiumRooms(stadiumRooms.map(r => 
+                                  r.id === room.id ? { ...r, schedule_end: e.target.value } : r
+                                ))
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Niveau d'Accès</label>
+                            <select
+                              value={room.access_level}
+                              onChange={(e) => {
+                                setStadiumRooms(stadiumRooms.map(r => 
+                                  r.id === room.id ? { ...r, access_level: e.target.value } : r
+                                ))
+                              }}
+                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                            >
+                              <option value="public">Public</option>
+                              <option value="vip">VIP</option>
+                              <option value="vip_plus">VIP+</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                          </div>
+                          
+                          <div className="space-y-2 flex items-center">
+                            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                              <input 
+                                type="checkbox" 
+                                className="rounded" 
+                                checked={room.is_open}
+                                onChange={(e) => {
+                                  setStadiumRooms(stadiumRooms.map(r => 
+                                    r.id === room.id ? { ...r, is_open: e.target.checked } : r
+                                  ))
+                                }}
+                              />
+                              Stade Ouvert
+                            </label>
+                          </div>
+                          
+                          <div className="lg:col-span-3 flex justify-end gap-2">
+                            <Button 
+                              onClick={() => handleUpdateStadiumRoom(room)}
+                              size="sm"
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <Save className="w-4 h-4 mr-2" />
+                              Sauvegarder
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </CardContent>
