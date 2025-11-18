@@ -1,12 +1,10 @@
-'use client'
-
-import { MapIcon, LogOut, User, Users, MessageCircle, Settings, Film, X, Shield, Crown, Star, Palette, Smile } from 'lucide-react'
+import { MapIcon } from 'lucide-react' // Added MapIcon import
 import React, { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { supabase } from 'path-to-supabase'
 import { Html } from '@react-three/drei'
-import { useRouter } from 'next/navigation'
-
-const supabase = createClient()
+import { RealisticAvatar } from 'path-to-avatar'
+import { User, Users, MessageCircle, Settings, Film, X, Shield, Crown, Star, Palette } from 'path-to-icons'
+import useTexture from 'path-to-useTexture'
 
 const InteractiveWorld = ({ userProfile, onlineCount, worldSettings }) => {
   const [showMenu, setShowMenu] = useState(false)
@@ -26,8 +24,6 @@ const InteractiveWorld = ({ userProfile, onlineCount, worldSettings }) => {
   const [playerChatBubbles, setPlayerChatBubbles] = useState({})
   const otherPlayers = []
   const [cinemaRooms, setCinemaRooms] = useState<any[]>([])
-  const myPosition = { x: 0, y: 0, z: 0 } // Assuming myPosition is defined somewhere
-  const router = useRouter()
 
   useEffect(() => {
     const checkMobile = () => {
@@ -193,36 +189,6 @@ const InteractiveWorld = ({ userProfile, onlineCount, worldSettings }) => {
     setCurrentSeat(null)
   }
 
-  const handleQuit = async () => {
-    if (!userProfile) return
-
-    try {
-      // Save current position to database
-      const { error } = await supabase
-        .from('interactive_profiles')
-        .update({
-          position_x: myPosition.x,
-          position_y: myPosition.y,
-          position_z: myPosition.z,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userProfile.id)
-
-      if (error) {
-        console.error('[v0] Error saving position:', error)
-      } else {
-        console.log('[v0] Position saved successfully')
-      }
-
-      // Redirect to home page
-      router.push('/')
-    } catch (err) {
-      console.error('[v0] Error quitting world:', err)
-      // Still redirect even if save fails
-      router.push('/')
-    }
-  }
-
   return (
     <>
       {otherPlayers
@@ -361,14 +327,6 @@ const InteractiveWorld = ({ userProfile, onlineCount, worldSettings }) => {
               </button>
             </>
           )}
-
-          <button
-            onClick={handleQuit}
-            className="w-full bg-gray-600/90 text-white py-3 rounded-lg hover:bg-gray-700 flex items-center justify-center gap-2 text-base font-medium transition-colors border-t-2 border-white/10 mt-4 pt-4"
-          >
-            <LogOut className="w-5 h-5" />
-            Quitter
-          </button>
         </div>
       )}
 
