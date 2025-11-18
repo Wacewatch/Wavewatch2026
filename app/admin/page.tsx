@@ -43,24 +43,6 @@ interface CinemaRoom {
   updated_at: string
 }
 
-interface StadiumRoom {
-  id: string
-  room_number: number
-  name: string
-  capacity: number
-  theme: string
-  match_title: string
-  match_poster: string | null
-  schedule_start: string | null
-  schedule_end: string | null
-  access_level: string
-  is_open: boolean
-  embed_url: string | null
-  created_at: string
-  updated_at: string
-}
-
-
 interface AvatarOption {
   id: string
   category: string
@@ -307,7 +289,7 @@ export default function AdminPage() {
 
   // Added state for Cinema Rooms Management
   const [cinemaRooms, setCinemaRooms] = useState<CinemaRoom[]>([]);
-  const [stadiumRooms, setStadiumRooms] = useState<StadiumRoom[]>([]);
+  const [stadiumRooms, setStadiumRooms] = useState<any[]>([]);
 
   // Added state for Online Users count
   const [onlineUsersCount, setOnlineUsersCount] = useState(0);
@@ -502,81 +484,49 @@ export default function AdminPage() {
     }
   }
 
-  // Renamed loadAllData to fetchAllData to include changelogs
-  const fetchAllData = async () => {
-    setLoading(true)
+  const loadAllData = async () => {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      // Fetch all necessary data
-      const [
-        tvData,
-        radioData,
-        retroData,
-        usersData,
-        changelogsData,
-        requestsData, // Added requestsData
-        musicData, // Added musicData
-        softwareData, // Added softwareData
-        gamesData, // Added gamesData
-        ebooksData, // Added ebooksData
-      ] = await Promise.all([
-        supabase.from("tv_channels").select("*").order("name"),
-        supabase.from("radio_stations").select("*").order("name"),
-        supabase.from("retrogaming_sources").select("*").order("name"),
-        supabase.from("user_profiles").select("*", { count: "exact" }),
-        supabase.from("changelogs").select("*").order("release_date", { ascending: false }),
-        supabase.from("requests").select(`*, user_profiles(username, email)`).order("created_at", { ascending: false }), // Added request loading
-        supabase.from("music_content").select("*").order("created_at", { ascending: false }), // Added music content loading
-        supabase.from("software").select("*").order("created_at", { ascending: false }), // Added software loading
-        supabase.from("games").select("*").order("created_at", { ascending: false }), // Added games loading
-        supabase.from("ebooks").select("*").order("created_at", { ascending: false }), // Added ebooks loading
+      console.log("🔄 Chargement de toutes les données...")
+      const results = await Promise.allSettled([
+        loadRealTVChannels(supabase),
+        loadRealRadioStations(supabase),
+        loadRealRetrogamingSources(supabase),
+        loadRealUsers(supabase),
+        loadRequests(supabase),
+        loadMusicContent(),
+        loadSoftware(),
+        loadGames(),
+        loadEbooks(),
       ])
 
-      // Update states
-      if (tvData.data) setTvChannels(tvData.data)
-      if (radioData.data) setRadioStations(radioData.data)
-      if (retroData.data) setRetrogamingSources(retroData.data)
-      if (usersData.data) setUsers(usersData.data)
-      if (changelogsData.data) setChangelogs(changelogsData.data)
-      if (requestsData.data) setRequests(requestsData.data.map((req) => ({ // Map requests to include username
-        ...req,
-        username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
-      })))
-      if (musicData.data) setMusicContent(musicData.data)
-      if (softwareData.data) setSoftware(softwareData.data)
-      if (gamesData.data) setGames(gamesData.data)
-      if (ebooksData.data) setEbooks(ebooksData.data)
-
-      // Load statistics, activities, site settings, and interactive world settings after fetching all basic data
-      await loadStatistics()
-      await loadRecentActivities()
-      await loadSiteSettings()
-
-      // Load interactive world related data only if the tab is active or on initial load if it's the default
-      if (activeTab === "interactive-world") {
-        await loadWorldSettings();
-        await loadCinemaRooms();
-        loadStadiumRooms(); // Load stadium rooms here as well
-        await loadAvatarOptions();
-        await loadOnlineUsers();
-      }
-
-    } catch (error) {
-      console.error("❌ Erreur lors du chargement des données admin:", error)
-      toast({
-        title: "Erreur de chargement",
-        description: "Impossible de charger les données d'administration",
-        variant: "destructive",
+      results.forEach((result, index) => {
+        const names = [
+          "TV Channels",
+          "Radio Stations",
+          "Retrogaming Sources",
+          "Users",
+          "Requests",
+          "Music Content",
+          "Software",
+          "Games",
+          "Ebooks",
+        ]
+        if (result.status === "rejected") {
+          console.error(`❌ Erreur lors du chargement de ${names[index]}:`, result.reason)
+        } else {
+          console.log(`✅ ${names[index]} chargé avec succès`)
+        }
       })
-    } finally {
-      setLoading(false)
+    } catch (error) {
+      console.error("❌ Erreur lors du chargement de toutes les données:", error)
+      throw error
     }
   }
 
-  // Renamed loadRealTVChannels, loadRealRadioStations, loadRealRetrogamingSources to use supabse client directly for consistency
   const loadRealTVChannels = async (supabase) => {
     try {
       console.log("🔄 Chargement des chaînes TV...")
@@ -1053,15 +1003,10 @@ export default function AdminPage() {
         .select("*")
         .order("room_number", { ascending: true })
         
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') throw error;
       setStadiumRooms(data || []);
     } catch (error) {
       console.error("Error loading stadium rooms:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les stades.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -1079,9 +1024,9 @@ export default function AdminPage() {
         .from("interactive_stadium_rooms")
         .insert({
           room_number: maxRoomNumber + 1,
-          name: `Stade ${maxRoomNumber + 1}`,
+          name: `Tribune ${maxRoomNumber + 1}`,
           capacity: 100,
-          theme: 'default',
+          theme: 'stadium',
           match_title: '',
           access_level: 'public',
           is_open: true,
@@ -1091,56 +1036,16 @@ export default function AdminPage() {
       if (error) throw error
 
       toast({
-        title: "Stade créé",
-        description: "Un nouveau stade a été créé.",
+        title: "Tribune créée",
+        description: "Une nouvelle tribune de stade a été créée.",
       })
+
       loadStadiumRooms()
     } catch (error) {
       console.error("Error creating stadium room:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de créer le stade.",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const handleUpdateStadiumRoom = async (room: StadiumRoom) => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
-    try {
-      const { error } = await supabase
-        .from("interactive_stadium_rooms")
-        .update({
-          room_number: room.room_number,
-          name: room.name,
-          capacity: room.capacity,
-          theme: room.theme,
-          match_title: room.match_title,
-          match_poster: room.match_poster,
-          embed_url: room.embed_url,
-          schedule_start: room.schedule_start,
-          schedule_end: room.schedule_end,
-          access_level: room.access_level,
-          is_open: room.is_open,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", room.id)
-
-      if (error) throw error
-
-      toast({
-        title: "Stade mis à jour",
-        description: `Le stade '${room.name}' a été mis à jour avec succès.`,
-      })
-      loadStadiumRooms()
-    } catch (error) {
-      console.error("Error updating stadium room:", error)
-      toast({
-        title: "Erreur",
-        description: "Impossible de mettre à jour le stade.",
+        description: "Impossible de créer la tribune.",
         variant: "destructive",
       })
     }
@@ -2702,6 +2607,135 @@ export default function AdminPage() {
     }
   }
 
+  // Modified useEffect to call fetchAllData
+  // Replaced loadAllData with fetchAllData to include changelogs
+  const fetchAllData = async () => {
+    setLoading(true)
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    try {
+      // Fetch all necessary data
+      const [
+        tvData,
+        radioData,
+        retroData,
+        usersData,
+        changelogsData,
+        requestsData, // Added requestsData
+        musicData, // Added musicData
+        softwareData, // Added softwareData
+        gamesData, // Added gamesData
+        ebooksData, // Added ebooksData
+      ] = await Promise.all([
+        supabase.from("tv_channels").select("*").order("name"),
+        supabase.from("radio_stations").select("*").order("name"),
+        supabase.from("retrogaming_sources").select("*").order("name"),
+        supabase.from("user_profiles").select("*", { count: "exact" }),
+        supabase.from("changelogs").select("*").order("release_date", { ascending: false }),
+        supabase.from("requests").select(`*, user_profiles(username, email)`).order("created_at", { ascending: false }), // Added request loading
+        supabase.from("music_content").select("*").order("created_at", { ascending: false }), // Added music content loading
+        supabase.from("software").select("*").order("created_at", { ascending: false }), // Added software loading
+        supabase.from("games").select("*").order("created_at", { ascending: false }), // Added games loading
+        supabase.from("ebooks").select("*").order("created_at", { ascending: false }), // Added ebooks loading
+      ])
+
+      // Update states
+      if (tvData.data) setTvChannels(tvData.data)
+      if (radioData.data) setRadioStations(radioData.data)
+      if (retroData.data) setRetrogamingSources(retroData.data)
+      if (usersData.data) setUsers(usersData.data)
+      if (changelogsData.data) setChangelogs(changelogsData.data)
+      if (requestsData.data) setRequests(requestsData.data.map((req) => ({ // Map requests to include username
+        ...req,
+        username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
+      })))
+      if (musicData.data) setMusicContent(musicData.data)
+      if (softwareData.data) setSoftware(softwareData.data)
+      if (gamesData.data) setGames(gamesData.data)
+      if (ebooksData.data) setEbooks(ebooksData.data)
+
+      // Load statistics, activities, site settings, and interactive world settings after fetching all basic data
+      await loadStatistics()
+      await loadRecentActivities()
+      await loadSiteSettings()
+
+      // Load interactive world related data only if the tab is active or on initial load if it's the default
+      if (activeTab === "interactive-world") {
+        await loadWorldSettings();
+        await loadCinemaRooms();
+        loadStadiumRooms();
+        await loadAvatarOptions();
+        await loadOnlineUsers();
+      }
+
+    } catch (error) {
+      console.error("❌ Erreur lors du chargement des données admin:", error)
+      toast({
+        title: "Erreur de chargement",
+        description: "Impossible de charger les données d'administration",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Add edit log handler
+  const handleEditLog = (log: any) => {
+    setEditingLog({
+      id: log.id,
+      version: log.version,
+      release_date: log.release_date,
+      title: log.title,
+      description: log.description,
+    })
+    setActiveModal("edit-log") // Use a distinct modal name for editing logs
+  }
+
+  // Add update log handler
+  const handleUpdateLog = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    if (!editingLog) return // Should not happen if called correctly
+
+    try {
+      const { error } = await supabase
+        .from("changelogs")
+        .update({
+          version: editingLog.version,
+          release_date: editingLog.release_date,
+          title: editingLog.title,
+          description: editingLog.description,
+        })
+        .eq("id", editingLog.id)
+
+      if (error) throw error
+
+      await fetchAllData() // Reload changelogs and other data
+      setActiveModal(null)
+      setEditingLog(null) // Clear editing state
+      toast({
+        title: "Log modifié",
+        description: "Le log a été mis à jour avec succès",
+      })
+    } catch (error) {
+      console.error("Error updating log:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier le log.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  // Add loadChangelogs function to be called by fetchAllData
+  // This function is now integrated within fetchAllData for efficiency
+  // const loadChangelogs = async () => { ... }
+
   // Use fetchAllData for the initial load if user is admin
   useEffect(() => {
     if (user?.isAdmin) {
@@ -2747,6 +2781,7 @@ export default function AdminPage() {
   }
 
 
+  // Fetch total user count for the broadcast message
   // Removed duplicated useEffect, logic moved to fetchAllData or handled by existing state
   // useEffect(() => {
   //   const fetchUserCount = async () => {
@@ -6201,8 +6236,8 @@ export default function AdminPage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <Gamepad2 className="w-5 h-5" />
-                      Gestion des Stades
+                      <Trophy className="w-5 h-5" />
+                      Gestion des Tribunes du Stade
                     </h3>
                     <Button 
                       onClick={handleCreateStadiumRoom}
@@ -6210,7 +6245,7 @@ export default function AdminPage() {
                       className="bg-green-600 hover:bg-green-700"
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Créer un Stade
+                      Créer une Tribune
                     </Button>
                   </div>
                   
@@ -6219,7 +6254,7 @@ export default function AdminPage() {
                       <div key={room.id} className="p-4 bg-gray-700 rounded-lg border border-gray-600">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Numéro du Stade</label>
+                            <label className="text-sm text-gray-300">Numéro de Tribune</label>
                             <Input
                               type="number"
                               value={room.room_number}
@@ -6233,7 +6268,7 @@ export default function AdminPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Nom du Stade</label>
+                            <label className="text-sm text-gray-300">Nom de la Tribune</label>
                             <Input
                               value={room.name}
                               onChange={(e) => {
@@ -6260,27 +6295,9 @@ export default function AdminPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Thème</label>
-                            <select
-                              value={room.theme}
-                              onChange={(e) => {
-                                setStadiumRooms(stadiumRooms.map(r => 
-                                  r.id === room.id ? { ...r, theme: e.target.value } : r
-                                ))
-                              }}
-                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-                            >
-                              <option value="default">Par défaut</option>
-                              <option value="modern">Moderne</option>
-                              <option value="classic">Classique</option>
-                              <option value="premium">Premium</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-2">
                             <label className="text-sm text-gray-300">Titre du Match</label>
                             <Input
-                              value={room.match_title}
+                              value={room.match_title || ''}
                               onChange={(e) => {
                                 setStadiumRooms(stadiumRooms.map(r => 
                                   r.id === room.id ? { ...r, match_title: e.target.value } : r
@@ -6293,10 +6310,10 @@ export default function AdminPage() {
                           <div className="space-y-2">
                             <label className="text-sm text-gray-300">URL Affiche</label>
                             <Input
-                              value={room.match_poster || ''}
+                              value={room.poster_url || ''}
                               onChange={(e) => {
                                 setStadiumRooms(stadiumRooms.map(r => 
-                                  r.id === room.id ? { ...r, match_poster: e.target.value } : r
+                                  r.id === room.id ? { ...r, poster_url: e.target.value } : r
                                 ))
                               }}
                               className="bg-gray-600 border-gray-500 text-white"
@@ -6316,87 +6333,110 @@ export default function AdminPage() {
                               className="bg-gray-600 border-gray-500 text-white"
                             />
                           </div>
-                          
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Heure de Début</label>
-                            <Input
-                              type="datetime-local"
-                              value={room.schedule_start ? new Date(room.schedule_start).toISOString().slice(0, 16) : ''}
-                              onChange={(e) => {
-                                setStadiumRooms(stadiumRooms.map(r => 
-                                  r.id === room.id ? { ...r, schedule_start: e.target.value } : r
-                                ))
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
 
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Heure de Fin</label>
-                            <Input
-                              type="datetime-local"
-                              value={room.schedule_end ? new Date(room.schedule_end).toISOString().slice(0, 16) : ''}
-                              onChange={(e) => {
-                                setStadiumRooms(stadiumRooms.map(r => 
-                                  r.id === room.id ? { ...r, schedule_end: e.target.value } : r
-                                ))
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Niveau d'Accès</label>
-                            <select
-                              value={room.access_level}
-                              onChange={(e) => {
-                                setStadiumRooms(stadiumRooms.map(r => 
-                                  r.id === room.id ? { ...r, access_level: e.target.value } : r
-                                ))
-                              }}
-                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-                            >
-                              <option value="public">Public</option>
-                              <option value="vip">VIP</option>
-                              <option value="vip_plus">VIP+</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          </div>
-                          
                           <div className="space-y-2 flex items-center">
                             <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
                               <input 
                                 type="checkbox" 
-                                className="rounded" 
                                 checked={room.is_open}
                                 onChange={(e) => {
                                   setStadiumRooms(stadiumRooms.map(r => 
                                     r.id === room.id ? { ...r, is_open: e.target.checked } : r
                                   ))
                                 }}
+                                className="rounded"
                               />
-                              Stade Ouvert
+                              Tribune Ouverte
                             </label>
                           </div>
-                          
-                          <div className="lg:col-span-3 flex justify-end gap-2">
-                            <Button 
-                              onClick={() => handleUpdateStadiumRoom(room)}
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <Save className="w-4 h-4 mr-2" />
-                              Sauvegarder
-                            </Button>
-                          </div>
+                        </div>
+
+                        <div className="flex gap-2 mt-4">
+                          <Button
+                            onClick={async () => {
+                              const supabase = createBrowserClient(
+                                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                              )
+                              const { error } = await supabase
+                                .from("interactive_stadium_rooms")
+                                .update(room)
+                                .eq("id", room.id)
+                              
+                              if (!error) {
+                                toast({ title: "Tribune mise à jour" })
+                              } else {
+                                toast({ title: "Erreur", description: error.message, variant: "destructive" })
+                              }
+                            }}
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Save className="w-4 h-4 mr-2" />
+                            Sauvegarder
+                          </Button>
+
+                          <Button
+                            onClick={async () => {
+                              if (!confirm("Supprimer cette tribune?")) return
+                              const supabase = createBrowserClient(
+                                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                                process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+                              )
+                              const { error } = await supabase
+                                .from("interactive_stadium_rooms")
+                                .delete()
+                                .eq("id", room.id)
+                              
+                              if (!error) {
+                                toast({ title: "Tribune supprimée" })
+                                loadStadiumRooms()
+                              } else {
+                                toast({ title: "Erreur", description: error.message, variant: "destructive" })
+                              }
+                            }}
+                            size="sm"
+                            variant="destructive"
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Supprimer
+                          </Button>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
+
+                {/* Online Users Monitor */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Utilisateurs en Ligne
+                  </h3>
+                  <div className="bg-gray-900 p-4 rounded-lg">
+                    <p className="text-4xl font-bold text-green-400">{onlineUsersCount}</p>
+                    <p className="text-sm text-gray-400">utilisateurs connectés actuellement</p>
+                    <Button 
+                      onClick={loadOnlineUsers}
+                      size="sm"
+                      variant="outline"
+                      className="mt-4"
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Actualiser
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
+
+        </Tabs>
+      </div>
+    </div>
+  )
+}
+Content>
 
         </Tabs>
       </div>
