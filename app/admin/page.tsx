@@ -482,6 +482,49 @@ export default function AdminPage() {
     }
   }
 
+  const loadAllData = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+    try {
+      console.log("🔄 Chargement de toutes les données...")
+      const results = await Promise.allSettled([
+        loadRealTVChannels(supabase),
+        loadRealRadioStations(supabase),
+        loadRealRetrogamingSources(supabase),
+        loadRealUsers(supabase),
+        loadRequests(supabase),
+        loadMusicContent(),
+        loadSoftware(),
+        loadGames(),
+        loadEbooks(),
+      ])
+
+      results.forEach((result, index) => {
+        const names = [
+          "TV Channels",
+          "Radio Stations",
+          "Retrogaming Sources",
+          "Users",
+          "Requests",
+          "Music Content",
+          "Software",
+          "Games",
+          "Ebooks",
+        ]
+        if (result.status === "rejected") {
+          console.error(`❌ Erreur lors du chargement de ${names[index]}:`, result.reason)
+        } else {
+          console.log(`✅ ${names[index]} chargé avec succès`)
+        }
+      })
+    } catch (error) {
+      console.error("❌ Erreur lors du chargement de toutes les données:", error)
+      throw error
+    }
+  }
+
   const loadRealTVChannels = async (supabase) => {
     try {
       console.log("🔄 Chargement des chaînes TV...")
@@ -558,60 +601,44 @@ export default function AdminPage() {
         
       if (countError) {
         console.error("❌ Erreur lors du comptage des utilisateurs:", countError)
-        throw countError
+      } else {
+        setTotalUsersInDB(totalCount || 0)
+        console.log(`[v0] Total users in DB: ${totalCount}`)
       }
 
-      setTotalUsersInDB(totalCount || 0)
-      console.log(`[v0] Total users in DB: ${totalCount}`)
+      const {
+        data: allUsers,
+        error: usersError,
+        count,
+      } = await supabase.from("user_profiles").select("*", { count: "exact" }).order("created_at", { ascending: false })
 
-      let allUsers = []
-      const batchSize = 1000
-      let currentBatch = 0
-      
-      while (currentBatch * batchSize < totalCount) {
-        const start = currentBatch * batchSize
-        const end = start + batchSize - 1
-        
-        console.log(`[v0] Loading users batch ${currentBatch + 1}: rows ${start}-${end}`)
-        
-        const { data: batchData, error: batchError } = await supabase
-          .from("user_profiles")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .range(start, end)
+      if (usersError) {
+        console.error("❌ Erreur lors du chargement des utilisateurs:", usersError)
+        setUsers([]) // Ensure users state is empty if there's an error
+        throw usersError
+      } else {
+        console.log(`✅ ${allUsers?.length || 0} utilisateurs chargés depuis Supabase (count: ${count})`)
 
-        if (batchError) {
-          console.error(`❌ Erreur lors du chargement du batch ${currentBatch}:`, batchError)
-          throw batchError
-        }
+        const correctedUsers = (allUsers || []).map((user) => ({
+          ...user,
+          // S'assurer que les booléens sont bien définis
+          is_admin: Boolean(user.is_admin),
+          is_vip: Boolean(user.is_vip),
+          is_vip_plus: Boolean(user.is_vip_plus),
+          is_beta: Boolean(user.is_beta),
+          // Définir un statut par défaut si non défini
+          status: user.status || "active",
+          // S'assurer que le nom d'utilisateur est défini
+          username: user.username || user.email?.split("@")[0] || "Utilisateur",
+        }))
 
-        allUsers = [...allUsers, ...(batchData || [])]
-        currentBatch++
-        
-        // Break if we got less than expected (reached the end)
-        if (!batchData || batchData.length < batchSize) {
-          break
-        }
+        setUsers(correctedUsers)
+        console.log(`[v0] Total users loaded: ${correctedUsers.length}`)
+        return { users: correctedUsers, count } // Return count as well
       }
-
-      console.log(`✅ ${allUsers.length} utilisateurs chargés au total (sur ${totalCount} dans la BDD)`)
-
-      const correctedUsers = allUsers.map((user) => ({
-        ...user,
-        is_admin: Boolean(user.is_admin),
-        is_vip: Boolean(user.is_vip),
-        is_vip_plus: Boolean(user.is_vip_plus),
-        is_beta: Boolean(user.is_beta),
-        status: user.status || "active",
-        username: user.username || user.email?.split("@")[0] || "Utilisateur",
-      }))
-
-      setUsers(correctedUsers)
-      console.log(`[v0] Total users loaded and set: ${correctedUsers.length}`)
-      return { users: correctedUsers, count: totalCount }
     } catch (error) {
       console.error("❌ Erreur lors du chargement des utilisateurs:", error)
-      setUsers([]) 
+      setUsers([]) // Ensure users state is empty on error
       throw error
     }
   }
@@ -619,12 +646,12 @@ export default function AdminPage() {
   const loadRequests = async (supabase) => {
     try {
       console.log("🔄 Chargement des demandes...")
-      const { data, error, count } = await supabase
+      const { data, error } = await supabase
         .from("content_requests")
         .select(`
           *,
           user_profiles(username, email)
-        `, { count: "exact" })
+        `)
         .order("created_at", { ascending: false })
 
       if (error) {
@@ -632,11 +659,8 @@ export default function AdminPage() {
         throw error
       }
 
-      console.log(`[v0] Raw content_requests data (count: ${count}):`, data)
-
       const requestsWithUserInfo = (data || []).map((req) => ({
         ...req,
-        type: req.content_type, // Map content_type to type for display
         username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
       }))
       console.log(`✅ ${requestsWithUserInfo.length} demandes chargées:`, requestsWithUserInfo)
@@ -2420,8 +2444,7 @@ export default function AdminPage() {
           item[field]?.toString().toLowerCase().includes(searchTerm.toLowerCase()),
         )
       }
-      // Modified to include 'type' field for searching specific content types
-      const searchableFields = ["title", "name", "username", "genre", "category", "content_type", "type"]
+      const searchableFields = ["title", "name", "username", "genre", "category"]
       return searchableFields.some((field) => item[field]?.toString().toLowerCase().includes(searchTerm.toLowerCase()))
     })
   }
@@ -2635,6 +2658,10 @@ export default function AdminPage() {
       })
     }
   }
+
+  // Add loadChangelogs function to be called by fetchAllData
+  // This function is now integrated within fetchAllData for efficiency
+  // const loadChangelogs = async () => { ... }
 
   // Use fetchAllData for the initial load if user is admin
   useEffect(() => {
@@ -5809,6 +5836,7 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
+          {/* Interactive World Tab Content */}
           <TabsContent value="interactive-world">
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
