@@ -240,7 +240,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [myProfile, setMyProfile] = useState<any>(null)
   const [otherPlayers, setOtherPlayers] = useState<any[]>([])
   const [onlineCount, setOnlineCount] = useState(0)
-  const [myPosition, setMyPosition] = useState({ x: 0, y: 0.5, z: 0 })
+  const [myPosition, setMyPosition] = useState({ x: 0, y: 0, z: 30 })
   const [myAvatarStyle, setMyAvatarStyle] = useState({
     bodyColor: '#3b82f6',
     headColor: '#fbbf24',
@@ -284,6 +284,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   })
 
   const [graphicsQuality, setGraphicsQuality] = useState('medium')
+  const [controlMode, setControlMode] = useState<'auto' | 'pc' | 'mobile'>('auto')
   const [isMobileMode, setIsMobileMode] = useState(false)
   const [povMode, setPovMode] = useState(false)
   const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
@@ -303,21 +304,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   useEffect(() => {
     const checkMobile = () => {
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouch
-      const isSmallScreen = window.innerWidth < 1024
-      setIsMobileMode(isTouchDevice || isSmallScreen)
-      console.log('[v0] Mobile mode:', isTouchDevice || isSmallScreen, 'Touch:', isTouchDevice, 'Screen:', isSmallScreen)
+      if (controlMode === 'mobile') {
+        setIsMobileMode(true)
+      } else if (controlMode === 'pc') {
+        setIsMobileMode(false)
+      } else {
+        // Auto detection
+        setIsMobileMode(
+          'ontouchstart' in window ||
+          navigator.maxTouchPoints > 0 ||
+          window.innerWidth < 768
+        )
+      }
     }
-
     checkMobile()
     window.addEventListener('resize', checkMobile)
-    window.addEventListener('orientationchange', checkMobile)
-
-    return () => {
-      window.removeEventListener('resize', checkMobile)
-      window.removeEventListener('orientationchange', checkMobile)
-    }
-  }, [])
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [controlMode])
 
   const [lastActivity, setLastActivity] = useState(Date.now())
   const [showAFKWarning, setShowAFKWarning] = useState(false)
@@ -358,46 +361,72 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const checkCollision = (newX: number, newZ: number): boolean => {
     // Collision zones for objects in the world
     const collisionZones = [
-      // Cinema building
-      { x: 15, z: 0, width: 9, depth: 9 },
-
-      // Trees
-      { x: -15, z: -15, width: 2, depth: 2 },
-      { x: -8, z: -18, width: 2, depth: 2 },
-      { x: 8, z: -18, width: 2, depth: 2 },
-      { x: 15, z: -15, width: 2, depth: 2 },
-      { x: -18, z: 10, width: 2, depth: 2 },
-      { x: 18, z: 10, width: 2, depth: 2 },
-      { x: -10, z: 15, width: 2, depth: 2 },
-      { x: 10, z: 15, width: 2, depth: 2 },
-
-      // Lampposts
-      { x: -20, z: -10, width: 1, depth: 1 },
-      { x: -20, z: 0, width: 1, depth: 1 },
-      { x: -20, z: 10, width: 1, depth: 1 },
-
-      // Fountain
-      { x: -15, z: 0, width: 6, depth: 6 },
-
-      // Bushes
-      { x: 5, z: -10, width: 2, depth: 2 },
-      { x: -5, z: -10, width: 2, depth: 2 },
-      { x: 10, z: 5, width: 2, depth: 2 },
-      { x: -10, z: 5, width: 2, depth: 2 },
-      { x: 12, z: -5, width: 2, depth: 2 },
-      { x: -12, z: -5, width: 2, depth: 2 },
+      // Cinema building (main)
+      { x: 40, z: 0, width: 12, depth: 12 },
 
       // Arcade building
-      { x: -15, z: -15, width: 5, depth: 5 },
-      // Additional buildings
-      { x: -15, z: 5, width: 5, depth: 4 },
-      { x: -15, z: -8, width: 4, depth: 4 },
-      // Decorative closed buildings
-      { x: -25, z: 0, width: 8, depth: 8 },
-      { x: 25, z: -10, width: 10, depth: 10 },
-      { x: -20, z: 15, width: 9, depth: 9 },
-      { x: 20, z: 10, width: 7, depth: 7 },
-      { x: 0, z: 25, width: 12, depth: 12 },
+      { x: -40, z: -40, width: 10, depth: 8 },
+
+      // Shopping mall
+      { x: -50, z: 10, width: 15, depth: 20 },
+
+      // Restaurant
+      { x: 30, z: -40, width: 12, depth: 10 },
+
+      // Hotel
+      { x: -30, z: 40, width: 18, depth: 15 },
+
+      // Museum
+      { x: 50, z: 30, width: 20, depth: 16 },
+
+      // Park fountain
+      { x: 0, z: 0, width: 8, depth: 8 },
+
+      // Trees (more spread out across larger world)
+      { x: -60, z: -50, width: 3, depth: 3 },
+      { x: -45, z: -60, width: 3, depth: 3 },
+      { x: 45, z: -60, width: 3, depth: 3 },
+      { x: 60, z: -50, width: 3, depth: 3 },
+      { x: -65, z: 30, width: 3, depth: 3 },
+      { x: 65, z: 30, width: 3, depth: 3 },
+      { x: -50, z: 55, width: 3, depth: 3 },
+      { x: 50, z: 55, width: 3, depth: 3 },
+      { x: -20, z: -30, width: 3, depth: 3 },
+      { x: 20, z: -30, width: 3, depth: 3 },
+      { x: -30, z: 20, width: 3, depth: 3 },
+      { x: 30, z: 20, width: 3, depth: 3 },
+      { x: -40, z: -20, width: 3, depth: 3 },
+      { x: 40, z: -20, width: 3, depth: 3 },
+      { x: -55, z: 0, width: 3, depth: 3 },
+      { x: 55, z: 0, width: 3, depth: 3 },
+
+      // Lampposts along pathways
+      { x: -70, z: -30, width: 1, depth: 1 },
+      { x: -70, z: 0, width: 1, depth: 1 },
+      { x: -70, z: 30, width: 1, depth: 1 },
+      { x: 70, z: -30, width: 1, depth: 1 },
+      { x: 70, z: 0, width: 1, depth: 1 },
+      { x: 70, z: 30, width: 1, depth: 1 },
+      { x: 0, z: -70, width: 1, depth: 1 },
+      { x: -30, z: -70, width: 1, depth: 1 },
+      { x: 30, z: -70, width: 1, depth: 1 },
+      { x: 0, z: 70, width: 1, depth: 1 },
+      { x: -30, z: 70, width: 1, depth: 1 },
+      { x: 30, z: 70, width: 1, depth: 1 },
+
+      // Bushes and decorations
+      { x: 15, z: -20, width: 2, depth: 2 },
+      { x: -15, z: -20, width: 2, depth: 2 },
+      { x: 25, z: 15, width: 2, depth: 2 },
+      { x: -25, z: 15, width: 2, depth: 2 },
+      { x: 35, z: -15, width: 2, depth: 2 },
+      { x: -35, z: -15, width: 2, depth: 2 },
+      { x: 10, z: 35, width: 2, depth: 2 },
+      { x: -10, z: 35, width: 2, depth: 2 },
+      { x: 5, z: -10, width: 2, depth: 2 },
+      { x: -5, z: -10, width: 2, depth: 2 },
+      { x: 20, z: 5, width: 2, depth: 2 },
+      { x: -20, z: 5, width: 2, depth: 2 },
     ]
 
     for (const zone of collisionZones) {
@@ -839,12 +868,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setCurrentEmoji(emoji)
     setShowQuickActions(false)
 
-    // Broadcast emoji to other players
+    // Broadcast emoji to other players using correct ID
     supabase.channel('world-actions').send({
       type: 'broadcast',
       event: 'player-emoji',
       payload: {
-        userId: userProfile.user_id,
+        userId: userProfile.id, // Changed from user_id to id
         emoji: emoji,
         timestamp: Date.now()
       }
@@ -861,12 +890,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     setIsJumping(true)
 
-    // Broadcast jump action to other players
+    // Broadcast jump action to other players using correct ID
     supabase.channel('world-actions').send({
       type: 'broadcast',
       event: 'player-action',
       payload: {
-        userId: userProfile.user_id,
+        userId: userProfile.id, // Changed from user_id to id
         action: 'jump',
         timestamp: Date.now()
       }
@@ -896,9 +925,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       }
 
       console.log('[v0] Sending message:', message)
-      
+
       const { error } = await supabase.from('interactive_chat_messages').insert(message)
-      
+
       if (error) {
         console.error('[v0] Error sending message:', error)
       } else {
@@ -958,21 +987,26 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setCurrentCinemaRoom(room)
     setShowCinema(false)
 
-    setMyPosition({ x: 0, y: 0.5, z: 0 })
+    setMyPosition({ x: 0, y: 0, z: 25 }) // Spawn at the entrance of the cinema
 
     await supabase
       .from('interactive_profiles')
       .update({
         current_room: `cinema_${room.id}`,
         position_x: 0,
-        position_y: 0.5,
-        position_z: 0
+        position_y: 0, // Will be adjusted by seat later
+        position_z: 25
       })
       .eq('user_id', userId)
 
+    // Generate seats on enter
     const capacity = room.capacity || 50
     const seatsPerRow = 10
     const rows = Math.ceil(capacity / seatsPerRow)
+    const seatSpacingX = 1.5
+    const seatSpacingZ = 2
+    const startZ = 20
+    const startX = -(seatsPerRow - 1) * seatSpacingX / 2
 
     const generatedSeats = []
     for (let row = 0; row < rows; row++) {
@@ -980,36 +1014,43 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         const seatNumber = row * seatsPerRow + col
         if (seatNumber >= capacity) break
 
+        const seatX = startX + col * seatSpacingX
+        const seatZ = startZ - row * seatSpacingZ
+
         generatedSeats.push({
           seat_number: seatNumber,
           row_number: row,
-          position_x: (col - 4.5) * 1.5,
-          position_y: 0.4,
-          position_z: row * 2 + 2,
-          color: '#374151',
-          is_occupied: false
+          position_x: seatX,
+          position_y: 0.5, // Ground level for seats
+          position_z: seatZ,
+          color: '#991b1b', // Default red
+          is_occupied: false,
+          user_id: null // Ensure user_id is null initially
         })
       }
     }
-
     setCinemaSeats(generatedSeats)
   }
 
   const handleLeaveRoom = async () => {
-    if (mySeat) {
-      await supabase
-        .from('interactive_cinema_seats')
-        .delete()
-        .eq('room_id', currentCinemaRoom.id)
-        .eq('user_id', userId)
-      setMySeat(null)
+    if (mySeat !== null) { // Check if user is seated
+      try {
+        await supabase
+          .from('interactive_cinema_seats')
+          .delete()
+          .eq('room_id', currentCinemaRoom.id)
+          .eq('user_id', userId)
+        setMySeat(null)
+      } catch (error) {
+        console.error('[v0] Error unseating:', error)
+      }
     }
 
     setCurrentCinemaRoom(null)
     setIsSeatsLocked(false) // Ensure seats are unlocked when leaving
     setCountdown('') // Clear countdown when leaving room
 
-    setMyPosition({ x: 0, y: 0.5, z: 0 }) // Reset position to world origin
+    setMyPosition({ x: 0, y: 0.5, z: 25 }) // Reset position to world entrance
 
     await supabase
       .from('interactive_profiles')
@@ -1017,60 +1058,68 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         current_room: null,
         position_x: 0,
         position_y: 0.5,
-        position_z: 0
+        position_z: 25
       })
       .eq('user_id', userId)
   }
 
-  const handleSitInSeat = async (seatNumber: number) => {
-    // if (isSeatsLocked && mySeat !== null && mySeat !== seatNumber) { // Removed seat lock check
-    //   return
-    // }
+  const handleSitInSeat = async (seatNumber?: number) => {
+    if (!userProfile || !currentCinemaRoom) return
 
-    if (mySeat === seatNumber) {
-      // Stand up
-      await supabase
-        .from('interactive_cinema_seats')
-        .delete()
-        .eq('room_id', currentCinemaRoom.id)
-        .eq('user_id', userId)
+    try {
+      // If no seat number provided, find first available seat
 
-      setMySeat(null)
-      setMyPosition({ x: 0, y: 0.5, z: 0 }) // Reset position to world origin
-    } else {
-      // Sit down - Calculate position based on seat number
-      // Get the seat data from the generatedSeats array
-      const seatData = cinemaSeats.find(s => s.seat_number === seatNumber)
-      if (!seatData) return // Should not happen if cinemaSeats is populated correctly
+      let targetSeat = seatNumber
 
-      const { error } = await supabase
-        .from('interactive_cinema_seats')
-        .upsert({
-          room_id: currentCinemaRoom.id,
-          user_id: userId,
-          seat_number: seatNumber,
-          row_number: seatData.row_number,
-          is_occupied: true,
-          // Add a default color if not specified
-          color: '#374151',
-          position_x: seatData.position_x,
-          position_y: seatData.position_y,
-          position_z: seatData.position_z
-        })
-
-      if (!error) {
-        setMySeat(seatNumber)
-        setMyPosition({ x: seatData.position_x, y: seatData.position_y, z: seatData.position_z })
-
-        await supabase
-          .from('interactive_profiles')
-          .update({
-            position_x: seatData.position_x,
-            position_y: seatData.position_y,
-            position_z: seatData.position_z
-          })
-          .eq('user_id', userId)
+      if (!targetSeat) {
+        const availableSeats = cinemaSeats.filter(seat => !seat.user_id)
+        if (availableSeats.length === 0) {
+          alert('Toutes les places sont occupées!')
+          return
+        }
+        targetSeat = availableSeats[0].seat_number
       }
+
+      const seat = cinemaSeats.find(s => s.seat_number === targetSeat)
+      if (!seat) return
+
+      if (mySeat === targetSeat) {
+        // Stand up
+        await supabase
+          .from('interactive_cinema_seats')
+          .update({ user_id: null })
+          .eq('room_id', currentCinemaRoom.id)
+          .eq('seat_number', targetSeat)
+
+        setMySeat(null)
+        setMyPosition({ x: 0, y: 0.5, z: 25 }) // Return to cinema entrance
+      } else {
+        if (seat.user_id && seat.user_id !== userProfile.id) { // Check if seat is occupied by someone else
+          alert('Cette place est déjà occupée!')
+          return
+        }
+
+        // Release old seat
+        if (mySeat !== null) {
+          await supabase
+            .from('interactive_cinema_seats')
+            .update({ user_id: null })
+            .eq('room_id', currentCinemaRoom.id)
+            .eq('seat_number', mySeat)
+        }
+
+        // Take new seat
+        await supabase
+          .from('interactive_cinema_seats')
+          .update({ user_id: userProfile.id })
+          .eq('room_id', currentCinemaRoom.id)
+          .eq('seat_number', targetSeat)
+
+        setMySeat(targetSeat)
+        setMyPosition({ x: seat.position_x, y: seat.position_y + 0.5, z: seat.position_z }) // Adjust y for avatar height
+      }
+    } catch (error) {
+      console.error('[v0] Error sitting:', error)
     }
   }
 
@@ -1173,28 +1222,29 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   useEffect(() => {
     if (!userId) return
-    
+
     const loadMyProfile = async () => {
       const { data, error } = await supabase
         .from('interactive_profiles')
         .select('*')
         .eq('user_id', userId)
         .single()
-      
+
       if (error) {
         console.error('[v0] Error loading my profile:', error)
         return
       }
-      
+
       console.log('[v0] Loaded my profile:', data)
       setMyProfile(data)
-      
+
       if (data) {
-        setMyPosition({ x: data.position_x, y: data.position_y, z: data.position_z })
-        setMyRotation(data.rotation || 0)
+        // Set initial position and rotation from profile
+        setMyPosition({ x: data.position_x || 0, y: data.position_y || 0.5, z: data.position_z || 0 })
+        setMyRotation(data.rotation || 0) // Assuming rotation is stored
       }
     }
-    
+
     loadMyProfile()
   }, [userId])
 
@@ -1214,7 +1264,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         {povMode && (
           <PerspectiveCamera
             makeDefault
-            position={[myPosition.x, myPosition.y + 1.5, myPosition.z]}
+            position={[myPosition.x, myPosition.y + 1.5, myPosition.z]} // Adjust for eye level
             fov={75}
           />
         )}
@@ -1277,385 +1327,374 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
         {!currentCinemaRoom ? (
           <>
-            {/* Ground */}
+            {/* Ground - larger natural terrain */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-              <planeGeometry args={[60, 60]} />
-              <meshStandardMaterial
-                color="#4ade80"
-                roughness={0.95}
-                metalness={0}
-              />
+              <planeGeometry args={[200, 200]} />
+              <meshStandardMaterial color="#4ade80" />
             </mesh>
 
-            {/* Main dirt road */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-              <planeGeometry args={[5, 50]} />
-              <meshStandardMaterial color="#8B7355" roughness={0.95} />
-            </mesh>
+            {/* Central Park with Fountain */}
+            <group position={[0, 0, 0]}>
+              {/* Fountain base */}
+              <mesh position={[0, 0.5, 0]} castShadow>
+                <cylinderGeometry args={[4, 5, 1, 8]} />
+                <meshStandardMaterial color="#cbd5e1" />
+              </mesh>
+              {/* Fountain water */}
+              <mesh position={[0, 1.2, 0]}>
+                <cylinderGeometry args={[3, 3, 0.4, 8]} />
+                <meshStandardMaterial color="#3b82f6" transparent opacity={0.7} />
+              </mesh>
+              {/* Fountain center */}
+              <mesh position={[0, 2, 0]} castShadow>
+                <cylinderGeometry args={[0.5, 0.8, 2, 8]} />
+                <meshStandardMaterial color="#94a3b8" />
+              </mesh>
+            </group>
 
-            {/* Removed yellow road markings for dirt road */}
-
-            {/* Arcade Building with proper info panel */}
-            <group position={[-15, 0, -15]}>
+            {/* Cinema Building - Main Attraction */}
+            <group position={[40, 0, 0]}>
               {/* Building */}
-              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
-                <boxGeometry args={[5, 5, 5]} />
-                <meshStandardMaterial color="#7c2d12" />
+              <mesh position={[0, 5, 0]} castShadow>
+                <boxGeometry args={[12, 10, 12]} />
+                <meshStandardMaterial color="#1e40af" />
               </mesh>
               {/* Roof */}
-              <mesh position={[0, 5.2, 0]} castShadow>
-                <coneGeometry args={[3.5, 1.5, 4]} />
-                <meshStandardMaterial color="#92400e" />
+              <mesh position={[0, 10.5, 0]} castShadow>
+                <coneGeometry args={[8, 2, 4]} />
+                <meshStandardMaterial color="#1e3a8a" />
               </mesh>
-              {/* Arcade Info Panel - only on arcade building */}
-              <Html position={[0, 4, 2.6]} center depthTest={false} zIndexRange={[100, 0]}>
-                <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
-                  <div className="text-xl">🕹️ ARCADE 🕹️</div>
-                  <div className="text-sm mt-1">Ouverture Prochainement</div>
-                </div>
-              </Html>
-            </group>
-
-            <group position={[15, 0, -5]}>
-              {/* Building */}
-              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
-                <boxGeometry args={[6, 5, 5]} />
-                <meshStandardMaterial color="#9333ea" />
-              </mesh>
-              {/* Roof */}
-              <mesh position={[0, 5.2, 0]} castShadow>
-                <coneGeometry args={[4, 1.5, 4]} />
-                <meshStandardMaterial color="#7e22ce" />
-              </mesh>
-              {/* Sign */}
-              <Html position={[0, 4, 2.6]} center depthTest={false} zIndexRange={[100, 0]}>
-                <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
-                  <div className="text-xl">🕹️ ARCADE 🕹️</div>
-                  <div className="text-sm mt-1">Ouverture Prochainement</div>
-                </div>
-              </Html>
-            </group>
-
-            {/* Additional decorative buildings */}
-            <group position={[-15, 0, 5]}>
-              <mesh position={[0, 2, 0]} castShadow receiveShadow>
-                <boxGeometry args={[5, 4, 4]} />
-                <meshStandardMaterial color="#0ea5e9" />
-              </mesh>
-              <mesh position={[0, 4.5, 0]} castShadow>
-                <boxGeometry args={[5.2, 1, 4.2]} />
-                <meshStandardMaterial color="#0284c7" />
+              <Text
+                position={[0, 8, 6.1]}
+                fontSize={1.2}
+                color="#ffffff"
+                anchorX="center"
+                anchorY="middle"
+              >
+                🎬 CINÉMA
+              </Text>
+              {/* Door */}
+              <mesh position={[0, 2, 6.1]} castShadow>
+                <boxGeometry args={[3, 4, 0.2]} />
+                <meshStandardMaterial color="#3b82f6" />
               </mesh>
             </group>
 
-            <group position={[-15, 0, -8]}>
-              <mesh position={[0, 3, 0]} castShadow receiveShadow>
-                <boxGeometry args={[4, 6, 4]} />
+            {/* Arcade Building */}
+            <group position={[-40, 0, -40]}>
+              <mesh position={[0, 4, 0]} castShadow>
+                <boxGeometry args={[10, 8, 8]} />
+                <meshStandardMaterial color="#7c3aed" />
+              </mesh>
+              <Text
+                position={[0, 6, 4.1]}
+                fontSize={0.8}
+                color="#fbbf24"
+                anchorX="center"
+                anchorY="middle"
+              >
+                🕹️ ARCADE
+              </Text>
+              <Text
+                position={[0, 4.5, 4.1]}
+                fontSize={0.5}
+                color="#ffffff"
+                anchorX="center"
+                anchorY="middle"
+              >
+                Ouverture Prochainement
+              </Text>
+            </group>
+
+            {/* Shopping Mall */}
+            <group position={[-50, 0, 10]}>
+              <mesh position={[0, 8, 0]} castShadow>
+                <boxGeometry args={[15, 16, 20]} />
+                <meshStandardMaterial color="#dc2626" />
+              </mesh>
+              <Text
+                position={[0, 10, 10.1]}
+                fontSize={1}
+                color="#ffffff"
+                anchorX="center"
+                anchorY="middle"
+                maxWidth={12}
+              >
+                CENTRE{'\n'}COMMERCIAL
+              </Text>
+            </group>
+
+            {/* Restaurant */}
+            <group position={[30, 0, -40]}>
+              <mesh position={[0, 5, 0]} castShadow>
+                <boxGeometry args={[12, 10, 10]} />
                 <meshStandardMaterial color="#f97316" />
               </mesh>
-              <mesh position={[0, 6.5, 0]} castShadow>
-                <coneGeometry args={[3, 1.5, 4]} />
-                <meshStandardMaterial color="#ea580c" />
-              </mesh>
+              <Text
+                position={[0, 7, 5.1]}
+                fontSize={0.9}
+                color="#ffffff"
+                anchorX="center"
+                anchorY="middle"
+              >
+                🍽️ RESTAURANT
+              </Text>
             </group>
 
-            {/* Cinema Building */}
-            <group position={[15, 0, 0]}>
-              <mesh position={[0, 2.5, 0]} castShadow>
-                <boxGeometry args={[8, 5, 8]} />
-                <meshStandardMaterial color="#1e3a8a" roughness={0.7} metalness={0.1} />
+            {/* Hotel */}
+            <group position={[-30, 0, 40]}>
+              <mesh position={[0, 10, 0]} castShadow>
+                <boxGeometry args={[18, 20, 15]} />
+                <meshStandardMaterial color="#4338ca" />
               </mesh>
+              <Text
+                position={[0, 15, 7.6]}
+                fontSize={1.1}
+                color="#fbbf24"
+                anchorX="center"
+                anchorY="middle"
+              >
+                🏨 HÔTEL
+              </Text>
+            </group>
 
-              <mesh position={[0, 5.5, 0]} castShadow>
-                <boxGeometry args={[8.5, 0.5, 8.5]} />
-                <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.2} />
+            {/* Museum */}
+            <group position={[50, 0, 30]}>
+              <mesh position={[0, 7, 0]} castShadow>
+                <boxGeometry args={[20, 14, 16]} />
+                <meshStandardMaterial color="#0891b2" />
               </mesh>
-
-              <mesh position={[0, 6, 0]}>
-                <boxGeometry args={[7, 0.8, 0.3]} />
-                <meshStandardMaterial
-                  color="#fbbf24"
-                  emissive="#fbbf24"
-                  emissiveIntensity={1.5}
-                  roughness={0.3}
-                  metalness={0.5}
-                />
-              </mesh>
-              <pointLight position={[0, 6, 0]} intensity={2} distance={10} color="#fbbf24" />
-
-              {[-2, 0, 2].map((x) => (
-                <mesh key={`window-${x}`} position={[x, 3, 4.1]}>
-                  <planeGeometry args={[1.5, 1.8]} />
-                  <meshStandardMaterial
-                    color="#60a5fa"
-                    emissive="#60a5fa"
-                    emissiveIntensity={0.5}
-                    metalness={0.8}
-                    roughness={0.1}
-                  />
+              {/* Columns */}
+              {[-6, -2, 2, 6].map((x) => (
+                <mesh key={x} position={[x, 3, 8.5]} castShadow>
+                  <cylinderGeometry args={[0.5, 0.5, 6, 8]} />
+                  <meshStandardMaterial color="#e2e8f0" />
                 </mesh>
               ))}
-
-              <mesh position={[-3, 1.2, 4.1]} castShadow>
-                <boxGeometry args={[1.5, 2.4, 0.1]} />
-                <meshStandardMaterial color="#7c2d12" roughness={0.8} metalness={0.1} />
-              </mesh>
-              <mesh position={[-3, 1.2, 0]}>
-                <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
-                <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
-              </mesh>
-
-              <mesh position={[-3, 0.1, 5.5]}>
-                <boxGeometry args={[2, 0.2, 2]} />
-                <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
-              </mesh>
-
-              <Html position={[0, 7, 0]} center depthTest={false} zIndexRange={[100, 0]}>
-                <button
-                  onClick={() => setShowCinema(true)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
-                >
-                  🎬 Entrer au Cinéma
-                </button>
-              </Html>
+              <Text
+                position={[0, 12, 8.1]}
+                fontSize={1}
+                color="#ffffff"
+                anchorX="center"
+                anchorY="middle"
+              >
+                🏛️ MUSÉE
+              </Text>
             </group>
 
-            {/* Additional decorative closed buildings */}
-            <group position={[-25, 0, 0]}>
-              <mesh position={[0, 3, 0]} castShadow>
-                <boxGeometry args={[8, 6, 8]} />
-                <meshStandardMaterial color="#8b5cf6" roughness={0.7} />
-              </mesh>
-              <Html position={[0, 7, 0]} center depthTest={false} zIndexRange={[100, 0]}>
-                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
-                  🔒 FERMÉ
-                </div>
-              </Html>
-            </group>
-
-            <group position={[25, 0, -10]}>
-              <mesh position={[0, 4, 0]} castShadow>
-                <boxGeometry args={[10, 8, 10]} />
-                <meshStandardMaterial color="#10b981" roughness={0.7} />
-              </mesh>
-              <Html position={[0, 9, 0]} center depthTest={false} zIndexRange={[100, 0]}>
-                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
-                  🔒 EN CONSTRUCTION
-                </div>
-              </Html>
-            </group>
-
-            <group position={[-20, 0, 15]}>
-              <mesh position={[0, 3.5, 0]} castShadow>
-                <boxGeometry args={[9, 7, 9]} />
-                <meshStandardMaterial color="#f59e0b" roughness={0.7} />
-              </mesh>
-              <Html position={[0, 7.5, 0]} center depthTest={false} zIndexRange={[100, 0]}>
-                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
-                  🔒 BIENTÔT
-                </div>
-              </Html>
-            </group>
-
-            <group position={[20, 0, 10]}>
-              <mesh position={[0, 2.5, 0]} castShadow>
-                <boxGeometry args={[7, 5, 7]} />
-                <meshStandardMaterial color="#ef4444" roughness={0.7} />
-              </mesh>
-              <Html position={[0, 5.5, 0]} center depthTest={false} zIndexRange={[100, 0]}>
-                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
-                  🔒 FERMÉ
-                </div>
-              </Html>
-            </group>
-
-            <group position={[0, 0, 25]}>
-              <mesh position={[0, 4, 0]} castShadow>
-                <boxGeometry args={[12, 8, 12]} />
-                <meshStandardMaterial color="#3b82f6" roughness={0.7} />
-              </mesh>
-              <Html position={[0, 9, 0]} center depthTest={false} zIndexRange={[100, 0]}>
-                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
-                  🔒 PROCHAINEMENT
-                </div>
-              </Html>
-            </group>
-
-            {(graphicsQuality === 'low'
-              ? [[-15, -15], [15, -15]]
-              : [[-15, -15], [-8, -18], [8, -18], [15, -15], [-18, 10], [18, 10], [-10, 15], [10, 15]]
-            ).map(([x, z], i) => (
-              <RealisticTree key={`tree-${i}`} position={[x, 0, z]} />
-            ))}
-
-            {(graphicsQuality === 'low'
-              ? [[0, -10]]
-              : [[-10, -10], [0, -10], [10, -10], [-10, 10], [10, 10]]
-            ).map((z, i) => (
-              <RealisticLamppost key={`lamp-${i}`} position={[-20, 0, z[1]]} />
-            ))}
-
-            {graphicsQuality !== 'low' && [-12, 0, 12].map((z) => (
-              <group key={`bench-${z}`} position={[-18, 0, z]}>
-                <mesh position={[0, 0.4, 0]} castShadow>
-                  <boxGeometry args={[2, 0.1, 0.8]} />
-                  <meshStandardMaterial color="#8b4513" roughness={0.9} />
-                </mesh>
-                <mesh position={[-0.8, 0.2, 0]} castShadow>
-                  <boxGeometry args={[0.1, 0.4, 0.8]} />
-                  <meshStandardMaterial color="#6b4423" roughness={0.9} />
-                </mesh>
-                <mesh position={[0.8, 0.2, 0]} castShadow>
-                  <boxGeometry args={[0.1, 0.4, 0.8]} />
-                  <meshStandardMaterial color="#6b4423" roughness={0.9} />
-                </mesh>
-              </group>
-            ))}
-
-            {graphicsQuality !== 'low' && (
-              <group position={[-15, 0, 0]}>
-                <mesh position={[0, 0.3, 0]} castShadow>
-                  <cylinderGeometry args={[2, 2.5, 0.6, 16]} />
-                  <meshStandardMaterial color="#6b7280" roughness={0.3} metalness={0.8} />
-                </mesh>
-                <mesh position={[0, 1, 0]}>
-                  <cylinderGeometry args={[0.3, 0.3, 1.4, 8]} />
-                  <meshStandardMaterial color="#94a3b8" roughness={0.2} metalness={0.9} />
-                </mesh>
-                <mesh position={[0, 1.8, 0]}>
-                  <sphereGeometry args={[0.4, 16, 16]} />
-                  <meshStandardMaterial color="#60a5fa" emissive="#60a5fa" emissiveIntensity={0.3} transparent opacity={0.7} />
-                </mesh>
-                <pointLight position={[0, 2, 0]} intensity={1} distance={8} color="#60a5fa" />
-              </group>
-            )}
-
-            {graphicsQuality !== 'low' && [
-              [5, -10], [-5, -10], [10, 5], [-10, 5], [12, -5], [-12, -5]
+            {/* Trees - varied across the world */}
+            {[
+              [-60, -50], [-45, -60], [45, -60], [60, -50],
+              [-65, 30], [65, 30], [-50, 55], [50, 55],
+              [-20, -30], [20, -30], [-30, 20], [30, 20],
+              [-40, -20], [40, -20], [-55, 0], [55, 0]
             ].map(([x, z], i) => (
-              <group key={`bush-${i}`} position={[x, 0, z]}>
-                <mesh position={[0, 0.5, 0]} castShadow>
-                  <sphereGeometry args={[0.8, 8, 8]} />
-                  <meshStandardMaterial color="#2d5016" roughness={0.95} />
+              <group key={`tree-${i}`} position={[x, 0, z]}>
+                {/* Trunk */}
+                <mesh position={[0, 2, 0]} castShadow>
+                  <cylinderGeometry args={[0.4, 0.5, 4, 8]} />
+                  <meshStandardMaterial color="#4a5568" />
                 </mesh>
-                <mesh position={[0.4, 0.6, 0.3]} castShadow>
+                {/* Foliage */}
+                <mesh position={[0, 5, 0]} castShadow>
+                  <coneGeometry args={[2.5, 4, 8]} />
+                  <meshStandardMaterial color="#166534" />
+                </mesh>
+              </group>
+            ))}
+
+            {/* Bushes - decorative elements */}
+            {[
+              [15, -20], [-15, -20], [25, 15], [-25, 15],
+              [35, -15], [-35, -15], [10, 35], [-10, 35],
+              [5, -10], [-5, -10], [20, 5], [-20, 5]
+            ].map(([x, z], i) => (
+              <mesh key={`bush-${i}`} position={[x, 0.8, z]} castShadow>
+                <sphereGeometry args={[1.5, 8, 8]} />
+                <meshStandardMaterial color="#15803d" />
+              </mesh>
+            ))}
+
+            {/* Lampposts along main paths */}
+            {[
+              [-70, -30], [-70, 0], [-70, 30],
+              [70, -30], [70, 0], [70, 30],
+              [0, -70], [-30, -70], [30, -70],
+              [0, 70], [-30, 70], [30, 70]
+            ].map(([x, z], i) => (
+              <group key={`lamp-${i}`} position={[x, 0, z]}>
+                <mesh position={[0, 3, 0]} castShadow>
+                  <cylinderGeometry args={[0.2, 0.2, 6, 8]} />
+                  <meshStandardMaterial color="#1f2937" />
+                </mesh>
+                <mesh position={[0, 6, 0]}>
                   <sphereGeometry args={[0.5, 8, 8]} />
-                  <meshStandardMaterial color="#3a6b1e" roughness={0.95} />
+                  <meshStandardMaterial color="#fef08a" emissive="#fef08a" emissiveIntensity={0.5} />
+                </mesh>
+                <pointLight position={[0, 6, 0]} intensity={0.5} distance={15} color="#fef08a" />
+              </group>
+            ))}
+
+            {/* Benches around park */}
+            {[
+              [8, 8], [-8, 8], [8, -8], [-8, -8]
+            ].map(([x, z], i) => (
+              <group key={`bench-${i}`} position={[x, 0, z]}>
+                <mesh position={[0, 0.4, 0]} castShadow>
+                  <boxGeometry args={[2, 0.2, 0.8]} />
+                  <meshStandardMaterial color="#6d28d9" />
+                </mesh>
+                <mesh position={[0, 0.8, -0.3]} castShadow>
+                  <boxGeometry args={[2, 0.6, 0.2]} />
+                  <meshStandardMaterial color="#6d28d9" />
                 </mesh>
               </group>
             ))}
           </>
         ) : (
           <>
-            {/* Cinema Interior */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-              <planeGeometry args={[30, 40]} />
-              <meshStandardMaterial color="#2d1010" />
+            {/* Larger cinema floor */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+              <planeGeometry args={[50, 60]} />
+              <meshStandardMaterial color="#1a1a1a" />
             </mesh>
 
-            <mesh position={[0, 3, -20]}>
-              <boxGeometry args={[30, 6, 0.5]} />
-              <meshStandardMaterial color="#1a0f0a" />
+            {/* Walls with theme colors */}
+            <mesh position={[0, 6, -30]} castShadow>
+              <boxGeometry args={[50, 12, 0.5]} />
+              <meshStandardMaterial color={
+                currentCinemaRoom.theme === 'luxury' ? '#4c1d95' :
+                currentCinemaRoom.theme === 'standard' ? '#1e40af' :
+                currentCinemaRoom.theme === 'imax' ? '#1f2937' : '#7c2d12'
+              } />
             </mesh>
-            <mesh position={[-15, 3, 0]}>
-              <boxGeometry args={[0.5, 6, 40]} />
-              <meshStandardMaterial color="#1a0f0a" />
+            <mesh position={[-25, 6, 0]} castShadow>
+              <boxGeometry args={[0.5, 12, 60]} />
+              <meshStandardMaterial color="#1a1a1a" />
             </mesh>
-            <mesh position={[15, 3, 0]}>
-              <boxGeometry args={[0.5, 6, 40]} />
-              <meshStandardMaterial color="#1a0f0a" />
+            <mesh position={[25, 6, 0]} castShadow>
+              <boxGeometry args={[0.5, 12, 60]} />
+              <meshStandardMaterial color="#1a1a1a" />
             </mesh>
 
-            {currentCinemaRoom && currentCinemaRoom !== 'world' && (() => {
-              const room = cinemaRooms.find(r => r.id === currentCinemaRoom.id)
-              if (!room) return null
+            {/* Ceiling with lights */}
+            <mesh position={[0, 12, 0]} receiveShadow>
+              <boxGeometry args={[50, 0.5, 60]} />
+              <meshStandardMaterial color="#0f0f0f" />
+            </mesh>
 
-              const isMovieStarted = room.schedule_start && new Date(room.schedule_start).getTime() < Date.now()
+            {/* Ceiling lights */}
+            {[-15, -5, 5, 15].map((x) =>
+              [-20, -10, 0, 10, 20].map((z) => (
+                <pointLight
+                  key={`light-${x}-${z}`}
+                  position={[x, 11, z]}
+                  intensity={0.3}
+                  distance={15}
+                  color="#fef3c7"
+                />
+              ))
+            )}
 
-              return (
-                <group position={[0, 3, -19]}>
-                  {/* Cinema Screen Background */}
-                  <mesh>
-                    <planeGeometry args={[14, 8]} />
-                    <meshStandardMaterial color="#1a1a1a" />
-                  </mesh>
+            {/* Stage lighting */}
+            <spotLight
+              position={[0, 10, -10]}
+              angle={0.5}
+              penumbra={0.5}
+              intensity={1}
+              castShadow
+              target-position={[0, 0, -28]}
+            />
 
-                  {/* Screen Border */}
-                  <mesh position={[0, 0, 0.1]}>
-                    <planeGeometry args={[13.5, 7.5]} />
-                    <meshStandardMaterial color="#000000" />
-                  </mesh>
+            {/* Curtains on sides */}
+            <mesh position={[-24, 6, -25]} castShadow>
+              <boxGeometry args={[1, 10, 10]} />
+              <meshStandardMaterial color="#7f1d1d" />
+            </mesh>
+            <mesh position={[24, 6, -25]} castShadow>
+              <boxGeometry args={[1, 10, 10]} />
+              <meshStandardMaterial color="#7f1d1d" />
+            </mesh>
 
-                  {/* Movie Info and Countdown - Display before movie starts */}
-                  {!isMovieStarted && (
-                    <>
-                      <Html position={[0, 1, 0.2]} center depthTest={false} zIndexRange={[100, 0]}>
-                        <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
-                          <h2 className="text-3xl font-bold mb-2">{room.movie_title}</h2>
-                          <p className="text-lg text-gray-300 mb-4">
-                            Début dans: <span className="text-yellow-400 font-bold">{countdown}</span>
-                          </p>
-                          {room.movie_poster && (
-                            <img
-                              src={`https://image.tmdb.org/t/p/w500${room.movie_poster}`}
-                              alt={room.movie_title}
-                              className="w-40 h-60 object-cover rounded mx-auto"
-                            />
-                          )}
-                        </div>
-                      </Html>
-                    </>
-                  )}
+            {/* Screen */}
+            <group position={[0, 6, -28]}>
+              <mesh castShadow>
+                <boxGeometry args={[24, 12, 0.3]} />
+                <meshStandardMaterial color="#1f2937" />
+              </mesh>
 
-                  {/* Movie Iframe - Display when movie has started */}
-                  {isMovieStarted && room.embed_url && (
-                    <Html transform style={{ width: '1300px', height: '720px' }}>
-                      <iframe
-                        src={room.embed_url}
-                        className="w-full h-full rounded"
-                        allowFullScreen
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      />
-                    </Html>
-                  )}
-                </group>
-              )
-            })()}
+              {currentCinemaRoom.movie_url && (
+                <Html position={[0, 0, 0.2]} transform occlude zIndexRange={[100, 0]}>
+                  <iframe
+                    src={currentCinemaRoom.movie_url}
+                    className="w-[800px] h-[450px]"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  />
+                </Html>
+              )}
+            </group>
 
             {cinemaSeats.map((seat) => {
-              const isMySeat = mySeat === seat.seat_number // Use seat.seat_number for comparison
+              const isMySeat = mySeat === seat.seat_number
+              const isOccupied = seat.user_id && seat.user_id !== userProfile?.id
 
               return (
                 <group key={seat.seat_number} position={[seat.position_x, seat.position_y, seat.position_z]}>
+                  {/* Seat base - red velvet style */}
                   <mesh castShadow>
-                    <boxGeometry args={[1, 0.8, 0.9]} />
-                    <meshStandardMaterial color={isMySeat ? '#ef4444' : seat.color} />
+                    <boxGeometry args={[1.2, 0.5, 1.2]} />
+                    <meshStandardMaterial
+                      color={isMySeat ? '#dc2626' : isOccupied ? '#7f1d1d' : '#991b1b'}
+                      roughness={0.7}
+                    />
                   </mesh>
-                  <Html position={[0, 1.2, 0]} center depthTest={false} zIndexRange={[100, 0]}>
-                    <button
-                      onClick={() => handleSitInSeat(seat.seat_number)}
-                      className={`text-xs px-3 py-2 rounded-lg ${
-                        isMySeat
-                          ? 'bg-red-500 hover:bg-red-600'
-                          : 'bg-blue-500 hover:bg-blue-600'
-                      } text-white whitespace-nowrap font-medium shadow-lg`}
-                    >
-                      {isMySeat ? '🚶 Se lever' : '💺 S\'asseoir'}
-                    </button>
-                  </Html>
+                  {/* Seat back - tall and comfortable */}
+                  <mesh position={[0, 0.7, -0.4]} castShadow>
+                    <boxGeometry args={[1.2, 1.2, 0.3]} />
+                    <meshStandardMaterial
+                      color={isMySeat ? '#dc2626' : isOccupied ? '#7f1d1d' : '#991b1b'}
+                      roughness={0.7}
+                    />
+                  </mesh>
+                  {/* Left armrest */}
+                  <mesh position={[-0.6, 0.4, 0]} castShadow>
+                    <boxGeometry args={[0.15, 0.8, 1]} />
+                    <meshStandardMaterial color="#4a1d1d" />
+                  </mesh>
+                  {/* Right armrest */}
+                  <mesh position={[0.6, 0.4, 0]} castShadow>
+                    <boxGeometry args={[0.15, 0.8, 1]} />
+                    <meshStandardMaterial color="#4a1d1d" />
+                  </mesh>
                 </group>
               )
             })}
 
+            <Html position={[0, 3, 28]} center depthTest={false} zIndexRange={[100, 0]}>
+              <div className="flex flex-col gap-3 items-center">
+                <button
+                  onClick={() => mySeat ? handleSitInSeat(mySeat) : handleSitInSeat()}
+                  disabled={!mySeat && cinemaSeats.every(s => s.user_id)}
+                  className={`px-8 py-4 rounded-xl font-bold text-lg shadow-2xl transition-all transform hover:scale-105 ${
+                    mySeat
+                      ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                      : cinemaSeats.every(s => s.user_id)
+                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
+                  }`}
+                >
+                  {mySeat ? '🚶 Se Lever' : cinemaSeats.every(s => s.user_id) ? '🔒 Complet' : '💺 S\'asseoir'}
+                </button>
 
-            <Html position={[0, 2, 19]} center depthTest={false} zIndexRange={[100, 0]}>
-              <button
-                onClick={handleLeaveRoom}
-                className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 whitespace-nowrap shadow-lg flex items-center gap-2"
-              >
-                <LogOut className="w-5 h-5" />
-                Sortir du Cinéma
-              </button>
+                <button
+                  onClick={handleLeaveRoom}
+                  className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 shadow-xl flex items-center gap-2 font-medium"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Sortir du Cinéma
+                </button>
+              </div>
             </Html>
           </>
         )}
@@ -1663,7 +1702,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         {/* My avatar with username and badge */}
         <group>
           <RealisticAvatar
-            position={[myPosition.x, myPosition.y + (isJumping ? 1 : 0), myPosition.z]}
+            position={[myPosition.x, myPosition.y + (isJumping ? 0.8 : 0), myPosition.z]} // Adjust y for jump height
             avatarStyle={myAvatarStyle}
             isMoving={movement.x !== 0 || movement.z !== 0}
           />
@@ -1713,7 +1752,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <RealisticAvatar
                   position={[player.position_x || 0, 0.5, player.position_z || 0]}
                   avatarStyle={avatarStyle}
-                  isMoving={false}
+                  isMoving={false} // Disable movement animation for other players for simplicity
                 />
 
                 {worldSettings.showStatusBadges && (
@@ -1882,7 +1921,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </button>
       )}
 
-      {mySeat !== null && currentCinemaRoom?.embed_url && !showMovieFullscreen && (
+      {mySeat !== null && currentCinemaRoom?.movie_url && !showMovieFullscreen && (
         <button
           onClick={() => setShowMovieFullscreen(true)}
           className="absolute bottom-24 right-4 z-10 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 shadow-lg flex items-center gap-2"
@@ -1892,7 +1931,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </button>
       )}
 
-      {showMovieFullscreen && currentCinemaRoom?.embed_url && (
+      {showMovieFullscreen && currentCinemaRoom?.movie_url && (
         <div className="absolute inset-0 bg-black z-40 flex flex-col">
           <div className="bg-black/90 backdrop-blur-lg px-4 py-3 flex justify-between items-center">
             <h3 className="text-white font-bold">{currentCinemaRoom.movie_title}</h3>
@@ -1906,7 +1945,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           </div>
           <div className="flex-1">
             <iframe
-              src={currentCinemaRoom.embed_url}
+              src={currentCinemaRoom.movie_url}
               className="w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -1915,9 +1954,107 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
+      {showCinema && (
+        <div className="fixed inset-0 bg-black/98 backdrop-blur-3xl flex items-center justify-center z-50 pointer-events-auto">
+          <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl shadow-2xl max-w-6xl w-full mx-4 shadow-2xl border border-white/20 overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+                🎬 Salles de Cinéma
+              </h2>
+              <button
+                onClick={() => setShowCinema(false)}
+                className="text-white/80 hover:text-white transition-colors bg-white/10 rounded-full p-2 pointer-events-auto"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[70vh] bg-black">
+              {cinemaRooms.length === 0 ? (
+                <div className="text-center text-white/60 py-12">
+                  <p className="text-xl">Aucune salle disponible pour le moment</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {cinemaRooms.map((room) => (
+                    <div
+                      key={room.id}
+                      className="bg-gradient-to-br from-indigo-900/70 to-purple-900/70 rounded-xl overflow-hidden border-2 border-white/20 hover:border-blue-500/70 transition-all shadow-lg"
+                    >
+                      {room.poster_url && (
+                        <div className="relative w-full h-64 bg-gray-900">
+                          <img
+                            src={room.poster_url || "/placeholder.svg"}
+                            alt={room.movie_title}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = '/abstract-movie-poster.png'
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      <div className="p-6">
+                        <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                          Salle {room.room_number} - {room.theme}
+                        </h3>
+                        <p className="text-white/80 font-medium mb-1">{room.movie_title}</p>
+                        <p className="text-white/60 text-sm mb-4">Capacité: {room.capacity}</p>
+
+                        {room.showtime && (
+                          <p className="text-blue-300 text-sm mb-4">
+                            🕐 Séance: {new Date(room.showtime).toLocaleString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        )}
+
+                        <div className="mb-4">
+                          {room.access_level === 'vip' && (
+                            <span className="inline-block bg-yellow-500/20 text-yellow-300 px-3 py-1 rounded-full text-sm font-medium">
+                              👑 VIP
+                            </span>
+                          )}
+                          {room.access_level === 'vip_plus' && (
+                            <span className="inline-block bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-medium">
+                              💎 VIP+
+                            </span>
+                          )}
+                          {room.access_level === 'admin' && (
+                            <span className="inline-block bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-sm font-medium">
+                              🛡️ Admin
+                            </span>
+                          )}
+                          {room.access_level === 'public' && (
+                            <span className="inline-block bg-green-500/20 text-green-300 px-3 py-1 rounded-full text-sm font-medium">
+                              🌍 Public
+                            </span>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => handleEnterRoom(room)}
+                          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
+                        >
+                          Entrer dans la Salle
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {showChat && (
         <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-          <div className="bg-black/90 backdrop-blur-xl rounded-xl w-full max-w-md h-[600px] flex flex-col border-2 border-white/30 shadow-2xl">
+          <div className="bg-black/95 backdrop-blur-xl rounded-xl w-full max-w-md h-[600px] flex flex-col border-2 border-white/30 shadow-2xl">
             <div className="flex justify-between items-center p-4 border-b border-white/20">
               <h3 className="text-white font-bold text-lg">
                 {currentCinemaRoom ? `Chat - Salle ${currentCinemaRoom.room_number}` : 'Chat Global'}
@@ -2163,22 +2300,36 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {showQuickActions && (
-        <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-3 bg-black/80 backdrop-blur-lg p-3 rounded-2xl border-2 border-white/20">
-          <button onClick={() => handleQuickAction('jump')} className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors">
-            <ArrowUp className="w-6 h-6" />
-          </button>
-          <button onClick={() => handleEmoji('😂')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
-            😂
-          </button>
-          <button onClick={() => handleEmoji('👍')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
-            👍
-          </button>
-          <button onClick={() => handleEmoji('❤️')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
-            ❤️
-          </button>
-          <button onClick={() => handleEmoji('😭')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
-            😭
-          </button>
+        <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-2 bg-black/90 backdrop-blur-xl p-4 rounded-2xl border-2 border-white/30 shadow-2xl">
+          <div className="text-white font-bold text-sm mb-2 text-center border-b border-white/20 pb-2">Actions Rapides</div>
+
+          {/* Jump button */}
+          {worldSettings.enableJumping && (
+            <button
+              onClick={() => { handleJump(); setShowQuickActions(false); }}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 rounded-xl shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all flex items-center gap-2 font-medium"
+            >
+              <ArrowUp className="w-5 h-5" />
+              Sauter
+            </button>
+          )}
+
+          <div className="text-white/60 text-xs text-center mt-1">Émojis</div>
+          <div className="grid grid-cols-3 gap-2">
+            <button onClick={() => handleEmoji('😂')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">😂</button>
+            <button onClick={() => handleEmoji('👍')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">👍</button>
+            <button onClick={() => handleEmoji('❤️')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">❤️</button>
+            <button onClick={() => handleEmoji('😭')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">😭</button>
+            <button onClick={() => handleEmoji('🎉')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">🎉</button>
+            <button onClick={() => handleEmoji('🔥')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">🔥</button>
+          </div>
+
+          <div className="text-white/60 text-xs text-center mt-2">Émotes</div>
+          <div className="grid grid-cols-3 gap-2">
+            <button onClick={() => handleEmoji('👋')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Saluer">👋</button>
+            <button onClick={() => handleEmoji('💃')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Danser">💃</button>
+            <button onClick={() => handleEmoji('🤝')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Serrer la main">🤝</button>
+          </div>
         </div>
       )}
 
@@ -2220,7 +2371,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {showSettings && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/95 backdrop-blur-lg z-[60] flex items-center justify-center p-4">
           <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full border-2 border-blue-500/30">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -2236,6 +2387,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             </div>
 
             <div className="space-y-4">
+              <div>
+                <label className="text-white font-medium block mb-2">
+                  Mode de Contrôle
+                </label>
+                <select
+                  value={controlMode}
+                  onChange={(e) => setControlMode(e.target.value as 'auto' | 'pc' | 'mobile')}
+                  className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 outline-none"
+                >
+                  <option value="auto">Automatique</option>
+                  <option value="pc">PC (Clavier)</option>
+                  <option value="mobile">Mobile (Joystick)</option>
+                </select>
+              </div>
+
               <div>
                 <label className="text-white font-medium block mb-2">
                   Qualité Graphique
@@ -2274,143 +2440,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 Fermer
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {showCinema && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border-2 border-blue-500/30">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 flex justify-between items-center">
-              <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                🎬 Salles de Cinéma
-              </h2>
-              <button
-                onClick={() => setShowCinema(false)}
-                className="text-white/80 hover:text-white transition-colors bg-white/10 rounded-full p-2"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto max-h-[70vh]">
-              {cinemaRooms.length === 0 ? (
-                <div className="text-center text-white/60 py-12">
-                  <p className="text-xl">Aucune salle disponible pour le moment</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {cinemaRooms.map((room) => (
-                    <div
-                      key={room.id}
-                      className="bg-gradient-to-br from-indigo-900/50 to-purple-900/50 rounded-xl overflow-hidden border-2 border-white/10 hover:border-blue-500/50 transition-all shadow-lg"
-                    >
-                      {room.poster_url && (
-                        <div className="relative w-full h-64 bg-gray-800">
-                          <img
-                            src={room.poster_url || "/placeholder.svg"}
-                            alt={room.movie_title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = '/abstract-movie-poster.png'
-                            }}
-                          />
-                        </div>
-                      )}
-                      
-                      <div className="p-6">
-                        <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                          Salle {room.room_number} - {room.theme}
-                        </h3>
-                        <p className="text-white/80 font-medium mb-1">{room.movie_title}</p>
-                        <p className="text-white/60 text-sm mb-4">Capacité: {room.capacity}</p>
-                        
-                        {room.showtime && (
-                          <p className="text-blue-300 text-sm mb-4">
-                            🕐 Séance: {new Date(room.showtime).toLocaleString('fr-FR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        )}
-
-                        <div className="mb-4">
-                          {room.access_level === 'vip' && (
-                            <span className="inline-block bg-yellow-500/20 text-yellow-300 px-3 py-1 rounded-full text-sm font-medium">
-                              👑 VIP
-                            </span>
-                          )}
-                          {room.access_level === 'vip_plus' && (
-                            <span className="inline-block bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-medium">
-                              💎 VIP+
-                            </span>
-                          )}
-                          {room.access_level === 'admin' && (
-                            <span className="inline-block bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-sm font-medium">
-                              🛡️ Admin
-                            </span>
-                          )}
-                          {room.access_level === 'public' && (
-                            <span className="inline-block bg-green-500/20 text-green-300 px-3 py-1 rounded-full text-sm font-medium">
-                              🌍 Public
-                            </span>
-                          )}
-                        </div>
-
-                        <button
-                          onClick={() => handleEnterRoom(room)}
-                          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
-                        >
-                          Entrer dans la Salle
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showChatInput && !isFullscreen && (
-        <div className="absolute top-20 right-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-white font-bold text-sm">Envoyer un message</h3>
-            <button
-              onClick={() => setShowChatInput(false)}
-              className="text-white/60 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  sendMessage()
-                  setShowChatInput(false)
-                }
-              }}
-              placeholder="Votre message..."
-              className="flex-1 bg-white/10 text-white px-3 py-2 rounded-lg outline-none text-sm"
-              autoFocus
-            />
-            <button
-              onClick={() => {
-                sendMessage()
-                setShowChatInput(false)
-              }}
-              className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
-            >
-              <Send className="w-4 h-4" />
-            </button>
           </div>
         </div>
       )}
