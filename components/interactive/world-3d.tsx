@@ -1,12 +1,12 @@
 'use client'
 
-import { MapIcon, LogOut } from 'lucide-react' // Added LogOut icon
+import { MapIcon, LogOut, User, Users, MessageCircle, Settings, Film, X, Shield, Crown, Star, Palette, Smile } from 'lucide-react'
 import React, { useState, useEffect } from 'react'
-import { supabase } from 'path-to-supabase'
+import { createClient } from '@/lib/supabase/client'
 import { Html } from '@react-three/drei'
-import { RealisticAvatar } from 'path-to-avatar'
-import { User, Users, MessageCircle, Settings, Film, X, Shield, Crown, Star, Palette } from 'path-to-icons'
-import useTexture from 'path-to-useTexture'
+import { useRouter } from 'next/navigation'
+
+const supabase = createClient()
 
 const InteractiveWorld = ({ userProfile, onlineCount, worldSettings }) => {
   const [showMenu, setShowMenu] = useState(false)
@@ -27,6 +27,7 @@ const InteractiveWorld = ({ userProfile, onlineCount, worldSettings }) => {
   const otherPlayers = []
   const [cinemaRooms, setCinemaRooms] = useState<any[]>([])
   const myPosition = { x: 0, y: 0, z: 0 } // Assuming myPosition is defined somewhere
+  const router = useRouter()
 
   useEffect(() => {
     const checkMobile = () => {
@@ -214,11 +215,11 @@ const InteractiveWorld = ({ userProfile, onlineCount, worldSettings }) => {
       }
 
       // Redirect to home page
-      window.location.href = '/'
+      router.push('/')
     } catch (err) {
       console.error('[v0] Error quitting world:', err)
       // Still redirect even if save fails
-      window.location.href = '/'
+      router.push('/')
     }
   }
 
