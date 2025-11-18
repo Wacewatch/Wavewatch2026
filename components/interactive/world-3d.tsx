@@ -384,11 +384,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const checkCollision = (newX: number, newZ: number): boolean => {
     // Collision zones for objects in the world
     const collisionZones = [
-      // Add a small collision zone at the center for the player's starting point
-      { x: 0, z: 0, width: 2, depth: 2 },
-      
-      // Cinema building - INCREASED SIZE
-      { x: 15, z: 0, width: 15, depth: 15 },
+      // Cinema building
+      { x: 15, z: 0, width: 9, depth: 9 },
 
       // Trees
       { x: -15, z: -15, width: 2, depth: 2 },
@@ -1065,14 +1062,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
 
     await handleSitInSeat(availableSeat.seat_number)
-    
-    // Orient camera towards screen (screen is at z: -7 in cinema room at x: 15)
-    if (povMode) {
-      // In POV mode, look towards the screen
-      // Screen is at world position [15, 3.5, -7]
-      // Player is at seat position, camera should face negative z direction (towards screen)
-      // This is handled by the camera's perspective, no explicit code needed here for now
-    }
   }
 
   const handleSitInSeat = async (seatNumber: number) => {
@@ -1593,34 +1582,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         ) : (
           <>
             {/* Cinema Interior */}
-            <group position={[15, 0, 0]}>
-              {/* Cinema Room - LARGER DIMENSIONS */}
-              <mesh receiveShadow>
-                <boxGeometry args={[15, 6, 15]} />
-                <meshStandardMaterial color="#1a1a2e" side={THREE.BackSide} />
-              </mesh>
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+              <planeGeometry args={[30, 40]} />
+              <meshStandardMaterial color="#2d1010" />
+            </mesh>
 
-              {/* Floor */}
-              <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-                <planeGeometry args={[15, 15]} />
-                <meshStandardMaterial color="#0f0f1a" />
-              </mesh>
-
-              {/* Ceiling with lights */}
-              <mesh position={[0, 5.9, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[15, 15]} />
-                <meshStandardMaterial color="#0a0f1f" />
-              </mesh>
-
-              {/* Add some spotlights on the ceiling */}
-              {[-5, 0, 5].map((x) => (
-                <mesh key={x} position={[x, 5.8, 0]}>
-                  <boxGeometry args={[0.5, 0.1, 0.5]} />
-                  <meshStandardMaterial color="#ffffff" />
-                  <pointLight position={[0, 0, 0]} intensity={1.5} distance={10} color="#ffffff" />
-                </mesh>
-              ))}
-            </group>
+            <mesh position={[0, 3, -20]}>
+              <boxGeometry args={[30, 6, 0.5]} />
+              <meshStandardMaterial color="#1a0f0a" />
+            </mesh>
+            <mesh position={[-15, 3, 0]}>
+              <boxGeometry args={[0.5, 6, 40]} />
+              <meshStandardMaterial color="#1a0f0a" />
+            </mesh>
+            <mesh position={[15, 3, 0]}>
+              <boxGeometry args={[0.5, 6, 40]} />
+              <meshStandardMaterial color="#1a0f0a" />
+            </mesh>
 
             {currentCinemaRoom && currentCinemaRoom !== 'world' && (() => {
               const room = cinemaRooms.find(r => r.id === currentCinemaRoom.id)
@@ -1629,23 +1607,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               const isMovieStarted = room.schedule_start && new Date(room.schedule_start).getTime() < Date.now()
 
               return (
-                <group position={[0, 3.5, -7]}>
-                  {/* Cinema Screen Background - LARGER */}
+                <group position={[0, 3, -19]}>
+                  {/* Cinema Screen Background */}
                   <mesh>
-                    <planeGeometry args={[12, 7]} />
+                    <planeGeometry args={[14, 8]} />
                     <meshStandardMaterial color="#1a1a1a" />
                   </mesh>
 
                   {/* Screen Border */}
                   <mesh position={[0, 0, 0.1]}>
-                    <planeGeometry args={[11.5, 6.5]} />
+                    <planeGeometry args={[13.5, 7.5]} />
                     <meshStandardMaterial color="#000000" />
                   </mesh>
 
                   {/* Movie Info and Countdown - Display before movie starts */}
                   {!isMovieStarted && (
                     <>
-                      <Html position={[0, 1, 0.2]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+                      <Html position={[0, 1, 0.2]} center depthTest={false} zIndexRange={[100, 0]}>
                         <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
                           <h2 className="text-3xl font-bold mb-2">{room.movie_title}</h2>
                           <p className="text-lg text-gray-300 mb-4">
@@ -1653,7 +1631,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                           </p>
                           {room.movie_poster && (
                             <img
-                              src={room.movie_poster.startsWith('http') ? room.movie_poster : `https://image.tmdb.org/t/p/w500${room.movie_poster}`}
+                              src={`https://image.tmdb.org/t/p/w500${room.movie_poster}`}
                               alt={room.movie_title}
                               className="w-40 h-60 object-cover rounded mx-auto"
                             />
@@ -1665,7 +1643,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
                   {/* Movie Iframe - Display when movie has started */}
                   {isMovieStarted && room.embed_url && (
-                    <Html transform style={{ width: '1100px', height: '620px' }}>
+                    <Html transform style={{ width: '1300px', height: '720px' }}>
                       <iframe
                         src={room.embed_url}
                         className="w-full h-full rounded"
@@ -2240,7 +2218,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {showQuickActions && (
-        <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-3 bg-black/80 backdrop-blur-lg p-3 rounded-2xl border-2 border-white/20 max-h-[60vh] md:max-h-[70vh] overflow-y-auto">
+        <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-3 bg-black/80 backdrop-blur-lg p-3 rounded-2xl border-2 border-white/20">
           {currentCinemaRoom && (
             <>
               {mySeat === null ? (
@@ -2424,130 +2402,146 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       {showCinema && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border-2 border-blue-500/30">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 md:p-6 flex justify-between items-center">
-              <h2 className="text-xl md:text-3xl font-bold text-white flex items-center gap-2 md:gap-3">
+            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 flex justify-between items-center">
+              <h2 className="text-3xl font-bold text-white flex items-center gap-3">
                 🎬 Salles de Cinéma
               </h2>
               <button
                 onClick={() => setShowCinema(false)}
                 className="text-white/80 hover:text-white transition-colors bg-white/10 rounded-full p-2"
               >
-                <X className="w-5 h-5 md:w-6 md:h-6" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
-            <div className="p-4 md:p-6 overflow-y-auto max-h-[70vh]">
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
               {cinemaRooms.length === 0 ? (
                 <div className="text-center text-white/60 py-12">
-                  <p className="text-lg md:text-xl">Aucune salle disponible pour le moment</p>
+                  <p className="text-xl">Aucune salle disponible pour le moment</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {cinemaRooms.map((room) => (
-                    <div key={room.id} className="bg-gradient-to-br from-gray-900/95 to-gray-800/95 rounded-xl p-4 md:p-6 hover:from-gray-800/95 hover:to-gray-700/95 transition-all border border-gray-700 shadow-lg">
-                      {/* Movie Poster - FIXED to use movie_poster column */}
-                      {room.movie_poster && (
-                        <div className="relative w-full h-48 md:h-64 bg-gray-800 mb-4 rounded-lg overflow-hidden">
+                    <div key={room.id} className="bg-gradient-to-br from-gray-900/95 to-gray-800/95 rounded-xl p-6 hover:from-gray-800/95 hover:to-gray-700/95 transition-all border border-gray-700 shadow-lg">
+                      {/* Movie Poster */}
+                      {room.poster_url && (
+                        <div className="relative w-full h-64 bg-gray-800">
                           <img
-                            src={room.movie_poster.startsWith('http') ? room.movie_poster : `https://image.tmdb.org/t/p/w500${room.movie_poster}`}
+                            src={room.poster_url || "/placeholder.svg"}
                             alt={room.movie_title}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              e.currentTarget.src = '/classic-cinema.png'
+                              e.currentTarget.src = '/abstract-movie-poster.png'
                             }}
                           />
                           {/* Access Level Badge on Poster */}
                           <div className="absolute top-2 right-2">
                             {room.access_level === 'vip' && (
-                              <span className="inline-block bg-yellow-500 text-white px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-bold shadow-lg">
+                              <span className="inline-block bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
                                 👑 VIP
                               </span>
                             )}
                             {room.access_level === 'vip_plus' && (
-                              <span className="inline-block bg-purple-600 text-white px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-bold shadow-lg">
+                              <span className="inline-block bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
                                 💎 VIP+
                               </span>
                             )}
                             {room.access_level === 'admin' && (
-                              <span className="inline-block bg-red-600 text-white px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-bold shadow-lg">
+                              <span className="inline-block bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
                                 🛡️ Admin
                               </span>
                             )}
                             {room.access_level === 'public' && (
-                              <span className="inline-block bg-green-600 text-white px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-bold shadow-lg">
+                              <span className="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
                                 🌍 Public
                               </span>
                             )}
                           </div>
                         </div>
                       )}
+                      
+                      <div className="p-6">
+                        {/* Room Title */}
+                        <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
+                          Salle {room.room_number} - {room.theme}
+                        </h3>
 
-                      <h3 className="text-lg md:text-xl font-bold text-white mb-2">{room.name}</h3>
-                      <p className="text-sm md:text-base text-gray-300 mb-4">{room.movie_title}</p>
+                        {/* Movie Title */}
+                        <p className="text-white/80 font-medium mb-3 text-lg">{room.movie_title}</p>
 
-                      <div className="grid grid-cols-2 gap-2 md:gap-3 mb-4">
-                        <div className="bg-gray-900/50 p-2 md:p-3 rounded-lg text-center">
-                          <p className="text-xs md:text-sm text-gray-400">Capacité</p>
-                          <p className="text-base md:text-xl font-bold text-white">{room.capacity} places</p>
+                        {/* Room Info Grid */}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          {/* Capacity */}
+                          <div className="bg-white/5 rounded-lg p-3">
+                            <p className="text-white/60 text-xs mb-1">Capacité</p>
+                            <p className="text-white font-bold text-lg">{room.capacity} places</p>
+                          </div>
+
+                          {/* TMDB ID */}
+                          {room.movie_tmdb_id && (
+                            <div className="bg-white/5 rounded-lg p-3">
+                              <p className="text-white/60 text-xs mb-1">ID TMDB</p>
+                              <p className="text-blue-300 font-mono font-bold">{room.movie_tmdb_id}</p>
+                            </div>
+                          )}
                         </div>
-                        <div className="bg-gray-900/50 p-2 md:p-3 rounded-lg text-center">
-                          <p className="text-xs md:text-sm text-gray-400">ID TMDB</p>
-                          <p className="text-base md:text-xl font-bold text-blue-400">{room.movie_tmdb_id}</p>
+
+                        {/* Start Time */}
+                        {room.schedule_start && (
+                          <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg p-3 mb-4 border border-blue-500/30">
+                            <p className="text-white/80 text-sm mb-1">🕐 Heure de début</p>
+                            <p className="text-white font-bold text-lg">
+                              {new Date(room.schedule_start).toLocaleString('fr-FR', {
+                                weekday: 'long',
+                                day: '2-digit',
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Access Requirements */}
+                        <div className="mb-4">
+                          <p className="text-white/60 text-sm mb-2">Accès requis:</p>
+                          <div className="flex gap-2 items-center">
+                            {room.access_level === 'public' && (
+                              <div className="flex items-center gap-2 bg-green-500/20 text-green-300 px-3 py-2 rounded-lg border border-green-500/30">
+                                <span className="text-lg">🌍</span>
+                                <span className="font-medium">Ouvert à tous</span>
+                              </div>
+                            )}
+                            {room.access_level === 'vip' && (
+                              <div className="flex items-center gap-2 bg-yellow-500/20 text-yellow-300 px-3 py-2 rounded-lg border border-yellow-500/30">
+                                <span className="text-lg">👑</span>
+                                <span className="font-medium">VIP requis</span>
+                              </div>
+                            )}
+                            {room.access_level === 'vip_plus' && (
+                              <div className="flex items-center gap-2 bg-purple-500/20 text-purple-300 px-3 py-2 rounded-lg border border-purple-500/30">
+                                <span className="text-lg">💎</span>
+                                <span className="font-medium">VIP+ requis</span>
+                              </div>
+                            )}
+                            {room.access_level === 'admin' && (
+                              <div className="flex items-center gap-2 bg-red-500/20 text-red-300 px-3 py-2 rounded-lg border border-red-500/30">
+                                <span className="text-lg">🛡️</span>
+                                <span className="font-medium">Admin uniquement</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Enter Button */}
+                        <button
+                          onClick={() => handleEnterRoom(room)}
+                          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
+                        >
+                          Entrer dans la Salle
+                        </button>
                       </div>
-
-                      {room.schedule_start && (
-                        <div className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 p-3 md:p-4 rounded-lg mb-4 border border-blue-500/30">
-                          <p className="text-xs md:text-sm text-gray-300 mb-1 flex items-center gap-2">
-                            <Clock className="w-4 h-4" />
-                            Heure de début
-                          </p>
-                          <p className="text-base md:text-xl font-bold text-white">
-                            {new Date(room.schedule_start).toLocaleDateString('fr-FR', { 
-                              weekday: 'long', 
-                              year: 'numeric', 
-                              month: 'long', 
-                              day: 'numeric' 
-                            })} à {new Date(room.schedule_start).toLocaleTimeString('fr-FR', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
-                          </p>
-                        </div>
-                      )}
-
-                      <div className="mb-4">
-                        <p className="text-xs md:text-sm text-gray-400 mb-2">Accès requis:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {room.access_level === 'vip' && (
-                            <span className="inline-flex items-center gap-1 bg-yellow-500/20 text-yellow-400 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium border border-yellow-500/30">
-                              <span className="text-base md:text-lg">👑</span> VIP
-                            </span>
-                          )}
-                          {room.access_level === 'vip_plus' && (
-                            <span className="inline-flex items-center gap-1 bg-purple-600/20 text-purple-400 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium border border-purple-500/30">
-                              <span className="text-base md:text-lg">💎</span> VIP+
-                            </span>
-                          )}
-                          {room.access_level === 'admin' && (
-                            <span className="inline-flex items-center gap-1 bg-red-600/20 text-red-400 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium border border-red-500/30">
-                              <span className="text-base md:text-lg">🛡️</span> Admin
-                            </span>
-                          )}
-                          {room.access_level === 'public' && (
-                            <span className="inline-flex items-center gap-1 bg-green-600/20 text-green-400 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium border border-green-500/30">
-                              <span className="text-base md:text-lg">🌍</span> Public
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => handleEnterRoom(room)}
-                        className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 md:py-3 rounded-lg font-bold hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg text-sm md:text-base"
-                      >
-                        Entrer dans la Salle
-                      </button>
                     </div>
                   ))}
                 </div>
