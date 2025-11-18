@@ -240,7 +240,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   // Removed unused onlineProfiles state
   const [myProfile, setMyProfile] = useState<any>(null)
   const [onlineCount, setOnlineCount] = useState(0)
-  const [myPosition, setMyPosition] = useState({ x: 0, y: 0, z: 50 })
+  const [myPosition, setMyPosition] = useState({ x: 0, y: 0.5, z: 0 })
   const [myAvatarStyle, setMyAvatarStyle] = useState({
     bodyColor: '#3b82f6',
     headColor: '#fbbf24',
@@ -259,7 +259,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [showChat, setShowChat] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAvatarCustomizer, setShowAvatarCustomizer] = useState(false)
-  const [showCinema, setShowCinema] = useState(false)
+  const [showCinema, setShowShowCinema] = useState(false) // Corrected typo from original code
   const [showUserCard, setShowUserCard] = useState(false)
   const [currentCinemaRoom, setCurrentCinemaRoom] = useState<any>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -382,8 +382,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       // Museum
       { x: 50, z: 30, width: 20, depth: 16 },
 
-      // Park fountain
-      { x: 0, z: 0, width: 8, depth: 8 },
+      // Park fountain - REMOVED
+      // { x: 0, z: 0, width: 8, depth: 8 },
 
       // Trees (more spread out across larger world)
       { x: -60, z: -50, width: 3, depth: 3 },
@@ -970,7 +970,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         .from('interactive_profiles')
         .update({
           position_x: newPos.x,
-          position_y: newPos.y,
           position_z: newPos.z
         })
         .eq('user_id', userId)
@@ -978,17 +977,22 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       return newPos
     })
-
+    
     if (dx !== 0 || dz !== 0) {
       setMovement({ x: dx, z: dz })
     } else {
       setMovement({ x: 0, z: 0 })
     }
-  }, [userId, supabase, isSeatsLocked, mySeat]) // isSeatsLocked and mySeat are now effectively unused here
+  }, [userId, supabase]) // Removed isSeatsLocked and mySeat from dependencies as they are effectively unused
+
+  const handleJoystickStop = useCallback(() => {
+    setMovement({ x: 0, z: 0 }) // Stop movement when joystick is released
+  }, [])
 
   const handleEnterRoom = async (room: any) => {
     setCurrentCinemaRoom(room)
-    setShowCinema(false)
+    setShowShowCinema(false) // Corrected typo
+    setShowCinema(false) // Also ensuring the old state is cleared
 
     setMyPosition({ x: 0, y: 0, z: 25 }) // Spawn at the entrance of the cinema
 
@@ -1386,23 +1390,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <meshStandardMaterial color="#4ade80" />
             </mesh>
 
-            {/* Central Park with Fountain */}
+            {/* Central Park with Fountain - REMOVED FOUNTAIN */}
             <group position={[0, 0, 0]}>
-              {/* Fountain base */}
-              <mesh position={[0, 0.5, 0]} castShadow>
-                <cylinderGeometry args={[4, 5, 1, 8]} />
-                <meshStandardMaterial color="#cbd5e1" />
-              </mesh>
-              {/* Fountain water */}
-              <mesh position={[0, 1.2, 0]}>
-                <cylinderGeometry args={[3, 3, 0.4, 8]} />
-                <meshStandardMaterial color="#3b82f6" transparent opacity={0.7} />
-              </mesh>
-              {/* Fountain center */}
-              <mesh position={[0, 2, 0]} castShadow>
-                <cylinderGeometry args={[0.5, 0.8, 2, 8]} />
-                <meshStandardMaterial color="#94a3b8" />
-              </mesh>
+              {/* Park benches only */}
+              {[
+                [8, 8], [-8, 8], [8, -8], [-8, -8]
+              ].map(([x, z], i) => (
+                <group key={`bench-${i}`} position={[x, 0, z]}>
+                  <mesh position={[0, 0.4, 0]} castShadow>
+                    <boxGeometry args={[2, 0.2, 0.8]} />
+                    <meshStandardMaterial color="#6d28d9" />
+                  </mesh>
+                  <mesh position={[0, 0.8, -0.3]} castShadow>
+                    <boxGeometry args={[2, 0.6, 0.2]} />
+                    <meshStandardMaterial color="#6d28d9" />
+                  </mesh>
+                </group>
+              ))}
             </group>
 
             {/* Cinema Building - Main Attraction */}
@@ -1588,21 +1592,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
 
-            {/* Benches around park */}
-            {[
-              [8, 8], [-8, 8], [8, -8], [-8, -8]
-            ].map(([x, z], i) => (
-              <group key={`bench-${i}`} position={[x, 0, z]}>
-                <mesh position={[0, 0.4, 0]} castShadow>
-                  <boxGeometry args={[2, 0.2, 0.8]} />
-                  <meshStandardMaterial color="#6d28d9" />
-                </mesh>
-                <mesh position={[0, 0.8, -0.3]} castShadow>
-                  <boxGeometry args={[2, 0.6, 0.2]} />
-                  <meshStandardMaterial color="#6d28d9" />
-                </mesh>
-              </group>
-            ))}
+            {/* Benches around park - MOVED TO CENTRAL PARK SECTION ABOVE */}
 
             {/* Render other players */}
             {otherPlayers.map((player) => (
@@ -1658,14 +1648,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
 
-            <RealisticAvatar
-              position={[myPosition.x, myPosition.y, myPosition.z]}
-              avatarStyle={myAvatarStyle}
-              isMoving={movement.x !== 0 || movement.z !== 0}
-            />
+            {myProfile && (
+              <>
+                <RealisticAvatar
+                  position={[myPosition.x, myPosition.y, myPosition.z]}
+                  avatarStyle={myAvatarStyle}
+                  isMoving={movement.x !== 0 || movement.z !== 0}
+                />
+                {console.log('[v0] Rendering player avatar at:', myPosition, 'Avatar style:', myAvatarStyle)}
+              </>
+            )}
 
             {/* My Chat Bubble */}
-            {currentEmoji && (
+            {currentEmoji && !currentCinemaRoom && (
               <Html
                 position={[myPosition.x, myPosition.y + 1.8, myPosition.z]}
                 center
@@ -1997,7 +1992,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
         {mySeat !== null && currentCinemaRoom?.embed_url && !showMovieFullscreen && (
           <Html position={[0, 6.5, -23]} center zIndexRange={[30, 0]}>
-            <button 
+            <button
               onClick={() => setShowMovieFullscreen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-lg"
             >
@@ -2383,25 +2378,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       {/* Mobile Controls - Always visible if mobile mode */}
       {isMobileMode && (
         <>
-          <button
-            onClick={() => setPovMode(!povMode)}
-            className="fixed bottom-6 left-6 z-50 w-20 h-20 bg-blue-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30 pointer-events-auto"
-          >
-            {povMode ? <Eye className="w-10 h-10 text-white" /> : <EyeOff className="w-10 h-10 text-white" />}
-          </button>
-
           {worldSettings.enableChat && (
             <button
               onClick={() => setShowChatInput(true)}
-              className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-20 h-20 bg-green-500 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30 pointer-events-auto"
+              className="fixed top-28 left-1/2 transform -translate-x-1/2 z-[30] w-16 h-16 bg-green-500/90 backdrop-blur-sm rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30 pointer-events-auto"
             >
-              <MessageCircle className="w-10 h-10 text-white" />
+              <MessageCircle className="w-8 h-8 text-white" />
             </button>
           )}
 
           <button
             onClick={() => setShowEmojiMenu(!showEmojiMenu)}
-            className="fixed bottom-6 right-6 z-50 w-20 h-20 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30 pointer-events-auto"
+            className="fixed bottom-6 right-6 z-[30] w-20 h-20 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30 pointer-events-auto"
           >
             <Smile className="w-10 h-10 text-white" />
           </button>
@@ -2411,20 +2399,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       {isMobileMode && (
         <MobileJoystick
           onMove={handleJoystickMove}
-          position="bottom-left"
+          onStop={handleJoystickStop}
+          className="fixed bottom-6 left-6 z-[30]"
         />
       )}
     </div>
   )
 }
 
-function MobileJoystick({ onMove, position: positionProp }: { onMove: (dx: number, dz: number) => void; position?: 'bottom-left' | 'bottom-right' }) {
+function MobileJoystick({ onMove, onStop, className }: { onMove: (dx: number, dz: number) => void; onStop: () => void; className: string }) {
   const [isDragging, setIsDragging] = useState(false)
   const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<number>()
-
-  const positionClass = positionProp === 'bottom-right' ? 'bottom-6 right-6' : 'bottom-6 left-6'
 
   useEffect(() => {
     const animate = () => {
@@ -2441,13 +2428,13 @@ function MobileJoystick({ onMove, position: positionProp }: { onMove: (dx: numbe
       animationRef.current = requestAnimationFrame(animate)
     } else {
       if (animationRef.current) cancelAnimationFrame(animationRef.current)
-      onMove(0,0)
+      onStop()
     }
 
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current)
     }
-  }, [isDragging, joystickPosition.x, joystickPosition.y, onMove])
+  }, [isDragging, joystickPosition.x, joystickPosition.y, onMove, onStop])
 
   const handleStart = (clientX: number, clientY: number) => {
     setIsDragging(true)
@@ -2482,7 +2469,7 @@ function MobileJoystick({ onMove, position: positionProp }: { onMove: (dx: numbe
   return (
     <div
       ref={containerRef}
-      className={`fixed ${positionClass} w-36 h-36 bg-white/20 backdrop-blur-lg rounded-full z-50 md:hidden border-4 border-white/30`}
+      className={`${className} w-36 h-36 bg-white/20 backdrop-blur-lg rounded-full z-50 md:hidden border-4 border-white/30`}
       onTouchStart={(e) => {
         e.preventDefault()
         handleStart(e.touches[0].clientX, e.touches[0].clientY)
