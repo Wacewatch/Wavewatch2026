@@ -4,7 +4,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Sky, Html, PerspectiveCamera, Text } from '@react-three/drei'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff, ArrowUp, Frown, ThumbsUp, Heart, Angry, ChevronLeft, Maximize2, MessageCircle, Sparkles, Star } from 'lucide-react'
+import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff, ArrowUp, Frown, ThumbsUp, Heart, Angry, ChevronLeft, Maximize2, MessageCircle, Sparkles, Star, Map, MapPin, Film, Trophy } from 'lucide-react'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -301,6 +301,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [myRotation, setMyRotation] = useState(0) // Added for rotation
 
   const [showMenu, setShowMenu] = useState(false)
+  const [showMap, setShowMap] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -667,9 +668,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       let dz = 0
       const speed = 0.15
 
-      if (keysPressed.current.has('w') || keysPressed.current.has('arrowup')) dz -= speed
+      if (keysPressed.current.has('z') || keysPressed.current.has('arrowup')) dz -= speed
       if (keysPressed.current.has('s') || keysPressed.current.has('arrowdown')) dz += speed
-      if (keysPressed.current.has('a') || keysPressed.current.has('arrowleft')) dx -= speed
+      if (keysPressed.current.has('q') || keysPressed.current.has('arrowleft')) dx -= speed
       if (keysPressed.current.has('d') || keysPressed.current.has('arrowright')) dx += speed
 
       if (dx !== 0 || dz !== 0) {
@@ -1249,25 +1250,24 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }, [userId])
 
   return (
-    <div className="fixed inset-0 bg-black z-50">
+    <div className="fixed inset-0 bg-sky-400">
       <Canvas
-        // Pass povMode to camera
-        camera={povMode ? undefined : { position: [0, 8, 12], fov: 60 }}
-        style={{ width: '100vw', height: '100vh' }}
         shadows
         gl={{
-          antialias: graphicsQuality !== 'low',
-          alpha: false,
-          powerPreference: graphicsQuality === 'high' ? 'high-performance' : 'default'
+          antialias: !isMobileMode,
+          powerPreference: isMobileMode ? 'low-power' : 'high-performance'
         }}
+        camera={{ position: povMode ? [myPosition.x, myPosition.y + 1.5, myPosition.z] : [myPosition.x, myPosition.y + 8, myPosition.z + 12], fov: 60 }}
       >
-        {povMode && (
-          <PerspectiveCamera
-            makeDefault
-            position={[myPosition.x, myPosition.y + 1.5, myPosition.z]} // Adjust for eye level
-            fov={75}
-          />
-        )}
+        
+        <ambientLight intensity={worldSettings.worldMode === 'night' ? 0.3 : 0.6} />
+        <directionalLight
+          position={[10, 20, 10]}
+          intensity={worldSettings.worldMode === 'night' ? 0.4 : 1}
+          castShadow
+          shadow-mapSize-width={graphicsQuality === 'high' ? 2048 : 1024}
+          shadow-mapSize-height={graphicsQuality === 'high' ? 2048 : 1024}
+        />
 
         {worldSettings.worldMode === 'day' && (
           <>
@@ -1276,13 +1276,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               inclination={0.6}
               azimuth={0.25}
             />
-            <ambientLight intensity={0.4} />
-            <directionalLight
-              position={[10, 20, 10]}
-              intensity={1.5}
-              castShadow
-              shadow-mapSize={graphicsQuality === 'high' ? [2048, 2048] : [1024, 1024]}
-            />
+            
           </>
         )}
 
@@ -1293,14 +1287,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               inclination={0.1}
               azimuth={0.25}
             />
-            <ambientLight intensity={0.15} />
-            <directionalLight
-              position={[10, 20, 10]}
-              intensity={0.3}
-              color="#4466ff"
-              castShadow
-              shadow-mapSize={graphicsQuality === 'high' ? [2048, 2048] : [1024, 1024]}
-            />
+            
           </>
         )}
 
@@ -1311,18 +1298,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               inclination={0.3}
               azimuth={0.1}
             />
-            <ambientLight intensity={0.3} />
-            <directionalLight
-              position={[10, 5, 10]}
-              intensity={1.0}
-              color="#ff8844"
-              castShadow
-              shadow-mapSize={graphicsQuality === 'high' ? [2048, 2048] : [1024, 1024]}
-            />
+            
           </>
         )}
 
-        <fog attach="fog" args={['#87CEEB', 10, 50]} />
         <hemisphereLight intensity={0.3} groundColor="#6b7280" />
 
         {!currentCinemaRoom ? (
@@ -1791,7 +1770,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         )}
       </Canvas>
 
-      <div className="fixed top-4 left-4 z-50">
+      {/* Top left controls */}
+      <div className="fixed top-4 left-4 z-50 flex flex-col gap-3">
         <button
           onClick={() => setShowMenu(!showMenu)}
           className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-4 border-white/40 active:scale-95"
@@ -1811,6 +1791,17 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <span>{onlineCount} en ligne</span>
               </div>
             </div>
+
+            <button
+              onClick={() => {
+                setShowMap(true)
+                setShowMenu(false)
+              }}
+              className="w-full bg-emerald-500/90 text-white py-3 rounded-lg hover:bg-emerald-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+            >
+              <Map className="w-5 h-5" />
+              Carte
+            </button>
 
             <button
               onClick={() => {
@@ -1840,17 +1831,86 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   setShowChat(true)
                   setShowMenu(false)
                 }}
-                className="w-full bg-green-500/90 text-white py-3 rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+                className="w-full bg-pink-500/90 text-white py-3 rounded-lg hover:bg-pink-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
               >
-                <MessageSquare className="w-5 h-5" />
-                Chat
+                <MessageCircle className="w-5 h-5" />
+                Chat Global
               </button>
             )}
           </div>
         )}
       </div>
 
-      {(!isFullscreen || isMobileMode) && (
+      {showMap && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-b from-gray-900 to-black rounded-2xl p-6 max-w-md w-full border-2 border-white/20 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                <Map className="w-6 h-6" />
+                Carte des Bâtiments
+              </h2>
+              <button
+                onClick={() => setShowMap(false)}
+                className="text-white/60 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {/* Cinema - Open */}
+              <button
+                onClick={() => {
+                  setShowCinema(true)
+                  setShowMap(false)
+                }}
+                className="w-full bg-gradient-to-r from-red-600 to-red-800 text-white p-4 rounded-xl hover:from-red-700 hover:to-red-900 transition-all flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-white/20 p-2 rounded-lg">
+                    <Film className="w-6 h-6" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-bold text-lg">Cinéma</div>
+                    <div className="text-xs text-white/80">Cliquez pour voir les salles</div>
+                  </div>
+                </div>
+                <div className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                  OUVERT
+                </div>
+              </button>
+
+              {/* Arcades - Closed */}
+              <button
+                disabled
+                className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white/50 p-4 rounded-xl cursor-not-allowed flex items-center justify-between opacity-60"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="bg-white/10 p-2 rounded-lg">
+                    <Trophy className="w-6 h-6" />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-bold text-lg">Arcades</div>
+                    <div className="text-xs text-white/60">Bientôt disponible</div>
+                  </div>
+                </div>
+                <div className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                  FERMÉ
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-6 bg-blue-500/20 border border-blue-500/30 rounded-lg p-3">
+              <p className="text-blue-200 text-sm flex items-start gap-2">
+                <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <span>Utilisez la carte pour vous téléporter rapidement vers les bâtiments ouverts.</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isFullscreen && (
         <div className="absolute top-4 right-4 z-10 flex gap-3">
           {worldSettings.enableChat && !isFullscreen && !showChatInput && (
             <button
@@ -2353,8 +2413,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
 
       {!isMobileMode && (
-        <div className="absolute bottom-4 left-4 bg-black/50 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-sm">
-          ⌨️ Touches ZQSD ou Flèches pour se déplacer
+        <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-md text-white p-3 rounded-xl text-sm space-y-1 border border-white/20 z-40">
+          <div className="font-bold mb-2 text-base">⌨️ Contrôles</div>
+          <div>🎮 <span className="font-mono bg-white/10 px-2 py-1 rounded">ZQSD</span> ou <span className="font-mono bg-white/10 px-2 py-1 rounded">Flèches</span> - Se déplacer</div>
+          <div>🖱️ Souris - Regarder autour</div>
+          {worldSettings.enableJumping && <div>⬆️ <span className="font-mono bg-white/10 px-2 py-1 rounded">Espace</span> - Sauter</div>}
         </div>
       )}
 
@@ -2456,8 +2519,8 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
   useEffect(() => {
     if (isDragging) {
       const animate = () => {
-        const maxDistance = 60
-        onMove(position.x / maxDistance, position.y / maxDistance)
+        const maxDistance = 40
+        onMove(-position.y / maxDistance, -position.x / maxDistance)
         animationRef.current = requestAnimationFrame(animate)
       }
       animationRef.current = requestAnimationFrame(animate)
@@ -2490,7 +2553,7 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
     let dy = clientY - centerY
 
     const distance = Math.sqrt(dx * dx + dy * dy)
-    const maxDistance = 60
+    const maxDistance = 40
 
     if (distance > maxDistance) {
       dx = (dx / distance) * maxDistance
@@ -2508,7 +2571,7 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
   return (
     <div
       ref={containerRef}
-      className="fixed bottom-24 left-8 w-36 h-36 bg-white/20 backdrop-blur-lg rounded-full z-20 md:hidden border-4 border-white/30"
+      className="fixed bottom-24 left-8 w-24 h-24 bg-white/20 backdrop-blur-lg rounded-full z-20 md:hidden border-4 border-white/30"
       onTouchStart={(e) => {
         e.preventDefault()
         handleStart(e.touches[0].clientX, e.touches[0].clientY)
@@ -2524,7 +2587,7 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
       onMouseLeave={handleEnd}
     >
       <div
-        className="absolute w-14 h-14 bg-white/60 rounded-full top-1/2 left-1/2 shadow-lg transition-transform"
+        className="absolute w-10 h-10 bg-white/60 rounded-full top-1/2 left-1/2 shadow-lg transition-transform"
         style={{
           transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`
         }}
