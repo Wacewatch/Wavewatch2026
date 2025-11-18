@@ -259,7 +259,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [showChat, setShowChat] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAvatarCustomizer, setShowAvatarCustomizer] = useState(false)
-  const [showCinema, setShowShowCinema] = useState(false) // Corrected typo from original code
+  const [showCinema, setShowCinema] = useState(false)
   const [showUserCard, setShowUserCard] = useState(false)
   const [currentCinemaRoom, setCurrentCinemaRoom] = useState<any>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -989,6 +989,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setMovement({ x: 0, z: 0 }) // Stop movement when joystick is released
   }, [])
 
+  const handleCinemaBuildingClick = () => {
+    console.log('[v0] Cinema building clicked, opening cinema rooms menu')
+    setShowCinema(true)
+    setShowMenu(false)
+  }
+
   const handleEnterRoom = async (room: any) => {
     setCurrentCinemaRoom(room)
     setShowShowCinema(false) // Corrected typo
@@ -1267,7 +1273,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           setMyPosition({
             x: profiles.position_x || 0,
             y: profiles.position_y || 0.5,
-            z: profiles.position_z || 50
+            z: profiles.position_z || 0
           })
           setMyRotation(profiles.rotation || 0)
           
@@ -1409,32 +1415,39 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               ))}
             </group>
 
-            {/* Cinema Building - Main Attraction */}
-            <group position={[40, 0, 0]}>
-              {/* Building */}
-              <mesh position={[0, 5, 0]} castShadow>
-                <boxGeometry args={[12, 10, 12]} />
-                <meshStandardMaterial color="#1e40af" />
+            {/* Cinema Building with onClick handler */}
+            <group
+              position={[0, 0, -50]}
+              onClick={handleCinemaBuildingClick}
+              onPointerOver={() => (document.body.style.cursor = 'pointer')}
+              onPointerOut={() => (document.body.style.cursor = 'default')}
+            >
+              <mesh position={[0, 12, 0]} castShadow>
+                <boxGeometry args={[25, 24, 20]} />
+                <meshStandardMaterial color="#7c3aed" />
               </mesh>
-              {/* Roof */}
-              <mesh position={[0, 10.5, 0]} castShadow>
-                <coneGeometry args={[8, 2, 4]} />
-                <meshStandardMaterial color="#1e3a8a" />
+              <mesh position={[0, 12, 10.1]}>
+                <planeGeometry args={[20, 4]} />
+                <meshStandardMaterial color="#000000" transparent opacity={0.8} />
               </mesh>
               <Text
-                position={[0, 8, 6.1]}
-                fontSize={1.2}
-                color="#ffffff"
+                position={[0, 12, 10.2]}
+                fontSize={1.5}
+                color="#fbbf24"
                 anchorX="center"
                 anchorY="middle"
               >
                 🎬 CINÉMA
               </Text>
-              {/* Door */}
-              <mesh position={[0, 2, 6.1]} castShadow>
-                <boxGeometry args={[3, 4, 0.2]} />
-                <meshStandardMaterial color="#3b82f6" />
-              </mesh>
+              <Text
+                position={[0, 10, 10.2]}
+                fontSize={0.7}
+                color="#ffffff"
+                anchorX="center"
+                anchorY="middle"
+              >
+                (Cliquez pour entrer)
+              </Text>
             </group>
 
             {/* Arcade Building */}
@@ -1648,16 +1661,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
 
-            {myProfile && (
-              <>
-                <RealisticAvatar
-                  position={[myPosition.x, myPosition.y, myPosition.z]}
-                  avatarStyle={myAvatarStyle}
-                  isMoving={movement.x !== 0 || movement.z !== 0}
-                />
-                {console.log('[v0] Rendering player avatar at:', myPosition, 'Avatar style:', myAvatarStyle)}
-              </>
-            )}
+            {console.log('[v0] Before avatar render - myProfile:', myProfile, 'myPosition:', myPosition, 'myAvatarStyle:', myAvatarStyle)}
+            
+            {/* Always render avatar if we have position data */}
+            <RealisticAvatar
+              position={[myPosition.x, myPosition.y, myPosition.z]}
+              avatarStyle={myAvatarStyle}
+              isMoving={movement.x !== 0 || movement.z !== 0}
+            />
+            {console.log('[v0] Rendered player avatar at:', myPosition)}
 
             {/* My Chat Bubble */}
             {currentEmoji && !currentCinemaRoom && (
@@ -2342,7 +2354,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <div className="border-t border-white/20 pt-4 space-y-3">
                   <p className="text-white/70 text-sm font-medium">Émotes</p>
                   <div className="grid grid-cols-4 gap-2">
-                    {['😊', '😂', '😍', '😎', '🤔', '😢', '😡', '🎉', '👍', '❤️', '🔥', '⭐'].map((emoji) => (
+                    {['😊', '😂', '😍', '😎', '🤓', '😴', '🥳', '🤩', '😇', '🤔', '👍', '❤️'].map((emoji) => (
                       <button
                         key={emoji}
                         onClick={() => {
