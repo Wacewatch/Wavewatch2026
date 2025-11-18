@@ -4,11 +4,12 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Sky, Html, PerspectiveCamera, Text } from '@react-three/drei'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff, ArrowUp, Frown, ThumbsUp, Heart, Angry, ChevronLeft, Maximize2, MessageCircle, Sparkles, Star } from 'lucide-react'
+import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff, ArrowUp, Frown, ThumbsUp, Heart, Angry, ChevronLeft, Maximize2, MessageCircle, Sparkles, Star, Map, Building2, Lock, Clock, Film } from 'lucide-react'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
+import { useRouter } from 'next/navigation' // Assuming router is needed for navigation
 
 interface WorldProps {
   userId: string
@@ -26,11 +27,29 @@ function RealisticAvatar({
   isMoving
 }: {
   position: [number, number, number]
-  avatarStyle: any
+  avatarStyle: {
+    bodyColor?: string
+    headColor?: string
+    skinTone?: string
+    hairStyle?: string
+    hairColor?: string
+    accessory?: string
+    faceSmiley?: string
+  }
   isMoving: boolean
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const [time, setTime] = useState(0)
+
+  const style = {
+    bodyColor: avatarStyle?.bodyColor || '#3b82f6',
+    headColor: avatarStyle?.headColor || '#fbbf24',
+    skinTone: avatarStyle?.skinTone || avatarStyle?.headColor || '#fbbf24',
+    hairStyle: avatarStyle?.hairStyle || 'short',
+    hairColor: avatarStyle?.hairColor || '#1f2937',
+    accessory: avatarStyle?.accessory || 'none',
+    faceSmiley: avatarStyle?.faceSmiley || '😊'
+  }
 
   useFrame((state, delta) => {
     if (isMoving && groupRef.current) {
@@ -54,45 +73,43 @@ function RealisticAvatar({
       {/* Torso - height divided by 2 */}
       <mesh position={[0, 0.375, 0]} castShadow>
         <boxGeometry args={[0.6, 0.45, 0.35]} />
-        <meshStandardMaterial color={avatarStyle.bodyColor} metalness={0.1} roughness={0.8} />
+        <meshStandardMaterial color={style.bodyColor} metalness={0.1} roughness={0.8} />
       </mesh>
 
       {/* Head */}
       <mesh position={[0, 0.85, 0]} castShadow>
         <sphereGeometry args={[0.32, 32, 32]} />
-        <meshStandardMaterial color={avatarStyle.skinTone || avatarStyle.headColor} metalness={0.1} roughness={0.6} />
+        <meshStandardMaterial color={style.skinTone} metalness={0.1} roughness={0.6} />
       </mesh>
 
-      {avatarStyle.faceSmiley && (
-        <Html position={[0, 0.85, 0.32]} center depthTest={false} zIndexRange={[100, 0]}>
-          <div className="text-2xl pointer-events-none">
-            {avatarStyle.faceSmiley}
-          </div>
-        </Html>
-      )}
+      <Html position={[0, 0.85, 0.32]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+        <div className="text-2xl pointer-events-none">
+          {style.faceSmiley}
+        </div>
+      </Html>
 
       {/* Hair styles */}
-      {avatarStyle.hairStyle === 'short' && (
+      {style.hairStyle === 'short' && (
         <mesh position={[0, 1.05, 0]} castShadow>
           <sphereGeometry args={[0.34, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshStandardMaterial color={avatarStyle.hairColor || '#3d2817'} metalness={0} roughness={1} />
+          <meshStandardMaterial color={style.hairColor} metalness={0} roughness={1} />
         </mesh>
       )}
-      {avatarStyle.hairStyle === 'long' && (
+      {style.hairStyle === 'long' && (
         <>
           <mesh position={[0, 1.05, 0]} castShadow>
             <sphereGeometry args={[0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.5]} />
-            <meshStandardMaterial color={avatarStyle.hairColor || '#3d2817'} metalness={0} roughness={1} />
+            <meshStandardMaterial color={style.hairColor} metalness={0} roughness={1} />
           </mesh>
           <mesh position={[0, 0.6, -0.3]} castShadow>
             <boxGeometry args={[0.5, 0.6, 0.2]} />
-            <meshStandardMaterial color={avatarStyle.hairColor || '#3d2817'} metalness={0} roughness={1} />
+            <meshStandardMaterial color={style.hairColor} metalness={0} roughness={1} />
           </mesh>
         </>
       )}
 
       {/* Accessories */}
-      {avatarStyle.accessory === 'glasses' && (
+      {style.accessory === 'glasses' && (
         <>
           <mesh position={[-0.15, 0.85, 0.28]}>
             <torusGeometry args={[0.08, 0.02, 8, 16]} />
@@ -108,7 +125,7 @@ function RealisticAvatar({
           </mesh>
         </>
       )}
-      {avatarStyle.accessory === 'hat' && (
+      {style.accessory === 'hat' && (
         <>
           <mesh position={[0, 1.15, 0]} castShadow>
             <cylinderGeometry args={[0.35, 0.35, 0.15, 16]} />
@@ -125,11 +142,11 @@ function RealisticAvatar({
       <group position={[-0.45, 0.3, 0]}>
         <mesh position={[0, -0.25, 0]} castShadow>
           <boxGeometry args={[0.2, 0.7, 0.2]} />
-          <meshStandardMaterial color={avatarStyle.bodyColor} metalness={0.1} roughness={0.8} />
+          <meshStandardMaterial color={style.bodyColor} metalness={0.1} roughness={0.8} />
         </mesh>
         <mesh position={[0, -0.6, 0]}>
           <sphereGeometry args={[0.13, 16, 16]} />
-          <meshStandardMaterial color={avatarStyle.skinTone || avatarStyle.headColor} metalness={0.1} roughness={0.6} />
+          <meshStandardMaterial color={style.skinTone} metalness={0.1} roughness={0.6} />
         </mesh>
       </group>
 
@@ -137,11 +154,11 @@ function RealisticAvatar({
       <group position={[0.45, 0.3, 0]}>
         <mesh position={[0, -0.25, 0]} castShadow>
           <boxGeometry args={[0.2, 0.7, 0.2]} />
-          <meshStandardMaterial color={avatarStyle.bodyColor} metalness={0.1} roughness={0.8} />
+          <meshStandardMaterial color={style.bodyColor} metalness={0.1} roughness={0.8} />
         </mesh>
         <mesh position={[0, -0.6, 0]}>
           <sphereGeometry args={[0.13, 16, 16]} />
-          <meshStandardMaterial color={avatarStyle.skinTone || avatarStyle.headColor} metalness={0.1} roughness={0.6} />
+          <meshStandardMaterial color={style.skinTone} metalness={0.1} roughness={0.6} />
         </mesh>
       </group>
 
@@ -237,6 +254,7 @@ function RealisticLamppost({ position }: { position: [number, number, number] })
 }
 
 export default function InteractiveWorld({ userId, userProfile }: InteractiveWorldProps) {
+  const router = useRouter() // Initialize router
   const [myProfile, setMyProfile] = useState<any>(null)
   const [otherPlayers, setOtherPlayers] = useState<any[]>([])
   const [onlineCount, setOnlineCount] = useState(0)
@@ -285,9 +303,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const [graphicsQuality, setGraphicsQuality] = useState('medium')
   const [isMobileMode, setIsMobileMode] = useState(false)
+  const [controlMode, setControlMode] = useState<'auto' | 'pc' | 'mobile'>('auto')
   const [povMode, setPovMode] = useState(false)
-  const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
-  const [showChatInput, setShowChatInput] = useState(false)
 
   const [countdown, setCountdown] = useState<string>('')
 
@@ -300,13 +317,22 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [myRotation, setMyRotation] = useState(0) // Added for rotation
 
   const [showMenu, setShowMenu] = useState(false)
+  const [showMap, setShowMap] = useState(false)
+  const [showChatInput, setShowChatInput] = useState(false)
+  const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
 
   useEffect(() => {
     const checkMobile = () => {
-      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouch
-      const isSmallScreen = window.innerWidth < 1024
-      setIsMobileMode(isTouchDevice || isSmallScreen)
-      console.log('[v0] Mobile mode:', isTouchDevice || isSmallScreen, 'Touch:', isTouchDevice, 'Screen:', isSmallScreen)
+      if (controlMode === 'pc') {
+        setIsMobileMode(false)
+      } else if (controlMode === 'mobile') {
+        setIsMobileMode(true)
+      } else {
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0
+        const isSmallScreen = window.innerWidth < 1024
+        setIsMobileMode(isTouchDevice || isSmallScreen)
+      }
+      console.log('[v0] Mobile mode:', isMobileMode, 'Control mode:', controlMode)
     }
 
     checkMobile()
@@ -317,7 +343,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       window.removeEventListener('resize', checkMobile)
       window.removeEventListener('orientationchange', checkMobile)
     }
-  }, [])
+  }, [controlMode, isMobileMode])
 
   const [lastActivity, setLastActivity] = useState(Date.now())
   const [showAFKWarning, setShowAFKWarning] = useState(false)
@@ -839,12 +865,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setCurrentEmoji(emoji)
     setShowQuickActions(false)
 
-    // Broadcast emoji to other players
-    supabase.channel('world-actions').send({
+    const channel = supabase.channel('world-updates')
+    channel.send({
       type: 'broadcast',
-      event: 'player-emoji',
+      event: 'player-action',
       payload: {
         userId: userProfile.user_id,
+        action: 'emoji',
         emoji: emoji,
         timestamp: Date.now()
       }
@@ -1022,6 +1049,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       .eq('user_id', userId)
   }
 
+  const handleSitInAnySeat = async () => {
+    if (!currentCinemaRoom) return
+
+    // Find first available seat (not occupied by anyone)
+    const occupiedSeats = cinemaSeats.filter(s => s.user_id && s.user_id !== userId)
+    const availableSeat = cinemaSeats.find(s => !occupiedSeats.find(os => os.seat_number === s.seat_number))
+
+    if (!availableSeat) {
+      console.log('[v0] No available seats')
+      return
+    }
+
+    await handleSitInSeat(availableSeat.seat_number)
+  }
+
   const handleSitInSeat = async (seatNumber: number) => {
     // if (isSeatsLocked && mySeat !== null && mySeat !== seatNumber) { // Removed seat lock check
     //   return
@@ -1092,43 +1134,26 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   useEffect(() => {
     const channel = supabase.channel('world-actions')
-      .on('broadcast', { event: 'player-emoji' }, (payload: any) => {
-        if (payload.userId && payload.userId !== userId) {
-          setPlayerActions(prev => ({
-            ...prev,
-            [payload.userId]: {
-              action: 'emoji',
-              emoji: payload.emoji,
-              timestamp: Date.now()
-            }
-          }))
-
-          setTimeout(() => {
-            setPlayerActions(prev => {
-              const newActions = { ...prev }
-              delete newActions[payload.userId]
-              return newActions
-            })
-          }, 3000)
-        }
-      })
       .on('broadcast', { event: 'player-action' }, (payload: any) => {
         if (payload.userId && payload.userId !== userId) {
+          // Handle actions like jump and emoji
           setPlayerActions(prev => ({
             ...prev,
             [payload.userId]: {
               action: payload.action,
-              timestamp: Date.now()
+              timestamp: Date.now(),
+              ...(payload.action === 'emoji' && { emoji: payload.emoji }) // Include emoji if it's an emoji action
             }
           }))
 
+          // Clear the action after a duration
           setTimeout(() => {
             setPlayerActions(prev => {
               const newActions = { ...prev }
               delete newActions[payload.userId]
               return newActions
             })
-          }, 2000)
+          }, payload.action === 'emoji' ? 3000 : 2000) // Emojis last longer
         }
       })
       .subscribe()
@@ -1198,8 +1223,24 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     loadMyProfile()
   }, [userId])
 
+  const handleQuitWorld = async () => {
+    // Save current position
+    await supabase
+      .from('interactive_profiles')
+      .update({
+        position_x: myPosition.x,
+        position_y: myPosition.y,
+        position_z: myPosition.z
+      })
+      .eq('user_id', userId)
+
+    // Redirect to home
+    router.push('/')
+  }
+
+
   return (
-    <div className="fixed inset-0 bg-black z-50">
+    <div className="relative w-full h-screen">
       <Canvas
         // Pass povMode to camera
         camera={povMode ? undefined : { position: [0, 8, 12], fov: 60 }}
@@ -1287,13 +1328,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               />
             </mesh>
 
-            {/* Main dirt road */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-              <planeGeometry args={[5, 50]} />
-              <meshStandardMaterial color="#8B7355" roughness={0.95} />
-            </mesh>
-
-            {/* Removed yellow road markings for dirt road */}
 
             {/* Arcade Building with proper info panel */}
             <group position={[-15, 0, -15]}>
@@ -1308,7 +1342,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <meshStandardMaterial color="#92400e" />
               </mesh>
               {/* Arcade Info Panel - only on arcade building */}
-              <Html position={[0, 4, 2.6]} center depthTest={false} zIndexRange={[100, 0]}>
+              <Html position={[0, 4, 2.6]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
                   <div className="text-xl">🕹️ ARCADE 🕹️</div>
                   <div className="text-sm mt-1">Ouverture Prochainement</div>
@@ -1328,7 +1362,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <meshStandardMaterial color="#7e22ce" />
               </mesh>
               {/* Sign */}
-              <Html position={[0, 4, 2.6]} center depthTest={false} zIndexRange={[100, 0]}>
+              <Html position={[0, 4, 2.6]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
                   <div className="text-xl">🕹️ ARCADE 🕹️</div>
                   <div className="text-sm mt-1">Ouverture Prochainement</div>
@@ -1410,7 +1444,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
               </mesh>
 
-              <Html position={[0, 7, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+              <Html position={[0, 7, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <button
                   onClick={() => setShowCinema(true)}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
@@ -1426,7 +1460,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <boxGeometry args={[8, 6, 8]} />
                 <meshStandardMaterial color="#8b5cf6" roughness={0.7} />
               </mesh>
-              <Html position={[0, 7, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+              <Html position={[0, 7, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
                   🔒 FERMÉ
                 </div>
@@ -1438,7 +1472,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <boxGeometry args={[10, 8, 10]} />
                 <meshStandardMaterial color="#10b981" roughness={0.7} />
               </mesh>
-              <Html position={[0, 9, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+              <Html position={[0, 9, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
                   🔒 EN CONSTRUCTION
                 </div>
@@ -1450,7 +1484,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <boxGeometry args={[9, 7, 9]} />
                 <meshStandardMaterial color="#f59e0b" roughness={0.7} />
               </mesh>
-              <Html position={[0, 7.5, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+              <Html position={[0, 7.5, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
                   🔒 BIENTÔT
                 </div>
@@ -1462,7 +1496,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <boxGeometry args={[7, 5, 7]} />
                 <meshStandardMaterial color="#ef4444" roughness={0.7} />
               </mesh>
-              <Html position={[0, 5.5, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+              <Html position={[0, 5.5, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
                   🔒 FERMÉ
                 </div>
@@ -1474,7 +1508,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <boxGeometry args={[12, 8, 12]} />
                 <meshStandardMaterial color="#3b82f6" roughness={0.7} />
               </mesh>
-              <Html position={[0, 9, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+              <Html position={[0, 9, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
                   🔒 PROCHAINEMENT
                 </div>
@@ -1631,32 +1665,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                     <boxGeometry args={[1, 0.8, 0.9]} />
                     <meshStandardMaterial color={isMySeat ? '#ef4444' : seat.color} />
                   </mesh>
-                  <Html position={[0, 1.2, 0]} center depthTest={false} zIndexRange={[100, 0]}>
-                    <button
-                      onClick={() => handleSitInSeat(seat.seat_number)}
-                      className={`text-xs px-3 py-2 rounded-lg ${
-                        isMySeat
-                          ? 'bg-red-500 hover:bg-red-600'
-                          : 'bg-blue-500 hover:bg-blue-600'
-                      } text-white whitespace-nowrap font-medium shadow-lg`}
-                    >
-                      {isMySeat ? '🚶 Se lever' : '💺 S\'asseoir'}
-                    </button>
-                  </Html>
                 </group>
               )
             })}
 
-
-            <Html position={[0, 2, 19]} center depthTest={false} zIndexRange={[100, 0]}>
-              <button
-                onClick={handleLeaveRoom}
-                className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 whitespace-nowrap shadow-lg flex items-center gap-2"
-              >
-                <LogOut className="w-5 h-5" />
-                Sortir du Cinéma
-              </button>
-            </Html>
           </>
         )}
 
@@ -1668,8 +1680,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             isMoving={movement.x !== 0 || movement.z !== 0}
           />
 
-          <Html position={[myPosition.x, myPosition.y + 1.8, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
-            <div className="flex items-center gap-1 bg-black/70 px-3 py-1 rounded-full backdrop-blur-sm shadow-lg">
+          <Html 
+            position={[myPosition.x, myPosition.y + 1.8, myPosition.z]} 
+            center 
+            depthTest={true}
+            occlude
+            zIndexRange={[0, 0]}
+          >
+            <div className="flex items-center gap-1 bg-black/70 px-3 py-1 rounded-full backdrop-blur-sm shadow-lg pointer-events-none">
               <span className="text-white text-sm font-bold">{myProfile?.username || 'Vous'}</span>
               {userProfile?.is_admin && (
                 <Shield className="w-4 h-4 text-red-500" title="Admin" />
@@ -1684,16 +1702,28 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           </Html>
 
           {currentEmoji && (
-            <Html position={[myPosition.x, myPosition.y + 2.5, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
-              <div className="text-5xl animate-bounce">
+            <Html 
+              position={[myPosition.x, myPosition.y + 2.5, myPosition.z]} 
+              center 
+              depthTest={true}
+              occlude
+              zIndexRange={[0, 0]}
+            >
+              <div className="text-5xl animate-bounce pointer-events-none">
                 {currentEmoji}
               </div>
             </Html>
           )}
 
           {playerChatBubbles[userId] && (
-            <Html position={[myPosition.x, myPosition.y + 2.2, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
-              <div className="bg-white/95 text-black px-3 py-2 rounded-lg shadow-xl max-w-xs text-sm border-2 border-blue-500">
+            <Html 
+              position={[myPosition.x, myPosition.y + 2.2, myPosition.z]} 
+              center 
+              depthTest={true}
+              occlude
+              zIndexRange={[0, 0]}
+            >
+              <div className="bg-white/95 text-black px-3 py-2 rounded-lg shadow-xl max-w-xs text-sm border-2 border-blue-500 pointer-events-none">
                 {playerChatBubbles[userId].message}
               </div>
             </Html>
@@ -1709,16 +1739,22 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             const playerAction = playerActions[player.user_id]
 
             return (
-              <group key={player.user_id}>
+              <group key={player.user_id} position={[player.position_x || 0, player.position_y || 0, player.position_z || 0]}>
                 <RealisticAvatar
-                  position={[player.position_x || 0, 0.5, player.position_z || 0]}
+                  position={[0, 0, 0]}
                   avatarStyle={avatarStyle}
                   isMoving={false}
                 />
 
                 {worldSettings.showStatusBadges && (
-                  <Html position={[player.position_x || 0, 2.3, player.position_z || 0]} center depthTest={false} zIndexRange={[100, 0]}>
-                    <div className="flex flex-col items-center gap-1">
+                  <Html 
+                    position={[player.position_x || 0, 2.3, player.position_z || 0]} 
+                    center 
+                    depthTest={true}
+                    occlude
+                    zIndexRange={[0, 0]}
+                  >
+                    <div className="flex flex-col items-center gap-1 pointer-events-none">
                       <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
                         <span className="text-white text-xs font-medium">{player.username || playerProfile?.username || 'Joueur'}</span>
                         {playerProfile?.is_admin && <Shield className="w-3 h-3 text-red-500" />}
@@ -1752,7 +1788,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         )}
       </Canvas>
 
-      <div className="fixed top-4 left-4 z-50">
+      {/* Menu Button */}
+      <div className="absolute top-6 left-6 z-10 flex flex-col gap-4">
         <button
           onClick={() => setShowMenu(!showMenu)}
           className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-4 border-white/40 active:scale-95"
@@ -1807,21 +1844,39 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 Chat
               </button>
             )}
+
+            <button
+              onClick={() => {
+                setShowMap(true)
+                setShowMenu(false)
+              }}
+              className="w-full bg-cyan-500/90 text-white py-3 rounded-lg hover:bg-cyan-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+            >
+              <Map className="w-5 h-5" />
+              Carte
+            </button>
+
+            <button
+              onClick={handleQuitWorld}
+              className="w-full bg-gray-600/90 text-white py-3 rounded-lg hover:bg-gray-700 flex items-center justify-center gap-2 text-base font-medium transition-colors border-t border-white/20 mt-2 pt-2"
+            >
+              <LogOut className="w-5 h-5" />
+              Quitter
+            </button>
           </div>
         )}
       </div>
 
       {(!isFullscreen || isMobileMode) && (
         <div className="absolute top-4 right-4 z-10 flex gap-3">
-          {worldSettings.enableChat && !isFullscreen && !showChatInput && (
-            <button
-              onClick={() => setShowChatInput(true)}
-              className="bg-white/20 backdrop-blur-lg text-white p-3 rounded-lg hover:bg-white/30 transition-colors shadow-lg"
-              title="Écrire un message"
-            >
-              <MessageCircle className="w-6 h-6" />
-            </button>
-          )}
+          
+          <button
+            onClick={() => setShowQuickActions(!showQuickActions)}
+            className="bg-white/20 backdrop-blur-lg text-white p-3 rounded-lg hover:bg-white/30 transition-colors shadow-lg"
+            title="Actions rapides"
+          >
+            <Smile className="w-6 h-6" />
+          </button>
 
           <button
             onClick={handleFullscreen}
@@ -2164,20 +2219,71 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       {showQuickActions && (
         <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-3 bg-black/80 backdrop-blur-lg p-3 rounded-2xl border-2 border-white/20">
+          {currentCinemaRoom && (
+            <>
+              {mySeat === null ? (
+                <button
+                  onClick={handleSitInAnySeat}
+                  className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
+                >
+                  💺 S'asseoir
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleSitInSeat(mySeat)}
+                  className="bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
+                >
+                  🚶 Se lever
+                </button>
+              )}
+              <button
+                onClick={handleLeaveRoom}
+                className="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
+              >
+                <LogOut className="w-5 h-5" />
+                Sortir
+              </button>
+              <div className="border-t border-white/20 my-1"></div>
+            </>
+          )}
           <button onClick={() => handleQuickAction('jump')} className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors">
             <ArrowUp className="w-6 h-6" />
           </button>
-          <button onClick={() => handleEmoji('😂')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
+          <button onClick={() => handleEmoji('😂')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Rire">
             😂
           </button>
-          <button onClick={() => handleEmoji('👍')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
+          <button onClick={() => handleEmoji('👍')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Pouce">
             👍
           </button>
-          <button onClick={() => handleEmoji('❤️')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
+          <button onClick={() => handleEmoji('❤️')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Coeur">
             ❤️
           </button>
-          <button onClick={() => handleEmoji('😭')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
+          <button onClick={() => handleEmoji('😭')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Pleurs">
             😭
+          </button>
+          <button onClick={() => handleEmoji('🔥')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Feu">
+            🔥
+          </button>
+          <button onClick={() => handleEmoji('🎉')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Fête">
+            🎉
+          </button>
+          <button onClick={() => handleEmoji('😎')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Cool">
+            😎
+          </button>
+          <button onClick={() => handleEmoji('🤔')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Réflexion">
+            🤔
+          </button>
+          <button onClick={() => handleEmoji('😱')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Choc">
+            😱
+          </button>
+          <button onClick={() => handleEmoji('💪')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Force">
+            💪
+          </button>
+          <button onClick={() => handleEmoji('🙏')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Prière">
+            🙏
+          </button>
+          <button onClick={() => handleEmoji('✨')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Étoiles">
+            ✨
           </button>
         </div>
       )}
@@ -2238,6 +2344,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             <div className="space-y-4">
               <div>
                 <label className="text-white font-medium block mb-2">
+                  Mode de Contrôle
+                </label>
+                <select
+                  value={controlMode}
+                  onChange={(e) => setControlMode(e.target.value as 'auto' | 'pc' | 'mobile')}
+                  className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 outline-none"
+                >
+                  <option value="auto">Automatique</option>
+                  <option value="pc">PC (Clavier)</option>
+                  <option value="mobile">Mobile (Joystick)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-white font-medium block mb-2">
                   Qualité Graphique
                 </label>
                 <select
@@ -2279,7 +2400,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {showCinema && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border-2 border-blue-500/30">
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 flex justify-between items-center">
               <h2 className="text-3xl font-bold text-white flex items-center gap-3">
@@ -2301,10 +2422,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {cinemaRooms.map((room) => (
-                    <div
-                      key={room.id}
-                      className="bg-gradient-to-br from-indigo-900/50 to-purple-900/50 rounded-xl overflow-hidden border-2 border-white/10 hover:border-blue-500/50 transition-all shadow-lg"
-                    >
+                    <div key={room.id} className="bg-gradient-to-br from-gray-900/95 to-gray-800/95 rounded-xl p-6 hover:from-gray-800/95 hover:to-gray-700/95 transition-all border border-gray-700 shadow-lg">
+                      {/* Movie Poster */}
                       {room.poster_url && (
                         <div className="relative w-full h-64 bg-gray-800">
                           <img
@@ -2315,51 +2434,107 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                               e.currentTarget.src = '/abstract-movie-poster.png'
                             }}
                           />
+                          {/* Access Level Badge on Poster */}
+                          <div className="absolute top-2 right-2">
+                            {room.access_level === 'vip' && (
+                              <span className="inline-block bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+                                👑 VIP
+                              </span>
+                            )}
+                            {room.access_level === 'vip_plus' && (
+                              <span className="inline-block bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+                                💎 VIP+
+                              </span>
+                            )}
+                            {room.access_level === 'admin' && (
+                              <span className="inline-block bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+                                🛡️ Admin
+                              </span>
+                            )}
+                            {room.access_level === 'public' && (
+                              <span className="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+                                🌍 Public
+                              </span>
+                            )}
+                          </div>
                         </div>
                       )}
                       
                       <div className="p-6">
+                        {/* Room Title */}
                         <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
                           Salle {room.room_number} - {room.theme}
                         </h3>
-                        <p className="text-white/80 font-medium mb-1">{room.movie_title}</p>
-                        <p className="text-white/60 text-sm mb-4">Capacité: {room.capacity}</p>
-                        
-                        {room.showtime && (
-                          <p className="text-blue-300 text-sm mb-4">
-                            🕐 Séance: {new Date(room.showtime).toLocaleString('fr-FR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                          </p>
-                        )}
 
-                        <div className="mb-4">
-                          {room.access_level === 'vip' && (
-                            <span className="inline-block bg-yellow-500/20 text-yellow-300 px-3 py-1 rounded-full text-sm font-medium">
-                              👑 VIP
-                            </span>
-                          )}
-                          {room.access_level === 'vip_plus' && (
-                            <span className="inline-block bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-medium">
-                              💎 VIP+
-                            </span>
-                          )}
-                          {room.access_level === 'admin' && (
-                            <span className="inline-block bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-sm font-medium">
-                              🛡️ Admin
-                            </span>
-                          )}
-                          {room.access_level === 'public' && (
-                            <span className="inline-block bg-green-500/20 text-green-300 px-3 py-1 rounded-full text-sm font-medium">
-                              🌍 Public
-                            </span>
+                        {/* Movie Title */}
+                        <p className="text-white/80 font-medium mb-3 text-lg">{room.movie_title}</p>
+
+                        {/* Room Info Grid */}
+                        <div className="grid grid-cols-2 gap-3 mb-4">
+                          {/* Capacity */}
+                          <div className="bg-white/5 rounded-lg p-3">
+                            <p className="text-white/60 text-xs mb-1">Capacité</p>
+                            <p className="text-white font-bold text-lg">{room.capacity} places</p>
+                          </div>
+
+                          {/* TMDB ID */}
+                          {room.movie_tmdb_id && (
+                            <div className="bg-white/5 rounded-lg p-3">
+                              <p className="text-white/60 text-xs mb-1">ID TMDB</p>
+                              <p className="text-blue-300 font-mono font-bold">{room.movie_tmdb_id}</p>
+                            </div>
                           )}
                         </div>
 
+                        {/* Start Time */}
+                        {room.schedule_start && (
+                          <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg p-3 mb-4 border border-blue-500/30">
+                            <p className="text-white/80 text-sm mb-1">🕐 Heure de début</p>
+                            <p className="text-white font-bold text-lg">
+                              {new Date(room.schedule_start).toLocaleString('fr-FR', {
+                                weekday: 'long',
+                                day: '2-digit',
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Access Requirements */}
+                        <div className="mb-4">
+                          <p className="text-white/60 text-sm mb-2">Accès requis:</p>
+                          <div className="flex gap-2 items-center">
+                            {room.access_level === 'public' && (
+                              <div className="flex items-center gap-2 bg-green-500/20 text-green-300 px-3 py-2 rounded-lg border border-green-500/30">
+                                <span className="text-lg">🌍</span>
+                                <span className="font-medium">Ouvert à tous</span>
+                              </div>
+                            )}
+                            {room.access_level === 'vip' && (
+                              <div className="flex items-center gap-2 bg-yellow-500/20 text-yellow-300 px-3 py-2 rounded-lg border border-yellow-500/30">
+                                <span className="text-lg">👑</span>
+                                <span className="font-medium">VIP requis</span>
+                              </div>
+                            )}
+                            {room.access_level === 'vip_plus' && (
+                              <div className="flex items-center gap-2 bg-purple-500/20 text-purple-300 px-3 py-2 rounded-lg border border-purple-500/30">
+                                <span className="text-lg">💎</span>
+                                <span className="font-medium">VIP+ requis</span>
+                              </div>
+                            )}
+                            {room.access_level === 'admin' && (
+                              <div className="flex items-center gap-2 bg-red-500/20 text-red-300 px-3 py-2 rounded-lg border border-red-500/30">
+                                <span className="text-lg">🛡️</span>
+                                <span className="font-medium">Admin uniquement</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Enter Button */}
                         <button
                           onClick={() => handleEnterRoom(room)}
                           className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
@@ -2376,41 +2551,69 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
-      {showChatInput && !isFullscreen && (
-        <div className="absolute top-20 right-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-white font-bold text-sm">Envoyer un message</h3>
-            <button
-              onClick={() => setShowChatInput(false)}
-              className="text-white/60 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  sendMessage()
-                  setShowChatInput(false)
-                }
-              }}
-              placeholder="Votre message..."
-              className="flex-1 bg-white/10 text-white px-3 py-2 rounded-lg outline-none text-sm"
-              autoFocus
-            />
-            <button
-              onClick={() => {
-                sendMessage()
-                setShowChatInput(false)
-              }}
-              className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+      {showMap && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-8 max-w-2xl w-full mx-4 shadow-2xl border-2 border-white/20">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-bold text-white flex items-center gap-3">
+                <Map className="w-8 h-8 text-cyan-400" />
+                Carte du Monde
+              </h2>
+              <button
+                onClick={() => setShowMap(false)}
+                className="text-white hover:text-red-400 transition-colors"
+              >
+                <X className="w-8 h-8" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              {/* Cinema - Open */}
+              <button
+                onClick={() => {
+                  setShowCinema(true)
+                  setShowMap(false)
+                }}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
+              >
+                <div className="bg-white/20 p-4 rounded-lg">
+                  <Building2 className="w-8 h-8" />
+                </div>
+                <div className="text-left flex-1">
+                  <h3 className="text-2xl font-bold mb-1">🎬 Cinéma</h3>
+                  <p className="text-white/80">Ouvert - Cliquez pour voir les salles</p>
+                </div>
+                <div className="text-3xl">→</div>
+              </button>
+
+              {/* Arcade - Closed */}
+              <div className="bg-gray-700/50 text-gray-400 p-6 rounded-xl flex items-center gap-4 opacity-60 cursor-not-allowed">
+                <div className="bg-gray-600/50 p-4 rounded-lg">
+                  <Building2 className="w-8 h-8" />
+                </div>
+                <div className="text-left flex-1">
+                  <h3 className="text-2xl font-bold mb-1 flex items-center gap-2">
+                    🎮 Arcade
+                    <Lock className="w-5 h-5" />
+                  </h3>
+                  <p className="text-gray-500">Fermé - Bientôt disponible</p>
+                </div>
+              </div>
+
+              {/* Stadium - Closed */}
+              <div className="bg-gray-700/50 text-gray-400 p-6 rounded-xl flex items-center gap-4 opacity-60 cursor-not-allowed">
+                <div className="bg-gray-600/50 p-4 rounded-lg">
+                  <Building2 className="w-8 h-8" />
+                </div>
+                <div className="text-left flex-1">
+                  <h3 className="text-2xl font-bold mb-1 flex items-center gap-2">
+                    ⚽ Stade de Foot
+                    <Lock className="w-5 h-5" />
+                  </h3>
+                  <p className="text-gray-500">Fermé - Bientôt disponible</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
