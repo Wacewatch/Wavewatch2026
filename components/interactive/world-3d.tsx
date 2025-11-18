@@ -1651,6 +1651,29 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             })}
 
             <Html position={[0, 3, 28]} center depthTest={false} zIndexRange={[100, 0]}>
+              <div className="flex flex-col gap-3 items-center">
+                <button
+                  onClick={() => mySeat ? handleSitInSeat(mySeat) : handleSitInSeat()}
+                  disabled={!mySeat && cinemaSeats.every(s => s.user_id)}
+                  className={`px-8 py-4 rounded-xl font-bold text-lg shadow-2xl transition-all transform hover:scale-105 ${
+                    mySeat
+                      ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
+                      : cinemaSeats.every(s => s.user_id)
+                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
+                  }`}
+                >
+                  {mySeat ? '🚶 Se Lever' : cinemaSeats.every(s => s.user_id) ? '🔒 Complet' : '💺 S\'asseoir'}
+                </button>
+
+                <button
+                  onClick={handleLeaveRoom}
+                  className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 shadow-xl flex items-center gap-2 font-medium"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Sortir du Cinéma
+                </button>
+              </div>
             </Html>
           </>
         )}
@@ -2021,8 +2044,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                       {room.poster_url && (
                         <div className="relative w-full h-64 bg-gray-900">
                           <img
-                            src={room.poster_url || "/placeholder.svg?height=256&width=400&query=cinema movie poster"}
-                            alt={room.movie_title || 'Affiche du film'}
+                            src={room.poster_url || "/placeholder.svg"}
+                            alt={room.movie_title}
                             className="w-full h-full object-cover"
                             onError={(e) => {
                               e.currentTarget.src = '/abstract-movie-poster.png'
@@ -2035,8 +2058,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                         <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
                           Salle {room.room_number} - {room.theme}
                         </h3>
-                        <p className="text-white/80 font-medium mb-1 text-lg">{room.movie_title || 'Film sans titre'}</p>
-                        <p className="text-white/60 text-sm mb-4">Capacité: {room.capacity} places</p>
+                        <p className="text-white/80 font-medium mb-1">{room.movie_title}</p>
+                        <p className="text-white/60 text-sm mb-4">Capacité: {room.capacity}</p>
 
                         {room.showtime && (
                           <p className="text-blue-300 text-sm mb-4">
@@ -2339,43 +2362,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       {showQuickActions && (
         <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-2 bg-black/90 backdrop-blur-xl p-4 rounded-2xl border-2 border-white/30 shadow-2xl">
           <div className="text-white font-bold text-sm mb-2 text-center border-b border-white/20 pb-2">Actions Rapides</div>
-
-          {/* Cinema actions - only show when in cinema room */}
-          {currentCinemaRoom && (
-            <>
-              <div className="text-white/60 text-xs text-center mt-1">Actions Cinéma</div>
-              <button
-                onClick={() => {
-                  if (mySeat) {
-                    handleSitInSeat(mySeat)
-                  } else {
-                    handleSitInSeat()
-                  }
-                  setShowQuickActions(false)
-                }}
-                disabled={!mySeat && cinemaSeats.every(s => s.user_id)}
-                className={`text-white p-3 rounded-xl shadow-lg transition-all flex items-center gap-2 font-medium ${
-                  mySeat
-                    ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
-                    : cinemaSeats.every(s => s.user_id)
-                    ? 'bg-gray-600 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
-                }`}
-              >
-                {mySeat ? '🚶 Se Lever' : cinemaSeats.every(s => s.user_id) ? '🔒 Complet' : '💺 S\'asseoir'}
-              </button>
-
-              <button
-                onClick={() => { handleLeaveRoom(); setShowQuickActions(false); }}
-                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white p-3 rounded-xl shadow-lg transition-all flex items-center gap-2 font-medium"
-              >
-                <LogOut className="w-5 h-5" />
-                Sortir du Cinéma
-              </button>
-
-              <div className="border-t border-white/20 my-2"></div>
-            </>
-          )}
 
           {/* Jump button */}
           {worldSettings.enableJumping && (
