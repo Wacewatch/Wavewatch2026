@@ -20,17 +20,39 @@ interface InteractiveWorldProps {
   userProfile: any
 }
 
+// Define a more specific type for avatarStyle
+interface AvatarStyle {
+  bodyColor: string
+  headColor: string
+  hairStyle: string
+  hairColor: string
+  skinTone: string
+  accessory: string
+  faceSmiley: string
+}
+
 function RealisticAvatar({
   position,
   avatarStyle,
-  isMoving
+  isMoving = false
 }: {
   position: [number, number, number]
-  avatarStyle: any
-  isMoving: boolean
+  avatarStyle: AvatarStyle
+  isMoving?: boolean
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const [time, setTime] = useState(0)
+
+  useEffect(() => {
+    console.log('[v0] RealisticAvatar mounted at position:', position, 'with style:', avatarStyle)
+    return () => {
+      console.log('[v0] RealisticAvatar unmounted')
+    }
+  }, [])
+
+  useEffect(() => {
+    console.log('[v0] RealisticAvatar position changed to:', position)
+  }, [position[0], position[1], position[2]])
 
   useFrame((state, delta) => {
     if (isMoving && groupRef.current) {
@@ -241,7 +263,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [myProfile, setMyProfile] = useState<any>(null)
   const [onlineCount, setOnlineCount] = useState(0)
   const [myPosition, setMyPosition] = useState({ x: 0, y: 0.5, z: 0 })
-  const [myAvatarStyle, setMyAvatarStyle] = useState({
+  const [myAvatarStyle, setMyAvatarStyle] = useState<AvatarStyle>({
     bodyColor: '#3b82f6',
     headColor: '#fbbf24',
     hairStyle: 'short',
@@ -365,7 +387,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     // Collision zones for objects in the world
     const collisionZones = [
       // Cinema building (main)
-      { x: 40, z: 0, width: 12, depth: 12 },
+      { x: 0, z: -50, width: 25, depth: 20 }, // Adjusted for cinema building position
 
       // Arcade building
       { x: -40, z: -40, width: 10, depth: 8 },
@@ -381,9 +403,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       // Museum
       { x: 50, z: 30, width: 20, depth: 16 },
-
-      // Park fountain - REMOVED
-      // { x: 0, z: 0, width: 8, depth: 8 },
 
       // Trees (more spread out across larger world)
       { x: -60, z: -50, width: 3, depth: 3 },
@@ -619,7 +638,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     loadAvatarStyle()
   }, [userId])
 
-  const saveAvatarStyle = async (newStyle: any) => {
+  const saveAvatarStyle = async (newStyle: AvatarStyle) => {
     setMyAvatarStyle(newStyle)
     await supabase
       .from('interactive_profiles')
@@ -644,13 +663,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }, [])
 
   useEffect(() => {
+    console.log('[v0] Setting up keyboard listeners')
     const handleKeyDown = (e: KeyboardEvent) => {
-      // if (isSeatsLocked && mySeat !== null) return // Removed seat lock check
       keysPressed.current.add(e.key.toLowerCase())
+      console.log('[v0] Key pressed:', e.key, 'Keys active:', Array.from(keysPressed.current))
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
       keysPressed.current.delete(e.key.toLowerCase())
+      console.log('[v0] Key released:', e.key)
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -660,12 +681,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       window.removeEventListener('keydown', handleKeyDown)
       window.removeEventListener('keyup', handleKeyUp)
     }
-  }, [isSeatsLocked, mySeat]) // isSeatsLocked is now effectively unused
+  }, [])
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // if (isSeatsLocked && mySeat !== null) return // Removed seat lock check
-
       let dx = 0
       let dz = 0
       const speed = 0.15
@@ -676,13 +695,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       if (keysPressed.current.has('d') || keysPressed.current.has('arrowright')) dx += speed
 
       if (dx !== 0 || dz !== 0) {
+        console.log('[v0] Moving with dx:', dx, 'dz:', dz)
         setMovement({ x: dx, z: dz })
         setMyPosition(prev => {
-          const newX = Math.max(-20, Math.min(20, prev.x + dx))
-          const newZ = Math.max(-20, Math.min(20, prev.z + dz))
+          const newX = Math.max(-40, Math.min(40, prev.x + dx))
+          const newZ = Math.max(-40, Math.min(40, prev.z + dz))
 
           if (checkCollision(newX, newZ)) {
-            return prev // Don't move if collision detected
+            console.log('[v0] Collision detected at:', newX, newZ)
+            return prev
           }
 
           const newPos = {
@@ -690,6 +711,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             y: 0.5,
             z: newZ
           }
+
+          console.log('[v0] New position:', newPos)
 
           supabase
             .from('interactive_profiles')
@@ -704,12 +727,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           return newPos
         })
       } else {
-        setMovement({ x: 0, z: 0 })
+        if (movement.x !== 0 || movement.z !== 0) {
+          setMovement({ x: 0, z: 0 })
+        }
       }
     }, 50)
 
     return () => clearInterval(interval)
-  }, [userId, isSeatsLocked, mySeat]) // isSeatsLocked is now effectively unused
+  }, [movement, userId])
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -953,10 +978,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     setMyPosition(prev => {
       const speed = 0.15
-      const newX = Math.max(-20, Math.min(20, prev.x + dx * speed))
-      const newZ = Math.max(-20, Math.min(20, prev.z + dz * speed))
+      const newX = Math.max(-40, Math.min(40, prev.x + dx * speed))
+      const newZ = Math.max(-40, Math.min(40, prev.z + dz * speed))
 
       if (checkCollision(newX, newZ)) {
+        console.log('[v0] Joystick collision detected at:', newX, newZ)
         return prev // Don't move if collision detected
       }
 
@@ -965,6 +991,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         y: 0.5,
         z: newZ
       }
+
+      console.log('[v0] Joystick new position:', newPos)
 
       supabase
         .from('interactive_profiles')
@@ -997,7 +1025,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const handleEnterRoom = async (room: any) => {
     setCurrentCinemaRoom(room)
-    setShowShowCinema(false) // Corrected typo
     setShowCinema(false) // Also ensuring the old state is cleared
 
     setMyPosition({ x: 0, y: 0, z: 25 }) // Spawn at the entrance of the cinema
@@ -1277,6 +1304,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           })
           setMyRotation(profiles.rotation || 0)
           
+          console.log('[v0] Setting avatar position to render at:', {
+            x: profiles.position_x || 0,
+            y: profiles.position_y || 0.5, 
+            z: profiles.position_z || 0
+          })
+          console.log('[v0] Avatar style for rendering:', profiles.avatar_style || myAvatarStyle)
+          
           if (profiles.current_room && profiles.current_room.startsWith('cinema_')) {
             console.log('[v0] User was stuck in cinema room, resetting...')
             await supabase
@@ -1300,6 +1334,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     
     loadMyProfile()
   }, [userId, userProfile])
+
+  useEffect(() => {
+    console.log('[v0] Avatar render effect - myPosition:', myPosition, 'myAvatarStyle:', myAvatarStyle, 'movement:', movement)
+  }, [myPosition, myAvatarStyle, movement])
 
   // Function to determine if it's the current user's avatar
   const isMe = (playerId: string) => playerId === userId;
@@ -1605,8 +1643,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
 
-            {/* Benches around park - MOVED TO CENTRAL PARK SECTION ABOVE */}
-
             {/* Render other players */}
             {otherPlayers.map((player) => (
               <group key={player.user_id}>
@@ -1661,9 +1697,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
 
-            {console.log('[v0] Before avatar render - myProfile:', myProfile, 'myPosition:', myPosition, 'myAvatarStyle:', myAvatarStyle)}
-            
-            {/* Always render avatar if we have position data */}
+            {/* My Avatar - Always render with bright color for testing */}
             <RealisticAvatar
               position={[myPosition.x, myPosition.y, myPosition.z]}
               avatarStyle={myAvatarStyle}
