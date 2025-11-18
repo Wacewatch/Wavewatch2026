@@ -4,7 +4,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Sky, Html, PerspectiveCamera, Text } from '@react-three/drei'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff, ArrowUp, Frown, ThumbsUp, Heart, Angry, ChevronLeft, Maximize2, MessageCircle, Sparkles, Star, Map, MapPin, Film, Trophy } from 'lucide-react'
+import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff, ArrowUp, Frown, ThumbsUp, Heart, Angry, ChevronLeft, Maximize2, MessageCircle, Sparkles, Star, Lock, Film, Clock } from 'lucide-react'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,7 +64,7 @@ function RealisticAvatar({
       </mesh>
 
       {avatarStyle.faceSmiley && (
-        <Html position={[0, 0.85, 0.32]} center depthTest={false} zIndexRange={[100, 0]}>
+        <Html position={[0, 0.85, 0.32]} center depthTest={true} zIndexRange={[10, 0]}>
           <div className="text-2xl pointer-events-none">
             {avatarStyle.faceSmiley}
           </div>
@@ -237,10 +237,10 @@ function RealisticLamppost({ position }: { position: [number, number, number] })
 }
 
 export default function InteractiveWorld({ userId, userProfile }: InteractiveWorldProps) {
+  // Removed unused onlineProfiles state
   const [myProfile, setMyProfile] = useState<any>(null)
-  const [otherPlayers, setOtherPlayers] = useState<any[]>([])
   const [onlineCount, setOnlineCount] = useState(0)
-  const [myPosition, setMyPosition] = useState({ x: 0, y: 0, z: 30 })
+  const [myPosition, setMyPosition] = useState({ x: 0, y: 0, z: 50 })
   const [myAvatarStyle, setMyAvatarStyle] = useState({
     bodyColor: '#3b82f6',
     headColor: '#fbbf24',
@@ -295,13 +295,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   // Synchronized actions state
   const [playerActions, setPlayerActions] = useState<Record<string, { action: string; timestamp: number }>>({})
   const [quickAction, setQuickAction] = useState<string | null>(null) // State for current quick action animation
+  const [otherPlayers, setOtherPlayers] = useState<any[]>([])
 
   const keysPressed = useRef<Set<string>>(new Set())
   const supabase = createClient()
   const [myRotation, setMyRotation] = useState(0) // Added for rotation
 
   const [showMenu, setShowMenu] = useState(false)
-  const [showMap, setShowMap] = useState(false)
+  const [showMapMenu, setShowMapMenu] = useState(false)
+  const [showEmojiMenu, setShowEmojiMenu] = useState(false) // Added for emoji menu
 
   useEffect(() => {
     const checkMobile = () => {
@@ -668,9 +670,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       let dz = 0
       const speed = 0.15
 
-      if (keysPressed.current.has('z') || keysPressed.current.has('arrowup')) dz -= speed
+      if (keysPressed.current.has('w') || keysPressed.current.has('arrowup')) dz -= speed
       if (keysPressed.current.has('s') || keysPressed.current.has('arrowdown')) dz += speed
-      if (keysPressed.current.has('q') || keysPressed.current.has('arrowleft')) dx -= speed
+      if (keysPressed.current.has('a') || keysPressed.current.has('arrowleft')) dx -= speed
       if (keysPressed.current.has('d') || keysPressed.current.has('arrowright')) dx += speed
 
       if (dx !== 0 || dz !== 0) {
@@ -1064,6 +1066,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       .eq('user_id', userId)
   }
 
+
   const handleSitInSeat = async (seatNumber?: number) => {
     if (!userProfile || !currentCinemaRoom) return
 
@@ -1123,6 +1126,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       console.error('[v0] Error sitting:', error)
     }
   }
+
+  const handleExitRoom = async () => {
+    if (mySeat !== null) {
+      try {
+        await supabase
+          .from('interactive_cinema_seats')
+          .update({ user_id: null })
+          .eq('room_id', currentCinemaRoom.id)
+          .eq('seat_number', mySeat)
+        setMySeat(null)
+      } catch (error) {
+        console.error('[v0] Error leaving seat:', error)
+      }
+    }
+    handleLeaveRoom()
+  }
+
 
   useEffect(() => {
     const checkCapacity = async () => {
@@ -1222,52 +1242,85 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   useEffect(() => {
-    if (!userId) return
-
-    const loadMyProfile = async () => {
-      const { data, error } = await supabase
-        .from('interactive_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single()
-
-      if (error) {
-        console.error('[v0] Error loading my profile:', error)
-        return
-      }
-
-      console.log('[v0] Loaded my profile:', data)
-      setMyProfile(data)
-
-      if (data) {
-        // Set initial position and rotation from profile
-        setMyPosition({ x: data.position_x || 0, y: data.position_y || 0.5, z: data.position_z || 0 })
-        setMyRotation(data.rotation || 0) // Assuming rotation is stored
-      }
+    if (!userId || !userProfile) {
+      console.log('[v0] No user ID or profile, skipping profile load')
+      return
     }
 
+    const loadMyProfile = async () => {
+      try {
+        const { data: profiles, error } = await supabase
+          .from('interactive_profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single()
+
+        if (error) throw error
+
+        if (profiles) {
+          console.log('[v0] Loaded my profile:', profiles)
+          setMyProfile(profiles)
+          setMyPosition({
+            x: profiles.position_x || 0,
+            y: profiles.position_y || 0.5,
+            z: profiles.position_z || 50
+          })
+          setMyRotation(profiles.rotation || 0)
+          
+          if (profiles.current_room && profiles.current_room.startsWith('cinema_')) {
+            console.log('[v0] User was stuck in cinema room, resetting...')
+            await supabase
+              .from('interactive_profiles')
+              .update({ current_room: null })
+              .eq('user_id', userId)
+            setCurrentCinemaRoom(null)
+          }
+
+          if (profiles.avatar_style) {
+            setMyAvatarStyle({
+              ...myAvatarStyle,
+              ...profiles.avatar_style
+            })
+          }
+        }
+      } catch (error) {
+        console.error('[v0] Error loading profile:', error)
+      }
+    }
+    
     loadMyProfile()
-  }, [userId])
+  }, [userId, userProfile])
+
+  // Function to determine if it's the current user's avatar
+  const isMe = (playerId: string) => playerId === userId;
+
+  const handleTakeSeat = async () => {
+    if (!currentCinemaRoom) return;
+    setShowEmojiMenu(false); // Close menu when taking a seat
+    await handleSitInSeat();
+  };
+
 
   return (
-    <div className="fixed inset-0 bg-sky-400">
+    <div className="fixed inset-0 bg-black z-50">
       <Canvas
+        // Pass povMode to camera
+        camera={povMode ? undefined : { position: [0, 8, 12], fov: 60 }}
+        style={{ width: '100vw', height: '100vh' }}
         shadows
         gl={{
-          antialias: !isMobileMode,
-          powerPreference: isMobileMode ? 'low-power' : 'high-performance'
+          antialias: graphicsQuality !== 'low',
+          alpha: false,
+          powerPreference: graphicsQuality === 'high' ? 'high-performance' : 'default'
         }}
-        camera={{ position: povMode ? [myPosition.x, myPosition.y + 1.5, myPosition.z] : [myPosition.x, myPosition.y + 8, myPosition.z + 12], fov: 60 }}
       >
-        
-        <ambientLight intensity={worldSettings.worldMode === 'night' ? 0.3 : 0.6} />
-        <directionalLight
-          position={[10, 20, 10]}
-          intensity={worldSettings.worldMode === 'night' ? 0.4 : 1}
-          castShadow
-          shadow-mapSize-width={graphicsQuality === 'high' ? 2048 : 1024}
-          shadow-mapSize-height={graphicsQuality === 'high' ? 2048 : 1024}
-        />
+        {povMode && (
+          <PerspectiveCamera
+            makeDefault
+            position={[myPosition.x, myPosition.y + 1.5, myPosition.z]} // Adjust for eye level
+            fov={75}
+          />
+        )}
 
         {worldSettings.worldMode === 'day' && (
           <>
@@ -1276,7 +1329,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               inclination={0.6}
               azimuth={0.25}
             />
-            
+            <ambientLight intensity={0.4} />
+            <directionalLight
+              position={[10, 20, 10]}
+              intensity={1.5}
+              castShadow
+              shadow-mapSize={graphicsQuality === 'high' ? [2048, 2048] : [1024, 1024]}
+            />
           </>
         )}
 
@@ -1287,7 +1346,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               inclination={0.1}
               azimuth={0.25}
             />
-            
+            <ambientLight intensity={0.15} />
+            <directionalLight
+              position={[10, 20, 10]}
+              intensity={0.3}
+              color="#4466ff"
+              castShadow
+              shadow-mapSize={graphicsQuality === 'high' ? [2048, 2048] : [1024, 1024]}
+            />
           </>
         )}
 
@@ -1298,10 +1364,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               inclination={0.3}
               azimuth={0.1}
             />
-            
+            <ambientLight intensity={0.3} />
+            <directionalLight
+              position={[10, 5, 10]}
+              intensity={1.0}
+              color="#ff8844"
+              castShadow
+              shadow-mapSize={graphicsQuality === 'high' ? [2048, 2048] : [1024, 1024]}
+            />
           </>
         )}
 
+        <fog attach="fog" args={['#87CEEB', 10, 50]} />
         <hemisphereLight intensity={0.3} groundColor="#6b7280" />
 
         {!currentCinemaRoom ? (
@@ -1529,9 +1603,86 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 </mesh>
               </group>
             ))}
+
+            {/* Render other players */}
+            {otherPlayers.map((player) => (
+              <group key={player.user_id}>
+                {!player.current_room?.startsWith('cinema_') && (
+                  <>
+                    <RealisticAvatar
+                      position={[player.position_x, player.position_y, player.position_z]}
+                      avatarStyle={player.avatar_style || myAvatarStyle}
+                      isMoving={player.movement_x !== 0 || player.movement_z !== 0}
+                    />
+
+                    {/* Player Name & Badge - Changed to use proper z-index */}
+                    {!isMe(player.user_id) && (
+                      <Html
+                        position={[player.position_x, player.position_y + 1.5, player.position_z]}
+                        center
+                        depthTest={true}
+                        zIndexRange={[10, 0]}
+                      >
+                        <div className="flex flex-col items-center gap-1 pointer-events-none">
+                          <div className="bg-black/80 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap shadow-lg">
+                            {player.user_profiles?.username || player.username}
+                            {player.user_profiles?.is_admin && (
+                              <Shield className="inline-block w-4 h-4 ml-1 text-red-400" />
+                            )}
+                            {player.user_profiles?.is_vip_plus && (
+                              <Crown className="inline-block w-4 h-4 ml-1 text-yellow-400" />
+                            )}
+                            {player.user_profiles?.is_vip && !player.user_profiles?.is_vip_plus && (
+                              <Star className="inline-block w-4 h-4 ml-1 text-purple-400" />
+                            )}
+                          </div>
+                        </div>
+                      </Html>
+                    )}
+
+                    {/* Chat bubbles for other players */}
+                    {playerChatBubbles[player.user_id] && (
+                      <Html
+                        position={[player.position_x, player.position_y + 1.8, player.position_z]}
+                        center
+                        depthTest={false}
+                        zIndexRange={[20, 0]}
+                      >
+                        <div className="text-sm bg-black/70 text-white px-3 py-1 rounded-full animate-fade-in-out">
+                          {playerChatBubbles[player.user_id].message}
+                        </div>
+                      </Html>
+                    )}
+                  </>
+                )}
+              </group>
+            ))}
+
+            <RealisticAvatar
+              position={[myPosition.x, myPosition.y, myPosition.z]}
+              avatarStyle={myAvatarStyle}
+              isMoving={movement.x !== 0 || movement.z !== 0}
+            />
+
+            {/* My Chat Bubble */}
+            {currentEmoji && (
+              <Html
+                position={[myPosition.x, myPosition.y + 1.8, myPosition.z]}
+                center
+                depthTest={false}
+                zIndexRange={[20, 0]}
+              >
+                <div className="text-xl animate-fade-in-out">
+                  {currentEmoji}
+                </div>
+              </Html>
+            )}
           </>
         ) : (
           <>
+            <ambientLight intensity={0.3} />
+            <pointLight position={[0, 5, 0]} intensity={0.5} color="#ffffff" />
+
             {/* Larger cinema floor */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
               <planeGeometry args={[50, 60]} />
@@ -1595,20 +1746,20 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <meshStandardMaterial color="#7f1d1d" />
             </mesh>
 
-            {/* Screen */}
             <group position={[0, 6, -28]}>
               <mesh castShadow>
                 <boxGeometry args={[24, 12, 0.3]} />
                 <meshStandardMaterial color="#1f2937" />
               </mesh>
 
-              {currentCinemaRoom.movie_url && (
-                <Html position={[0, 0, 0.2]} transform occlude zIndexRange={[100, 0]}>
+              {currentCinemaRoom?.embed_url && (
+                <Html position={[0, 0, 0.2]} transform occlude zIndexRange={[10, 0]}>
                   <iframe
-                    src={currentCinemaRoom.movie_url}
-                    className="w-[800px] h-[450px]"
+                    src={currentCinemaRoom.embed_url}
+                    className="w-[800px] h-[450px] pointer-events-auto"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
                   />
                 </Html>
               )}
@@ -1649,269 +1800,131 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 </group>
               )
             })}
-
-            <Html position={[0, 3, 28]} center depthTest={false} zIndexRange={[100, 0]}>
-              <div className="flex flex-col gap-3 items-center">
-                <button
-                  onClick={() => mySeat ? handleSitInSeat(mySeat) : handleSitInSeat()}
-                  disabled={!mySeat && cinemaSeats.every(s => s.user_id)}
-                  className={`px-8 py-4 rounded-xl font-bold text-lg shadow-2xl transition-all transform hover:scale-105 ${
-                    mySeat
-                      ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white'
-                      : cinemaSeats.every(s => s.user_id)
-                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white'
-                  }`}
-                >
-                  {mySeat ? '🚶 Se Lever' : cinemaSeats.every(s => s.user_id) ? '🔒 Complet' : '💺 S\'asseoir'}
-                </button>
-
-                <button
-                  onClick={handleLeaveRoom}
-                  className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 shadow-xl flex items-center gap-2 font-medium"
-                >
-                  <LogOut className="w-5 h-5" />
-                  Sortir du Cinéma
-                </button>
-              </div>
-            </Html>
-          </>
-        )}
-
-        {/* My avatar with username and badge */}
-        <group>
-          <RealisticAvatar
-            position={[myPosition.x, myPosition.y + (isJumping ? 0.8 : 0), myPosition.z]} // Adjust y for jump height
-            avatarStyle={myAvatarStyle}
-            isMoving={movement.x !== 0 || movement.z !== 0}
-          />
-
-          <Html position={[myPosition.x, myPosition.y + 1.8, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
-            <div className="flex items-center gap-1 bg-black/70 px-3 py-1 rounded-full backdrop-blur-sm shadow-lg">
-              <span className="text-white text-sm font-bold">{myProfile?.username || 'Vous'}</span>
-              {userProfile?.is_admin && (
-                <Shield className="w-4 h-4 text-red-500" title="Admin" />
-              )}
-              {userProfile?.is_vip_plus && !userProfile?.is_admin && (
-                <Crown className="w-4 h-4 text-purple-400" title="VIP+" />
-              )}
-              {userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin && (
-                <Star className="w-4 h-4 text-yellow-400" title="VIP" />
-              )}
-            </div>
-          </Html>
-
-          {currentEmoji && (
-            <Html position={[myPosition.x, myPosition.y + 2.5, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
-              <div className="text-5xl animate-bounce">
-                {currentEmoji}
-              </div>
-            </Html>
-          )}
-
-          {playerChatBubbles[userId] && (
-            <Html position={[myPosition.x, myPosition.y + 2.2, myPosition.z]} center depthTest={false} zIndexRange={[100, 0]}>
-              <div className="bg-white/95 text-black px-3 py-2 rounded-lg shadow-xl max-w-xs text-sm border-2 border-blue-500">
-                {playerChatBubbles[userId].message}
-              </div>
-            </Html>
-          )}
-        </group>
-
-        {/* Player avatars with badges */}
-        {otherPlayers
-          .filter(p => !currentCinemaRoom || p.current_room === `cinema_${currentCinemaRoom.id}`)
-          .map((player) => {
-            const playerProfile = player.user_profiles
-            const avatarStyle = player.avatar_style || { bodyColor: '#ef4444', headColor: '#fbbf24', faceSmiley: '😊' }
-            const playerAction = playerActions[player.user_id]
-
-            return (
-              <group key={player.user_id}>
-                <RealisticAvatar
-                  position={[player.position_x || 0, 0.5, player.position_z || 0]}
-                  avatarStyle={avatarStyle}
-                  isMoving={false} // Disable movement animation for other players for simplicity
-                />
-
-                {worldSettings.showStatusBadges && (
-                  <Html position={[player.position_x || 0, 2.3, player.position_z || 0]} center depthTest={false} zIndexRange={[100, 0]}>
-                    <div className="flex flex-col items-center gap-1">
-                      <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
-                        <span className="text-white text-xs font-medium">{player.username || playerProfile?.username || 'Joueur'}</span>
-                        {playerProfile?.is_admin && <Shield className="w-3 h-3 text-red-500" />}
-                        {playerProfile?.is_vip_plus && !playerProfile?.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
-                        {playerProfile?.is_vip && !playerProfile?.is_vip_plus && !playerProfile?.is_admin && <Star className="w-3 h-3 text-yellow-400" />}
+            {/* Render other players' avatars and chat bubbles */}
+            {otherPlayers.map((player) => {
+              const isPlayerMe = isMe(player.user_id);
+              return (
+                <group key={player.user_id}>
+                  <RealisticAvatar
+                    position={[player.position_x, player.position_y, player.position_z]}
+                    avatarStyle={player.avatar_style || myAvatarStyle}
+                    isMoving={player.movement_x !== 0 || player.movement_z !== 0}
+                  />
+                  {!isPlayerMe && (
+                    <Html
+                      position={[player.position_x, player.position_y + 1.5, player.position_z]}
+                      center
+                      depthTest={true}
+                      zIndexRange={[10, 0]}
+                    >
+                      <div className="flex flex-col items-center gap-1 pointer-events-none">
+                        <div className="bg-black/80 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap shadow-lg">
+                          {player.user_profiles?.username || player.username}
+                          {player.user_profiles?.is_admin && <Shield className="inline-block w-4 h-4 ml-1 text-red-400" />}
+                          {player.user_profiles?.is_vip_plus && <Crown className="inline-block w-4 h-4 ml-1 text-yellow-400" />}
+                          {player.user_profiles?.is_vip && !player.user_profiles?.is_vip_plus && <Star className="inline-block w-4 h-4 ml-1 text-purple-400" />}
+                        </div>
                       </div>
-                      {playerChatBubbles[player.user_id] && Date.now() - playerChatBubbles[player.user_id].timestamp < 5000 && (
-                        <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
-                          {playerChatBubbles[player.user_id].message}
-                        </div>
-                      )}
-                      {playerAction && playerAction.action === 'emoji' && (
-                        <div className="text-4xl animate-bounce">
-                          {playerAction.emoji}
-                        </div>
-                      )}
-                    </div>
-                  </Html>
-                )}
-              </group>
-            )
-          })}
-
-        {!povMode && (
-          <OrbitControls
-            target={[myPosition.x, myPosition.y, myPosition.z]}
-            maxPolarAngle={Math.PI / 2.5}
-            minDistance={6}
-            maxDistance={25}
-          />
+                    </Html>
+                  )}
+                  {/* Chat bubbles for other players */}
+                  {playerChatBubbles[player.user_id] && (
+                    <Html
+                      position={[player.position_x, player.position_y + 1.8, player.position_z]}
+                      center
+                      depthTest={false}
+                      zIndexRange={[20, 0]}
+                    >
+                      <div className="text-sm bg-black/70 text-white px-3 py-1 rounded-full animate-fade-in-out">
+                        {playerChatBubbles[player.user_id].message}
+                      </div>
+                    </Html>
+                  )}
+                </group>
+              );
+            })}
+          </>
         )}
       </Canvas>
 
-      {/* Top left controls */}
-      <div className="fixed top-4 left-4 z-50 flex flex-col gap-3">
-        <button
-          onClick={() => setShowMenu(!showMenu)}
-          className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-4 border-white/40 active:scale-95"
-        >
-          <Menu className="w-8 h-8" />
-        </button>
+      {/* UI Overlay */}
+      <div className="absolute inset-0 pointer-events-none">
+        {/* Menu principal - Top Left */}
+        <div className="absolute top-4 left-4 z-50 pointer-events-auto">
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-4 border-white/40 active:scale-95"
+          >
+            <Menu className="w-8 h-8" />
+          </button>
 
-        {showMenu && (
-          <div className="absolute top-0 left-20 mt-0 bg-black/95 backdrop-blur-xl rounded-xl p-4 w-80 space-y-3 shadow-2xl border-2 border-white/30">
-            <div className="text-white mb-3 pb-3 border-b border-white/20">
-              <div className="font-bold text-lg flex items-center gap-2">
-                <User className="w-5 h-5" />
-                {myProfile?.username || 'Joueur'}
+          {showMenu && (
+            <div className="absolute top-0 left-20 mt-0 bg-black/95 backdrop-blur-xl rounded-xl p-4 w-80 space-y-3 shadow-2xl border-2 border-white/30">
+              <div className="text-white mb-3 pb-3 border-b border-white/20">
+                <div className="font-bold text-lg flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  {myProfile?.username || 'Vous'}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-white/60 mt-1">
+                  <Users className="w-4 h-4" />
+                  <span>{onlineCount} en ligne</span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-sm text-white/60 mt-1">
-                <Users className="w-4 h-4" />
-                <span>{onlineCount} en ligne</span>
-              </div>
-            </div>
 
-            <button
-              onClick={() => {
-                setShowMap(true)
-                setShowMenu(false)
-              }}
-              className="w-full bg-emerald-500/90 text-white py-3 rounded-lg hover:bg-emerald-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
-            >
-              <Map className="w-5 h-5" />
-              Carte
-            </button>
-
-            <button
-              onClick={() => {
-                setShowSettings(true)
-                setShowMenu(false)
-              }}
-              className="w-full bg-blue-500/90 text-white py-3 rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
-            >
-              <Settings className="w-5 h-5" />
-              Paramètres
-            </button>
-
-            <button
-              onClick={() => {
-                setShowAvatarCustomizer(true)
-                setShowMenu(false)
-              }}
-              className="w-full bg-purple-500/90 text-white py-3 rounded-lg hover:bg-purple-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
-            >
-              <Palette className="w-5 h-5" />
-              Avatar
-            </button>
-
-            {worldSettings.enableChat && (
               <button
                 onClick={() => {
-                  setShowChat(true)
+                  setShowMapMenu(true)
                   setShowMenu(false)
                 }}
-                className="w-full bg-pink-500/90 text-white py-3 rounded-lg hover:bg-pink-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 text-white py-3 rounded-lg hover:from-cyan-600 hover:to-blue-600 flex items-center justify-center gap-2 text-base font-medium transition-colors shadow-lg"
               >
-                <MessageCircle className="w-5 h-5" />
-                Chat Global
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                Carte
               </button>
-            )}
-          </div>
-        )}
-      </div>
 
-      {showMap && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-b from-gray-900 to-black rounded-2xl p-6 max-w-md w-full border-2 border-white/20 shadow-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Map className="w-6 h-6" />
-                Carte des Bâtiments
-              </h2>
-              <button
-                onClick={() => setShowMap(false)}
-                className="text-white/60 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {/* Cinema - Open */}
               <button
                 onClick={() => {
-                  setShowCinema(true)
-                  setShowMap(false)
+                  setShowSettings(true)
+                  setShowMenu(false)
                 }}
-                className="w-full bg-gradient-to-r from-red-600 to-red-800 text-white p-4 rounded-xl hover:from-red-700 hover:to-red-900 transition-all flex items-center justify-between group"
+                className="w-full bg-blue-500/90 text-white py-3 rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="bg-white/20 p-2 rounded-lg">
-                    <Film className="w-6 h-6" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-bold text-lg">Cinéma</div>
-                    <div className="text-xs text-white/80">Cliquez pour voir les salles</div>
-                  </div>
-                </div>
-                <div className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                  OUVERT
-                </div>
+                <Settings className="w-5 h-5" />
+                Paramètres
               </button>
 
-              {/* Arcades - Closed */}
               <button
-                disabled
-                className="w-full bg-gradient-to-r from-gray-700 to-gray-900 text-white/50 p-4 rounded-xl cursor-not-allowed flex items-center justify-between opacity-60"
+                onClick={() => {
+                  setShowAvatarCustomizer(true)
+                  setShowMenu(false)
+                }}
+                className="w-full bg-purple-500/90 text-white py-3 rounded-lg hover:bg-purple-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
               >
-                <div className="flex items-center gap-3">
-                  <div className="bg-white/10 p-2 rounded-lg">
-                    <Trophy className="w-6 h-6" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-bold text-lg">Arcades</div>
-                    <div className="text-xs text-white/60">Bientôt disponible</div>
-                  </div>
-                </div>
-                <div className="bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                  FERMÉ
-                </div>
+                <Palette className="w-5 h-5" />
+                Avatar
               </button>
-            </div>
 
-            <div className="mt-6 bg-blue-500/20 border border-blue-500/30 rounded-lg p-3">
-              <p className="text-blue-200 text-sm flex items-start gap-2">
-                <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                <span>Utilisez la carte pour vous téléporter rapidement vers les bâtiments ouverts.</span>
-              </p>
+              {worldSettings.enableChat && (
+                <button
+                  onClick={() => {
+                    setShowChat(true)
+                    setShowMenu(false)
+                  }}
+                  className="w-full bg-green-500/90 text-white py-3 rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  Chat
+                </button>
+              )}
             </div>
-          </div>
+          )}
         </div>
-      )}
 
-      {!isFullscreen && (
-        <div className="absolute top-4 right-4 z-10 flex gap-3">
+        {/* Top Right Icons */}
+        <div className="absolute top-4 right-4 z-50 flex gap-3 pointer-events-auto">
           {worldSettings.enableChat && !isFullscreen && !showChatInput && (
             <button
               onClick={() => setShowChatInput(true)}
@@ -1930,613 +1943,511 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             <Maximize2 className="w-6 h-6" />
           </button>
         </div>
-      )}
 
-      {showChatInput && !isFullscreen && (
-        <div className="absolute top-20 right-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-white font-bold text-sm">Envoyer un message</h3>
-            <button
-              onClick={() => setShowChatInput(false)}
-              className="text-white/60 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+        {/* Chat Input */}
+        {showChatInput && !isFullscreen && (
+          <div className="absolute top-20 right-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-60 p-4 pointer-events-auto">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-white font-bold text-sm">Envoyer un message</h3>
+              <button
+                onClick={() => setShowChatInput(false)}
+                className="text-white/60 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    sendMessage()
+                    setShowChatInput(false)
+                  }
+                }}
+                placeholder="Votre message..."
+                className="flex-1 bg-white/10 text-white px-3 py-2 rounded-lg outline-none text-sm"
+                autoFocus
+              />
+              <button
+                onClick={() => {
                   sendMessage()
                   setShowChatInput(false)
-                }
-              }}
-              placeholder="Votre message..."
-              className="flex-1 bg-white/10 text-white px-3 py-2 rounded-lg outline-none text-sm"
-              autoFocus
-            />
-            <button
-              onClick={() => {
-                sendMessage()
-                setShowChatInput(false)
-              }}
-              className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
+                }}
+                className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Fullscreen Exit Button */}
+        {isFullscreen && (
+          <button
+            onClick={handleFullscreen}
+            className="absolute top-4 right-4 z-60 bg-red-500/80 backdrop-blur-lg text-white p-3 rounded-full hover:bg-red-600/80 transition-colors shadow-lg"
+            title="Quitter le plein écran"
+          >
+            <Minimize className="w-6 h-6" />
+          </button>
+        )}
+
+        {mySeat !== null && currentCinemaRoom?.embed_url && !showMovieFullscreen && (
+          <Html position={[0, 6.5, -23]} center zIndexRange={[30, 0]}>
+            <button 
+              onClick={() => setShowMovieFullscreen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all shadow-lg"
             >
-              <Send className="w-4 h-4" />
+              <Maximize className="w-4 h-4" />
+              Plein Écran
             </button>
-          </div>
-        </div>
-      )}
+          </Html>
+        )}
 
-      {isFullscreen && (
-        <button
-          onClick={handleFullscreen}
-          className="absolute top-4 right-4 z-50 bg-red-500/80 backdrop-blur-lg text-white p-3 rounded-full hover:bg-red-600/80 transition-colors shadow-lg"
-          title="Quitter le plein écran"
-        >
-          <Minimize className="w-6 h-6" />
-        </button>
-      )}
-
-      {mySeat !== null && currentCinemaRoom?.movie_url && !showMovieFullscreen && (
-        <button
-          onClick={() => setShowMovieFullscreen(true)}
-          className="absolute bottom-24 right-4 z-10 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 shadow-lg flex items-center gap-2"
-        >
-          <Play className="w-5 h-5" />
-          Voir le Film en Plein Écran
-        </button>
-      )}
-
-      {showMovieFullscreen && currentCinemaRoom?.movie_url && (
-        <div className="absolute inset-0 bg-black z-40 flex flex-col">
-          <div className="bg-black/90 backdrop-blur-lg px-4 py-3 flex justify-between items-center">
-            <h3 className="text-white font-bold">{currentCinemaRoom.movie_title}</h3>
-            <button
-              onClick={() => setShowMovieFullscreen(false)}
-              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center gap-2"
-            >
-              <EyeOff className="w-4 h-4" />
-              Quitter
-            </button>
-          </div>
-          <div className="flex-1">
-            <iframe
-              src={currentCinemaRoom.movie_url}
-              className="w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
-          </div>
-        </div>
-      )}
-
-      {showCinema && (
-        <div className="fixed inset-0 bg-black/98 backdrop-blur-3xl flex items-center justify-center z-50 pointer-events-auto">
-          <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl shadow-2xl max-w-6xl w-full mx-4 shadow-2xl border border-white/20 overflow-hidden">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 flex justify-between items-center">
-              <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                🎬 Salles de Cinéma
-              </h2>
+        {showMovieFullscreen && currentCinemaRoom?.embed_url && (
+          <Html fullscreen zIndexRange={[80, 0]}>
+            <div className="fixed inset-0 bg-black/95 backdrop-blur-sm z-[80] flex items-center justify-center">
               <button
-                onClick={() => setShowCinema(false)}
-                className="text-white/80 hover:text-white transition-colors bg-white/10 rounded-full p-2 pointer-events-auto"
+                onClick={() => setShowMovieFullscreen(false)}
+                className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white p-3 rounded-full z-[90] transition-all shadow-lg"
               >
                 <X className="w-6 h-6" />
               </button>
+              <iframe
+                src={currentCinemaRoom.embed_url}
+                className="w-[90vw] h-[90vh] rounded-lg shadow-2xl"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
             </div>
+          </Html>
+        )}
 
-            <div className="p-6 overflow-y-auto max-h-[70vh] bg-black">
-              {cinemaRooms.length === 0 ? (
-                <div className="text-center text-white/60 py-12">
-                  <p className="text-xl">Aucune salle disponible pour le moment</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {cinemaRooms.map((room) => (
-                    <div
-                      key={room.id}
-                      className="bg-gradient-to-br from-indigo-900/70 to-purple-900/70 rounded-xl overflow-hidden border-2 border-white/20 hover:border-blue-500/70 transition-all shadow-lg"
-                    >
+        {/* Cinema Rooms Menu */}
+        {showCinema && (
+          <div className="fixed inset-0 bg-black/98 backdrop-blur-xl z-[70] flex items-center justify-center p-4 overflow-y-auto pointer-events-auto">
+            <div className="bg-gradient-to-br from-gray-900 via-purple-900/30 to-gray-900 rounded-2xl shadow-2xl p-4 sm:p-8 w-full max-w-4xl border-2 border-purple-500/30 my-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">
+                  <Film className="w-7 h-7 sm:w-8 sm:h-8" />
+                  Salles de Cinéma
+                </h2>
+                <button
+                  onClick={() => setShowCinema(false)}
+                  className="text-white/80 hover:text-white transition-colors"
+                >
+                  <X className="w-7 h-7" />
+                </button>
+              </div>
+
+              <div className="grid gap-4 sm:gap-6">
+                {cinemaRooms.map((room) => (
+                  <div
+                    key={room.id}
+                    className="bg-gradient-to-br from-gray-800/80 to-purple-900/30 rounded-xl p-4 sm:p-6 border border-purple-500/20 hover:border-purple-500/40 transition-all"
+                  >
+                    <div className="flex flex-col sm:flex-row gap-4">
                       {room.poster_url && (
-                        <div className="relative w-full h-64 bg-gray-900">
-                          <img
-                            src={room.poster_url || "/placeholder.svg"}
-                            alt={room.movie_title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = '/abstract-movie-poster.png'
-                            }}
-                          />
-                        </div>
+                        <img
+                          src={room.poster_url || "/placeholder.svg"}
+                          alt={room.movie_title || room.room_name}
+                          className="w-full sm:w-32 h-48 sm:h-40 object-cover rounded-lg shadow-lg"
+                          onError={(e) => {
+                            console.error('[v0] Failed to load poster:', room.poster_url)
+                            e.currentTarget.src = '/abstract-movie-poster.png'
+                          }}
+                        />
                       )}
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between gap-2 mb-2">
+                          <h3 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                            {room.room_name}
+                          </h3>
+                          {room.is_open ? (
+                            <span className="flex items-center gap-1 text-sm text-green-400">
+                              <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                              Ouvert
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-sm text-red-400">
+                              <Lock className="w-4 h-4" />
+                              Fermé
+                            </span>
+                          )}
+                        </div>
 
-                      <div className="p-6">
-                        <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                          Salle {room.room_number} - {room.theme}
-                        </h3>
-                        <p className="text-white/80 font-medium mb-1">{room.movie_title}</p>
-                        <p className="text-white/60 text-sm mb-4">Capacité: {room.capacity}</p>
+                        {room.movie_title && (
+                          <p className="text-white/90 font-semibold mb-2">{room.movie_title}</p>
+                        )}
 
-                        {room.showtime && (
-                          <p className="text-blue-300 text-sm mb-4">
-                            🕐 Séance: {new Date(room.showtime).toLocaleString('fr-FR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
+                        {room.start_time && (
+                          <p className="text-white/70 text-sm mb-2 flex items-center gap-2">
+                            <Clock className="w-4 h-4" />
+                            Début: {new Date(room.start_time).toLocaleTimeString('fr-FR', {
                               hour: '2-digit',
                               minute: '2-digit'
                             })}
                           </p>
                         )}
 
-                        <div className="mb-4">
+                        <p className="text-white/60 text-sm mb-3">
+                          Capacité: {room.capacity}
+                        </p>
+
+                        <div className="flex items-center gap-2 mb-4">
+                          {room.access_level === 'public' && (
+                            <span className="bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-medium border border-green-500/30">
+                              Public
+                            </span>
+                          )}
                           {room.access_level === 'vip' && (
-                            <span className="inline-block bg-yellow-500/20 text-yellow-300 px-3 py-1 rounded-full text-sm font-medium">
-                              👑 VIP
+                            <span className="bg-purple-500/20 text-purple-400 px-3 py-1 rounded-full text-xs font-medium border border-purple-500/30 flex items-center gap-1">
+                              <Star className="w-3 h-3" /> VIP
                             </span>
                           )}
                           {room.access_level === 'vip_plus' && (
-                            <span className="inline-block bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm font-medium">
-                              💎 VIP+
+                            <span className="bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-xs font-medium border border-yellow-500/30 flex items-center gap-1">
+                              <Crown className="w-3 h-3" /> VIP+
                             </span>
                           )}
                           {room.access_level === 'admin' && (
-                            <span className="inline-block bg-red-500/20 text-red-300 px-3 py-1 rounded-full text-sm font-medium">
-                              🛡️ Admin
-                            </span>
-                          )}
-                          {room.access_level === 'public' && (
-                            <span className="inline-block bg-green-500/20 text-green-300 px-3 py-1 rounded-full text-sm font-medium">
-                              🌍 Public
+                            <span className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-xs font-medium border border-red-500/30 flex items-center gap-1">
+                              <Shield className="w-3 h-3" /> Admin
                             </span>
                           )}
                         </div>
 
                         <button
                           onClick={() => handleEnterRoom(room)}
-                          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
+                          disabled={!room.is_open}
+                          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 sm:py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
                         >
                           Entrer dans la Salle
                         </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {showChat && (
-        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-          <div className="bg-black/95 backdrop-blur-xl rounded-xl w-full max-w-md h-[600px] flex flex-col border-2 border-white/30 shadow-2xl">
-            <div className="flex justify-between items-center p-4 border-b border-white/20">
-              <h3 className="text-white font-bold text-lg">
-                {currentCinemaRoom ? `Chat - Salle ${currentCinemaRoom.room_number}` : 'Chat Global'}
-              </h3>
-              <button
-                onClick={() => setShowChat(false)}
-                className="text-white/60 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {(currentCinemaRoom ? roomMessages : messages).map((msg, i) => (
-                <div key={i} className="bg-white/10 rounded-lg p-3">
-                  <div className="text-blue-400 font-semibold text-sm">{msg.username || 'Anonyme'}</div>
-                  <div className="text-white text-sm mt-1">{msg.message}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="p-4 border-t border-white/20">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && chatInput.trim()) {
-                      sendMessage()
-                    }
-                  }}
-                  placeholder="Votre message..."
-                  className="flex-1 bg-white/10 text-white px-4 py-3 rounded-lg outline-none placeholder-white/40"
-                  autoFocus
-                />
+        {/* Map Menu */}
+        {showMapMenu && (
+          <div className="fixed inset-0 bg-black/98 backdrop-blur-xl z-[70] flex items-center justify-center p-4 overflow-y-auto pointer-events-auto">
+            <div className="bg-gradient-to-br from-gray-900 via-blue-900/30 to-gray-900 rounded-2xl shadow-2xl p-4 sm:p-8 w-full max-w-4xl border-2 border-blue-500/30 my-4">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  Carte du Monde
+                </h2>
                 <button
-                  onClick={sendMessage}
-                  disabled={!chatInput.trim()}
-                  className="bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  onClick={() => setShowMapMenu(false)}
+                  className="text-white/80 hover:text-white transition-colors"
                 >
-                  <Send className="w-5 h-5" />
+                  <X className="w-7 h-7" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                {/* Cinema - Open */}
+                <button
+                  onClick={() => {
+                    setShowCinema(true)
+                    setShowMapMenu(false)
+                  }}
+                  className="bg-gradient-to-br from-purple-600/80 to-blue-600/80 rounded-xl p-4 sm:p-6 hover:scale-105 transition-transform border-2 border-white/20 text-left pointer-events-auto"
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="text-4xl sm:text-6xl">🎬</div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-white">Cinéma</h3>
+                    <div className="flex items-center gap-2 text-green-400">
+                      <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                      <span className="text-sm sm:text-base font-semibold">Ouvert</span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Arcade - Closed */}
+                <div className="bg-gradient-to-br from-gray-700/50 to-gray-800/50 rounded-xl p-4 sm:p-6 border-2 border-white/10 cursor-not-allowed opacity-60">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="text-4xl sm:text-6xl">🕹️</div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-white">Arcade</h3>
+                    <div className="flex items-center gap-2 text-red-400">
+                      <Lock className="w-4 h-4" />
+                      <span className="text-sm sm:text-base font-semibold">Fermé</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Football Stadium - Closed */}
+                <div className="bg-gradient-to-br from-gray-700/50 to-gray-800/50 rounded-xl p-4 sm:p-6 border-2 border-white/10 cursor-not-allowed opacity-60">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="text-4xl sm:text-6xl">⚽</div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-white">Stade de Foot</h3>
+                    <div className="flex items-center gap-2 text-red-400">
+                      <Lock className="w-4 h-4" />
+                      <span className="text-sm sm:text-base font-semibold">Fermé</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Shopping Center - Closed */}
+                <div className="bg-gradient-to-br from-gray-700/50 to-gray-800/50 rounded-xl p-4 sm:p-6 border-2 border-white/10 cursor-not-allowed opacity-60">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="text-4xl sm:text-6xl">🏬</div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-white">Centre Commercial</h3>
+                    <div className="flex items-center gap-2 text-red-400">
+                      <Lock className="w-4 h-4" />
+                      <span className="text-sm sm:text-base font-semibold">Fermé</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 text-center">
+                <button
+                  onClick={() => setShowMapMenu(false)}
+                  className="bg-cyan-500 text-white px-6 sm:px-8 py-2 sm:py-3 rounded-lg hover:bg-cyan-600 transition-colors font-medium text-sm sm:text-base pointer-events-auto"
+                >
+                  Fermer
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {showAvatarCustomizer && (
-        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-          <div className="bg-black/90 backdrop-blur-xl rounded-xl w-full max-w-2xl max-h-[80vh] overflow-y-auto border-2 border-white/30 shadow-2xl">
-            <div className="flex justify-between items-center p-6 border-b border-white/20">
-              <h3 className="text-white font-bold text-2xl">Personnaliser Avatar</h3>
-              <button
-                onClick={() => setShowAvatarCustomizer(false)}
-                className="text-white/60 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
+        {/* Settings Menu */}
+        {showSettings && (
+          <div className="fixed inset-0 bg-black/95 backdrop-blur-lg z-[70] flex items-center justify-center p-4 pointer-events-auto">
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full border-2 border-blue-500/30">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Settings className="w-6 h-6" />
+                  Paramètres
+                </h2>
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="text-white/60 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
 
-            <div className="p-6 space-y-6">
-              {/* Skin Tone */}
-              <div>
-                <label className="text-white font-semibold mb-3 block">Teinte de peau</label>
-                <div className="grid grid-cols-6 gap-3">
-                  {['#fbbf24', '#f59e0b', '#d97706', '#92400e', '#7c2d12', '#451a03'].map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => saveAvatarStyle({ ...myAvatarStyle, skinTone: color })}
-                      className={`w-12 h-12 rounded-full border-4 transition-all ${
-                        myAvatarStyle.skinTone === color ? 'border-white scale-110' : 'border-transparent'
+              <div className="space-y-4">
+                <div>
+                  <label className="text-white font-medium block mb-2">
+                    Mode de Contrôle
+                  </label>
+                  <select
+                    value={controlMode}
+                    onChange={(e) => setControlMode(e.target.value as 'auto' | 'pc' | 'mobile')}
+                    className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 outline-none"
+                  >
+                    <option value="auto">Automatique</option>
+                    <option value="pc">PC (Clavier)</option>
+                    <option value="mobile">Mobile (Joystick)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-white font-medium block mb-2">
+                    Qualité Graphique
+                  </label>
+                  <select
+                    value={graphicsQuality}
+                    onChange={(e) => setGraphicsQuality(e.target.value)}
+                    className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 outline-none"
+                  >
+                    <option value="low">Basse</option>
+                    <option value="medium">Moyenne</option>
+                    <option value="high">Haute</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <label className="text-white font-medium">Mode POV</label>
+                  <button
+                    onClick={() => setPovMode(!povMode)}
+                    className={`w-12 h-6 rounded-full transition-colors ${
+                      povMode ? 'bg-blue-500' : 'bg-gray-600'
+                    }`}
+                  >
+                    <div
+                      className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                        povMode ? 'translate-x-6' : 'translate-x-1'
                       }`}
-                      style={{ backgroundColor: color }}
                     />
-                  ))}
+                  </button>
                 </div>
+
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors font-medium mt-6"
+                >
+                  Fermer
+                </button>
               </div>
-
-              {/* Body Color */}
-              <div>
-                <label className="text-white font-semibold mb-3 block">Couleur du corps</label>
-                <div className="grid grid-cols-6 gap-3">
-                  {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'].map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => saveAvatarStyle({ ...myAvatarStyle, bodyColor: color })}
-                      className={`w-12 h-12 rounded-full border-4 transition-all ${
-                        myAvatarStyle.bodyColor === color ? 'border-white scale-110' : 'border-transparent'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Hair Style */}
-              <div>
-                <label className="text-white font-semibold mb-3 block">Style de cheveux</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {['short', 'long', 'none'].map((style) => {
-                    const option = customizationOptions.find(
-                      (o) => o.category === 'hair_style' && o.value === style
-                    )
-                    const isLocked = option?.is_premium && !userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin
-
-                    return (
-                      <button
-                        key={style}
-                        onClick={() => !isLocked && saveAvatarStyle({ ...myAvatarStyle, hairStyle: style })}
-                        disabled={isLocked}
-                        className={`p-4 rounded-lg border-2 transition-all ${
-                          myAvatarStyle.hairStyle === style
-                            ? 'border-blue-500 bg-blue-500/20'
-                            : 'border-white/20 bg-white/5'
-                        } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
-                      >
-                        <div className="text-white font-medium flex items-center justify-center gap-2">
-                          {isLocked && <Crown className="w-4 h-4 text-yellow-400" />}
-                          {option?.label || style}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Hair Color */}
-              <div>
-                <label className="text-white font-semibold mb-3 block">Couleur des cheveux</label>
-                <div className="grid grid-cols-6 gap-3">
-                  {['#1f2937', '#92400e', '#fbbf24', '#ef4444', '#8b5cf6', '#ec4899'].map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => saveAvatarStyle({ ...myAvatarStyle, hairColor: color })}
-                      className={`w-12 h-12 rounded-full border-4 transition-all ${
-                        myAvatarStyle.hairColor === color ? 'border-white scale-110' : 'border-transparent'
-                      }`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Face Smiley */}
-              <div>
-                <label className="text-white font-semibold mb-3 block">Visage (Smiley)</label>
-                <div className="grid grid-cols-5 gap-3">
-                  {[
-                    { emoji: '😊', label: 'Souriant', premium: false },
-                    { emoji: '😎', label: 'Cool', premium: false },
-                    { emoji: '🤓', label: 'Intello', premium: false },
-                    { emoji: '😇', label: 'Ange', premium: true, level: 'vip' },
-                    { emoji: '🤩', label: 'Star', premium: true, level: 'vip' },
-                    { emoji: '😈', label: 'Diable', premium: true, level: 'vip_plus' },
-                    { emoji: '🤖', label: 'Robot', premium: true, level: 'vip_plus' },
-                    { emoji: '👽', label: 'Alien', premium: true, level: 'vip_plus' },
-                    { emoji: '🔥', label: 'Feu', premium: true, level: 'admin' },
-                    { emoji: '⭐', label: 'Étoile', premium: true, level: 'admin' }
-                  ].map((face) => {
-                    const isLocked = face.premium && (
-                      (face.level === 'vip' && !userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin) ||
-                      (face.level === 'vip_plus' && !userProfile?.is_vip_plus && !userProfile?.is_admin) ||
-                      (face.level === 'admin' && !userProfile?.is_admin)
-                    )
-
-                    return (
-                      <button
-                        key={face.emoji}
-                        onClick={() => !isLocked && saveAvatarStyle({ ...myAvatarStyle, faceSmiley: face.emoji })}
-                        disabled={isLocked}
-                        className={`p-3 rounded-lg border-2 transition-all relative ${
-                          myAvatarStyle.faceSmiley === face.emoji
-                            ? 'border-blue-500 bg-blue-500/20 scale-110'
-                            : 'border-white/20 bg-white/5'
-                        } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
-                        title={face.label}
-                      >
-                        <div className="text-3xl">{face.emoji}</div>
-                        {isLocked && (
-                          <div className="absolute top-1 right-1">
-                            <Crown className="w-3 h-3 text-yellow-400" />
-                          </div>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-
-              {/* Accessory */}
-              <div>
-                <label className="text-white font-semibold mb-3 block">Accessoire</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {['none', 'glasses', 'hat'].map((acc) => {
-                    const option = customizationOptions.find(
-                      (o) => o.category === 'accessory' && o.value === acc
-                    )
-                    const isLocked = option?.is_premium && !userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin
-
-                    return (
-                      <button
-                        key={acc}
-                        onClick={() => !isLocked && saveAvatarStyle({ ...myAvatarStyle, accessory: acc })}
-                        disabled={isLocked}
-                        className={`p-4 rounded-lg border-2 transition-all ${
-                          myAvatarStyle.accessory === acc
-                            ? 'border-blue-500 bg-blue-500/20'
-                            : 'border-white/20 bg-white/5'
-                        } ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/10'}`}
-                      >
-                        <div className="text-white font-medium flex items-center justify-center gap-2">
-                          {isLocked && <Crown className="w-4 h-4 text-yellow-400" />}
-                          {option?.label || acc}
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 border-t border-white/20">
-              <button
-                onClick={() => setShowAvatarCustomizer(false)}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-bold text-lg"
-              >
-                Sauvegarder
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {worldSettings.enableEmojis && (
-        <button
-          onClick={() => setShowQuickActions(!showQuickActions)}
-          className="fixed bottom-6 right-6 w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
-        >
-          <Smile className="w-10 h-10 text-white" />
-        </button>
-      )}
+        {/* Emoji Menu */}
+        {showEmojiMenu && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[70] pointer-events-auto">
+            <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full border-2 border-orange-500/30">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">
+                  <Smile className="w-6 h-6" />
+                  Actions Rapides
+                </h2>
+                <button
+                  onClick={() => setShowEmojiMenu(false)}
+                  className="text-white/60 hover:text-white transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
 
-      {showQuickActions && (
-        <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-2 bg-black/90 backdrop-blur-xl p-4 rounded-2xl border-2 border-white/30 shadow-2xl">
-          <div className="text-white font-bold text-sm mb-2 text-center border-b border-white/20 pb-2">Actions Rapides</div>
+              <div className="space-y-4">
+                {currentCinemaRoom && (
+                  <div className="border-t border-white/20 pt-4 space-y-3">
+                    <p className="text-white/70 text-sm font-medium">Actions Cinéma</p>
+                    
+                    {mySeat === null && (
+                      <button
+                        onClick={handleTakeSeat}
+                        disabled={isSeatsLocked}
+                        className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium flex items-center justify-center gap-2"
+                      >
+                        <Play className="w-5 h-5" />
+                        {isSeatsLocked ? 'Salle Complète' : "S'asseoir"}
+                      </button>
+                    )}
 
-          {/* Jump button */}
-          {worldSettings.enableJumping && (
+                    <button
+                      onClick={handleExitRoom}
+                      className="w-full bg-red-500/90 text-white py-3 rounded-lg hover:bg-red-600 transition-all font-medium flex items-center justify-center gap-2"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      Sortir du Cinéma
+                    </button>
+                  </div>
+                )}
+
+                <div className="border-t border-white/20 pt-4 space-y-3">
+                  <p className="text-white/70 text-sm font-medium">Émotes</p>
+                  <div className="grid grid-cols-4 gap-2">
+                    {['😊', '😂', '😍', '😎', '🤔', '😢', '😡', '🎉', '👍', '❤️', '🔥', '⭐'].map((emoji) => (
+                      <button
+                        key={emoji}
+                        onClick={() => {
+                          handleEmoji(emoji)
+                          setShowEmojiMenu(false)
+                        }}
+                        className="text-3xl hover:scale-110 transition-transform bg-white/10 hover:bg-white/20 rounded-lg p-3"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="border-t border-white/20 pt-4">
+                  <button
+                    onClick={() => {
+                      handleJump()
+                      setShowEmojiMenu(false)
+                    }}
+                    className="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white py-3 rounded-lg hover:from-green-600 hover:to-teal-600 transition-all font-medium flex items-center justify-center gap-2"
+                  >
+                    <ArrowUp className="w-5 h-5" />
+                    Sauter
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Controls - Always visible if mobile mode */}
+      {isMobileMode && (
+        <>
+          <button
+            onClick={() => setPovMode(!povMode)}
+            className="fixed bottom-6 left-6 z-50 w-20 h-20 bg-blue-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30 pointer-events-auto"
+          >
+            {povMode ? <Eye className="w-10 h-10 text-white" /> : <EyeOff className="w-10 h-10 text-white" />}
+          </button>
+
+          {worldSettings.enableChat && (
             <button
-              onClick={() => { handleJump(); setShowQuickActions(false); }}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 rounded-xl shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all flex items-center gap-2 font-medium"
+              onClick={() => setShowChatInput(true)}
+              className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-20 h-20 bg-green-500 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30 pointer-events-auto"
             >
-              <ArrowUp className="w-5 h-5" />
-              Sauter
+              <MessageCircle className="w-10 h-10 text-white" />
             </button>
           )}
 
-          <div className="text-white/60 text-xs text-center mt-1">Émojis</div>
-          <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => handleEmoji('😂')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">😂</button>
-            <button onClick={() => handleEmoji('👍')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">👍</button>
-            <button onClick={() => handleEmoji('❤️')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">❤️</button>
-            <button onClick={() => handleEmoji('😭')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">😭</button>
-            <button onClick={() => handleEmoji('🎉')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">🎉</button>
-            <button onClick={() => handleEmoji('🔥')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">🔥</button>
-          </div>
-
-          <div className="text-white/60 text-xs text-center mt-2">Émotes</div>
-          <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => handleEmoji('👋')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Saluer">👋</button>
-            <button onClick={() => handleEmoji('💃')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Danser">💃</button>
-            <button onClick={() => handleEmoji('🤝')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Serrer la main">🤝</button>
-          </div>
-        </div>
+          <button
+            onClick={() => setShowEmojiMenu(!showEmojiMenu)}
+            className="fixed bottom-6 right-6 z-50 w-20 h-20 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30 pointer-events-auto"
+          >
+            <Smile className="w-10 h-10 text-white" />
+          </button>
+        </>
       )}
 
-      {isMobileMode && !isFullscreen && (
-        <button
-          onClick={() => setPovMode(!povMode)}
-          className="fixed bottom-6 left-6 z-20 w-20 h-20 bg-blue-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30"
-        >
-          {povMode ? <Eye className="w-10 h-10 text-white" /> : <EyeOff className="w-10 h-10 text-white" />}
-        </button>
-      )}
-
-      {isMobileMode && worldSettings.enableChat && (
-        <button
-          onClick={() => setShowChatInput(true)}
-          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20 w-20 h-20 bg-green-500 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30"
-        >
-          <MessageCircle className="w-10 h-10 text-white" />
-        </button>
-      )}
-
-
-      {!isMobileMode && (
-        <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-md text-white p-3 rounded-xl text-sm space-y-1 border border-white/20 z-40">
-          <div className="font-bold mb-2 text-base">⌨️ Contrôles</div>
-          <div>🎮 <span className="font-mono bg-white/10 px-2 py-1 rounded">ZQSD</span> ou <span className="font-mono bg-white/10 px-2 py-1 rounded">Flèches</span> - Se déplacer</div>
-          <div>🖱️ Souris - Regarder autour</div>
-          {worldSettings.enableJumping && <div>⬆️ <span className="font-mono bg-white/10 px-2 py-1 rounded">Espace</span> - Sauter</div>}
-        </div>
-      )}
-
-      {isMobileMode && <MobileJoystick onMove={handleJoystickMove} />}
-
-      {showAFKWarning && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-          <div className="bg-red-600 text-white p-8 rounded-2xl max-w-md text-center">
-            <h2 className="text-2xl font-bold mb-4">Déconnexion AFK</h2>
-            <p className="mb-4">Vous avez été inactif pendant plus de 3 heures.</p>
-            <p>Redirection en cours...</p>
-          </div>
-        </div>
-      )}
-
-      {showSettings && (
-        <div className="fixed inset-0 bg-black/95 backdrop-blur-lg z-[60] flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full border-2 border-blue-500/30">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Settings className="w-6 h-6" />
-                Paramètres
-              </h2>
-              <button
-                onClick={() => setShowSettings(false)}
-                className="text-white/60 hover:text-white transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-white font-medium block mb-2">
-                  Mode de Contrôle
-                </label>
-                <select
-                  value={controlMode}
-                  onChange={(e) => setControlMode(e.target.value as 'auto' | 'pc' | 'mobile')}
-                  className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 outline-none"
-                >
-                  <option value="auto">Automatique</option>
-                  <option value="pc">PC (Clavier)</option>
-                  <option value="mobile">Mobile (Joystick)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-white font-medium block mb-2">
-                  Qualité Graphique
-                </label>
-                <select
-                  value={graphicsQuality}
-                  onChange={(e) => setGraphicsQuality(e.target.value)}
-                  className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 outline-none"
-                >
-                  <option value="low">Basse</option>
-                  <option value="medium">Moyenne</option>
-                  <option value="high">Haute</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <label className="text-white font-medium">Mode POV</label>
-                <button
-                  onClick={() => setPovMode(!povMode)}
-                  className={`w-12 h-6 rounded-full transition-colors ${
-                    povMode ? 'bg-blue-500' : 'bg-gray-600'
-                  }`}
-                >
-                  <div
-                    className={`w-5 h-5 bg-white rounded-full transition-transform ${
-                      povMode ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <button
-                onClick={() => setShowSettings(false)}
-                className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors font-medium mt-6"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
+      {isMobileMode && (
+        <MobileJoystick
+          onMove={handleJoystickMove}
+          position="bottom-left"
+        />
       )}
     </div>
   )
 }
 
-function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }) {
+function MobileJoystick({ onMove, position: positionProp }: { onMove: (dx: number, dz: number) => void; position?: 'bottom-left' | 'bottom-right' }) {
   const [isDragging, setIsDragging] = useState(false)
-  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [joystickPosition, setJoystickPosition] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<number>()
 
+  const positionClass = positionProp === 'bottom-right' ? 'bottom-6 right-6' : 'bottom-6 left-6'
+
   useEffect(() => {
-    if (isDragging) {
-      const animate = () => {
-        const maxDistance = 40
-        onMove(-position.y / maxDistance, -position.x / maxDistance)
+    const animate = () => {
+      const maxDistance = 60
+      if (isDragging) {
+        onMove(joystickPosition.x / maxDistance, joystickPosition.y / maxDistance)
         animationRef.current = requestAnimationFrame(animate)
+      } else {
+        onMove(0, 0)
       }
+    }
+
+    if (isDragging) {
       animationRef.current = requestAnimationFrame(animate)
     } else {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
-      onMove(0, 0)
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
+      onMove(0,0)
     }
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
-      }
+      if (animationRef.current) cancelAnimationFrame(animationRef.current)
     }
-  }, [isDragging, position.x, position.y, onMove])
+  }, [isDragging, joystickPosition.x, joystickPosition.y, onMove])
 
   const handleStart = (clientX: number, clientY: number) => {
     setIsDragging(true)
@@ -2553,25 +2464,25 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
     let dy = clientY - centerY
 
     const distance = Math.sqrt(dx * dx + dy * dy)
-    const maxDistance = 40
+    const maxDistance = 60
 
     if (distance > maxDistance) {
       dx = (dx / distance) * maxDistance
       dy = (dy / distance) * maxDistance
     }
 
-    setPosition({ x: dx, y: dy })
+    setJoystickPosition({ x: dx, y: dy })
   }
 
   const handleEnd = () => {
     setIsDragging(false)
-    setPosition({ x: 0, y: 0 })
+    setJoystickPosition({ x: 0, y: 0 })
   }
 
   return (
     <div
       ref={containerRef}
-      className="fixed bottom-24 left-8 w-24 h-24 bg-white/20 backdrop-blur-lg rounded-full z-20 md:hidden border-4 border-white/30"
+      className={`fixed ${positionClass} w-36 h-36 bg-white/20 backdrop-blur-lg rounded-full z-50 md:hidden border-4 border-white/30`}
       onTouchStart={(e) => {
         e.preventDefault()
         handleStart(e.touches[0].clientX, e.touches[0].clientY)
@@ -2587,9 +2498,9 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
       onMouseLeave={handleEnd}
     >
       <div
-        className="absolute w-10 h-10 bg-white/60 rounded-full top-1/2 left-1/2 shadow-lg transition-transform"
+        className="absolute w-14 h-14 bg-white/60 rounded-full top-1/2 left-1/2 shadow-lg transition-transform"
         style={{
-          transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`
+          transform: `translate(calc(-50% + ${joystickPosition.x}px), calc(-50% + ${joystickPosition.y}px))`
         }}
       />
       <div className="absolute inset-0 flex items-center justify-center text-white/50 text-xs font-medium">
