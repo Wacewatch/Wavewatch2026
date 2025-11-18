@@ -388,7 +388,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       { x: -12, z: -5, width: 2, depth: 2 },
 
       // Arcade building
-      { x: -15, z: -15, width: 8, depth: 6 }, // Adjusted arcade width and depth
+      { x: -15, z: -15, width: 5, depth: 5 },
       // Additional buildings
       { x: -15, z: 5, width: 5, depth: 4 },
       { x: -15, z: -8, width: 4, depth: 4 },
@@ -839,12 +839,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setCurrentEmoji(emoji)
     setShowQuickActions(false)
 
-    // Broadcast emoji to other players using correct ID
+    // Broadcast emoji to other players
     supabase.channel('world-actions').send({
       type: 'broadcast',
       event: 'player-emoji',
       payload: {
-        userId: userProfile.id, // Changed from user_id to id
+        userId: userProfile.user_id,
         emoji: emoji,
         timestamp: Date.now()
       }
@@ -861,12 +861,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     setIsJumping(true)
 
-    // Broadcast jump action to other players using correct ID
+    // Broadcast jump action to other players
     supabase.channel('world-actions').send({
       type: 'broadcast',
       event: 'player-action',
       payload: {
-        userId: userProfile.id, // Changed from user_id to id
+        userId: userProfile.user_id,
         action: 'jump',
         timestamp: Date.now()
       }
@@ -1287,26 +1287,76 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               />
             </mesh>
 
+            {/* Main dirt road */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+              <planeGeometry args={[5, 50]} />
+              <meshStandardMaterial color="#8B7355" roughness={0.95} />
+            </mesh>
 
+            {/* Removed yellow road markings for dirt road */}
 
-            {/* Arcade Building - single instance with proper panel */}
+            {/* Arcade Building with proper info panel */}
             <group position={[-15, 0, -15]}>
+              {/* Building */}
               <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
-                <boxGeometry args={[8, 5, 6]} />
-                <meshStandardMaterial color="#7c3aed" />
+                <boxGeometry args={[5, 5, 5]} />
+                <meshStandardMaterial color="#7c2d12" />
               </mesh>
+              {/* Roof */}
               <mesh position={[0, 5.2, 0]} castShadow>
-                <coneGeometry args={[5, 1.5, 4]} />
-                <meshStandardMaterial color="#6d28d9" />
+                <coneGeometry args={[3.5, 1.5, 4]} />
+                <meshStandardMaterial color="#92400e" />
               </mesh>
-
               {/* Arcade Info Panel - only on arcade building */}
-              <Html position={[0, 4, 3.1]} center depthTest={false} zIndexRange={[100, 0]}>
+              <Html position={[0, 4, 2.6]} center depthTest={false} zIndexRange={[100, 0]}>
                 <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
                   <div className="text-xl">🕹️ ARCADE 🕹️</div>
                   <div className="text-sm mt-1">Ouverture Prochainement</div>
                 </div>
               </Html>
+            </group>
+
+            <group position={[15, 0, -5]}>
+              {/* Building */}
+              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
+                <boxGeometry args={[6, 5, 5]} />
+                <meshStandardMaterial color="#9333ea" />
+              </mesh>
+              {/* Roof */}
+              <mesh position={[0, 5.2, 0]} castShadow>
+                <coneGeometry args={[4, 1.5, 4]} />
+                <meshStandardMaterial color="#7e22ce" />
+              </mesh>
+              {/* Sign */}
+              <Html position={[0, 4, 2.6]} center depthTest={false} zIndexRange={[100, 0]}>
+                <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
+                  <div className="text-xl">🕹️ ARCADE 🕹️</div>
+                  <div className="text-sm mt-1">Ouverture Prochainement</div>
+                </div>
+              </Html>
+            </group>
+
+            {/* Additional decorative buildings */}
+            <group position={[-15, 0, 5]}>
+              <mesh position={[0, 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[5, 4, 4]} />
+                <meshStandardMaterial color="#0ea5e9" />
+              </mesh>
+              <mesh position={[0, 4.5, 0]} castShadow>
+                <boxGeometry args={[5.2, 1, 4.2]} />
+                <meshStandardMaterial color="#0284c7" />
+              </mesh>
+            </group>
+
+            <group position={[-15, 0, -8]}>
+              <mesh position={[0, 3, 0]} castShadow receiveShadow>
+                <boxGeometry args={[4, 6, 4]} />
+                <meshStandardMaterial color="#f97316" />
+              </mesh>
+              <mesh position={[0, 6.5, 0]} castShadow>
+                <coneGeometry args={[3, 1.5, 4]} />
+                <meshStandardMaterial color="#ea580c" />
+              </mesh>
             </group>
 
             {/* Cinema Building */}
@@ -1371,28 +1421,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             </group>
 
             {/* Additional decorative closed buildings */}
-            <group position={[-15, 0, 5]}>
-              <mesh position={[0, 2, 0]} castShadow receiveShadow>
-                <boxGeometry args={[5, 4, 4]} />
-                <meshStandardMaterial color="#0ea5e9" />
-              </mesh>
-              <mesh position={[0, 4.5, 0]} castShadow>
-                <boxGeometry args={[5.2, 1, 4.2]} />
-                <meshStandardMaterial color="#0284c7" />
-              </mesh>
-            </group>
-
-            <group position={[-15, 0, -8]}>
-              <mesh position={[0, 3, 0]} castShadow receiveShadow>
-                <boxGeometry args={[4, 6, 4]} />
-                <meshStandardMaterial color="#f97316" />
-              </mesh>
-              <mesh position={[0, 6.5, 0]} castShadow>
-                <coneGeometry args={[3, 1.5, 4]} />
-                <meshStandardMaterial color="#ea580c" />
-              </mesh>
-            </group>
-
             <group position={[-25, 0, 0]}>
               <mesh position={[0, 3, 0]} castShadow>
                 <boxGeometry args={[8, 6, 8]} />
@@ -1519,23 +1547,22 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           </>
         ) : (
           <>
-            {/* Cinema Interior - larger floor */}
+            {/* Cinema Interior */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-              <planeGeometry args={[40, 50]} />
+              <planeGeometry args={[30, 40]} />
               <meshStandardMaterial color="#2d1010" />
             </mesh>
 
-            {/* Cinema walls - taller and wider */}
-            <mesh position={[0, 4, -25]}>
-              <boxGeometry args={[40, 8, 0.5]} />
+            <mesh position={[0, 3, -20]}>
+              <boxGeometry args={[30, 6, 0.5]} />
               <meshStandardMaterial color="#1a0f0a" />
             </mesh>
-            <mesh position={[-20, 4, 0]}>
-              <boxGeometry args={[0.5, 8, 50]} />
+            <mesh position={[-15, 3, 0]}>
+              <boxGeometry args={[0.5, 6, 40]} />
               <meshStandardMaterial color="#1a0f0a" />
             </mesh>
-            <mesh position={[20, 4, 0]}>
-              <boxGeometry args={[0.5, 8, 50]} />
+            <mesh position={[15, 3, 0]}>
+              <boxGeometry args={[0.5, 6, 40]} />
               <meshStandardMaterial color="#1a0f0a" />
             </mesh>
 
@@ -1546,7 +1573,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               const isMovieStarted = room.schedule_start && new Date(room.schedule_start).getTime() < Date.now()
 
               return (
-                <group position={[0, 4, -24]}> {/* Adjusted position slightly */}
+                <group position={[0, 3, -19]}>
                   {/* Cinema Screen Background */}
                   <mesh>
                     <planeGeometry args={[14, 8]} />
@@ -1596,31 +1623,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             })()}
 
             {cinemaSeats.map((seat) => {
-              const isMySeat = mySeat === seat.seat_number
+              const isMySeat = mySeat === seat.seat_number // Use seat.seat_number for comparison
 
               return (
                 <group key={seat.seat_number} position={[seat.position_x, seat.position_y, seat.position_z]}>
-                  {/* Seat base */}
                   <mesh castShadow>
-                    <boxGeometry args={[1.2, 0.4, 1]} />
-                    <meshStandardMaterial color={isMySeat ? '#ef4444' : '#991b1b'} />
+                    <boxGeometry args={[1, 0.8, 0.9]} />
+                    <meshStandardMaterial color={isMySeat ? '#ef4444' : seat.color} />
                   </mesh>
-                  {/* Seat back */}
-                  <mesh position={[0, 0.5, -0.3]} castShadow>
-                    <boxGeometry args={[1.2, 0.8, 0.2]} />
-                    <meshStandardMaterial color={isMySeat ? '#ef4444' : '#991b1b'} />
-                  </mesh>
-                  {/* Armrests */}
-                  <mesh position={[-0.55, 0.3, 0]} castShadow>
-                    <boxGeometry args={[0.1, 0.6, 0.8]} />
-                    <meshStandardMaterial color="#7f1d1d" />
-                  </mesh>
-                  <mesh position={[0.55, 0.3, 0]} castShadow>
-                    <boxGeometry args={[0.1, 0.6, 0.8]} />
-                    <meshStandardMaterial color="#7f1d1d" />
-                  </mesh>
-                  
-                  <Html position={[0, 2.5, 0]} center depthTest={false} zIndexRange={[100, 0]}>
+                  <Html position={[0, 1.2, 0]} center depthTest={false} zIndexRange={[100, 0]}>
                     <button
                       onClick={() => handleSitInSeat(seat.seat_number)}
                       className={`text-xs px-3 py-2 rounded-lg ${
@@ -1637,7 +1648,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             })}
 
 
-            <Html position={[0, 2, 25]} center depthTest={false} zIndexRange={[100, 0]}> {/* Adjusted position */}
+            <Html position={[0, 2, 19]} center depthTest={false} zIndexRange={[100, 0]}>
               <button
                 onClick={handleLeaveRoom}
                 className="bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 whitespace-nowrap shadow-lg flex items-center gap-2"
@@ -1906,7 +1917,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       {showChat && (
         <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-          <div className="bg-black/95 backdrop-blur-xl rounded-xl w-full max-w-md h-[600px] flex flex-col border-2 border-white/30 shadow-2xl">
+          <div className="bg-black/90 backdrop-blur-xl rounded-xl w-full max-w-md h-[600px] flex flex-col border-2 border-white/30 shadow-2xl">
             <div className="flex justify-between items-center p-4 border-b border-white/20">
               <h3 className="text-white font-bold text-lg">
                 {currentCinemaRoom ? `Chat - Salle ${currentCinemaRoom.room_number}` : 'Chat Global'}
@@ -2152,36 +2163,22 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {showQuickActions && (
-        <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-2 bg-black/90 backdrop-blur-xl p-4 rounded-2xl border-2 border-white/30 shadow-2xl">
-          <div className="text-white font-bold text-sm mb-2 text-center border-b border-white/20 pb-2">Actions Rapides</div>
-          
-          {/* Jump button */}
-          {worldSettings.enableJumping && (
-            <button 
-              onClick={() => { handleJump(); setShowQuickActions(false); }} 
-              className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-3 rounded-xl shadow-lg hover:from-blue-600 hover:to-blue-700 transition-all flex items-center gap-2 font-medium"
-            >
-              <ArrowUp className="w-5 h-5" />
-              Sauter
-            </button>
-          )}
-
-          <div className="text-white/60 text-xs text-center mt-1">Émojis</div>
-          <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => handleEmoji('😂')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">😂</button>
-            <button onClick={() => handleEmoji('👍')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">👍</button>
-            <button onClick={() => handleEmoji('❤️')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">❤️</button>
-            <button onClick={() => handleEmoji('😭')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">😭</button>
-            <button onClick={() => handleEmoji('🎉')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">🎉</button>
-            <button onClick={() => handleEmoji('🔥')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors">🔥</button>
-          </div>
-
-          <div className="text-white/60 text-xs text-center mt-2">Émotes</div>
-          <div className="grid grid-cols-3 gap-2">
-            <button onClick={() => handleEmoji('👋')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Saluer">👋</button>
-            <button onClick={() => handleEmoji('💃')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Danser">💃</button>
-            <button onClick={() => handleEmoji('🤝')} className="text-4xl p-2 rounded-xl hover:bg-white/10 transition-colors" title="Serrer la main">🤝</button>
-          </div>
+        <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-3 bg-black/80 backdrop-blur-lg p-3 rounded-2xl border-2 border-white/20">
+          <button onClick={() => handleQuickAction('jump')} className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors">
+            <ArrowUp className="w-6 h-6" />
+          </button>
+          <button onClick={() => handleEmoji('😂')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
+            😂
+          </button>
+          <button onClick={() => handleEmoji('👍')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
+            👍
+          </button>
+          <button onClick={() => handleEmoji('❤️')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
+            ❤️
+          </button>
+          <button onClick={() => handleEmoji('😭')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors">
+            😭
+          </button>
         </div>
       )}
 
@@ -2282,8 +2279,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {showCinema && (
-        <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-          <div className="bg-black/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border-2 border-blue-500/30">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border-2 border-blue-500/30">
             <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 flex justify-between items-center">
               <h2 className="text-3xl font-bold text-white flex items-center gap-3">
                 🎬 Salles de Cinéma
