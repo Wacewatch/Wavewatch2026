@@ -619,15 +619,17 @@ export default function AdminPage() {
       }
 
       const requestsWithUserInfo = (data || []).map((req) => ({
-        ...req,
-        username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
-        // Ensure all required fields exist
         id: req.id,
-        type: req.type,
-        title: req.title,
-        status: req.status,
+        user_id: req.user_id,
+        type: req.type || "movie",
+        title: req.title || "Sans titre",
+        description: req.description || "",
+        status: req.status || "pending",
         created_at: req.created_at,
+        updated_at: req.updated_at,
+        username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
       }))
+      
       console.log(`✅ ${requestsWithUserInfo.length} demandes chargées:`, requestsWithUserInfo)
       setRequests(requestsWithUserInfo)
       return requestsWithUserInfo
@@ -4318,9 +4320,8 @@ export default function AdminPage() {
 
                 {requests.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucune demande trouvée</p>
-                    <p className="text-sm">Les demandes des utilisateurs apparaîtront ici</p>
+                    <p>Aucune demande trouvée dans la base de données</p>
+                    <p className="text-sm mt-2">Les nouvelles demandes apparaîtront ici automatiquement</p>
                   </div>
                 )}
               </CardContent>

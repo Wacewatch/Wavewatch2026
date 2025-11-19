@@ -7,7 +7,8 @@ import { createClient } from "@/lib/supabase/client"
 import InteractiveWorld from "@/components/interactive/world-3d"
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
-import { User } from 'lucide-react'
+import { User, AlertTriangle } from 'lucide-react'
+import { Button } from "@/components/ui/button"
 
 export default function InteractivePage() {
   const [hasProfile, setHasProfile] = useState(false)
@@ -16,6 +17,7 @@ export default function InteractivePage() {
   const [showWorld, setShowWorld] = useState(false)
   const [userProfile, setUserProfile] = useState<any>(null)
   const [checkingProfile, setCheckingProfile] = useState(true)
+  const [showConstructionWarning, setShowConstructionWarning] = useState(false)
   const [avatarStyle, setAvatarStyle] = useState({
     bodyColor: '#3b82f6',
     headColor: '#fde68a',
@@ -80,7 +82,7 @@ export default function InteractivePage() {
       if (interactiveProfile && interactiveProfile.username && interactiveProfile.username.trim() !== '') {
         console.log('[v0] Found existing interactive profile')
         setHasProfile(true)
-        setShowWorld(true)
+        setShowConstructionWarning(true)
       } else {
         console.log('[v0] No interactive profile found, showing username input')
         setHasProfile(false)
@@ -133,11 +135,16 @@ export default function InteractivePage() {
       
       setHasProfile(true)
       setShowOnboarding(false)
-      setShowWorld(true)
+      setShowConstructionWarning(true)
     } catch (err) {
       console.error('[v0] Unexpected error during profile creation:', err)
       alert(`Erreur inattendue: ${err}`)
     }
+  }
+
+  const handleEnterWorld = () => {
+    setShowConstructionWarning(false)
+    setShowWorld(true)
   }
 
   useEffect(() => {
@@ -167,6 +174,54 @@ export default function InteractivePage() {
     return (
       <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
         <div className="text-white text-2xl">Chargement...</div>
+      </div>
+    )
+  }
+
+  if (showConstructionWarning) {
+    return (
+      <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 border-2 border-yellow-500/50 rounded-2xl max-w-2xl w-full p-8 shadow-2xl">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="bg-yellow-500/20 p-4 rounded-full">
+              <AlertTriangle className="w-8 h-8 text-yellow-500" />
+            </div>
+            <h2 className="text-3xl font-bold text-white">🚧 Page en construction</h2>
+          </div>
+          
+          <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 mb-6">
+            <h3 className="text-xl font-semibold text-yellow-400 mb-4">Ouverte pour tests</h3>
+            <p className="text-gray-300 leading-relaxed mb-4">
+              Cette page est actuellement en développement, mais elle est ouverte pour effectuer des tests.
+            </p>
+            <p className="text-gray-300 leading-relaxed mb-4">
+              Merci d'être <span className="text-yellow-400 font-semibold">respectueux</span> et de faire preuve de <span className="text-yellow-400 font-semibold">compréhension</span> durant cette phase.
+            </p>
+            <p className="text-gray-300 leading-relaxed">
+              Vos <span className="text-blue-400 font-semibold">retours</span> et votre <span className="text-blue-400 font-semibold">comportement</span> aideront à améliorer l'expérience finale.
+            </p>
+          </div>
+
+          <p className="text-center text-lg text-white mb-6 font-medium">
+            Bonne exploration ! 🎮
+          </p>
+
+          <div className="flex gap-4">
+            <Button
+              onClick={() => router.push('/')}
+              variant="outline"
+              className="flex-1 bg-transparent border-gray-600 text-gray-300 hover:bg-gray-800"
+            >
+              Retour
+            </Button>
+            <Button
+              onClick={handleEnterWorld}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold"
+            >
+              J'ai compris, entrer
+            </Button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -308,7 +363,7 @@ export default function InteractivePage() {
                     <button
                       key={color}
                       onClick={() => setAvatarStyle({ ...avatarStyle, headColor: color, skinTone: color })}
-                      className={`w-12 h-12 md:w-14 md:h-14 rounded-xl border-4 transition-all active:scale-95 shadow-lg ${
+                      className={`w-12 h-12 md:w-14 md:h-14 rounded-xl border-4 transition-all active:scale-95 ${
                         avatarStyle.skinTone === color ? 'border-white scale-105 ring-4 ring-white/50' : 'border-white/20'
                       }`}
                       style={{ backgroundColor: color }}
@@ -430,13 +485,13 @@ export default function InteractivePage() {
             </div>
           </div>
 
-          <button
+          <Button
             onClick={handleCreateProfile}
             className="w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white py-2.5 sm:py-3 md:py-4 rounded-xl font-bold text-sm sm:text-base md:text-lg hover:from-green-600 hover:to-emerald-700 transition-all mt-3 sm:mt-4 md:mt-6 shadow-2xl hover:shadow-green-500/50 flex items-center justify-center gap-2 active:scale-95"
           >
             <User className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6" />
             Entrer dans le Monde
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -457,13 +512,13 @@ export default function InteractivePage() {
             maxLength={20}
             onKeyDown={(e) => e.key === 'Enter' && username.trim() && setShowOnboarding(true)}
           />
-          <button
+          <Button
             onClick={() => setShowOnboarding(true)}
             disabled={!username.trim()}
             className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-blue-600 hover:to-purple-700 transition-all"
           >
             Continuer
-          </button>
+          </Button>
         </div>
       </div>
     )
