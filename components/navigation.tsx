@@ -158,6 +158,12 @@ export function Navigation() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
+                <DropdownMenuItem asChild>
+                  <Link href="/ebooks" style={{ color: "hsl(var(--nav-text))" }} className="flex items-center justify-between">
+                    Ebooks
+                    <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">NEW</Badge>
+                  </Link>
+                </DropdownMenuItem>
                 {user?.isAdmin ? (
                   <>
                     <DropdownMenuItem asChild>
@@ -175,11 +181,6 @@ export function Navigation() {
                         Jeux
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/ebooks" style={{ color: "hsl(var(--nav-text))" }}>
-                        Ebooks
-                      </Link>
-                    </DropdownMenuItem>
                   </>
                 ) : (
                   <>
@@ -191,9 +192,6 @@ export function Navigation() {
                     </DropdownMenuItem>
                     <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
                       Jeux <span className="ml-auto text-xs">Bientôt</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
-                      Ebooks <span className="ml-auto text-xs">Bientôt</span>
                     </DropdownMenuItem>
                   </>
                 )}
@@ -658,6 +656,17 @@ export function Navigation() {
                       Collections
                     </Link>
                   </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                  >
+                    <Link href="/ebooks" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-between">
+                      Ebooks
+                      <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">NEW</Badge>
+                    </Link>
+                  </Button>
                   {user?.isAdmin ? (
                     <>
                       <Button
@@ -690,17 +699,6 @@ export function Navigation() {
                           Jeux
                         </Link>
                       </Button>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        className="w-full justify-start"
-                        style={{ color: "hsl(var(--nav-text))" }}
-                      >
-                        <Link href="/ebooks" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-between">
-                          Ebooks
-                          <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">NEW</Badge>
-                        </Link>
-                      </Button>
                     </>
                   ) : (
                     <>
@@ -727,14 +725,6 @@ export function Navigation() {
                         style={{ color: "hsl(var(--nav-text-secondary))" }}
                       >
                         Jeux <span className="ml-auto text-xs">Bientôt</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        disabled
-                        className="w-full justify-start opacity-60 cursor-not-allowed"
-                        style={{ color: "hsl(var(--nav-text-secondary))" }}
-                      >
-                        Ebooks <span className="ml-auto text-xs">Bientôt</span>
                       </Button>
                     </>
                   )}
