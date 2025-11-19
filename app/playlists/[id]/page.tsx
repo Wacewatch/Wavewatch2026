@@ -7,7 +7,7 @@ import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Globe, Lock, Calendar, Film, Trash2, Clock } from 'lucide-react'
+import { ArrowLeft, Globe, Lock, Calendar, Film, Trash2, Clock, Play } from 'lucide-react'
 import { usePlaylists } from "@/hooks/use-playlists"
 import { createClient } from "@/lib/supabase/client"
 import Image from "next/image"
@@ -133,11 +133,35 @@ export default function PlaylistContentPage() {
         .order("position", { ascending: true })
 
       if (!itemsError && itemsData) {
-        const processedItems = itemsData.map((item) => ({
-          ...item,
-          content_type: item.media_type,
-          content_id: item.tmdb_id,
+        const processedItems = await Promise.all(itemsData.map(async (item) => {
+          if (item.media_type === "tv-channel" && item.tmdb_id) {
+            // Fetch full TV channel data including stream_url
+            const { data: channelData } = await supabase
+              .from("tv_channels")
+              .select("*")
+              .eq("id", item.tmdb_id)
+              .single()
+            
+            if (channelData) {
+              return {
+                ...item,
+                content_type: item.media_type,
+                content_id: item.tmdb_id,
+                stream_url: channelData.stream_url,
+                logo_url: channelData.logo_url || item.poster_path,
+                poster_path: channelData.logo_url || item.poster_path,
+              }
+            }
+          }
+          
+          return {
+            ...item,
+            content_type: item.media_type,
+            content_id: item.tmdb_id,
+          }
         }))
+        
+        console.log("[v0] Processed playlist items with TV channels:", processedItems)
         setPlaylistItems(processedItems)
       }
     } catch (error) {
@@ -582,7 +606,12 @@ export default function PlaylistContentPage() {
                 {filteredPlaylistItems.map((item) => {
                   let imageUrl = "/placeholder.svg?height=300&width=200"
 
-                  if (item.poster_path) {
+                  if (item.media_type === "tv-channel") {
+                    imageUrl = item.logo_url || item.poster_path || "/placeholder.svg?height=300&width=200"
+                    if (imageUrl && !imageUrl.startsWith("http")) {
+                      imageUrl = "/placeholder.svg?height=300&width=200"
+                    }
+                  } else if (item.poster_path) {
                     if (item.poster_path.startsWith("http")) {
                       imageUrl = item.poster_path
                     } else {
@@ -671,7 +700,28 @@ export default function PlaylistContentPage() {
                     <div key={item.id} className="space-y-2 group">
                       <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700 cursor-pointer">
                         {isPlayableItem ? (
-                          <button onClick={handleItemClick} className="w-full h-full" type="button"></button>
+                          <button 
+                            onClick={handleItemClick} 
+                            className="w-full h-full flex items-center justify-center bg-gray-800"
+                            type="button"
+                          >
+                            {item.media_type === "tv-channel" && (item.logo_url || item.poster_path) ? (
+                              <img 
+                                src={item.logo_url || item.poster_path}
+                                alt={item.title}
+                                className="w-full h-full object-contain p-4"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement
+                                  target.src = "/placeholder.svg?height=300&width=200"
+                                }}
+                              />
+                            ) : (
+                              <div className="text-white text-center p-4">
+                                <Play className="w-12 h-12 mx-auto mb-2" />
+                                <p className="text-sm">{item.title}</p>
+                              </div>
+                            )}
+                          </button>
                         ) : (
                           <Image
                             src={imageUrl || "/placeholder.svg"}

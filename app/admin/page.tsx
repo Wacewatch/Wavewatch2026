@@ -270,13 +270,12 @@ export default function AdminPage() {
 
   const [worldSettings, setWorldSettings] = useState({
     maxCapacity: 100,
-    worldMode: "day",
-    voiceChatEnabled: true,
+    worldMode: 'day',
     playerInteractionsEnabled: true,
     showStatusBadges: true,
-    enableChat: true, // Added new properties
-    enableEmojis: true, // Added new properties
-    enableJumping: true, // Added new properties
+    enableChat: true,
+    enableEmojis: true,
+    enableJumping: true,
   })
 
   const [avatarOptions, setAvatarOptions] = useState<AvatarOption[]>([])
@@ -293,6 +292,9 @@ export default function AdminPage() {
   // Added state for Online Users count
   const [onlineUsersCount, setOnlineUsersCount] = useState(0);
 
+  const [arcadeMachines, setArcadeMachines] = useState<any[]>([])
+  const [stadium, setStadium] = useState<any>(null)
+
   const [activeTab, setActiveTab] = useState("dashboard"); // State to track active tab
 
   // useEffect moved inside the AdminPage component if it depends on user state
@@ -306,6 +308,8 @@ export default function AdminPage() {
         loadCinemaRooms();
         loadAvatarOptions();
         loadOnlineUsers();
+        loadArcadeMachines();
+        loadStadium();
       }
     }
     // Ensure dependency array includes user and activeTab if they affect the effect's execution
@@ -604,37 +608,40 @@ export default function AdminPage() {
 
   const loadRequests = async (supabase) => {
     try {
-      console.log("🔄 Chargement des demandes...")
+      console.log("[v0] Loading content requests...")
       const { data, error } = await supabase
         .from("content_requests")
         .select(`
           *,
-          user_profiles(username, email)
+          user_profiles!content_requests_user_id_fkey(username, email)
         `)
         .order("created_at", { ascending: false })
 
       if (error) {
-        console.error("❌ Erreur Supabase content_requests:", error)
+        console.error("[v0] Supabase error loading content_requests:", error)
         throw error
       }
+
+      console.log("[v0] Raw content_requests data:", data)
 
       const requestsWithUserInfo = (data || []).map((req) => ({
         id: req.id,
         user_id: req.user_id,
-        type: req.type || "movie",
+        type: req.content_type || "movie",
         title: req.title || "Sans titre",
         description: req.description || "",
         status: req.status || "pending",
         created_at: req.created_at,
         updated_at: req.updated_at,
+        admin_notes: req.admin_notes || "",
         username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
       }))
       
-      console.log(`✅ ${requestsWithUserInfo.length} demandes chargées:`, requestsWithUserInfo)
+      console.log("[v0] Processed requests:", requestsWithUserInfo)
       setRequests(requestsWithUserInfo)
       return requestsWithUserInfo
     } catch (error) {
-      console.error("❌ Erreur lors du chargement des demandes:", error)
+      console.error("[v0] Error loading content requests:", error)
       setRequests([])
       throw error
     }
@@ -893,14 +900,23 @@ export default function AdminPage() {
       }
 
       if (data && data.setting_value) {
-        setWorldSettings(data.setting_value as any) // Cast to any as setting_value is likely JSONB
+        // Ensure all expected keys are present, with defaults if missing
+        const loadedSettings = data.setting_value;
+        setWorldSettings({
+          maxCapacity: loadedSettings.maxCapacity ?? 100,
+          worldMode: loadedSettings.worldMode ?? 'day',
+          playerInteractionsEnabled: loadedSettings.playerInteractionsEnabled ?? true,
+          showStatusBadges: loadedSettings.showStatusBadges ?? true,
+          enableChat: loadedSettings.enableChat ?? true,
+          enableEmojis: loadedSettings.enableEmojis ?? true,
+          enableJumping: loadedSettings.enableJumping ?? true,
+        });
       }
     } catch (error) {
       console.error("[v0] Error loading world settings:", error)
     }
   }
 
-  // ADDED: Function to handle saving World settings
   const handleSaveWorldSettings = async () => {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -2562,6 +2578,8 @@ export default function AdminPage() {
         await loadCinemaRooms();
         await loadAvatarOptions();
         await loadOnlineUsers();
+        loadArcadeMachines();
+        loadStadium();
       }
 
     } catch (error) {
@@ -5227,7 +5245,6 @@ export default function AdminPage() {
                             <SelectItem value="Science-Fiction">Science-Fiction</SelectItem>
                             <SelectItem value="Thriller">Thriller</SelectItem>
                             <SelectItem value="Romance">Romance</SelectItem>
-                            {/* Adding Magazine and Journal categories to ebooks */}
                             <SelectItem value="Magazine">Magazine</SelectItem>
                             <SelectItem value="Journal">Journal</SelectItem>
                           </SelectContent>
@@ -5847,15 +5864,6 @@ export default function AdminPage() {
                       <input 
                         type="checkbox" 
                         className="rounded" 
-                        checked={worldSettings.voiceChatEnabled} 
-                        onChange={(e) => setWorldSettings({ ...worldSettings, voiceChatEnabled: e.target.checked })}
-                      />
-                      Activer le chat vocal
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input 
-                        type="checkbox" 
-                        className="rounded" 
                         checked={worldSettings.playerInteractionsEnabled} 
                         onChange={(e) => setWorldSettings({ ...worldSettings, playerInteractionsEnabled: e.target.checked })}
                       />
@@ -6126,26 +6134,141 @@ export default function AdminPage() {
 
                 <Separator className="bg-gray-700" />
 
-                {/* Online Users Monitor */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    Utilisateurs en Ligne
-                  </h3>
-                  <div className="bg-gray-900 p-4 rounded-lg">
-                    <p className="text-4xl font-bold text-green-400">{onlineUsersCount}</p>
-                    <p className="text-sm text-gray-400">utilisateurs connectés actuellement</p>
-                    <Button 
-                      onClick={loadOnlineUsers}
-                      size="sm"
-                      variant="outline"
-                      className="mt-4"
-                    >
-                      <RefreshCw className="w-4 h-4 mr-2" />
-                      Actualiser
-                    </Button>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Trophy className="w-5 h-5" />
+                      Stade de Football
+                    </h3>
+                  </div>
+                  
+                  {stadium && (
+                    <div className="p-4 bg-gray-700 rounded-lg border border-gray-600">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <label className="text-sm text-gray-300">Nom du Stade</label>
+                          <Input
+                            value={stadium.name}
+                            onChange={(e) => setStadium({ ...stadium, name: e.target.value })}
+                            className="bg-gray-600 border-gray-500 text-white"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm text-gray-300">Titre du Match</label>
+                          <Input
+                            value={stadium.match_title || ''}
+                            onChange={(e) => setStadium({ ...stadium, match_title: e.target.value })}
+                            className="bg-gray-600 border-gray-500 text-white"
+                          />
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
+                          <Input
+                            value={stadium.embed_url || ''}
+                            onChange={(e) => setStadium({ ...stadium, embed_url: e.target.value })}
+                            placeholder="https://www.youtube.com/embed/..."
+                            className="bg-gray-600 border-gray-500 text-white"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm text-gray-300">Heure de Début</label>
+                          <Input
+                            type="datetime-local"
+                            value={stadium.schedule_start ? new Date(stadium.schedule_start).toISOString().slice(0, 16) : ''}
+                            onChange={(e) => setStadium({ ...stadium, schedule_start: e.target.value })}
+                            className="bg-gray-600 border-gray-500 text-white"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm text-gray-300">Heure de Fin</label>
+                          <Input
+                            type="datetime-local"
+                            value={stadium.schedule_end ? new Date(stadium.schedule_end).toISOString().slice(0, 16) : ''}
+                            onChange={(e) => setStadium({ ...stadium, schedule_end: e.target.value })}
+                            className="bg-gray-600 border-gray-500 text-white"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-sm text-gray-300">Niveau d'Accès</label>
+                          <select
+                            value={stadium.access_level}
+                            onChange={(e) => setStadium({ ...stadium, access_level: e.target.value })}
+                            className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                          >
+                            <option value="public">Public</option>
+                            <option value="vip">VIP</option>
+                            <option value="vip_plus">VIP+</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-2 flex items-center">
+                          <label className="flex items-center gap-2 text-sm text-gray-300">
+                            <input 
+                              type="checkbox" 
+                              className="rounded" 
+                              checked={stadium.is_open}
+                              onChange={(e) => setStadium({ ...stadium, is_open: e.target.checked })}
+                            />
+                            Stade Ouvert
+                          </label>
+                        </div>
+
+                        <div className="md:col-span-2 flex justify-end">
+                          <Button 
+                            onClick={handleUpdateStadium}
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Save className="w-4 h-4 mr-2" />
+                            Sauvegarder le Stade
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <Separator className="bg-gray-700" />
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Gamepad2 className="w-5 h-5" />
+                      Machines d'Arcade
+                    </h3>
+                    <div className="text-sm text-gray-400">
+                      {arcadeMachines.length} machines disponibles
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4">
+                    <p className="text-sm text-blue-200">
+                      Les machines d'arcade sont gérées via la table <span className="font-mono bg-blue-900/50 px-2 py-1 rounded">retrogaming_sources</span>. 
+                      Les jeux actifs apparaissent automatiquement dans l'arcade du monde interactif.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto">
+                    {arcadeMachines.map((machine) => (
+                      <div key={machine.id} className="bg-gray-700 p-3 rounded-lg border border-gray-600">
+                        <div className="font-medium text-white">{machine.name}</div>
+                        <div className="text-xs text-gray-400 mt-1">{machine.category || 'Jeu Rétro'}</div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`text-xs px-2 py-1 rounded ${machine.is_active ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300'}`}>
+                            {machine.is_active ? 'Actif' : 'Inactif'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
+
               </CardContent>
             </Card>
           </TabsContent>

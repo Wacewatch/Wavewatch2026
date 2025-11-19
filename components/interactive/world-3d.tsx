@@ -4,7 +4,7 @@ import { Canvas, useFrame } from '@react-three/fiber'
 import { OrbitControls, Sky, Html, PerspectiveCamera, Text } from '@react-three/drei'
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff, ArrowUp, Frown, ThumbsUp, Heart, Angry, ChevronLeft, Maximize2, MessageCircle, Sparkles, Star, Map, Building2, Lock, Clock, Film } from 'lucide-react'
+import { Maximize, Minimize, MessageSquare, Send, Settings, Crown, Shield, X, LogOut, User, Users, Palette, Menu, Eye, Play, Smile, EyeOff, ArrowUp, Frown, ThumbsUp, Heart, Angry, ChevronLeft, Maximize2, MessageCircle, Sparkles, Star, Map, Building2, Lock, Clock, Film, Gamepad2, Trophy } from 'lucide-react'
 import * as THREE from 'three'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -312,14 +312,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [playerActions, setPlayerActions] = useState<Record<string, { action: string; timestamp: number }>>({})
   const [quickAction, setQuickAction] = useState<string | null>(null) // State for current quick action animation
 
+  const [arcadeMachines, setArcadeMachines] = useState<any[]>([])
+  const [showArcade, setShowArcade] = useState(false)
+  const [currentArcadeMachine, setCurrentArcadeMachine] = useState<any>(null)
+  const [stadium, setStadium] = useState<any>(null)
+  const [showStadium, setShowStadium] = useState(false)
+
   const keysPressed = useRef<Set<string>>(new Set())
   const supabase = createClient()
   const [myRotation, setMyRotation] = useState(0) // Added for rotation
 
   const [showMenu, setShowMenu] = useState(false)
   const [showMap, setShowMap] = useState(false)
-  const [showChatInput, setShowChatInput] = useState(false)
-  const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
+
 
   useEffect(() => {
     const checkMobile = () => {
@@ -544,6 +549,47 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         .then()
     }
   }, [userId])
+
+  useEffect(() => {
+    const loadArcadeMachines = async () => {
+      const { data } = await supabase
+        .from('retrogaming_sources')
+        .select('*')
+        .eq('is_active', true)
+        .order('name')
+
+      if (data) setArcadeMachines(data)
+    }
+
+    loadArcadeMachines()
+  }, [])
+
+  useEffect(() => {
+    const loadStadium = async () => {
+      const { data } = await supabase
+        .from('interactive_stadium')
+        .select('*')
+        .eq('is_open', true)
+        .single()
+
+      if (data) setStadium(data)
+    }
+
+    loadStadium()
+
+    const channel = supabase
+      .channel('stadium')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'interactive_stadium'
+      }, loadStadium)
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
 
   useEffect(() => {
     // Seats are never locked anymore
@@ -1238,6 +1284,52 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     router.push('/')
   }
 
+  const handleEnterArcade = (machine: any) => {
+    setCurrentArcadeMachine(machine)
+    setShowArcade(false)
+  }
+
+  const handleLeaveArcade = () => {
+    setCurrentArcadeMachine(null)
+  }
+
+  const handleEnterStadium = () => {
+    if (!stadium) return
+    setShowStadium(false)
+    setCurrentCinemaRoom(null) // Ensure we're not in cinema
+    
+    // Teleport player to stadium position
+    const stadiumPos = { x: -15, y: 0.5, z: -15 }
+    setMyPosition(stadiumPos)
+    
+    // Update position in database
+    supabase
+      .from('interactive_profiles')
+      .update({ 
+        position_x: stadiumPos.x, 
+        position_y: stadiumPos.y, 
+        position_z: stadiumPos.z,
+        current_room: 'stadium'
+      })
+      .eq('user_id', userId)
+      .then(() => console.log('[v0] Teleported to stadium'))
+  }
+
+  const handleLeaveStadium = () => {
+    const mainPos = { x: 0, y: 0.5, z: 0 }
+    setMyPosition(mainPos)
+    
+    supabase
+      .from('interactive_profiles')
+      .update({ 
+        position_x: mainPos.x, 
+        position_y: mainPos.y, 
+        position_z: mainPos.z,
+        current_room: null
+      })
+      .eq('user_id', userId)
+      .then(() => console.log('[v0] Left stadium'))
+  }
 
   return (
     <div className="relative w-full h-screen">
@@ -1316,7 +1408,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         <fog attach="fog" args={['#87CEEB', 10, 50]} />
         <hemisphereLight intensity={0.3} groundColor="#6b7280" />
 
-        {!currentCinemaRoom ? (
+        {!currentCinemaRoom && userProfile?.current_room !== 'stadium' ? (
           <>
             {/* Ground */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
@@ -1329,24 +1421,71 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             </mesh>
 
 
-            {/* Arcade Building with proper info panel */}
-            <group position={[-15, 0, -15]}>
-              {/* Building */}
-              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
-                <boxGeometry args={[5, 5, 5]} />
-                <meshStandardMaterial color="#7c2d12" />
+            {/* Arcade building - was Arcade Building - Now OPEN */}
+            <group position={[-25, 0, 0]}>
+              <mesh position={[0, 3, 0]} castShadow>
+                <boxGeometry args={[10, 6, 10]} />
+                <meshStandardMaterial color="#8b5cf6" roughness={0.7} metalness={0.2} />
               </mesh>
-              {/* Roof */}
-              <mesh position={[0, 5.2, 0]} castShadow>
-                <coneGeometry args={[3.5, 1.5, 4]} />
-                <meshStandardMaterial color="#92400e" />
+              
+              <mesh position={[0, 6.5, 0]} castShadow>
+                <boxGeometry args={[10.5, 0.5, 10.5]} />
+                <meshStandardMaterial color="#6b21a8" roughness={0.6} metalness={0.3} />
               </mesh>
-              {/* Arcade Info Panel - only on arcade building */}
-              <Html position={[0, 4, 2.6]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
-                  <div className="text-xl">🕹️ ARCADE 🕹️</div>
-                  <div className="text-sm mt-1">Ouverture Prochainement</div>
-                </div>
+
+              <mesh position={[0, 7, 0]}>
+                <boxGeometry args={[8, 0.6, 0.3]} />
+                <meshStandardMaterial
+                  color="#f59e0b"
+                  emissive="#f59e0b"
+                  emissiveIntensity={1.5}
+                  roughness={0.3}
+                  metalness={0.5}
+                />
+              </mesh>
+              <pointLight position={[0, 7, 0]} intensity={2} distance={10} color="#f59e0b" />
+
+              <Html position={[0, 8, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+                <button
+                  onClick={() => setShowArcade(true)}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
+                >
+                  🕹️ Entrer à l'Arcade
+                </button>
+              </Html>
+            </group>
+
+            {/* Stadium building - was Stadium Building - Now OPEN */}
+            <group position={[25, 0, -15]}>
+              <mesh position={[0, 3.5, 0]} castShadow>
+                <boxGeometry args={[12, 7, 10]} />
+                <meshStandardMaterial color="#16a34a" roughness={0.7} metalness={0.1} />
+              </mesh>
+              
+              <mesh position={[0, 7.5, 0]} castShadow>
+                <boxGeometry args={[12.5, 0.5, 10.5]} />
+                <meshStandardMaterial color="#15803d" roughness={0.6} metalness={0.2} />
+              </mesh>
+
+              <mesh position={[0, 8, 0]}>
+                <boxGeometry args={[10, 0.7, 0.3]} />
+                <meshStandardMaterial
+                  color="#22c55e"
+                  emissive="#22c55e"
+                  emissiveIntensity={1.5}
+                  roughness={0.3}
+                  metalness={0.5}
+                />
+              </mesh>
+              <pointLight position={[0, 8, 0]} intensity={2} distance={10} color="#22c55e" />
+
+              <Html position={[0, 9, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+                <button
+                  onClick={handleEnterStadium}
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
+                >
+                  ⚽ Entrer au Stade
+                </button>
               </Html>
             </group>
 
@@ -1385,7 +1524,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             <group position={[-15, 0, -8]}>
               <mesh position={[0, 3, 0]} castShadow receiveShadow>
                 <boxGeometry args={[4, 6, 4]} />
-                <meshStandardMaterial color="#f97316" />
+                <meshStandardMaterial color="#f59e0b" />
               </mesh>
               <mesh position={[0, 6.5, 0]} castShadow>
                 <coneGeometry args={[3, 1.5, 4]} />
@@ -1455,64 +1594,26 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             </group>
 
             {/* Additional decorative closed buildings */}
-            <group position={[-25, 0, 0]}>
-              <mesh position={[0, 3, 0]} castShadow>
-                <boxGeometry args={[8, 6, 8]} />
-                <meshStandardMaterial color="#8b5cf6" roughness={0.7} />
+            <group position={[-15, 0, 5]}>
+              <mesh position={[0, 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[5, 4, 4]} />
+                <meshStandardMaterial color="#0ea5e9" />
               </mesh>
-              <Html position={[0, 7, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
-                  🔒 FERMÉ
-                </div>
-              </Html>
+              <mesh position={[0, 4.5, 0]} castShadow>
+                <boxGeometry args={[5.2, 1, 4.2]} />
+                <meshStandardMaterial color="#0284c7" />
+              </mesh>
             </group>
 
-            <group position={[25, 0, -10]}>
-              <mesh position={[0, 4, 0]} castShadow>
-                <boxGeometry args={[10, 8, 10]} />
-                <meshStandardMaterial color="#10b981" roughness={0.7} />
+            <group position={[-15, 0, -8]}>
+              <mesh position={[0, 3, 0]} castShadow receiveShadow>
+                <boxGeometry args={[4, 6, 4]} />
+                <meshStandardMaterial color="#f59e0b" />
               </mesh>
-              <Html position={[0, 9, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
-                  🔒 EN CONSTRUCTION
-                </div>
-              </Html>
-            </group>
-
-            <group position={[-20, 0, 15]}>
-              <mesh position={[0, 3.5, 0]} castShadow>
-                <boxGeometry args={[9, 7, 9]} />
-                <meshStandardMaterial color="#f59e0b" roughness={0.7} />
+              <mesh position={[0, 6.5, 0]} castShadow>
+                <coneGeometry args={[3, 1.5, 4]} />
+                <meshStandardMaterial color="#ea580c" />
               </mesh>
-              <Html position={[0, 7.5, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
-                  🔒 BIENTÔT
-                </div>
-              </Html>
-            </group>
-
-            <group position={[20, 0, 10]}>
-              <mesh position={[0, 2.5, 0]} castShadow>
-                <boxGeometry args={[7, 5, 7]} />
-                <meshStandardMaterial color="#ef4444" roughness={0.7} />
-              </mesh>
-              <Html position={[0, 5.5, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
-                  🔒 FERMÉ
-                </div>
-              </Html>
-            </group>
-
-            <group position={[0, 0, 25]}>
-              <mesh position={[0, 4, 0]} castShadow>
-                <boxGeometry args={[12, 8, 12]} />
-                <meshStandardMaterial color="#3b82f6" roughness={0.7} />
-              </mesh>
-              <Html position={[0, 9, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold">
-                  🔒 PROCHAINEMENT
-                </div>
-              </Html>
             </group>
 
             {(graphicsQuality === 'low'
@@ -1579,6 +1680,70 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
           </>
+        ) : userProfile?.current_room === 'stadium' ? (
+          <>
+            {/* Stadium Interior */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+              <planeGeometry args={[40, 30]} />
+              <meshStandardMaterial color="#1c4e24" />
+            </mesh>
+
+            <mesh position={[0, 3, -20]}>
+              <boxGeometry args={[40, 6, 0.5]} />
+              <meshStandardMaterial color="#14381a" />
+            </mesh>
+            <mesh position={[-20, 3, 0]}>
+              <boxGeometry args={[0.5, 6, 30]} />
+              <meshStandardMaterial color="#14381a" />
+            </mesh>
+            <mesh position={[20, 3, 0]}>
+              <boxGeometry args={[0.5, 6, 30]} />
+              <meshStandardMaterial color="#14381a" />
+            </mesh>
+
+            {stadium?.embed_url && (
+              <group position={[0, 3, -19.5]}>
+                {/* Stadium Screen Background */}
+                <mesh>
+                  <planeGeometry args={[30, 12]} />
+                  <meshStandardMaterial color="#0f2a15" />
+                </mesh>
+
+                {/* Screen Border */}
+                <mesh position={[0, 0, 0.1]}>
+                  <planeGeometry args={[29.5, 11.5]} />
+                  <meshStandardMaterial color="#000000" />
+                </mesh>
+
+                <Html transform style={{ width: '2500px', height: '1000px' }}>
+                  <iframe
+                    src={stadium.embed_url}
+                    className="w-full h-full rounded"
+                    allowFullScreen
+                    allow="autoplay; fullscreen"
+                  />
+                </Html>
+              </group>
+            )}
+
+            {/* Spectator Stands */}
+            {[
+              { x: -15, z: 10, rot: 0 }, { x: 15, z: 10, rot: 0 },
+              { x: -15, z: -10, rot: Math.PI }, { x: 15, z: -10, rot: Math.PI },
+              { x: 0, z: 15, rot: -Math.PI / 2 }, { x: 0, z: -15, rot: Math.PI / 2 }
+            ].map((props, i) => (
+              <group key={`stand-${i}`} position={[props.x, 0.5, props.z]} rotation={[0, props.rot, 0]}>
+                <mesh castShadow>
+                  <boxGeometry args={[1.5, 0.8, 1.5]} />
+                  <meshStandardMaterial color="#383838" />
+                </mesh>
+                <mesh position={[0, -0.4, 0]}>
+                  <boxGeometry args={[1.5, 0.1, 1.5]} />
+                  <meshStandardMaterial color="#2c2c2c" />
+                </mesh>
+              </group>
+            ))}
+          </>
         ) : (
           <>
             {/* Cinema Interior */}
@@ -1607,7 +1772,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               const isMovieStarted = room.schedule_start && new Date(room.schedule_start).getTime() < Date.now()
 
               return (
-                <group position={[0, 3, -19]}>
+                <group position={[0, 3, -20]}>
                   {/* Cinema Screen Background */}
                   <mesh>
                     <planeGeometry args={[14, 8]} />
@@ -1732,7 +1897,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
         {/* Player avatars with badges */}
         {otherPlayers
-          .filter(p => !currentCinemaRoom || p.current_room === `cinema_${currentCinemaRoom.id}`)
+          .filter(p => !currentCinemaRoom || p.current_room === `cinema_${currentCinemaRoom.id}` || userProfile?.current_room === 'stadium' && p.current_room === 'stadium' || (!currentCinemaRoom && !p.current_room))
           .map((player) => {
             const playerProfile = player.user_profiles
             const avatarStyle = player.avatar_style || { bodyColor: '#ef4444', headColor: '#fbbf24', faceSmiley: '😊' }
@@ -2218,73 +2383,60 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {showQuickActions && (
-        <div className="fixed bottom-28 right-6 z-20 flex flex-col gap-3 bg-black/80 backdrop-blur-lg p-3 rounded-2xl border-2 border-white/20">
-          {currentCinemaRoom && (
-            <>
-              {mySeat === null ? (
+        <div className="fixed bottom-28 right-6 z-20 bg-black/90 backdrop-blur-lg p-4 rounded-2xl border-2 border-white/20 max-h-[60vh] md:max-h-[70vh] overflow-y-auto">
+          <div className="flex flex-col gap-3">
+            {currentCinemaRoom && (
+              <>
+                {mySeat === null ? (
+                  <button
+                    onClick={handleSitInAnySeat}
+                    className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
+                  >
+                    💺 S'asseoir
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleSitInSeat(mySeat)}
+                    className="bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
+                  >
+                    🚶 Se lever
+                  </button>
+                )}
                 <button
-                  onClick={handleSitInAnySeat}
-                  className="bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
+                  onClick={handleLeaveRoom}
+                  className="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
                 >
-                  💺 S'asseoir
+                  <LogOut className="w-5 h-5" />
+                  Sortir
                 </button>
-              ) : (
+                <div className="border-t border-white/20 my-1"></div>
+              </>
+            )}
+            {userProfile?.current_room === 'stadium' && (
+              <>
                 <button
-                  onClick={() => handleSitInSeat(mySeat)}
-                  className="bg-gray-600 text-white px-4 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
+                  onClick={handleLeaveStadium}
+                  className="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
                 >
-                  🚶 Se lever
+                  <LogOut className="w-5 h-5" />
+                  Quitter le Stade
                 </button>
-              )}
-              <button
-                onClick={handleLeaveRoom}
-                className="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
+                <div className="border-t border-white/20 my-1"></div>
+              </>
+            )}
+            <button onClick={() => handleQuickAction('jump')} className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center">
+              <ArrowUp className="w-6 h-6" />
+            </button>
+            {['😂', '👍', '❤️', '😭', '🔥', '🎉', '😎', '🤔', '😱', '💪', '🙏', '✨'].map(emoji => (
+              <button 
+                key={emoji} 
+                onClick={() => handleEmoji(emoji)} 
+                className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors text-center" 
               >
-                <LogOut className="w-5 h-5" />
-                Sortir
+                {emoji}
               </button>
-              <div className="border-t border-white/20 my-1"></div>
-            </>
-          )}
-          <button onClick={() => handleQuickAction('jump')} className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors">
-            <ArrowUp className="w-6 h-6" />
-          </button>
-          <button onClick={() => handleEmoji('😂')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Rire">
-            😂
-          </button>
-          <button onClick={() => handleEmoji('👍')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Pouce">
-            👍
-          </button>
-          <button onClick={() => handleEmoji('❤️')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Coeur">
-            ❤️
-          </button>
-          <button onClick={() => handleEmoji('😭')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Pleurs">
-            😭
-          </button>
-          <button onClick={() => handleEmoji('🔥')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Feu">
-            🔥
-          </button>
-          <button onClick={() => handleEmoji('🎉')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Fête">
-            🎉
-          </button>
-          <button onClick={() => handleEmoji('😎')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Cool">
-            😎
-          </button>
-          <button onClick={() => handleEmoji('🤔')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Réflexion">
-            🤔
-          </button>
-          <button onClick={() => handleEmoji('😱')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Choc">
-            😱
-          </button>
-          <button onClick={() => handleEmoji('💪')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Force">
-            💪
-          </button>
-          <button onClick={() => handleEmoji('🙏')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Prière">
-            🙏
-          </button>
-          <button onClick={() => handleEmoji('✨')} className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors" title="Étoiles">
-            ✨
-          </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -2399,224 +2551,200 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
-      {showCinema && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden border-2 border-blue-500/30">
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 flex justify-between items-center">
-              <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                🎬 Salles de Cinéma
-              </h2>
-              <button
-                onClick={() => setShowCinema(false)}
-                className="text-white/80 hover:text-white transition-colors bg-white/10 rounded-full p-2"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-6 overflow-y-auto max-h-[70vh]">
-              {cinemaRooms.length === 0 ? (
-                <div className="text-center text-white/60 py-12">
-                  <p className="text-xl">Aucune salle disponible pour le moment</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {cinemaRooms.map((room) => (
-                    <div key={room.id} className="bg-gradient-to-br from-gray-900/95 to-gray-800/95 rounded-xl p-6 hover:from-gray-800/95 hover:to-gray-700/95 transition-all border border-gray-700 shadow-lg">
-                      {/* Movie Poster */}
-                      {room.poster_url && (
-                        <div className="relative w-full h-64 bg-gray-800">
-                          <img
-                            src={room.poster_url || "/placeholder.svg"}
-                            alt={room.movie_title}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.currentTarget.src = '/abstract-movie-poster.png'
-                            }}
-                          />
-                          {/* Access Level Badge on Poster */}
-                          <div className="absolute top-2 right-2">
-                            {room.access_level === 'vip' && (
-                              <span className="inline-block bg-yellow-500 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                                👑 VIP
-                              </span>
-                            )}
-                            {room.access_level === 'vip_plus' && (
-                              <span className="inline-block bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                                💎 VIP+
-                              </span>
-                            )}
-                            {room.access_level === 'admin' && (
-                              <span className="inline-block bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                                🛡️ Admin
-                              </span>
-                            )}
-                            {room.access_level === 'public' && (
-                              <span className="inline-block bg-green-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                                🌍 Public
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      
-                      <div className="p-6">
-                        {/* Room Title */}
-                        <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-2">
-                          Salle {room.room_number} - {room.theme}
-                        </h3>
-
-                        {/* Movie Title */}
-                        <p className="text-white/80 font-medium mb-3 text-lg">{room.movie_title}</p>
-
-                        {/* Room Info Grid */}
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                          {/* Capacity */}
-                          <div className="bg-white/5 rounded-lg p-3">
-                            <p className="text-white/60 text-xs mb-1">Capacité</p>
-                            <p className="text-white font-bold text-lg">{room.capacity} places</p>
-                          </div>
-
-                          {/* TMDB ID */}
-                          {room.movie_tmdb_id && (
-                            <div className="bg-white/5 rounded-lg p-3">
-                              <p className="text-white/60 text-xs mb-1">ID TMDB</p>
-                              <p className="text-blue-300 font-mono font-bold">{room.movie_tmdb_id}</p>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Start Time */}
-                        {room.schedule_start && (
-                          <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg p-3 mb-4 border border-blue-500/30">
-                            <p className="text-white/80 text-sm mb-1">🕐 Heure de début</p>
-                            <p className="text-white font-bold text-lg">
-                              {new Date(room.schedule_start).toLocaleString('fr-FR', {
-                                weekday: 'long',
-                                day: '2-digit',
-                                month: 'long',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Access Requirements */}
-                        <div className="mb-4">
-                          <p className="text-white/60 text-sm mb-2">Accès requis:</p>
-                          <div className="flex gap-2 items-center">
-                            {room.access_level === 'public' && (
-                              <div className="flex items-center gap-2 bg-green-500/20 text-green-300 px-3 py-2 rounded-lg border border-green-500/30">
-                                <span className="text-lg">🌍</span>
-                                <span className="font-medium">Ouvert à tous</span>
-                              </div>
-                            )}
-                            {room.access_level === 'vip' && (
-                              <div className="flex items-center gap-2 bg-yellow-500/20 text-yellow-300 px-3 py-2 rounded-lg border border-yellow-500/30">
-                                <span className="text-lg">👑</span>
-                                <span className="font-medium">VIP requis</span>
-                              </div>
-                            )}
-                            {room.access_level === 'vip_plus' && (
-                              <div className="flex items-center gap-2 bg-purple-500/20 text-purple-300 px-3 py-2 rounded-lg border border-purple-500/30">
-                                <span className="text-lg">💎</span>
-                                <span className="font-medium">VIP+ requis</span>
-                              </div>
-                            )}
-                            {room.access_level === 'admin' && (
-                              <div className="flex items-center gap-2 bg-red-500/20 text-red-300 px-3 py-2 rounded-lg border border-red-500/30">
-                                <span className="text-lg">🛡️</span>
-                                <span className="font-medium">Admin uniquement</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Enter Button */}
-                        <button
-                          onClick={() => handleEnterRoom(room)}
-                          className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
-                        >
-                          Entrer dans la Salle
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
       {showMap && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-8 max-w-2xl w-full mx-4 shadow-2xl border-2 border-white/20">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-6 md:p-8 max-w-2xl w-full mx-4 shadow-2xl border-2 border-white/20">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-3xl font-bold text-white flex items-center gap-3">
-                <Map className="w-8 h-8 text-cyan-400" />
+              <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                <Map className="w-6 h-6 md:w-8 md:h-8 text-cyan-400" />
                 Carte du Monde
               </h2>
               <button
                 onClick={() => setShowMap(false)}
                 className="text-white hover:text-red-400 transition-colors"
               >
-                <X className="w-8 h-8" />
+                <X className="w-6 h-6 md:w-8 md:h-8" />
               </button>
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              {/* Cinema - Open */}
               <button
                 onClick={() => {
                   setShowCinema(true)
                   setShowMap(false)
                 }}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white p-4 md:p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
               >
-                <div className="bg-white/20 p-4 rounded-lg">
-                  <Building2 className="w-8 h-8" />
+                <div className="bg-white/20 p-3 md:p-4 rounded-lg">
+                  <Building2 className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
-                <div className="text-left flex-1">
-                  <h3 className="text-2xl font-bold mb-1">🎬 Cinéma</h3>
-                  <p className="text-white/80">Ouvert - Cliquez pour voir les salles</p>
+                <div className="text-left">
+                  <div className="font-bold text-lg md:text-xl">🎬 Cinéma</div>
+                  <div className="text-xs md:text-sm opacity-90">Ouvert - Cliquez pour voir les salles</div>
                 </div>
-                <div className="text-3xl">→</div>
               </button>
 
-              {/* Arcade - Closed */}
-              <div className="bg-gray-700/50 text-gray-400 p-6 rounded-xl flex items-center gap-4 opacity-60 cursor-not-allowed">
-                <div className="bg-gray-600/50 p-4 rounded-lg">
-                  <Building2 className="w-8 h-8" />
+              <button
+                onClick={() => {
+                  setShowArcade(true)
+                  setShowMap(false)
+                }}
+                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white p-4 md:p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
+              >
+                <div className="bg-white/20 p-3 md:p-4 rounded-lg">
+                  <Gamepad2 className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
-                <div className="text-left flex-1">
-                  <h3 className="text-2xl font-bold mb-1 flex items-center gap-2">
-                    🎮 Arcade
-                    <Lock className="w-5 h-5" />
-                  </h3>
-                  <p className="text-gray-500">Fermé - Bientôt disponible</p>
+                <div className="text-left">
+                  <div className="font-bold text-lg md:text-xl">🕹️ Arcade</div>
+                  <div className="text-xs md:text-sm opacity-90">Ouvert - Jouez aux jeux rétro</div>
                 </div>
-              </div>
+              </button>
 
-              {/* Stadium - Closed */}
-              <div className="bg-gray-700/50 text-gray-400 p-6 rounded-xl flex items-center gap-4 opacity-60 cursor-not-allowed">
-                <div className="bg-gray-600/50 p-4 rounded-lg">
-                  <Building2 className="w-8 h-8" />
+              <button
+                onClick={() => {
+                  setShowStadium(true)
+                  setShowMap(false)
+                }}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white p-4 md:p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
+              >
+                <div className="bg-white/20 p-3 md:p-4 rounded-lg">
+                  <Trophy className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
-                <div className="text-left flex-1">
-                  <h3 className="text-2xl font-bold mb-1 flex items-center gap-2">
-                    ⚽ Stade de Foot
-                    <Lock className="w-5 h-5" />
-                  </h3>
-                  <p className="text-gray-500">Fermé - Bientôt disponible</p>
+                <div className="text-left">
+                  <div className="font-bold text-lg md:text-xl">⚽ Stade</div>
+                  <div className="text-xs md:text-sm opacity-90">Ouvert - Regardez les matchs en live</div>
                 </div>
-              </div>
+              </button>
             </div>
           </div>
         </div>
       )}
+
+      {showArcade && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-gradient-to-br from-purple-900 via-purple-800 to-pink-900 rounded-2xl p-6 md:p-8 max-w-4xl w-full my-8 shadow-2xl border-2 border-purple-400/30">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                <Gamepad2 className="w-6 h-6 md:w-8 md:h-8 text-pink-400" />
+                🕹️ Arcade - Jeux Rétro
+              </h2>
+              <button
+                onClick={() => setShowArcade(false)}
+                className="text-white hover:text-red-400 transition-colors"
+              >
+                <X className="w-6 h-6 md:w-8 md:h-8" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+              {arcadeMachines.map((machine) => (
+                <button
+                  key={machine.id}
+                  onClick={() => handleEnterArcade(machine)}
+                  className="bg-gradient-to-br from-purple-700 to-pink-700 hover:from-purple-600 hover:to-pink-600 text-white p-4 rounded-xl transition-all transform hover:scale-105 shadow-lg text-left"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="bg-white/20 p-2 rounded-lg">
+                      <Gamepad2 className="w-5 h-5" />
+                    </div>
+                    <div className="font-bold text-lg">{machine.name}</div>
+                  </div>
+                  {machine.description && (
+                    <div className="text-sm opacity-90 line-clamp-2">{machine.description}</div>
+                  )}
+                  <div className="mt-2 text-xs opacity-75">{machine.category || 'Jeu Rétro'}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {currentArcadeMachine && (
+        <div className="fixed inset-0 bg-black z-50 flex flex-col">
+          <div className="bg-purple-900 px-4 py-3 flex items-center justify-between border-b-2 border-purple-400">
+            <div className="flex items-center gap-3 text-white">
+              <Gamepad2 className="w-5 h-5 text-pink-400" />
+              <span className="font-bold text-lg">{currentArcadeMachine.name}</span>
+            </div>
+            <button
+              onClick={handleLeaveArcade}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium"
+            >
+              <X className="w-5 h-5" />
+              Quitter
+            </button>
+          </div>
+          <iframe
+            src={currentArcadeMachine.url}
+            className="flex-1 w-full h-full border-0"
+            allow="gamepad; fullscreen"
+            allowFullScreen
+          />
+        </div>
+      )}
+
+      {showStadium && stadium && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 rounded-2xl p-6 md:p-8 max-w-2xl w-full shadow-2xl border-2 border-green-400/30">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                <Trophy className="w-6 h-6 md:w-8 md:h-8 text-yellow-400" />
+                ⚽ {stadium.name}
+              </h2>
+              <button
+                onClick={() => setShowStadium(false)}
+                className="text-white hover:text-red-400 transition-colors"
+              >
+                <X className="w-6 h-6 md:w-8 md:h-8" />
+              </button>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="bg-white/10 rounded-lg p-4">
+                <h3 className="font-bold text-white text-lg mb-2">{stadium.match_title || 'Match en direct'}</h3>
+                {stadium.schedule_start && (
+                  <div className="text-green-200 text-sm">
+                    Début: {new Date(stadium.schedule_start).toLocaleString('fr-FR')}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={handleEnterStadium}
+              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-4 rounded-xl font-bold text-lg transition-all transform hover:scale-105 shadow-lg"
+            >
+              Entrer dans le Stade
+            </button>
+          </div>
+        </div>
+      )}
+
+      {userProfile?.current_room === 'stadium' && stadium?.embed_url && (
+        <div className="fixed inset-0 bg-black z-40 flex flex-col">
+          <div className="bg-green-900 px-4 py-3 flex items-center justify-between border-b-2 border-green-400">
+            <div className="flex items-center gap-3 text-white">
+              <Trophy className="w-5 h-5 text-yellow-400" />
+              <span className="font-bold text-lg">{stadium.match_title || 'Match en direct'}</span>
+            </div>
+            <button
+              onClick={handleLeaveStadium}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium"
+            >
+              <LogOut className="w-5 h-5" />
+              Quitter le Stade
+            </button>
+          </div>
+          <iframe
+            src={stadium.embed_url}
+            className="flex-1 w-full h-full border-0"
+            allow="autoplay; fullscreen"
+            allowFullScreen
+          />
+        </div>
+      )}
+
     </div>
   )
 }
