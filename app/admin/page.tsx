@@ -1193,6 +1193,60 @@ export default function AdminPage() {
     }
   }
 
+  // CHANGE: Added loadArcadeMachines function after loadCinemaRooms
+  const loadArcadeMachines = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    try {
+      const { data, error } = await supabase
+        .from("retrogaming_sources")
+        .select("*")
+        .order("name", { ascending: true });
+        
+      if (error) throw error;
+      setArcadeMachines(data || []);
+    } catch (error) {
+      console.error("Error loading arcade machines:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les machines d'arcade.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // CHANGE: Added loadStadium function
+  const loadStadium = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+    try {
+      const { data, error } = await supabase
+        .from("interactive_stadium")
+        .select("*")
+        .single();
+        
+      if (error) {
+        // If no stadium exists yet, that's okay
+        if (error.code === 'PGRST116') {
+          setStadium(null);
+          return;
+        }
+        throw error;
+      }
+      setStadium(data);
+    } catch (error) {
+      console.error("Error loading stadium:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger le stade de football.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const loadStatistics = async () => {
     const supabase = createBrowserClient(

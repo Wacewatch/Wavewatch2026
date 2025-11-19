@@ -275,6 +275,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const [movement, setMovement] = useState({ x: 0, z: 0 })
   const [showChat, setShowChat] = useState(false)
+  const [showChatInput, setShowChatInput] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAvatarCustomizer, setShowAvatarCustomizer] = useState(false)
   const [showCinema, setShowCinema] = useState(false)
@@ -317,13 +318,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [currentArcadeMachine, setCurrentArcadeMachine] = useState<any>(null)
   const [stadium, setStadium] = useState<any>(null)
   const [showStadium, setShowStadium] = useState(false)
-
-  const keysPressed = useRef<Set<string>>(new Set())
-  const supabase = createClient()
-  const [myRotation, setMyRotation] = useState(0) // Added for rotation
-
-  const [showMenu, setShowMenu] = useState(false)
-  const [showMap, setShowMap] = useState(false)
+  const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
 
 
   useEffect(() => {
@@ -1812,7 +1807,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                       <iframe
                         src={room.embed_url}
                         className="w-full h-full rounded"
-                        allowFullScreen
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       />
                     </Html>
