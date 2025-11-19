@@ -482,48 +482,7 @@ export default function AdminPage() {
     }
   }
 
-  const loadAllData = async () => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
-    try {
-      console.log("🔄 Chargement de toutes les données...")
-      const results = await Promise.allSettled([
-        loadRealTVChannels(supabase),
-        loadRealRadioStations(supabase),
-        loadRealRetrogamingSources(supabase),
-        loadRealUsers(supabase),
-        loadRequests(supabase),
-        loadMusicContent(),
-        loadSoftware(),
-        loadGames(),
-        loadEbooks(),
-      ])
-
-      results.forEach((result, index) => {
-        const names = [
-          "TV Channels",
-          "Radio Stations",
-          "Retrogaming Sources",
-          "Users",
-          "Requests",
-          "Music Content",
-          "Software",
-          "Games",
-          "Ebooks",
-        ]
-        if (result.status === "rejected") {
-          console.error(`❌ Erreur lors du chargement de ${names[index]}:`, result.reason)
-        } else {
-          console.log(`✅ ${names[index]} chargé avec succès`)
-        }
-      })
-    } catch (error) {
-      console.error("❌ Erreur lors du chargement de toutes les données:", error)
-      throw error
-    }
-  }
+  // REMOVED: loadAllData function, replaced by fetchAllData
 
   const loadRealTVChannels = async (supabase) => {
     try {
@@ -662,6 +621,12 @@ export default function AdminPage() {
       const requestsWithUserInfo = (data || []).map((req) => ({
         ...req,
         username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
+        // Ensure all required fields exist
+        id: req.id,
+        type: req.type,
+        title: req.title,
+        status: req.status,
+        created_at: req.created_at,
       }))
       console.log(`✅ ${requestsWithUserInfo.length} demandes chargées:`, requestsWithUserInfo)
       setRequests(requestsWithUserInfo)
@@ -5329,19 +5294,6 @@ export default function AdminPage() {
                           placeholder="https://download.example.com/ebook.pdf"
                         />
                       </div>
-                      {!ebookForm.is_audiobook && (
-                        <div className="space-y-2 col-span-2">
-                          <Label>URL de lecture directe</Label>
-                          <Input
-                            value={ebookForm.reading_url}
-                            onChange={(e) => setEbookForm({ ...ebookForm, reading_url: e.target.value })}
-                            placeholder="https://example.com/reader?book=..."
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Lien pour le bouton "Lire en ligne" (optionnel)
-                          </p>
-                        </div>
-                      )}
                       <div className="space-y-2">
                         <Label>Nombre de pages</Label>
                         <Input
@@ -5396,6 +5348,19 @@ export default function AdminPage() {
                             onChange={(e) => setEbookForm({ ...ebookForm, audiobook_url: e.target.value })}
                             placeholder="https://example.com/audiobook-stream"
                           />
+                        </div>
+                      )}
+                      {!ebookForm.is_audiobook && (
+                        <div className="space-y-2 col-span-2">
+                          <Label>URL de lecture directe</Label>
+                          <Input
+                            value={ebookForm.reading_url}
+                            onChange={(e) => setEbookForm({ ...ebookForm, reading_url: e.target.value })}
+                            placeholder="https://example.com/reader?book=..."
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Lien pour le bouton "Lire en ligne" (optionnel)
+                          </p>
                         </div>
                       )}
                       <div className="space-y-2 col-span-2">
@@ -5836,7 +5801,6 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Interactive World Tab Content */}
           <TabsContent value="interactive-world">
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
@@ -5935,7 +5899,7 @@ export default function AdminPage() {
                   </div>
                   
                   <div className="flex justify-end pt-4">
-                    {/* CHANGE: Renamed handleSaveWorldSettings to handleSaveInteractiveSettings */}
+                    {/* CHANGE: Renamed handleWorldSettings to handleSaveWorldSettings */}
                     <Button 
                       onClick={handleSaveWorldSettings}
                       className="bg-blue-600 hover:bg-blue-700"

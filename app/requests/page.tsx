@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { Search, Plus, ArrowLeft } from "lucide-react"
+import { Search, Plus, ArrowLeft } from 'lucide-react'
 import { searchMulti } from "@/lib/tmdb"
 import Image from "next/image"
 import Link from "next/link"
@@ -45,7 +45,13 @@ export default function RequestsPage() {
       const response = await fetch("/api/content-requests")
       const data = await response.json()
       setRequests(data.requests || [])
-      setMyRequests(data.requests || [])
+      
+      if (user) {
+        const userRequests = (data.requests || []).filter((req: any) => req.user_id === user.id)
+        setMyRequests(userRequests)
+      } else {
+        setMyRequests([])
+      }
     } catch (error) {
       console.error("Error loading requests:", error)
     }

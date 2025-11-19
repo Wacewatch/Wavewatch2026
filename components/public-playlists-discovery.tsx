@@ -24,20 +24,9 @@ export function PublicPlaylistsDiscovery() {
     totalCount,
     itemsPerPage,
     goToPage,
+    sortBy,
+    setSortBy,
   } = usePublicPlaylists()
-  const [sortBy, setSortBy] = useState<"recent" | "popular" | "liked">("recent")
-
-  const sortedPlaylists = [...playlists].sort((a, b) => {
-    switch (sortBy) {
-      case "popular":
-        return b.likes_count - b.dislikes_count - (a.likes_count - a.dislikes_count)
-      case "liked":
-        return b.likes_count - a.likes_count
-      case "recent":
-      default:
-        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
-    }
-  })
 
   if (loading) {
     return (
@@ -67,15 +56,6 @@ export function PublicPlaylistsDiscovery() {
             Récentes
           </Button>
           <Button
-            variant={sortBy === "popular" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSortBy("popular")}
-            className={sortBy === "popular" ? "bg-blue-600" : "border-gray-600 text-gray-300"}
-          >
-            <TrendingUp className="w-4 h-4 mr-1" />
-            Populaires
-          </Button>
-          <Button
             variant={sortBy === "liked" ? "default" : "outline"}
             size="sm"
             onClick={() => setSortBy("liked")}
@@ -99,7 +79,7 @@ export function PublicPlaylistsDiscovery() {
       </div>
 
       {/* Playlists Grid */}
-      {sortedPlaylists.length === 0 ? (
+      {playlists.length === 0 ? (
         <Card className="bg-gray-800 border-gray-700">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Globe className="w-16 h-16 text-gray-600 mb-4" />
@@ -114,7 +94,7 @@ export function PublicPlaylistsDiscovery() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {sortedPlaylists.map((playlist) => (
+            {playlists.map((playlist) => (
               <Link key={playlist.id} href={`/playlists/${playlist.id}`}>
                 <Card
                   className={`border-gray-700 hover:border-opacity-80 transition-all duration-300 cursor-pointer transform hover:scale-105 ${
@@ -347,13 +327,12 @@ export function PublicPlaylistsDiscovery() {
             ))}
           </div>
 
-          {/* Pagination controls */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-700">
-              <div className="text-sm text-gray-400">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-8 pt-6 border-t border-gray-700">
+              <div className="text-sm text-gray-400 text-center sm:text-left">
                 Affichage de {(currentPage - 1) * itemsPerPage + 1} à {Math.min(currentPage * itemsPerPage, totalCount)} sur {totalCount} playlists
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -362,7 +341,7 @@ export function PublicPlaylistsDiscovery() {
                   className="border-gray-600 text-gray-300 hover:bg-gray-700"
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" />
-                  Précédent
+                  <span className="hidden sm:inline">Précédent</span>
                 </Button>
                 <div className="flex items-center gap-1">
                   {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -382,7 +361,7 @@ export function PublicPlaylistsDiscovery() {
                         variant={currentPage === pageNum ? "default" : "outline"}
                         size="sm"
                         onClick={() => goToPage(pageNum)}
-                        className={currentPage === pageNum ? "bg-blue-600" : "border-gray-600 text-gray-300 hover:bg-gray-700"}
+                        className={`min-w-[2.5rem] ${currentPage === pageNum ? "bg-blue-600" : "border-gray-600 text-gray-300 hover:bg-gray-700"}`}
                       >
                         {pageNum}
                       </Button>
@@ -396,7 +375,7 @@ export function PublicPlaylistsDiscovery() {
                   disabled={currentPage === totalPages}
                   className="border-gray-600 text-gray-300 hover:bg-gray-700"
                 >
-                  Suivant
+                  <span className="hidden sm:inline">Suivant</span>
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>

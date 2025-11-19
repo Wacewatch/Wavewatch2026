@@ -28,17 +28,18 @@ export function usePublicPlaylists() {
   const [playlists, setPlaylists] = useState<PublicPlaylist[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [sortBy, setSortBy] = useState<"recent" | "popular" | "liked">("recent")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [itemsPerPage] = useState(30)
   const supabase = createClient()
   const isMountedRef = useRef(true)
 
-  const loadPublicPlaylists = useCallback(async (page = 1) => {
+  const loadPublicPlaylists = useCallback(async (page = 1, sort: "recent" | "liked" = "recent") => {
     if (!isMountedRef.current) return
 
     try {
-      console.log("[v0] Loading public playlists... page:", page)
+      console.log("[v0] Loading public playlists... page:", page, "sort:", sort)
 
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), 10000))
 
@@ -53,15 +54,36 @@ export function usePublicPlaylists() {
 
       const offset = (page - 1) * itemsPerPage
 
-      const queryPromise = supabase
+      let query = supabase
         .from("playlists")
         .select("id, user_id, title, description, theme_color, created_at, updated_at")
         .eq("is_public", true)
-        .order("updated_at", { ascending: false })
-        .range(offset, offset + itemsPerPage - 1)
+
+      // For liked sort, we need to join with playlist_likes and count
+      if (sort === "liked") {
+        // First get all playlists with their like counts
+        const { data: likesData } = await supabase
+          .from("playlist_likes")
+          .select("playlist_id, is_like")
+
+        // Count likes per playlist
+        const likeCounts: Record<string, number> = {}
+        likesData?.forEach((like) => {
+          if (like.is_like) {
+            likeCounts[like.playlist_id] = (likeCounts[like.playlist_id] || 0) + 1
+          }
+        })
+
+        // Apply default ordering (will be overridden client-side)
+        query = query.order("updated_at", { ascending: false })
+      } else {
+        query = query.order("updated_at", { ascending: false })
+      }
+
+      query = query.range(offset, offset + itemsPerPage - 1)
 
       const { data: playlistsData, error: playlistsError } = (await Promise.race([
-        queryPromise as any,
+        query as any,
         timeoutPromise,
       ])) as any
 
@@ -69,16 +91,6 @@ export function usePublicPlaylists() {
 
       if (playlistsError) {
         console.error("[v0] Error loading public playlists:", playlistsError.message)
-        console.error("[v0] Error code:", playlistsError.code)
-        console.error("[v0] Error hint:", playlistsError.hint)
-
-        if (playlistsError.message.includes("JSON") || playlistsError.message.includes("Invalid")) {
-          console.error("[v0] ❌ Supabase project issue:")
-          console.error("[v0]   - Your Supabase project may be PAUSED")
-          console.error("[v0]   - Go to https://supabase.com/dashboard to check project status")
-          console.error("[v0]   - Or the 'playlists' table may not exist")
-        }
-
         throw playlistsError
       }
 
@@ -141,7 +153,7 @@ export function usePublicPlaylists() {
       const userLikes = userLikesResult.data || []
       const userFavorites = userFavoritesResult.data || []
 
-      const processedPlaylists = playlistsData.map((playlist) => {
+      let processedPlaylists = playlistsData.map((playlist) => {
         const itemsCount = itemsCounts.filter((item) => item.playlist_id === playlist.id).length
         const playlistLikes = likesData.filter((like) => like.playlist_id === playlist.id)
         const likesCount = playlistLikes.filter((like) => like.is_like).length
@@ -166,6 +178,10 @@ export function usePublicPlaylists() {
           is_favorited: isFavorited,
         }
       })
+
+      if (sort === "liked") {
+        processedPlaylists.sort((a, b) => b.likes_count - a.likes_count)
+      }
 
       console.log("[v0] Public playlists loaded successfully:", processedPlaylists.length)
       console.log(
@@ -212,8 +228,8 @@ export function usePublicPlaylists() {
   }, [])
 
   useEffect(() => {
-    loadPublicPlaylists(1)
-  }, [loadPublicPlaylists])
+    loadPublicPlaylists(1, sortBy)
+  }, [sortBy, loadPublicPlaylists])
 
   const toggleLike = async (playlistId: string, isLike: boolean) => {
     if (!user?.id) {
@@ -387,6 +403,8 @@ export function usePublicPlaylists() {
     loading,
     searchQuery,
     setSearchQuery,
+    sortBy,
+    setSortBy,
     toggleLike,
     toggleFavorite,
     refreshPlaylists: loadPublicPlaylists,
@@ -395,6 +413,6 @@ export function usePublicPlaylists() {
     totalCount,
     itemsPerPage,
     totalPages: Math.ceil(totalCount / itemsPerPage),
-    goToPage: (page: number) => loadPublicPlaylists(page),
+    goToPage: (page: number) => loadPublicPlaylists(page, sortBy),
   }
 }

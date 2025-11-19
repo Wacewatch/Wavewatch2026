@@ -7,12 +7,12 @@ import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Globe, Lock, Calendar, Film, Trash2, Clock } from "lucide-react"
+import { ArrowLeft, Globe, Lock, Calendar, Film, Trash2, Clock } from 'lucide-react'
 import { usePlaylists } from "@/hooks/use-playlists"
 import { createClient } from "@/lib/supabase/client"
 import Image from "next/image"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter } from 'next/navigation'
 import { toast } from "@/hooks/use-toast"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { IframeModal } from "@/components/iframe-modal"
@@ -169,7 +169,7 @@ export default function PlaylistContentPage() {
     console.log("[v0] Playing playlist item:", item)
 
     if (item.media_type === "tv-channel") {
-      const streamUrl = item.stream_url || item.streamUrl || item.url || item.poster_path
+      const streamUrl = item.stream_url || item.streamUrl || item.url
       console.log("[v0] TV Channel stream URL:", streamUrl)
 
       if (streamUrl) {
@@ -282,6 +282,14 @@ export default function PlaylistContentPage() {
       const episodeId = item.episode_id || item.tmdb_id
       const seriesId = item.series_id || item.content_id
       router.push(`/tv-shows/${seriesId}/episode/${episodeId}`)
+      return
+    }
+
+    if (item.media_type === "movie") {
+      router.push(`/movies/${item.tmdb_id || item.content_id}`)
+      return
+    } else if (item.media_type === "tv") {
+      router.push(`/tv-shows/${item.tmdb_id || item.content_id}`)
       return
     }
   }
@@ -662,17 +670,21 @@ export default function PlaylistContentPage() {
                   const content = (
                     <div key={item.id} className="space-y-2 group">
                       <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700 cursor-pointer">
-                        <Image
-                          src={imageUrl || "/placeholder.svg"}
-                          alt={item.title}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform"
-                          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 12.5vw"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement
-                            target.src = "/placeholder.svg?height=300&width=200"
-                          }}
-                        />
+                        {isPlayableItem ? (
+                          <button onClick={handleItemClick} className="w-full h-full" type="button"></button>
+                        ) : (
+                          <Image
+                            src={imageUrl || "/placeholder.svg"}
+                            alt={item.title}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform"
+                            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 25vw, 12.5vw"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.src = "/placeholder.svg?height=300&width=200"
+                            }}
+                          />
+                        )}
                         {isOwner && (
                           <div className="absolute top-2 right-2">
                             <Button

@@ -4,7 +4,7 @@ import { useState } from "react"
 import { PublicPlaylistsDiscovery } from "@/components/public-playlists-discovery"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, TrendingUp, Clock, Heart } from "lucide-react"
+import { Search, TrendingUp, Clock, Heart } from 'lucide-react'
 
 export default function PublicPlaylistsPage() {
   const [searchQuery, setSearchQuery] = useState("")

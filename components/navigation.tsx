@@ -51,14 +51,12 @@ export function Navigation() {
     { id: "dark", name: "Sombre", gradient: "from-gray-900 to-gray-800" },
     { id: "light", name: "Clair", gradient: "from-gray-100 to-gray-200" },
     { id: "ocean", name: "Océan", gradient: "from-blue-900 to-cyan-700" },
-    { id: "sunset", name: "Coucher de soleil", gradient: "from-orange-600 to-pink-600" },
     { id: "forest", name: "Forêt", gradient: "from-green-900 to-emerald-700" },
     { id: "midnight", name: "Minuit", gradient: "from-indigo-950 to-blue-900" },
     { id: "aurora", name: "Aurore", gradient: "from-teal-800 to-cyan-600" },
     { id: "desert", name: "Désert", gradient: "from-yellow-800 to-orange-700" },
     { id: "lavender", name: "Lavande", gradient: "from-purple-400 to-pink-400" },
     { id: "crimson", name: "Cramoisi", gradient: "from-red-900 to-rose-700" },
-    { id: "sapphire", name: "Saphir", gradient: "from-blue-800 to-indigo-700" },
     { id: "jade", name: "Jade", gradient: "from-emerald-800 to-teal-700" },
   ]
 
@@ -239,17 +237,12 @@ export function Navigation() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
-                {user?.isAdmin ? (
-                  <DropdownMenuItem asChild>
-                    <Link href="/interactive" style={{ color: "hsl(var(--nav-text))" }}>
-                      WaveWatch World
-                    </Link>
-                  </DropdownMenuItem>
-                ) : (
-                  <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
-                    WaveWatch World <span className="ml-auto text-xs">Bientôt</span>
-                  </DropdownMenuItem>
-                )}
+                <DropdownMenuItem asChild>
+                  <Link href="/interactive" style={{ color: "hsl(var(--nav-text))" }} className="flex items-center justify-between">
+                    WaveWatch World
+                    <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">NEW</Badge>
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -524,7 +517,6 @@ export function Navigation() {
 
             {/* Mobile Navigation Links */}
             <div className="space-y-6">
-              {/* User Actions */}
               {!user ? (
                 <div className="flex flex-col space-y-2">
                   <Button
@@ -704,8 +696,9 @@ export function Navigation() {
                         className="w-full justify-start"
                         style={{ color: "hsl(var(--nav-text))" }}
                       >
-                        <Link href="/ebooks" onClick={() => setIsMenuOpen(false)}>
+                        <Link href="/ebooks" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-between">
                           Ebooks
+                          <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">NEW</Badge>
                         </Link>
                       </Button>
                     </>
@@ -793,27 +786,17 @@ export function Navigation() {
                       Découvrir des Playlists
                     </Link>
                   </Button>
-                  {user?.isAdmin ? (
-                    <Button
-                      asChild
-                      variant="ghost"
-                      className="w-full justify-start"
-                      style={{ color: "hsl(var(--nav-text))" }}
-                    >
-                      <Link href="/interactive" onClick={() => setIsMenuOpen(false)}>
-                        WaveWatch World
-                      </Link>
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="ghost"
-                      disabled
-                      className="w-full justify-start opacity-60 cursor-not-allowed"
-                      style={{ color: "hsl(var(--nav-text-secondary))" }}
-                    >
-                      WaveWatch World <span className="ml-auto text-xs">Bientôt</span>
-                    </Button>
-                  )}
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                  >
+                    <Link href="/interactive" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-between">
+                      WaveWatch World
+                      <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">NEW</Badge>
+                    </Link>
+                  </Button>
                 </div>
               </div>
             </div>
