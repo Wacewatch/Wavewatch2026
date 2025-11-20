@@ -48,6 +48,7 @@ interface InteractiveWorldProps {
   userProfile: any
 }
 
+// RealisticAvatar is only used inside Canvas
 function RealisticAvatar({
   position,
   avatarStyle,
@@ -98,117 +99,87 @@ function RealisticAvatar({
   return (
     <group ref={groupRef} position={position}>
       {/* Torso - height divided by 2 */}
-      <mesh position={[0, 0.375, 0]} castShadow>
-        <boxGeometry args={[0.6, 0.45, 0.35]} />
-        <meshStandardMaterial color={style.bodyColor} metalness={0.1} roughness={0.8} />
+      <mesh castShadow position={[0, 1.2, 0]}>
+        <boxGeometry args={[0.5, 0.6, 0.3]} />
+        <meshStandardMaterial color={style.bodyColor} />
       </mesh>
 
       {/* Head */}
-      <mesh position={[0, 0.85, 0]} castShadow>
-        <sphereGeometry args={[0.32, 32, 32]} />
-        <meshStandardMaterial color={style.skinTone} metalness={0.1} roughness={0.6} />
+      <mesh castShadow position={[0, 1.8, 0]}>
+        <boxGeometry args={[0.4, 0.4, 0.4]} />
+        <meshStandardMaterial color={style.skinTone} />
       </mesh>
 
-      <Html position={[0, 0.85, 0.32]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-        <div className="text-2xl pointer-events-none">{style.faceSmiley}</div>
-      </Html>
-
-      {/* Hair styles */}
+      {/* Hair */}
       {style.hairStyle === "short" && (
-        <mesh position={[0, 1.05, 0]} castShadow>
-          <sphereGeometry args={[0.34, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshStandardMaterial color={style.hairColor} metalness={0} roughness={1} />
+        <mesh castShadow position={[0, 2.05, 0]}>
+          <boxGeometry args={[0.42, 0.15, 0.42]} />
+          <meshStandardMaterial color={style.hairColor} />
         </mesh>
       )}
       {style.hairStyle === "long" && (
         <>
-          <mesh position={[0, 1.05, 0]} castShadow>
-            <sphereGeometry args={[0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.5]} />
-            <meshStandardMaterial color={style.hairColor} metalness={0} roughness={1} />
+          <mesh castShadow position={[0, 2.05, 0]}>
+            <boxGeometry args={[0.42, 0.15, 0.42]} />
+            <meshStandardMaterial color={style.hairColor} />
           </mesh>
-          <mesh position={[0, 0.6, -0.3]} castShadow>
-            <boxGeometry args={[0.5, 0.6, 0.2]} />
-            <meshStandardMaterial color={style.hairColor} metalness={0} roughness={1} />
-          </mesh>
-        </>
-      )}
-
-      {/* Accessories */}
-      {style.accessory === "glasses" && (
-        <>
-          <mesh position={[-0.15, 0.85, 0.28]}>
-            <torusGeometry args={[0.08, 0.02, 8, 16]} />
-            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
-          </mesh>
-          <mesh position={[0.15, 0.85, 0.28]}>
-            <torusGeometry args={[0.08, 0.02, 8, 16]} />
-            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
-          </mesh>
-          <mesh position={[0, 0.85, 0.28]}>
-            <boxGeometry args={[0.12, 0.02, 0.02]} />
-            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
-          </mesh>
-        </>
-      )}
-      {style.accessory === "hat" && (
-        <>
-          <mesh position={[0, 1.15, 0]} castShadow>
-            <cylinderGeometry args={[0.35, 0.35, 0.15, 16]} />
-            <meshStandardMaterial color="#ef4444" metalness={0.2} roughness={0.8} />
-          </mesh>
-          <mesh position={[0, 1.25, 0]} castShadow>
-            <cylinderGeometry args={[0.25, 0.35, 0.2, 16]} />
-            <meshStandardMaterial color="#ef4444" metalness={0.2} roughness={0.8} />
+          <mesh castShadow position={[0, 1.7, 0.2]}>
+            <boxGeometry args={[0.42, 0.4, 0.1]} />
+            <meshStandardMaterial color={style.hairColor} />
           </mesh>
         </>
       )}
 
       {/* Left Arm */}
-      <group position={[-0.45, 0.3, 0]}>
-        <mesh position={[0, -0.25, 0]} castShadow>
-          <boxGeometry args={[0.2, 0.7, 0.2]} />
-          <meshStandardMaterial color={style.bodyColor} metalness={0.1} roughness={0.8} />
-        </mesh>
-        <mesh position={[0, -0.6, 0]}>
-          <sphereGeometry args={[0.13, 16, 16]} />
-          <meshStandardMaterial color={style.skinTone} metalness={0.1} roughness={0.6} />
-        </mesh>
-      </group>
+      <mesh castShadow position={[-0.35, 1.2, 0]}>
+        <boxGeometry args={[0.15, 0.5, 0.15]} />
+        <meshStandardMaterial color={style.skinTone} />
+      </mesh>
 
       {/* Right Arm */}
-      <group position={[0.45, 0.3, 0]}>
-        <mesh position={[0, -0.25, 0]} castShadow>
-          <boxGeometry args={[0.2, 0.7, 0.2]} />
-          <meshStandardMaterial color={style.bodyColor} metalness={0.1} roughness={0.8} />
-        </mesh>
-        <mesh position={[0, -0.6, 0]}>
-          <sphereGeometry args={[0.13, 16, 16]} />
-          <meshStandardMaterial color={style.skinTone} metalness={0.1} roughness={0.6} />
-        </mesh>
-      </group>
+      <mesh castShadow position={[0.35, 1.2, 0]}>
+        <boxGeometry args={[0.15, 0.5, 0.15]} />
+        <meshStandardMaterial color={style.skinTone} />
+      </mesh>
 
-      {/* Legs - unchanged position */}
-      <group position={[-0.2, 0.15, 0]}>
-        <mesh position={[0, -0.35, 0]} castShadow>
-          <boxGeometry args={[0.22, 0.7, 0.22]} />
-          <meshStandardMaterial color="#2563eb" metalness={0.1} roughness={0.9} />
-        </mesh>
-        <mesh position={[0, -0.7, 0.1]}>
-          <boxGeometry args={[0.24, 0.15, 0.3]} />
-          <meshStandardMaterial color="#1e3a8a" metalness={0.2} roughness={0.8} />
-        </mesh>
-      </group>
+      {/* Left Leg */}
+      <mesh castShadow position={[-0.15, 0.65, 0]}>
+        <boxGeometry args={[0.15, 0.6, 0.15]} />
+        <meshStandardMaterial color={style.bodyColor} />
+      </mesh>
 
-      <group position={[0.2, 0.15, 0]}>
-        <mesh position={[0, -0.35, 0]} castShadow>
-          <boxGeometry args={[0.22, 0.7, 0.22]} />
-          <meshStandardMaterial color="#2563eb" metalness={0.1} roughness={0.9} />
+      {/* Right Leg */}
+      <mesh castShadow position={[0.15, 0.65, 0]}>
+        <boxGeometry args={[0.15, 0.6, 0.15]} />
+        <meshStandardMaterial color={style.bodyColor} />
+      </mesh>
+
+      {/* Face Smiley */}
+      <Html
+        position={[0, 1.8, 0.21]}
+        center
+        distanceFactor={1}
+        style={{
+          pointerEvents: "none",
+          userSelect: "none",
+        }}
+      >
+        <div className="text-2xl">{style.faceSmiley}</div>
+      </Html>
+
+      {/* Accessory */}
+      {style.accessory === "hat" && (
+        <mesh castShadow position={[0, 2.25, 0]}>
+          <cylinderGeometry args={[0.25, 0.3, 0.15, 16]} />
+          <meshStandardMaterial color="#1f2937" />
         </mesh>
-        <mesh position={[0, -0.7, 0.1]}>
-          <boxGeometry args={[0.24, 0.15, 0.3]} />
-          <meshStandardMaterial color="#1e3a8a" metalness={0.2} roughness={0.8} />
+      )}
+      {style.accessory === "glasses" && (
+        <mesh position={[0, 1.85, 0.22]}>
+          <boxGeometry args={[0.35, 0.08, 0.02]} />
+          <meshStandardMaterial color="#000000" />
         </mesh>
-      </group>
+      )}
     </group>
   )
 }
