@@ -2,7 +2,7 @@
 
 import { Canvas, useFrame } from "@react-three/fiber"
 import { OrbitControls, Sky, Html, PerspectiveCamera } from "@react-three/drei"
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback } from "react" // Import React
 import { createClient } from "@/lib/supabase/client"
 import {
   Minimize,
@@ -29,6 +29,8 @@ import {
   Building2,
   Gamepad2,
   Trophy,
+  Film,
+  Sparkles,
 } from "lucide-react"
 import type * as THREE from "three"
 import { useRouter } from "next/navigation" // Assuming router is needed for navigation
@@ -46,7 +48,17 @@ interface InteractiveWorldProps {
   userProfile: any
 }
 
-function RealisticAvatar({
+// Define UserProfile type for clarity
+type UserProfile = {
+  id: string
+  user_id: string
+  username: string
+  is_admin?: boolean
+  is_vip?: boolean
+  is_vip_plus?: boolean
+}
+
+function RealisticAvatarComponent({
   position,
   avatarStyle,
   isMoving,
@@ -96,117 +108,75 @@ function RealisticAvatar({
   return (
     <group ref={groupRef} position={position}>
       {/* Torso - height divided by 2 */}
-      <mesh position={[0, 0.375, 0]} castShadow>
-        <boxGeometry args={[0.6, 0.45, 0.35]} />
-        <meshStandardMaterial color={style.bodyColor} metalness={0.1} roughness={0.8} />
+      <mesh castShadow position={[0, 1.2, 0]}>
+        <boxGeometry args={[0.5, 0.6, 0.3]} />
+        <meshStandardMaterial color={style.bodyColor} />
       </mesh>
 
       {/* Head */}
-      <mesh position={[0, 0.85, 0]} castShadow>
-        <sphereGeometry args={[0.32, 32, 32]} />
-        <meshStandardMaterial color={style.skinTone} metalness={0.1} roughness={0.6} />
+      <mesh castShadow position={[0, 1.8, 0]}>
+        <boxGeometry args={[0.4, 0.4, 0.4]} />
+        <meshStandardMaterial color={style.skinTone} />
       </mesh>
 
-      <Html position={[0, 0.85, 0.32]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-        <div className="text-2xl pointer-events-none">{style.faceSmiley}</div>
-      </Html>
-
-      {/* Hair styles */}
+      {/* Hair */}
       {style.hairStyle === "short" && (
-        <mesh position={[0, 1.05, 0]} castShadow>
-          <sphereGeometry args={[0.34, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshStandardMaterial color={style.hairColor} metalness={0} roughness={1} />
+        <mesh castShadow position={[0, 2.05, 0]}>
+          <boxGeometry args={[0.42, 0.15, 0.42]} />
+          <meshStandardMaterial color={style.hairColor} />
         </mesh>
       )}
       {style.hairStyle === "long" && (
         <>
-          <mesh position={[0, 1.05, 0]} castShadow>
-            <sphereGeometry args={[0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI / 1.5]} />
-            <meshStandardMaterial color={style.hairColor} metalness={0} roughness={1} />
+          <mesh castShadow position={[0, 2.05, 0]}>
+            <boxGeometry args={[0.42, 0.15, 0.42]} />
+            <meshStandardMaterial color={style.hairColor} />
           </mesh>
-          <mesh position={[0, 0.6, -0.3]} castShadow>
-            <boxGeometry args={[0.5, 0.6, 0.2]} />
-            <meshStandardMaterial color={style.hairColor} metalness={0} roughness={1} />
-          </mesh>
-        </>
-      )}
-
-      {/* Accessories */}
-      {style.accessory === "glasses" && (
-        <>
-          <mesh position={[-0.15, 0.85, 0.28]}>
-            <torusGeometry args={[0.08, 0.02, 8, 16]} />
-            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
-          </mesh>
-          <mesh position={[0.15, 0.85, 0.28]}>
-            <torusGeometry args={[0.08, 0.02, 8, 16]} />
-            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
-          </mesh>
-          <mesh position={[0, 0.85, 0.28]}>
-            <boxGeometry args={[0.12, 0.02, 0.02]} />
-            <meshStandardMaterial color="#1f2937" metalness={0.8} roughness={0.2} />
-          </mesh>
-        </>
-      )}
-      {style.accessory === "hat" && (
-        <>
-          <mesh position={[0, 1.15, 0]} castShadow>
-            <cylinderGeometry args={[0.35, 0.35, 0.15, 16]} />
-            <meshStandardMaterial color="#ef4444" metalness={0.2} roughness={0.8} />
-          </mesh>
-          <mesh position={[0, 1.25, 0]} castShadow>
-            <cylinderGeometry args={[0.25, 0.35, 0.2, 16]} />
-            <meshStandardMaterial color="#ef4444" metalness={0.2} roughness={0.8} />
+          <mesh castShadow position={[0, 1.7, 0.2]}>
+            <boxGeometry args={[0.42, 0.4, 0.1]} />
+            <meshStandardMaterial color={style.hairColor} />
           </mesh>
         </>
       )}
 
       {/* Left Arm */}
-      <group position={[-0.45, 0.3, 0]}>
-        <mesh position={[0, -0.25, 0]} castShadow>
-          <boxGeometry args={[0.2, 0.7, 0.2]} />
-          <meshStandardMaterial color={style.bodyColor} metalness={0.1} roughness={0.8} />
-        </mesh>
-        <mesh position={[0, -0.6, 0]}>
-          <sphereGeometry args={[0.13, 16, 16]} />
-          <meshStandardMaterial color={style.skinTone} metalness={0.1} roughness={0.6} />
-        </mesh>
-      </group>
+      <mesh castShadow position={[-0.35, 1.2, 0]}>
+        <boxGeometry args={[0.15, 0.5, 0.15]} />
+        <meshStandardMaterial color={style.skinTone} />
+      </mesh>
 
       {/* Right Arm */}
-      <group position={[0.45, 0.3, 0]}>
-        <mesh position={[0, -0.25, 0]} castShadow>
-          <boxGeometry args={[0.2, 0.7, 0.2]} />
-          <meshStandardMaterial color={style.bodyColor} metalness={0.1} roughness={0.8} />
-        </mesh>
-        <mesh position={[0, -0.6, 0]}>
-          <sphereGeometry args={[0.13, 16, 16]} />
-          <meshStandardMaterial color={style.skinTone} metalness={0.1} roughness={0.6} />
-        </mesh>
-      </group>
+      <mesh castShadow position={[0.35, 1.2, 0]}>
+        <boxGeometry args={[0.15, 0.5, 0.15]} />
+        <meshStandardMaterial color={style.skinTone} />
+      </mesh>
 
-      {/* Legs - unchanged position */}
-      <group position={[-0.2, 0.15, 0]}>
-        <mesh position={[0, -0.35, 0]} castShadow>
-          <boxGeometry args={[0.22, 0.7, 0.22]} />
-          <meshStandardMaterial color="#2563eb" metalness={0.1} roughness={0.9} />
-        </mesh>
-        <mesh position={[0, -0.7, 0.1]}>
-          <boxGeometry args={[0.24, 0.15, 0.3]} />
-          <meshStandardMaterial color="#1e3a8a" metalness={0.2} roughness={0.8} />
-        </mesh>
-      </group>
+      {/* Left Leg */}
+      <mesh castShadow position={[-0.15, 0.65, 0]}>
+        <boxGeometry args={[0.15, 0.6, 0.15]} />
+        <meshStandardMaterial color={style.bodyColor} />
+      </mesh>
 
-      <group position={[0.2, 0.15, 0]}>
-        <mesh position={[0, -0.35, 0]} castShadow>
-          <boxGeometry args={[0.22, 0.7, 0.22]} />
-          <meshStandardMaterial color="#2563eb" metalness={0.1} roughness={0.9} />
+      {/* Right Leg */}
+      <mesh castShadow position={[0.15, 0.65, 0]}>
+        <boxGeometry args={[0.15, 0.6, 0.15]} />
+        <meshStandardMaterial color={style.bodyColor} />
+      </mesh>
+
+      {/* Accessory */}
+      {style.accessory === "glasses" && (
+        <mesh castShadow position={[0, 1.85, 0.2]}>
+          <boxGeometry args={[0.35, 0.1, 0.05]} />
+          <meshStandardMaterial color="#333333" />
         </mesh>
-        <mesh position={[0, -0.7, 0.1]}>
-          <boxGeometry args={[0.24, 0.15, 0.3]} />
-          <meshStandardMaterial color="#1e3a8a" metalness={0.2} roughness={0.8} />
+      )}
+
+      {style.accessory === "hat" && (
+        <mesh castShadow position={[0, 2.2, 0]}>
+          <cylinderGeometry args={[0.25, 0.22, 0.15, 16]} />
+          <meshStandardMaterial color="#8b4513" />
         </mesh>
-      </group>
+      )}
     </group>
   )
 }
@@ -276,7 +246,11 @@ function RealisticLamppost({ position }: { position: [number, number, number] })
   )
 }
 
-export default function InteractiveWorld({ userId, userProfile }: InteractiveWorldProps) {
+export default function InteractiveWorld({
+  userProfile: initialUserProfile,
+}: {
+  userProfile: UserProfile | null
+}) {
   const router = useRouter() // Initialize router
   const [myProfile, setMyProfile] = useState<any>(null)
   const [otherPlayers, setOtherPlayers] = useState<any[]>([])
@@ -297,14 +271,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [currentEmoji, setCurrentEmoji] = useState<string | null>(null)
   const [isJumping, setIsJumping] = useState(false)
 
-  const [showAnimatedEmotes, setShowAnimatedEmotes] = useState(false)
-
   const [movement, setMovement] = useState({ x: 0, z: 0 })
   const [showChat, setShowChat] = useState(false)
   const [showChatInput, setShowChatInput] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAvatarCustomizer, setShowAvatarCustomizer] = useState(false)
-  const [showCinema, setShowCinema] = useState(false)
+  const [showCinema, setShowCinema] = useState(false) // State for cinema modal
   const [showUserCard, setShowUserCard] = useState(false)
   const [currentCinemaRoom, setCurrentCinemaRoom] = useState<any>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -323,7 +295,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [showArcade, setShowArcade] = useState(false)
   const [currentArcadeMachine, setCurrentArcadeMachine] = useState<any>(null)
   const [stadium, setStadium] = useState<any>(null)
-  const [showStadium, setShowStadium] = useState(false)
+  const [showStadium, setShowStadium] = useState(false) // <-- MODAL STATE
   const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
   const [showMenu, setShowMenu] = useState(false) // Added this state
 
@@ -346,11 +318,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [povMode, setPovMode] = useState(false)
 
   const [countdown, setCountdown] = useState<string>("")
+  const [currentMessage, setCurrentMessage] = useState<string | null>(null) // For player's own chat bubble
 
   // Synchronized actions state
   const [playerActions, setPlayerActions] = useState<Record<string, { action: string; timestamp: number }>>({})
   const [quickAction, setQuickAction] = useState<string | null>(null) // State for current quick action animation
   const keysPressed = useRef<Set<string>>(new Set()) // Ref for tracking pressed keys
+
+  const isMoving = movement.x !== 0 || movement.z !== 0
 
   useEffect(() => {
     const checkMobile = () => {
@@ -398,7 +373,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         supabase
           .from("interactive_profiles")
           .update({ is_online: false, last_seen: new Date().toISOString() })
-          .eq("user_id", userId)
+          .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
           .then(() => {
             console.log("[v0] User disconnected due to AFK")
             window.location.href = "/"
@@ -410,7 +385,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       events.forEach((event) => window.removeEventListener(event, updateActivity))
       clearInterval(checkAFK)
     }
-  }, [lastActivity, userId])
+  }, [lastActivity, initialUserProfile?.user_id]) // Depend on initialUserProfile?.user_id
 
   const checkCollision = (newX: number, newZ: number): boolean => {
     // Collision zones for objects in the world
@@ -501,7 +476,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           .from("interactive_profiles")
           .select("*")
           .eq("is_online", true)
-          .neq("user_id", userId)
+          .neq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
 
         if (profilesError) {
           console.error("[v0] Error loading profiles:", profilesError)
@@ -547,7 +522,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     supabase
       .from("interactive_profiles")
       .update({ is_online: true, last_seen: new Date().toISOString() })
-      .eq("user_id", userId)
+      .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
       .then()
 
     loadPlayers()
@@ -575,10 +550,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       supabase
         .from("interactive_profiles")
         .update({ is_online: false, last_seen: new Date().toISOString() })
-        .eq("user_id", userId)
+        .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
         .then()
     }
-  }, [userId])
+  }, [initialUserProfile?.user_id]) // Depend on initialUserProfile?.user_id
 
   useEffect(() => {
     const loadArcadeMachines = async () => {
@@ -671,7 +646,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   useEffect(() => {
     const loadAvatarStyle = async () => {
-      const { data } = await supabase.from("interactive_profiles").select("avatar_style").eq("user_id", userId).single()
+      const { data } = await supabase
+        .from("interactive_profiles")
+        .select("avatar_style")
+        .eq("user_id", initialUserProfile?.user_id || "")
+        .single() // Use initialUserProfile?.user_id
 
       if (data?.avatar_style) {
         setMyAvatarStyle(data.avatar_style)
@@ -679,11 +658,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
 
     loadAvatarStyle()
-  }, [userId])
+  }, [initialUserProfile?.user_id]) // Depend on initialUserProfile?.user_id
 
   const saveAvatarStyle = async (newStyle: any) => {
     setMyAvatarStyle(newStyle)
-    await supabase.from("interactive_profiles").update({ avatar_style: newStyle }).eq("user_id", userId)
+    await supabase
+      .from("interactive_profiles")
+      .update({ avatar_style: newStyle })
+      .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
   }
 
   useEffect(() => {
@@ -734,16 +716,20 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       if (dx !== 0 || dz !== 0) {
         setMovement({ x: dx, z: dz })
         setMyPosition((prev) => {
-          const newX = Math.max(-20, Math.min(20, prev.x + dx))
-          const newZ = Math.max(-20, Math.min(20, prev.z + dz))
+          // Calculate new position with bounds checking
+          const newXRaw = prev.x + dx
+          const newZRaw = prev.z + dz
+          const newX = Math.max(-20, Math.min(20, newXRaw))
+          const newZ = Math.max(-20, Math.min(20, newZRaw))
 
-          if (checkCollision(newX, newZ)) {
-            return prev // Don't move if collision detected
+          // Prevent movement if collision detected or if position changed due to bounds
+          if (checkCollision(newX, newZ) || newX !== newXRaw || newZ !== newZRaw) {
+            return prev // Don't move if collision detected or outside bounds
           }
 
           const newPos = {
             x: newX,
-            y: 0.5,
+            y: 0.5, // Assuming a fixed height
             z: newZ,
           }
 
@@ -754,7 +740,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               position_y: newPos.y,
               position_z: newPos.z,
             })
-            .eq("user_id", userId)
+            .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
             .then()
 
           return newPos
@@ -765,7 +751,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }, 50)
 
     return () => clearInterval(interval)
-  }, [userId, isSeatsLocked, mySeat]) // isSeatsLocked is now effectively unused
+  }, [initialUserProfile?.user_id, isSeatsLocked, mySeat]) // isSeatsLocked is now effectively unused
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -932,7 +918,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }, [])
 
   const handleEmoji = (emoji: string) => {
-    if (!userProfile) {
+    if (!initialUserProfile) {
       console.log("[v0] Cannot send emoji: userProfile is null")
       return
     }
@@ -945,7 +931,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       type: "broadcast",
       event: "player-action",
       payload: {
-        userId: userProfile.user_id,
+        userId: initialUserProfile.user_id,
         action: "emoji",
         emoji: emoji,
         timestamp: Date.now(),
@@ -956,7 +942,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const handleJump = () => {
-    if (!userProfile) {
+    if (!initialUserProfile) {
       console.log("[v0] Cannot jump: userProfile is null")
       return
     }
@@ -968,7 +954,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       type: "broadcast",
       event: "player-action",
       payload: {
-        userId: userProfile.user_id,
+        userId: initialUserProfile.user_id,
         action: "jump",
         timestamp: Date.now(),
       },
@@ -978,7 +964,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const sendMessage = async () => {
-    if (!userProfile || !userProfile.id) {
+    if (!initialUserProfile) {
       console.log("[v0] Cannot send message: userProfile is missing")
       return
     }
@@ -990,8 +976,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     if (chatInput.trim()) {
       const message = {
-        user_id: userProfile.id, // Use id instead of user_id
-        username: myProfile?.username || userProfile.username || "Joueur",
+        user_id: initialUserProfile.id, // Use id instead of user_id
+        username: myProfile?.username || initialUserProfile.username || "Joueur",
         message: chatInput.trim(),
         room: currentCinemaRoom ? `cinema_${currentCinemaRoom.id}` : "world",
         created_at: new Date().toISOString(),
@@ -1007,7 +993,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         console.log("[v0] Message sent successfully")
         setPlayerChatBubbles((prev) => ({
           ...prev,
-          [userProfile.id]: {
+          [initialUserProfile.id]: {
             message: chatInput.trim(),
             timestamp: Date.now(),
           },
@@ -1024,11 +1010,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       setMyPosition((prev) => {
         const speed = 0.15
-        const newX = Math.max(-20, Math.min(20, prev.x + dx * speed))
-        const newZ = Math.max(-20, Math.min(20, prev.z + dz * speed))
+        const newXRaw = prev.x + dx * speed
+        const newZRaw = prev.z + dz * speed
+        const newX = Math.max(-20, Math.min(20, newXRaw))
+        const newZ = Math.max(-20, Math.min(20, newZRaw))
 
-        if (checkCollision(newX, newZ)) {
-          return prev // Don't move if collision detected
+        if (checkCollision(newX, newZ) || newX !== newXRaw || newZ !== newZRaw) {
+          return prev // Don't move if collision detected or outside bounds
         }
 
         const newPos = {
@@ -1044,7 +1032,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             position_y: newPos.y,
             position_z: newPos.z,
           })
-          .eq("user_id", userId)
+          .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
           .then()
 
         return newPos
@@ -1056,7 +1044,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         setMovement({ x: 0, z: 0 })
       }
     },
-    [userId, supabase, isSeatsLocked, mySeat],
+    [initialUserProfile?.user_id, supabase, isSeatsLocked, mySeat],
   ) // isSeatsLocked and mySeat are now effectively unused here
 
   const handleEnterArcade = () => {
@@ -1077,7 +1065,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         position_z: arcadePos.z,
         current_room: "arcade",
       })
-      .eq("user_id", userId)
+      .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
       .then(() => console.log("[v0] Teleported to arcade room"))
   }
 
@@ -1094,7 +1082,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         position_z: mainPos.z,
         current_room: null,
       })
-      .eq("user_id", userId)
+      .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
       .then(() => console.log("[v0] Left arcade room"))
   }
 
@@ -1107,7 +1095,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setCurrentArcadeMachine(null)
   }
 
-  const handleEnterRoom = async (room: any) => {
+  const handleEnterCinemaRoom = async (room: any) => {
     setCurrentCinemaRoom(room)
     setShowCinema(false)
 
@@ -1121,7 +1109,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         position_y: 0.5,
         position_z: 0,
       })
-      .eq("user_id", userId)
+      .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
 
     const capacity = room.capacity || 50
     const seatsPerRow = 10
@@ -1150,7 +1138,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const handleLeaveRoom = async () => {
     if (mySeat) {
-      await supabase.from("interactive_cinema_seats").delete().eq("room_id", currentCinemaRoom.id).eq("user_id", userId)
+      await supabase
+        .from("interactive_cinema_seats")
+        .delete()
+        .eq("room_id", currentCinemaRoom.id)
+        .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
       setMySeat(null)
     }
 
@@ -1168,14 +1160,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         position_y: 0.5,
         position_z: 0,
       })
-      .eq("user_id", userId)
+      .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
   }
 
   const handleSitInAnySeat = async () => {
     if (!currentCinemaRoom) return
 
     // Find first available seat (not occupied by anyone)
-    const occupiedSeats = cinemaSeats.filter((s) => s.user_id && s.user_id !== userId)
+    const occupiedSeats = cinemaSeats.filter((s) => s.user_id && s.user_id !== initialUserProfile?.user_id) // Use initialUserProfile?.user_id
     const availableSeat = cinemaSeats.find((s) => !occupiedSeats.find((os) => os.seat_number === s.seat_number))
 
     if (!availableSeat) {
@@ -1193,7 +1185,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     if (mySeat === seatNumber) {
       // Stand up
-      await supabase.from("interactive_cinema_seats").delete().eq("room_id", currentCinemaRoom.id).eq("user_id", userId)
+      await supabase
+        .from("interactive_cinema_seats")
+        .delete()
+        .eq("room_id", currentCinemaRoom.id)
+        .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
 
       setMySeat(null)
       setMyPosition({ x: 0, y: 0.5, z: 0 }) // Reset position to world origin
@@ -1205,7 +1201,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       const { error } = await supabase.from("interactive_cinema_seats").upsert({
         room_id: currentCinemaRoom.id,
-        user_id: userId,
+        user_id: initialUserProfile?.user_id || "", // Use initialUserProfile?.user_id
         seat_number: seatNumber,
         row_number: seatData.row_number,
         is_occupied: true,
@@ -1227,12 +1223,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             position_y: seatData.position_y,
             position_z: seatData.position_z,
           })
-          .eq("user_id", userId)
+          .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
       }
     }
   }
 
-  const handleOpenStadiumModal = () => {
+  const handleShowStadiumModal = () => {
     setShowStadium(true)
   }
 
@@ -1240,7 +1236,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     if (!stadium) return
     setShowStadium(false)
     setCurrentCinemaRoom(null)
-    setCurrentRoom("stadium")
+    setCurrentRoom("stadium") // Set local state immediately
 
     // Teleport player to stadium viewing position
     const stadiumPos = { x: 0, y: 0.5, z: 10 } // Center position facing the screen
@@ -1255,7 +1251,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         position_z: stadiumPos.z,
         current_room: "stadium",
       })
-      .eq("user_id", userId)
+      .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
       .then(() => console.log("[v0] Teleported to stadium"))
   }
 
@@ -1272,7 +1268,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         position_z: mainPos.z,
         current_room: null,
       })
-      .eq("user_id", userId)
+      .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
       .then(() => console.log("[v0] Left stadium"))
   }
 
@@ -1296,7 +1292,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     const channel = supabase
       .channel("world-actions")
       .on("broadcast", { event: "player-action" }, (payload: any) => {
-        if (payload.userId && payload.userId !== userId) {
+        if (payload.userId && payload.userId !== initialUserProfile?.user_id) {
+          // Use initialUserProfile?.user_id
           // Handle actions like jump and emoji
           setPlayerActions((prev) => ({
             ...prev,
@@ -1325,20 +1322,45 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [initialUserProfile?.user_id]) // Depend on initialUserProfile?.user_id
+
+  const handleSendChatMessage = (message: string) => {
+    if (!initialUserProfile?.id || !message.trim()) return
+
+    // Update local bubble immediately
+    setPlayerChatBubbles((prev) => ({
+      ...prev,
+      [initialUserProfile.id]: { message: message.trim(), timestamp: Date.now() },
+    }))
+
+    // Broadcast to other players
+    supabase
+      .channel("world-actions")
+      .send({
+        type: "broadcast",
+        event: "chat-message",
+        payload: {
+          user_id: initialUserProfile.id,
+          username: initialUserProfile.username || "Joueur",
+          message: message.trim(),
+          timestamp: Date.now(),
+        },
+      })
+      .then(() => console.log("[v0] Chat message broadcasted"))
+  }
 
   const broadcastAction = async (action: string) => {
     console.log("[v0] Broadcasting action:", action)
     await supabase.channel("player-actions").send({
       type: "broadcast",
       event: "action",
-      payload: { userId: userId, action }, // Use userId from props
+      payload: { userId: initialUserProfile?.user_id, action }, // Use initialUserProfile?.user_id from props
     })
   }
 
   // Handle quick actions (emotes, jumps)
   const handleQuickAction = (action: string) => {
-    if (!userProfile) {
+    if (!initialUserProfile) {
       console.log("[v0] Cannot perform quick action: userProfile is null")
       return
     }
@@ -1351,7 +1373,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       type: "broadcast",
       event: "player-action",
       payload: {
-        userId: userProfile.user_id,
+        userId: initialUserProfile.user_id,
         action,
         timestamp: Date.now(),
       },
@@ -1361,10 +1383,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   useEffect(() => {
-    if (!userId) return
+    if (!initialUserProfile?.user_id) return // Wait for user ID
 
     const loadMyProfile = async () => {
-      const { data, error } = await supabase.from("interactive_profiles").select("*").eq("user_id", userId).single()
+      const { data, error } = await supabase
+        .from("interactive_profiles")
+        .select("*")
+        .eq("user_id", initialUserProfile.user_id)
+        .single()
 
       if (error) {
         console.error("[v0] Error loading my profile:", error)
@@ -1382,7 +1408,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
 
     loadMyProfile()
-  }, [userId])
+  }, [initialUserProfile?.user_id])
 
   const handleQuitWorld = async () => {
     // Save current position
@@ -1393,7 +1419,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         position_y: myPosition.y,
         position_z: myPosition.z,
       })
-      .eq("user_id", userId)
+      .eq("user_id", initialUserProfile?.user_id || "") // Use initialUserProfile?.user_id
 
     // Redirect to home
     router.push("/")
@@ -1469,46 +1495,31 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <meshStandardMaterial color="#4ade80" roughness={0.95} metalness={0} />
             </mesh>
 
-            {/* Cinema building - OPEN */}
-            <group position={[15, 0, -5]}>
-              {/* Building */}
-              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
-                <boxGeometry args={[8, 5, 8]} />
-                <meshStandardMaterial color="#3b82f6" />
-              </mesh>
-              <mesh position={[0, 5.3, 0]} castShadow receiveShadow>
-                <coneGeometry args={[5, 1.2, 4]} rotation={[0, Math.PI / 4, 0]} />
-                <meshStandardMaterial color="#2563eb" />
-              </mesh>
-              <mesh position={[0, 1.2, 4.1]} receiveShadow>
-                <boxGeometry args={[2, 2.3, 0.2]} />
-                <meshStandardMaterial color="#1e293b" />
-              </mesh>
-              <Html position={[0, 6, 0]} center>
-                <button
-                  onClick={() => setShowCinema(true)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
-                >
-                  🎬 Voir les Salles
-                </button>
-              </Html>
-            </group>
-
-            {/* Arcade building - NOW OPEN */}
-            <group position={[-15, 0, -15]}>
+            {/* Arcade building - was Arcade Building - Now OPEN */}
+            <group position={[-25, 0, 0]}>
               <mesh position={[0, 3, 0]} castShadow>
                 <boxGeometry args={[10, 6, 10]} />
-                <meshStandardMaterial color="#9333ea" />
+                <meshStandardMaterial color="#8b5cf6" roughness={0.7} metalness={0.2} />
               </mesh>
-              <mesh position={[0, 6.3, 0]} castShadow>
-                <coneGeometry args={[6, 1.5, 4]} rotation={[0, Math.PI / 4, 0]} />
-                <meshStandardMaterial color="#7e22ce" />
+
+              <mesh position={[0, 6.5, 0]} castShadow>
+                <boxGeometry args={[10.5, 0.5, 10.5]} />
+                <meshStandardMaterial color="#6b21a8" roughness={0.6} metalness={0.3} />
               </mesh>
-              <mesh position={[0, 1.5, 5.1]}>
-                <boxGeometry args={[2.5, 3, 0.2]} />
-                <meshStandardMaterial color="#1e293b" />
+
+              <mesh position={[0, 7, 0]}>
+                <boxGeometry args={[8, 0.6, 0.3]} />
+                <meshStandardMaterial
+                  color="#f59e0b"
+                  emissive="#f59e0b"
+                  emissiveIntensity={1.5}
+                  roughness={0.3}
+                  metalness={0.5}
+                />
               </mesh>
-              <Html position={[0, 7, 0]} center>
+              <pointLight position={[0, 7, 0]} intensity={2} distance={10} color="#f59e0b" />
+
+              <Html position={[0, 8, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <button
                   onClick={handleEnterArcade}
                   className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
@@ -1518,23 +1529,33 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </Html>
             </group>
 
-            {/* Stadium building - NOW OPEN */}
+            {/* Stadium building - was Stadium Building - Now OPEN */}
             <group position={[25, 0, -15]}>
               <mesh position={[0, 3.5, 0]} castShadow>
-                <cylinderGeometry args={[8, 8, 7, 32]} />
-                <meshStandardMaterial color="#16a34a" />
+                <boxGeometry args={[12, 7, 10]} />
+                <meshStandardMaterial color="#16a34a" roughness={0.7} metalness={0.1} />
               </mesh>
+
               <mesh position={[0, 7.5, 0]} castShadow>
-                <torusGeometry args={[8, 0.5, 16, 32]} />
-                <meshStandardMaterial color="#15803d" />
+                <boxGeometry args={[12.5, 0.5, 10.5]} />
+                <meshStandardMaterial color="#15803d" roughness={0.6} metalness={0.2} />
               </mesh>
-              <mesh position={[0, 2, 8.1]}>
-                <boxGeometry args={[3, 4, 0.2]} />
-                <meshStandardMaterial color="#1e293b" />
+
+              <mesh position={[0, 8, 0]}>
+                <boxGeometry args={[10, 0.7, 0.3]} />
+                <meshStandardMaterial
+                  color="#22c55e"
+                  emissive="#22c55e"
+                  emissiveIntensity={1.5}
+                  roughness={0.3}
+                  metalness={0.5}
+                />
               </mesh>
-              <Html position={[0, 8, 0]} center>
+              <pointLight position={[0, 8, 0]} intensity={2} distance={10} color="#22c55e" />
+
+              <Html position={[0, 9, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <button
-                  onClick={handleOpenStadiumModal}
+                  onClick={handleShowStadiumModal}
                   className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
                 >
                   ⚽ Infos Match
@@ -1542,7 +1563,111 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </Html>
             </group>
 
+            <group position={[15, 0, 0]}>
+              {/* Building */}
+              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
+                <boxGeometry args={[6, 5, 5]} />
+                <meshStandardMaterial color="#9333ea" />
+              </mesh>
+              {/* Roof */}
+              <mesh position={[0, 5.2, 0]} castShadow>
+                <coneGeometry args={[4, 1.5, 4]} />
+                <meshStandardMaterial color="#7e22ce" />
+              </mesh>
+              {/* Sign */}
+              <Html position={[0, 4, 2.6]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+                <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
+                  <div className="text-xl">🕹️ ARCADE 🕹️</div>
+                  <div className="text-sm mt-1">Ouverture Prochainement</div>
+                </div>
+              </Html>
+            </group>
+
             {/* Additional decorative buildings */}
+            <group position={[-15, 0, 5]}>
+              <mesh position={[0, 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[5, 4, 4]} />
+                <meshStandardMaterial color="#0ea5e9" />
+              </mesh>
+              <mesh position={[0, 4.5, 0]} castShadow>
+                <boxGeometry args={[5.2, 1, 4.2]} />
+                <meshStandardMaterial color="#0284c7" />
+              </mesh>
+            </group>
+
+            <group position={[-15, 0, -8]}>
+              <mesh position={[0, 3, 0]} castShadow receiveShadow>
+                <boxGeometry args={[4, 6, 4]} />
+                <meshStandardMaterial color="#f59e0b" />
+              </mesh>
+              <mesh position={[0, 6.5, 0]} castShadow>
+                <coneGeometry args={[3, 1.5, 4]} />
+                <meshStandardMaterial color="#ea580c" />
+              </mesh>
+            </group>
+
+            {/* Cinema Building */}
+            <group position={[15, 0, 0]}>
+              <mesh position={[0, 2.5, 0]} castShadow>
+                <boxGeometry args={[8, 5, 8]} />
+                <meshStandardMaterial color="#1e3a8a" roughness={0.7} metalness={0.1} />
+              </mesh>
+
+              <mesh position={[0, 5.5, 0]} castShadow>
+                <boxGeometry args={[8.5, 0.5, 8.5]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.2} />
+              </mesh>
+
+              <mesh position={[0, 6, 0]}>
+                <boxGeometry args={[7, 0.8, 0.3]} />
+                <meshStandardMaterial
+                  color="#fbbf24"
+                  emissive="#fbbf24"
+                  emissiveIntensity={1.5}
+                  roughness={0.3}
+                  metalness={0.5}
+                />
+              </mesh>
+              <pointLight position={[0, 6, 0]} intensity={2} distance={10} color="#fbbf24" />
+
+              {[-2, 0, 2].map((x) => (
+                <mesh key={`window-${x}`} position={[x, 3, 4.1]}>
+                  <planeGeometry args={[1.5, 1.8]} />
+                  <meshStandardMaterial
+                    color="#60a5fa"
+                    emissive="#60a5fa"
+                    emissiveIntensity={0.5}
+                    metalness={0.8}
+                    roughness={0.1}
+                  />
+                </mesh>
+              ))}
+
+              <mesh position={[-3, 1.2, 4.1]} castShadow>
+                <boxGeometry args={[1.5, 2.4, 0.1]} />
+                <meshStandardMaterial color="#7c2d12" roughness={0.8} metalness={0.1} />
+              </mesh>
+              <mesh position={[-3, 1.2, 0]}>
+                <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
+                <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
+              </mesh>
+
+              <mesh position={[-3, 0.1, 5.5]}>
+                <boxGeometry args={[2, 0.2, 2]} />
+                <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
+              </mesh>
+
+              <Html position={[0, 7, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+                <button
+                  onClick={() => setShowCinema(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
+                >
+                  🎬 Entrer au Cinéma
+                </button>
+              </Html>
+            </group>
+
+            {/* Additional decorative closed buildings */}
             <group position={[-15, 0, 5]}>
               <mesh position={[0, 2, 0]} castShadow receiveShadow>
                 <boxGeometry args={[5, 4, 4]} />
@@ -1614,30 +1739,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   </mesh>
                 </group>
               ))}
-
-            {graphicsQuality !== "low" && (
-              <group position={[-15, 0, 0]}>
-                <mesh position={[0, 0.3, 0]} castShadow>
-                  <cylinderGeometry args={[2, 2.5, 0.6, 16]} />
-                  <meshStandardMaterial color="#6b7280" roughness={0.3} metalness={0.8} />
-                </mesh>
-                <mesh position={[0, 1, 0]}>
-                  <cylinderGeometry args={[0.3, 0.3, 1.4, 8]} />
-                  <meshStandardMaterial color="#94a3b8" roughness={0.2} metalness={0.9} />
-                </mesh>
-                <mesh position={[0, 1.8, 0]}>
-                  <sphereGeometry args={[0.4, 16, 16]} />
-                  <meshStandardMaterial
-                    color="#60a5fa"
-                    emissive="#60a5fa"
-                    emissiveIntensity={0.3}
-                    transparent
-                    opacity={0.7}
-                  />
-                </mesh>
-                <pointLight position={[0, 2, 0]} intensity={1} distance={8} color="#60a5fa" />
-              </group>
-            )}
 
             {graphicsQuality !== "low" &&
               [
@@ -1962,7 +2063,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
                     {/* Movie Iframe - Display when movie has started */}
                     {isMovieStarted && room.embed_url && (
-                      <Html transform style={{ width: "1300px", height: "720px" }}>
+                      <Html transform position={[0, 0, 0.2]} style={{ width: "1300px", height: "720px" }}>
                         <iframe
                           src={room.embed_url}
                           className="w-full h-full rounded"
@@ -2006,7 +2107,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 key={player.user_id}
                 position={[player.position_x || 0, player.position_y || 0, player.position_z || 0]}
               >
-                <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={false} />
+                <RealisticAvatarComponent position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={false} />
 
                 {worldSettings.showStatusBadges && (
                   <Html
@@ -2044,32 +2145,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             )
           })}
-
-        {!povMode && (
-          <group position={[myPosition.x, myPosition.y, myPosition.z]}>
-            <RealisticAvatar
-              position={[0, 0, 0]}
-              avatarStyle={myAvatarStyle}
-              isMoving={movement.x !== 0 || movement.z !== 0}
-            />
-
-            {worldSettings.showStatusBadges && userProfile && (
-              <Html position={[0, 2.3, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <div className="flex flex-col items-center gap-1 pointer-events-none">
-                  <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
-                    <span className="text-white text-xs font-medium">{userProfile.username || "Vous"}</span>
-                    {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
-                    {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
-                    {userProfile.is_vip && !userProfile.is_vip_plus && !userProfile.is_admin && (
-                      <Star className="w-3 h-3 text-yellow-400" />
-                    )}
-                  </div>
-                  {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
-                </div>
-              </Html>
-            )}
-          </group>
-        )}
 
         {!povMode && (
           <OrbitControls
@@ -2363,7 +2438,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   {["short", "long", "none"].map((style) => {
                     const option = customizationOptions.find((o) => o.category === "hair_style" && o.value === style)
                     const isLocked =
-                      option?.is_premium && !userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin
+                      option?.is_premium &&
+                      !initialUserProfile?.is_vip &&
+                      !initialUserProfile?.is_vip_plus &&
+                      !initialUserProfile?.is_admin // Use initialUserProfile
 
                     return (
                       <button
@@ -2422,11 +2500,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                     const isLocked =
                       face.premium &&
                       ((face.level === "vip" &&
-                        !userProfile?.is_vip &&
-                        !userProfile?.is_vip_plus &&
-                        !userProfile?.is_admin) ||
-                        (face.level === "vip_plus" && !userProfile?.is_vip_plus && !userProfile?.is_admin) ||
-                        (face.level === "admin" && !userProfile?.is_admin))
+                        !initialUserProfile?.is_vip &&
+                        !initialUserProfile?.is_vip_plus &&
+                        !initialUserProfile?.is_admin) ||
+                        (face.level === "vip_plus" &&
+                          !initialUserProfile?.is_vip_plus &&
+                          !initialUserProfile?.is_admin) ||
+                        (face.level === "admin" && !initialUserProfile?.is_admin))
 
                     return (
                       <button
@@ -2459,7 +2539,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   {["none", "glasses", "hat"].map((acc) => {
                     const option = customizationOptions.find((o) => o.category === "accessory" && o.value === acc)
                     const isLocked =
-                      option?.is_premium && !userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin
+                      option?.is_premium &&
+                      !initialUserProfile?.is_vip &&
+                      !initialUserProfile?.is_vip_plus &&
+                      !initialUserProfile?.is_admin // Use initialUserProfile
 
                     return (
                       <button
@@ -2495,7 +2578,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
-      {/* Quick Actions and Emoji Menu */}
       {worldSettings.enableEmojis && (
         <button
           onClick={() => setShowQuickActions(!showQuickActions)}
@@ -2547,84 +2629,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <div className="border-t border-white/20 my-1"></div>
               </>
             )}
-            {currentRoom === "arcade" && (
-              <>
-                <button
-                  onClick={handleLeaveArcade}
-                  className="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
-                >
-                  <LogOut className="w-5 h-5" />
-                  Quitter l'Arcade
-                </button>
-                <div className="border-t border-white/20 my-1"></div>
-              </>
-            )}
             <button
               onClick={() => handleQuickAction("jump")}
               className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
             >
               <ArrowUp className="w-6 h-6" />
             </button>
-
-            <div className="flex gap-2 mb-2">
+            {["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"].map((emoji) => (
               <button
-                onClick={() => setShowAnimatedEmotes(false)}
-                className={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
-                  !showAnimatedEmotes ? "bg-yellow-500 text-black" : "bg-gray-700 text-white hover:bg-gray-600"
-                }`}
+                key={emoji}
+                onClick={() => handleEmoji(emoji)}
+                className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors text-center"
               >
-                😊 Emojis
+                {emoji}
               </button>
-              <button
-                onClick={() => setShowAnimatedEmotes(true)}
-                className={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
-                  showAnimatedEmotes ? "bg-yellow-500 text-black" : "bg-gray-700 text-white hover:bg-gray-600"
-                }`}
-              >
-                ✨ Animés
-              </button>
-            </div>
-
-            {!showAnimatedEmotes ? (
-              // Regular emojis
-              <>
-                {["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"].map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => handleEmoji(emoji)}
-                    className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors text-center"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </>
-            ) : (
-              // Animated emotes using placeholder images (in real app, would use actual GIF URLs)
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { name: "dance", emoji: "💃" },
-                  { name: "celebrate", emoji: "🎊" },
-                  { name: "laugh", emoji: "🤣" },
-                  { name: "cry", emoji: "😢" },
-                  { name: "angry", emoji: "😡" },
-                  { name: "love", emoji: "😍" },
-                  { name: "clap", emoji: "👏" },
-                  { name: "wave", emoji: "👋" },
-                  { name: "thinking", emoji: "🤨" },
-                ].map((emote) => (
-                  <button
-                    key={emote.name}
-                    onClick={() => handleEmoji(emote.emoji)}
-                    className="relative bg-gradient-to-br from-purple-600 to-pink-600 p-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-110"
-                  >
-                    <div className="text-3xl animate-pulse">{emote.emoji}</div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-lg flex items-end justify-center pb-1">
-                      <span className="text-[8px] text-white font-bold uppercase">{emote.name}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
         </div>
       )}
@@ -2734,9 +2753,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {showMap && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 rounded-2xl p-6 md:p-8 max-w-2xl w-full mx-4 shadow-2xl border-2 border-blue-400/30 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6 sticky top-0 bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 pb-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-6 md:p-8 max-w-2xl w-full mx-4 shadow-2xl border-2 border-white/20">
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
                 <Map className="w-6 h-6 md:w-8 md:h-8 text-cyan-400" />
                 Carte du Monde
@@ -2759,7 +2778,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 </div>
                 <div className="text-left">
                   <div className="font-bold text-lg md:text-xl">🎬 Cinéma</div>
-                  <div className="text-xs md:text-sm opacity-90">Ouvert - Cliquez pour voir les salles</div>
+                  <div className="text-xs md:text-sm opacity-90">Ouvert - Voir les salles disponibles</div>
                 </div>
               </button>
 
@@ -2781,7 +2800,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
               <button
                 onClick={() => {
-                  setShowStadium(true)
+                  handleShowStadiumModal()
                   setShowMap(false)
                 }}
                 className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white p-4 md:p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
@@ -2791,7 +2810,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 </div>
                 <div className="text-left">
                   <div className="font-bold text-lg md:text-xl">⚽ Stade</div>
-                  <div className="text-xs md:text-sm opacity-90">Ouvert - Regardez les matchs en live</div>
+                  <div className="text-xs md:text-sm opacity-90">Ouvert - Voir les infos du match</div>
                 </div>
               </button>
             </div>
@@ -2913,6 +2932,134 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             allowFullScreen
           />
         </div>
+      )}
+
+      {showCinema && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-2xl p-6 md:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-purple-400/30">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                <Film className="w-6 h-6 md:w-8 md:h-8 text-purple-400" />
+                Salles de Cinéma
+              </h2>
+              <button onClick={() => setShowCinema(false)} className="text-white hover:text-red-400 transition-colors">
+                <X className="w-6 h-6 md:w-8 md:h-8" />
+              </button>
+            </div>
+
+            {cinemaRooms.length === 0 ? (
+              <div className="text-center text-white py-12">
+                <Film className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg">Aucune salle de cinéma disponible pour le moment</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {cinemaRooms.map((room) => {
+                  const currentOccupancy = cinemaSeats.filter((s) => s.cinema_room_id === room.id && s.user_id).length
+                  const isFull = currentOccupancy >= room.capacity
+                  const isOpen = room.is_open
+
+                  return (
+                    <div
+                      key={room.id}
+                      className={`bg-white/10 backdrop-blur rounded-xl p-4 border-2 transition-all ${
+                        isFull || !isOpen
+                          ? "border-gray-500/30 opacity-60"
+                          : "border-purple-400/30 hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/20"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg font-bold text-white">Salle {room.room_number}</span>
+                            {isFull && (
+                              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                                Complète
+                              </span>
+                            )}
+                            {!isOpen && (
+                              <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                                Fermée
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="text-white font-semibold text-sm mb-1">{room.movie_title}</h3>
+                          <div className="flex items-center gap-2 text-xs text-purple-300">
+                            <Sparkles className="w-3 h-3" />
+                            <span>{room.theme}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm mb-4">
+                        <div className="flex items-center gap-2 text-white">
+                          <Users className="w-4 h-4" />
+                          <span>
+                            {currentOccupancy}/{room.capacity}
+                          </span>
+                        </div>
+                        {room.schedule_start && (
+                          <div className="text-purple-300 text-xs">
+                            {new Date(room.schedule_start).toLocaleTimeString("fr-FR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (!isFull && isOpen) {
+                            setCurrentCinemaRoom(room)
+                            setShowCinema(false)
+                          }
+                        }}
+                        disabled={isFull || !isOpen}
+                        className={`w-full py-3 rounded-lg font-bold transition-all ${
+                          isFull || !isOpen
+                            ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                            : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white transform hover:scale-105"
+                        }`}
+                      >
+                        {isFull ? "Salle Complète" : !isOpen ? "Salle Fermée" : "Entrer"}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!povMode && initialUserProfile && (
+        <group position={[myPosition.x, myPosition.y, myPosition.z]}>
+          <RealisticAvatarComponent position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
+
+          {worldSettings.showStatusBadges && (
+            <Html position={[0, 2.3, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+              <div className="flex flex-col items-center gap-1 pointer-events-none">
+                <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
+                  <span className="text-white text-xs font-medium">{initialUserProfile.username || "Vous"}</span>
+                  {initialUserProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
+                  {initialUserProfile.is_vip_plus && !initialUserProfile.is_admin && (
+                    <Crown className="w-3 h-3 text-purple-400" />
+                  )}
+                  {initialUserProfile.is_vip && !initialUserProfile.is_vip_plus && !initialUserProfile.is_admin && (
+                    <Star className="w-3 h-3 text-yellow-400" />
+                  )}
+                </div>
+                {currentMessage && (
+                  <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
+                    {currentMessage}
+                  </div>
+                )}
+                {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
+              </div>
+            </Html>
+          )}
+        </group>
       )}
     </div>
   )
