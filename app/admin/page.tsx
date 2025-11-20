@@ -16,8 +16,54 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Edit, Trash2, Users, Tv, Radio, Search, Eye, EyeOff, BarChart3, FileText, Zap, Trophy, Crown, Shield, UserX, Clock, Activity, Heart, UserPlus, Play, ThumbsUp, ThumbsDown, Calendar, FlagIcon as FlaskIcon, TrendingUp, Monitor, Headphones, Gamepad2, Film, Clapperboard, Sparkles, LogIn, MessageSquare, CheckCircle, XCircle, Music, Download, BookOpen, Send, SettingsIcon, Save, ChevronLeft, ChevronRight, Globe, UserCircle, RefreshCw } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Users,
+  Tv,
+  Radio,
+  Search,
+  Eye,
+  EyeOff,
+  BarChart3,
+  FileText,
+  Zap,
+  Trophy,
+  Crown,
+  Shield,
+  UserX,
+  Clock,
+  Activity,
+  Heart,
+  UserPlus,
+  Play,
+  ThumbsUp,
+  ThumbsDown,
+  Calendar,
+  FlagIcon as FlaskIcon,
+  TrendingUp,
+  Monitor,
+  Headphones,
+  Gamepad2,
+  Film,
+  Clapperboard,
+  Sparkles,
+  LogIn,
+  MessageSquare,
+  CheckCircle,
+  XCircle,
+  Music,
+  Download,
+  BookOpen,
+  Send,
+  SettingsIcon,
+  Save,
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+} from "lucide-react"
+import { useRouter } from "next/navigation"
 // REMOVED: import { supabase } from "@/lib/supabase" // Removed incorrect Supabase import
 import { createBrowserClient } from "@supabase/ssr" // Import for Supabase client
 import { Separator } from "@/components/ui/separator" // Import Separator
@@ -270,7 +316,7 @@ export default function AdminPage() {
 
   const [worldSettings, setWorldSettings] = useState({
     maxCapacity: 100,
-    worldMode: 'day',
+    worldMode: "day",
     playerInteractionsEnabled: true,
     showStatusBadges: true,
     enableChat: true,
@@ -280,22 +326,22 @@ export default function AdminPage() {
 
   const [avatarOptions, setAvatarOptions] = useState<AvatarOption[]>([])
   const [newOption, setNewOption] = useState({
-    category: 'hair_style',
-    label: '',
-    value: '',
-    is_premium: false
+    category: "hair_style",
+    label: "",
+    value: "",
+    is_premium: false,
   })
 
   // Added state for Cinema Rooms Management
-  const [cinemaRooms, setCinemaRooms] = useState<CinemaRoom[]>([]);
+  const [cinemaRooms, setCinemaRooms] = useState<CinemaRoom[]>([])
 
   // Added state for Online Users count
-  const [onlineUsersCount, setOnlineUsersCount] = useState(0);
+  const [onlineUsersCount, setOnlineUsersCount] = useState(0)
 
   const [arcadeMachines, setArcadeMachines] = useState<any[]>([])
   const [stadium, setStadium] = useState<any>(null)
 
-  const [activeTab, setActiveTab] = useState("dashboard"); // State to track active tab
+  const [activeTab, setActiveTab] = useState("dashboard") // State to track active tab
 
   // useEffect moved inside the AdminPage component if it depends on user state
   useEffect(() => {
@@ -304,17 +350,16 @@ export default function AdminPage() {
       // fetchAllData(); // Initial load moved to the main useEffect below
       // Load specific data based on active tab (or defer until tab is active)
       if (activeTab === "interactive-world") {
-        loadWorldSettings();
-        loadCinemaRooms();
-        loadAvatarOptions();
-        loadOnlineUsers();
-        loadArcadeMachines();
-        loadStadium();
+        loadWorldSettings()
+        loadCinemaRooms()
+        loadAvatarOptions()
+        loadOnlineUsers()
+        loadArcadeMachines()
+        loadStadium()
       }
     }
     // Ensure dependency array includes user and activeTab if they affect the effect's execution
-  }, [user, activeTab]); // Added activeTab dependency
-
+  }, [user, activeTab]) // Added activeTab dependency
 
   const handleUpdateRequestStatus = async (id: string, status: string) => {
     const supabase = createBrowserClient(
@@ -433,9 +478,7 @@ export default function AdminPage() {
         data: allUsers,
         error: usersError,
         count: totalUsersCount,
-      } = await supabase
-        .from("user_profiles")
-        .select("id", { count: "exact" })
+      } = await supabase.from("user_profiles").select("id", { count: "exact" })
 
       if (usersError) throw usersError
 
@@ -561,7 +604,7 @@ export default function AdminPage() {
       const { count: totalCount, error: countError } = await supabase
         .from("user_profiles")
         .select("*", { count: "exact", head: true })
-        
+
       if (countError) {
         console.error("❌ Erreur lors du comptage des utilisateurs:", countError)
       } else {
@@ -636,7 +679,7 @@ export default function AdminPage() {
         admin_notes: req.admin_notes || "",
         username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
       }))
-      
+
       console.log("[v0] Processed requests:", requestsWithUserInfo)
       setRequests(requestsWithUserInfo)
       return requestsWithUserInfo
@@ -887,33 +930,51 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
-    
+
     try {
       const { data, error } = await supabase
         .from("interactive_world_settings")
         .select("*")
         .eq("setting_key", "world_config")
-        .maybeSingle() // Use maybeSingle to avoid error if no row exists
+        .maybeSingle()
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "No Row Found" error, which is ok
-        throw error
+      // Handle Supabase errors (including rate limiting)
+      if (error) {
+        // PGRST116 is "No Row Found" error, which is acceptable
+        if (error.code === "PGRST116") {
+          console.log("[v0] No world settings found, using defaults")
+          return
+        }
+        // Log other errors but don't crash
+        console.warn("[v0] Error loading world settings:", error.message || error)
+        return
       }
 
       if (data && data.setting_value) {
-        // Ensure all expected keys are present, with defaults if missing
-        const loadedSettings = data.setting_value;
+        // Validate that setting_value is an object
+        if (typeof data.setting_value !== "object") {
+          console.warn("[v0] Invalid world settings format, using defaults")
+          return
+        }
+
+        const loadedSettings = data.setting_value
         setWorldSettings({
           maxCapacity: loadedSettings.maxCapacity ?? 100,
-          worldMode: loadedSettings.worldMode ?? 'day',
+          worldMode: loadedSettings.worldMode ?? "day",
           playerInteractionsEnabled: loadedSettings.playerInteractionsEnabled ?? true,
           showStatusBadges: loadedSettings.showStatusBadges ?? true,
           enableChat: loadedSettings.enableChat ?? true,
           enableEmojis: loadedSettings.enableEmojis ?? true,
           enableJumping: loadedSettings.enableJumping ?? true,
-        });
+        })
       }
     } catch (error) {
-      console.error("[v0] Error loading world settings:", error)
+      // Catch any unexpected errors (like JSON parsing errors from rate limiting)
+      console.warn(
+        "[v0] Unexpected error loading world settings:",
+        error instanceof Error ? error.message : "Unknown error",
+      )
+      // Continue with default settings
     }
   }
 
@@ -922,20 +983,21 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
-    
+
     try {
-      console.log('[v0] Saving world settings:', worldSettings)
-      
-      const { error } = await supabase
-        .from("interactive_world_settings")
-        .upsert({
+      console.log("[v0] Saving world settings:", worldSettings)
+
+      const { error } = await supabase.from("interactive_world_settings").upsert(
+        {
           setting_key: "world_config",
           setting_value: worldSettings,
           updated_at: new Date().toISOString(),
           updated_by: user?.id,
-        }, {
-          onConflict: "setting_key"
-        })
+        },
+        {
+          onConflict: "setting_key",
+        },
+      )
 
       if (error) {
         console.error("[v0] Error saving world settings:", error)
@@ -947,7 +1009,7 @@ export default function AdminPage() {
         return
       }
 
-      console.log('[v0] World settings saved successfully')
+      console.log("[v0] World settings saved successfully")
       toast({
         title: "Paramètres sauvegardés",
         description: "Les paramètres du monde interactif ont été mis à jour.",
@@ -967,24 +1029,25 @@ export default function AdminPage() {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
+    )
     try {
       const { data, error } = await supabase
         .from("interactive_cinema_rooms")
         .select("*")
         .order("room_number", { ascending: true }) // Order by room number for consistency
-        
-      if (error) throw error;
-      setCinemaRooms(data || []);
+
+      if (error) {
+        console.warn("Error loading cinema rooms:", error.message || error)
+        return
+      }
+
+      if (data) {
+        setCinemaRooms(data)
+      }
     } catch (error) {
-      console.error("Error loading cinema rooms:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les salles de cinéma.",
-        variant: "destructive",
-      });
+      console.warn("Error loading cinema rooms:", error instanceof Error ? error.message : "Unknown error")
     }
-  };
+  }
 
   // ADDED: Function to create a new cinema room
   const handleCreateCinemaRoom = async () => {
@@ -994,23 +1057,19 @@ export default function AdminPage() {
     )
     try {
       // Determine the next room number
-      const maxRoomNumber = cinemaRooms.length > 0 
-        ? Math.max(...cinemaRooms.map(r => r.room_number)) 
-        : 0
+      const maxRoomNumber = cinemaRooms.length > 0 ? Math.max(...cinemaRooms.map((r) => r.room_number)) : 0
 
-      const { error } = await supabase
-        .from("interactive_cinema_rooms")
-        .insert({
-          room_number: maxRoomNumber + 1, // Assign next available number
-          name: `Salle ${maxRoomNumber + 1}`, // Default name
-          capacity: 50, // Default capacity
-          theme: 'default', // Default theme
-          movie_title: '', // Default empty movie title
-          access_level: 'public', // Default access level
-          is_open: true, // Default to open
-          embed_url: '', // Initialize embed_url
-          // created_at and updated_at are handled by Supabase defaults
-        })
+      const { error } = await supabase.from("interactive_cinema_rooms").insert({
+        room_number: maxRoomNumber + 1, // Assign next available number
+        name: `Salle ${maxRoomNumber + 1}`, // Default name
+        capacity: 50, // Default capacity
+        theme: "default", // Default theme
+        movie_title: "", // Default empty movie title
+        access_level: "public", // Default access level
+        is_open: true, // Default to open
+        embed_url: "", // Initialize embed_url
+        // created_at and updated_at are handled by Supabase defaults
+      })
 
       if (error) throw error
 
@@ -1079,19 +1138,20 @@ export default function AdminPage() {
     )
     try {
       const { data, error } = await supabase
-        .from("avatar_customization_options")
+        .from("interactive_avatar_options")
         .select("*")
-        .order("category", { ascending: true }) // Order by category
-        
-      if (error) throw error
-      setAvatarOptions(data || [])
+        .order("id", { ascending: true })
+
+      if (error) {
+        console.warn("Error loading avatar options:", error.message || error)
+        return
+      }
+
+      if (data) {
+        setAvatarOptions(data)
+      }
     } catch (error) {
-      console.error("Error loading avatar options:", error)
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les options de personnalisation.",
-        variant: "destructive",
-      })
+      console.warn("Error loading avatar options:", error instanceof Error ? error.message : "Unknown error")
     }
   }
 
@@ -1111,15 +1171,13 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      const { error } = await supabase
-        .from("avatar_customization_options")
-        .insert({
-          category: newOption.category,
-          label: newOption.label,
-          value: newOption.value,
-          is_premium: newOption.is_premium,
-          // created_at will be set by Supabase
-        })
+      const { error } = await supabase.from("avatar_customization_options").insert({
+        category: newOption.category,
+        label: newOption.label,
+        value: newOption.value,
+        is_premium: newOption.is_premium,
+        // created_at will be set by Supabase
+      })
 
       if (error) throw error
 
@@ -1129,10 +1187,10 @@ export default function AdminPage() {
       })
       // Reset the form
       setNewOption({
-        category: 'hair_style', // Reset to default category
-        label: '',
-        value: '',
-        is_premium: false
+        category: "hair_style", // Reset to default category
+        label: "",
+        value: "",
+        is_premium: false,
       })
       loadAvatarOptions() // Refresh the list
     } catch (error) {
@@ -1151,10 +1209,7 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      const { error } = await supabase
-        .from("avatar_customization_options")
-        .delete()
-        .eq("id", id)
+      const { error } = await supabase.from("avatar_customization_options").delete().eq("id", id)
 
       if (error) throw error
 
@@ -1182,9 +1237,9 @@ export default function AdminPage() {
       // Query for users that are marked as online in the interactive_profiles table
       const { count, error } = await supabase
         .from("interactive_profiles")
-        .select("*", { count: 'exact', head: true }) // count: 'exact' and head: true optimizes for count only
+        .select("*", { count: "exact", head: true }) // count: 'exact' and head: true optimizes for count only
         .eq("is_online", true) // Filter for online users
-        
+
       if (error) throw error
       setOnlineUsersCount(count || 0) // Update the state with the count
     } catch (error) {
@@ -1198,55 +1253,96 @@ export default function AdminPage() {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
+    )
     try {
-      const { data, error } = await supabase
-        .from("retrogaming_sources")
-        .select("*")
-        .order("name", { ascending: true });
-        
-      if (error) throw error;
-      setArcadeMachines(data || []);
+      const { data, error } = await supabase.from("retrogaming_sources").select("*").order("name", { ascending: true })
+
+      if (error) {
+        console.warn("Error loading arcade machines:", error.message || error)
+        return
+      }
+
+      if (data) {
+        setArcadeMachines(data)
+      }
     } catch (error) {
-      console.error("Error loading arcade machines:", error);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les machines d'arcade.",
-        variant: "destructive",
-      });
+      console.warn("Error loading arcade machines:", error instanceof Error ? error.message : "Unknown error")
     }
-  };
+  }
 
   // CHANGE: Added loadStadium function
   const loadStadium = async () => {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    );
+    )
     try {
       const { data, error } = await supabase
         .from("interactive_stadium")
         .select("*")
-        .single();
-        
+        .eq("id", 1) // Assuming a single stadium configuration with id 1
+        .maybeSingle() // Use maybeSingle for cases where the row might not exist
+
       if (error) {
-        // If no stadium exists yet, that's okay
-        if (error.code === 'PGRST116') {
-          setStadium(null);
-          return;
+        // PGRST116 is "No Row Found" error, which is acceptable
+        if (error.code === "PGRST116") {
+          console.log("[v0] No stadium found, using defaults")
+          return
         }
-        throw error;
+        console.warn("Error loading stadium:", error.message || error)
+        return
       }
-      setStadium(data);
+
+      if (data) {
+        setStadium(data)
+      }
     } catch (error) {
-      console.error("Error loading stadium:", error);
+      console.warn("Error loading stadium:", error instanceof Error ? error.message : "Unknown error")
+    }
+  }
+
+  // ADDED: Function to update Stadium configuration
+  const handleUpdateStadium = async () => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+
+    if (!stadium) {
+      toast({ title: "Erreur", description: "Aucun stade configuré à mettre à jour.", variant: "destructive" })
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from("interactive_stadium")
+        .update({
+          name: stadium.name,
+          match_title: stadium.match_title,
+          embed_url: stadium.embed_url,
+          schedule_start: stadium.schedule_start,
+          schedule_end: stadium.schedule_end,
+          access_level: stadium.access_level,
+          is_open: stadium.is_open,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", stadium.id) // Ensure we update the correct row
+
+      if (error) throw error
+
+      toast({
+        title: "Stade mis à jour",
+        description: `Le stade '${stadium.name}' a été mis à jour avec succès.`,
+      })
+    } catch (error) {
+      console.error("Error updating stadium:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de charger le stade de football.",
+        description: "Impossible de mettre à jour le stade.",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   const loadStatistics = async () => {
     const supabase = createBrowserClient(
@@ -2599,11 +2695,26 @@ export default function AdminPage() {
         supabase.from("retrogaming_sources").select("*").order("name"),
         supabase.from("user_profiles").select("*", { count: "exact" }),
         supabase.from("changelogs").select("*").order("release_date", { ascending: false }),
-        supabase.from("requests").select(`*, user_profiles(username, email)`).order("created_at", { ascending: false }), // Added request loading
-        supabase.from("music_content").select("*").order("created_at", { ascending: false }), // Added music content loading
-        supabase.from("software").select("*").order("created_at", { ascending: false }), // Added software loading
-        supabase.from("games").select("*").order("created_at", { ascending: false }), // Added games loading
-        supabase.from("ebooks").select("*").order("created_at", { ascending: false }), // Added ebooks loading
+        supabase
+          .from("requests")
+          .select(`*, user_profiles(username, email)`)
+          .order("created_at", { ascending: false }), // Added request loading
+        supabase
+          .from("music_content")
+          .select("*")
+          .order("created_at", { ascending: false }), // Added music content loading
+        supabase
+          .from("software")
+          .select("*")
+          .order("created_at", { ascending: false }), // Added software loading
+        supabase
+          .from("games")
+          .select("*")
+          .order("created_at", { ascending: false }), // Added games loading
+        supabase
+          .from("ebooks")
+          .select("*")
+          .order("created_at", { ascending: false }), // Added ebooks loading
       ])
 
       // Update states
@@ -2612,10 +2723,14 @@ export default function AdminPage() {
       if (retroData.data) setRetrogamingSources(retroData.data)
       if (usersData.data) setUsers(usersData.data)
       if (changelogsData.data) setChangelogs(changelogsData.data)
-      if (requestsData.data) setRequests(requestsData.data.map((req) => ({ // Map requests to include username
-        ...req,
-        username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
-      })))
+      if (requestsData.data)
+        setRequests(
+          requestsData.data.map((req) => ({
+            // Map requests to include username
+            ...req,
+            username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
+          })),
+        )
       if (musicData.data) setMusicContent(musicData.data)
       if (softwareData.data) setSoftware(softwareData.data)
       if (gamesData.data) setGames(gamesData.data)
@@ -2628,14 +2743,13 @@ export default function AdminPage() {
 
       // Load interactive world related data only if the tab is active or on initial load if it's the default
       if (activeTab === "interactive-world") {
-        await loadWorldSettings();
-        await loadCinemaRooms();
-        await loadAvatarOptions();
-        await loadOnlineUsers();
-        loadArcadeMachines();
-        loadStadium();
+        await loadWorldSettings()
+        await loadCinemaRooms()
+        await loadAvatarOptions()
+        await loadOnlineUsers()
+        loadArcadeMachines()
+        loadStadium()
       }
-
     } catch (error) {
       console.error("❌ Erreur lors du chargement des données admin:", error)
       toast({
@@ -2709,15 +2823,14 @@ export default function AdminPage() {
       // Reload online users periodically if the interactive-world tab is active
       const intervalId = setInterval(() => {
         if (activeTab === "interactive-world") {
-          loadOnlineUsers();
+          loadOnlineUsers()
         }
-      }, 15000); // Refresh every 15 seconds
+      }, 15000) // Refresh every 15 seconds
 
       // Cleanup interval on component unmount
-      return () => clearInterval(intervalId);
+      return () => clearInterval(intervalId)
     }
   }, [user, activeTab]) // Re-run if user or activeTab changes
-
 
   if (!user || !user.isAdmin) {
     return (
@@ -2746,7 +2859,6 @@ export default function AdminPage() {
     )
   }
 
-
   // Fetch total user count for the broadcast message
   // Removed duplicated useEffect, logic moved to fetchAllData or handled by existing state
   // useEffect(() => {
@@ -2763,7 +2875,6 @@ export default function AdminPage() {
   //   }
   //   fetchUserCount()
   // }, [user])
-
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -3342,7 +3453,8 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
                     <Users className="w-5 h-5 text-blue-400" />
                     <span className="text-sm text-blue-300">
-                      Ce message sera envoyé à {totalUsersInDB} utilisateur(s) inscrit(s) (filtré: {getFilteredUsers().length})
+                      Ce message sera envoyé à {totalUsersInDB} utilisateur(s) inscrit(s) (filtré:{" "}
+                      {getFilteredUsers().length})
                     </span>
                   </div>
                   <Button
@@ -4074,10 +4186,7 @@ export default function AdminPage() {
                         className="pl-10"
                       />
                     </div>
-                    <Select
-                      value={userRoleFilter}
-                      onValueChange={(value) => setUserRoleFilter(value)}
-                    >
+                    <Select value={userRoleFilter} onValueChange={(value) => setUserRoleFilter(value)}>
                       <SelectTrigger className="w-[200px]">
                         <SelectValue placeholder="Filtrer par grade" />
                       </SelectTrigger>
@@ -4093,7 +4202,9 @@ export default function AdminPage() {
                   </div>
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>
-                      Affichage {(userCurrentPage - 1) * USERS_PER_PAGE + 1} à {Math.min(userCurrentPage * USERS_PER_PAGE, getFilteredUsers().length)} sur {totalUsersInDB} utilisateurs (filtré: {getFilteredUsers().length})
+                      Affichage {(userCurrentPage - 1) * USERS_PER_PAGE + 1} à{" "}
+                      {Math.min(userCurrentPage * USERS_PER_PAGE, getFilteredUsers().length)} sur {totalUsersInDB}{" "}
+                      utilisateurs (filtré: {getFilteredUsers().length})
                     </span>
                     <div className="flex items-center gap-2">
                       <Button
@@ -4110,7 +4221,11 @@ export default function AdminPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setUserCurrentPage((prev) => Math.min(Math.ceil(getFilteredUsers().length / USERS_PER_PAGE), prev + 1))}
+                        onClick={() =>
+                          setUserCurrentPage((prev) =>
+                            Math.min(Math.ceil(getFilteredUsers().length / USERS_PER_PAGE), prev + 1),
+                          )
+                        }
                         disabled={userCurrentPage >= Math.ceil(getFilteredUsers().length / USERS_PER_PAGE)}
                       >
                         <ChevronRight className="w-4 h-4" />
@@ -5887,25 +6002,28 @@ export default function AdminPage() {
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-white">Paramètres Généraux du Monde</h3>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm text-gray-300">Capacité Maximale</label>
                       <Input
                         type="number"
                         value={worldSettings.maxCapacity}
-                        onChange={(e) => setWorldSettings({ ...worldSettings, maxCapacity: parseInt(e.target.value, 10) })}
+                        onChange={(e) =>
+                          setWorldSettings({ ...worldSettings, maxCapacity: Number.parseInt(e.target.value, 10) })
+                        }
                         className="bg-gray-700 border-gray-600 text-white"
                         placeholder="Nombre max d'utilisateurs"
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <label className="text-sm text-gray-300">Mode du Monde</label>
-                      <select 
+                      <select
                         value={worldSettings.worldMode}
                         onChange={(e) => setWorldSettings({ ...worldSettings, worldMode: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-700 border-gray-600 rounded-md text-white">
+                        className="w-full px-3 py-2 bg-gray-700 border-gray-600 rounded-md text-white"
+                      >
                         <option value="day">Jour</option>
                         <option value="night">Nuit</option>
                         <option value="sunset">Coucher de soleil</option>
@@ -5915,58 +6033,57 @@ export default function AdminPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                     <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input 
-                        type="checkbox" 
-                        className="rounded" 
-                        checked={worldSettings.playerInteractionsEnabled} 
-                        onChange={(e) => setWorldSettings({ ...worldSettings, playerInteractionsEnabled: e.target.checked })}
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={worldSettings.playerInteractionsEnabled}
+                        onChange={(e) =>
+                          setWorldSettings({ ...worldSettings, playerInteractionsEnabled: e.target.checked })
+                        }
                       />
                       Activer les interactions entre joueurs
                     </label>
                     <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input 
-                        type="checkbox" 
-                        className="rounded" 
-                        checked={worldSettings.showStatusBadges} 
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={worldSettings.showStatusBadges}
                         onChange={(e) => setWorldSettings({ ...worldSettings, showStatusBadges: e.target.checked })}
                       />
                       Afficher les badges de statut
                     </label>
                     <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input 
-                        type="checkbox" 
-                        className="rounded" 
-                        checked={worldSettings.enableChat} 
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={worldSettings.enableChat}
                         onChange={(e) => setWorldSettings({ ...worldSettings, enableChat: e.target.checked })}
                       />
                       Activer le chat texte
                     </label>
                     <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input 
-                        type="checkbox" 
-                        className="rounded" 
-                        checked={worldSettings.enableEmojis} 
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={worldSettings.enableEmojis}
                         onChange={(e) => setWorldSettings({ ...worldSettings, enableEmojis: e.target.checked })}
                       />
                       Activer les émojis
                     </label>
                     <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input 
-                        type="checkbox" 
-                        className="rounded" 
-                        checked={worldSettings.enableJumping} 
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={worldSettings.enableJumping}
                         onChange={(e) => setWorldSettings({ ...worldSettings, enableJumping: e.target.checked })}
                       />
                       Activer le saut
                     </label>
                   </div>
-                  
+
                   <div className="flex justify-end pt-4">
                     {/* CHANGE: Renamed handleWorldSettings to handleSaveWorldSettings */}
-                    <Button 
-                      onClick={handleSaveWorldSettings}
-                      className="bg-blue-600 hover:bg-blue-700"
-                    >
+                    <Button onClick={handleSaveWorldSettings} className="bg-blue-600 hover:bg-blue-700">
                       <Save className="w-4 h-4 mr-2" />
                       Sauvegarder les Paramètres
                     </Button>
@@ -5981,16 +6098,12 @@ export default function AdminPage() {
                       <Film className="w-5 h-5" />
                       Gestion des Salles de Cinéma
                     </h3>
-                    <Button 
-                      onClick={handleCreateCinemaRoom}
-                      size="sm"
-                      className="bg-green-600 hover:bg-green-700"
-                    >
+                    <Button onClick={handleCreateCinemaRoom} size="sm" className="bg-green-600 hover:bg-green-700">
                       <Plus className="w-4 h-4 mr-2" />
                       Créer une Salle
                     </Button>
                   </div>
-                  
+
                   <div className="space-y-4">
                     {cinemaRooms.map((room) => (
                       <div key={room.id} className="p-4 bg-gray-700 rounded-lg border border-gray-600">
@@ -6001,9 +6114,11 @@ export default function AdminPage() {
                               type="number"
                               value={room.room_number}
                               onChange={(e) => {
-                                setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, room_number: parseInt(e.target.value) } : r
-                                ))
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, room_number: Number.parseInt(e.target.value) } : r,
+                                  ),
+                                )
                               }}
                               className="bg-gray-600 border-gray-500 text-white"
                             />
@@ -6014,23 +6129,25 @@ export default function AdminPage() {
                             <Input
                               value={room.name}
                               onChange={(e) => {
-                                setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, name: e.target.value } : r
-                                ))
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) => (r.id === room.id ? { ...r, name: e.target.value } : r)),
+                                )
                               }}
                               className="bg-gray-600 border-gray-500 text-white"
                             />
                           </div>
-                          
+
                           <div className="space-y-2">
                             <label className="text-sm text-gray-300">Capacité</label>
                             <Input
                               type="number"
                               value={room.capacity}
                               onChange={(e) => {
-                                setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, capacity: parseInt(e.target.value) } : r
-                                ))
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, capacity: Number.parseInt(e.target.value) } : r,
+                                  ),
+                                )
                               }}
                               className="bg-gray-600 border-gray-500 text-white"
                             />
@@ -6041,9 +6158,9 @@ export default function AdminPage() {
                             <select
                               value={room.theme}
                               onChange={(e) => {
-                                setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, theme: e.target.value } : r
-                                ))
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) => (r.id === room.id ? { ...r, theme: e.target.value } : r)),
+                                )
                               }}
                               className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
                             >
@@ -6059,9 +6176,11 @@ export default function AdminPage() {
                             <Input
                               value={room.movie_title}
                               onChange={(e) => {
-                                setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, movie_title: e.target.value } : r
-                                ))
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, movie_title: e.target.value } : r,
+                                  ),
+                                )
                               }}
                               className="bg-gray-600 border-gray-500 text-white"
                             />
@@ -6071,11 +6190,15 @@ export default function AdminPage() {
                             <label className="text-sm text-gray-300">ID TMDB du Film</label>
                             <Input
                               type="number"
-                              value={room.movie_tmdb_id || ''}
+                              value={room.movie_tmdb_id || ""}
                               onChange={(e) => {
-                                setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, movie_tmdb_id: parseInt(e.target.value) || null } : r
-                                ))
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id
+                                      ? { ...r, movie_tmdb_id: Number.parseInt(e.target.value) || null }
+                                      : r,
+                                  ),
+                                )
                               }}
                               className="bg-gray-600 border-gray-500 text-white"
                             />
@@ -6084,39 +6207,45 @@ export default function AdminPage() {
                           <div className="space-y-2">
                             <label className="text-sm text-gray-300">URL Affiche</label>
                             <Input
-                              value={room.movie_poster || ''}
+                              value={room.movie_poster || ""}
                               onChange={(e) => {
-                                setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, movie_poster: e.target.value } : r
-                                ))
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, movie_poster: e.target.value } : r,
+                                  ),
+                                )
                               }}
                               className="bg-gray-600 border-gray-500 text-white"
                             />
                           </div>
-                          
+
                           <div className="space-y-2">
                             <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
                             <Input
-                              value={room.embed_url || ''}
+                              value={room.embed_url || ""}
                               onChange={(e) => {
-                                setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, embed_url: e.target.value } : r
-                                ))
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) => (r.id === room.id ? { ...r, embed_url: e.target.value } : r)),
+                                )
                               }}
                               placeholder="https://www.youtube.com/embed/..."
                               className="bg-gray-600 border-gray-500 text-white"
                             />
                           </div>
-                          
+
                           <div className="space-y-2">
                             <label className="text-sm text-gray-300">Heure de Début</label>
                             <Input
                               type="datetime-local"
-                              value={room.schedule_start ? new Date(room.schedule_start).toISOString().slice(0, 16) : ''}
+                              value={
+                                room.schedule_start ? new Date(room.schedule_start).toISOString().slice(0, 16) : ""
+                              }
                               onChange={(e) => {
-                                setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, schedule_start: e.target.value } : r
-                                ))
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, schedule_start: e.target.value } : r,
+                                  ),
+                                )
                               }}
                               className="bg-gray-600 border-gray-500 text-white"
                             />
@@ -6126,11 +6255,13 @@ export default function AdminPage() {
                             <label className="text-sm text-gray-300">Heure de Fin</label>
                             <Input
                               type="datetime-local"
-                              value={room.schedule_end ? new Date(room.schedule_end).toISOString().slice(0, 16) : ''}
+                              value={room.schedule_end ? new Date(room.schedule_end).toISOString().slice(0, 16) : ""}
                               onChange={(e) => {
-                                setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, schedule_end: e.target.value } : r
-                                ))
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, schedule_end: e.target.value } : r,
+                                  ),
+                                )
                               }}
                               className="bg-gray-600 border-gray-500 text-white"
                             />
@@ -6141,9 +6272,11 @@ export default function AdminPage() {
                             <select
                               value={room.access_level}
                               onChange={(e) => {
-                                setCinemaRooms(cinemaRooms.map(r => 
-                                  r.id === room.id ? { ...r, access_level: e.target.value } : r
-                                ))
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, access_level: e.target.value } : r,
+                                  ),
+                                )
                               }}
                               className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
                             >
@@ -6153,25 +6286,27 @@ export default function AdminPage() {
                               <option value="admin">Admin</option>
                             </select>
                           </div>
-                          
+
                           <div className="space-y-2 flex items-center">
                             <label className="flex items-center gap-2 text-sm text-gray-300">
-                              <input 
-                                type="checkbox" 
-                                className="rounded" 
+                              <input
+                                type="checkbox"
+                                className="rounded"
                                 checked={room.is_open}
                                 onChange={(e) => {
-                                  setCinemaRooms(cinemaRooms.map(r => 
-                                    r.id === room.id ? { ...r, is_open: e.target.checked } : r
-                                  ))
+                                  setCinemaRooms(
+                                    cinemaRooms.map((r) =>
+                                      r.id === room.id ? { ...r, is_open: e.target.checked } : r,
+                                    ),
+                                  )
                                 }}
                               />
                               Salle Ouverte
                             </label>
                           </div>
-                          
+
                           <div className="lg:col-span-3 flex justify-end gap-2">
-                            <Button 
+                            <Button
                               onClick={() => handleUpdateCinemaRoom(room)}
                               size="sm"
                               className="bg-green-600 hover:bg-green-700"
@@ -6195,7 +6330,7 @@ export default function AdminPage() {
                       Stade de Football
                     </h3>
                   </div>
-                  
+
                   {stadium && (
                     <div className="p-4 bg-gray-700 rounded-lg border border-gray-600">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -6211,7 +6346,7 @@ export default function AdminPage() {
                         <div className="space-y-2">
                           <label className="text-sm text-gray-300">Titre du Match</label>
                           <Input
-                            value={stadium.match_title || ''}
+                            value={stadium.match_title || ""}
                             onChange={(e) => setStadium({ ...stadium, match_title: e.target.value })}
                             className="bg-gray-600 border-gray-500 text-white"
                           />
@@ -6220,7 +6355,7 @@ export default function AdminPage() {
                         <div className="space-y-2 md:col-span-2">
                           <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
                           <Input
-                            value={stadium.embed_url || ''}
+                            value={stadium.embed_url || ""}
                             onChange={(e) => setStadium({ ...stadium, embed_url: e.target.value })}
                             placeholder="https://www.youtube.com/embed/..."
                             className="bg-gray-600 border-gray-500 text-white"
@@ -6231,7 +6366,9 @@ export default function AdminPage() {
                           <label className="text-sm text-gray-300">Heure de Début</label>
                           <Input
                             type="datetime-local"
-                            value={stadium.schedule_start ? new Date(stadium.schedule_start).toISOString().slice(0, 16) : ''}
+                            value={
+                              stadium.schedule_start ? new Date(stadium.schedule_start).toISOString().slice(0, 16) : ""
+                            }
                             onChange={(e) => setStadium({ ...stadium, schedule_start: e.target.value })}
                             className="bg-gray-600 border-gray-500 text-white"
                           />
@@ -6241,7 +6378,9 @@ export default function AdminPage() {
                           <label className="text-sm text-gray-300">Heure de Fin</label>
                           <Input
                             type="datetime-local"
-                            value={stadium.schedule_end ? new Date(stadium.schedule_end).toISOString().slice(0, 16) : ''}
+                            value={
+                              stadium.schedule_end ? new Date(stadium.schedule_end).toISOString().slice(0, 16) : ""
+                            }
                             onChange={(e) => setStadium({ ...stadium, schedule_end: e.target.value })}
                             className="bg-gray-600 border-gray-500 text-white"
                           />
@@ -6263,9 +6402,9 @@ export default function AdminPage() {
 
                         <div className="space-y-2 flex items-center">
                           <label className="flex items-center gap-2 text-sm text-gray-300">
-                            <input 
-                              type="checkbox" 
-                              className="rounded" 
+                            <input
+                              type="checkbox"
+                              className="rounded"
                               checked={stadium.is_open}
                               onChange={(e) => setStadium({ ...stadium, is_open: e.target.checked })}
                             />
@@ -6274,11 +6413,7 @@ export default function AdminPage() {
                         </div>
 
                         <div className="md:col-span-2 flex justify-end">
-                          <Button 
-                            onClick={handleUpdateStadium}
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700"
-                          >
+                          <Button onClick={handleUpdateStadium} size="sm" className="bg-green-600 hover:bg-green-700">
                             <Save className="w-4 h-4 mr-2" />
                             Sauvegarder le Stade
                           </Button>
@@ -6296,15 +6431,14 @@ export default function AdminPage() {
                       <Gamepad2 className="w-5 h-5" />
                       Machines d'Arcade
                     </h3>
-                    <div className="text-sm text-gray-400">
-                      {arcadeMachines.length} machines disponibles
-                    </div>
+                    <div className="text-sm text-gray-400">{arcadeMachines.length} machines disponibles</div>
                   </div>
-                  
+
                   <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4">
                     <p className="text-sm text-blue-200">
-                      Les machines d'arcade sont gérées via la table <span className="font-mono bg-blue-900/50 px-2 py-1 rounded">retrogaming_sources</span>. 
-                      Les jeux actifs apparaissent automatiquement dans l'arcade du monde interactif.
+                      Les machines d'arcade sont gérées via la table{" "}
+                      <span className="font-mono bg-blue-900/50 px-2 py-1 rounded">retrogaming_sources</span>. Les jeux
+                      actifs apparaissent automatiquement dans l'arcade du monde interactif.
                     </p>
                   </div>
 
@@ -6312,21 +6446,21 @@ export default function AdminPage() {
                     {arcadeMachines.map((machine) => (
                       <div key={machine.id} className="bg-gray-700 p-3 rounded-lg border border-gray-600">
                         <div className="font-medium text-white">{machine.name}</div>
-                        <div className="text-xs text-gray-400 mt-1">{machine.category || 'Jeu Rétro'}</div>
+                        <div className="text-xs text-gray-400 mt-1">{machine.category || "Jeu Rétro"}</div>
                         <div className="flex items-center gap-2 mt-2">
-                          <span className={`text-xs px-2 py-1 rounded ${machine.is_active ? 'bg-green-600 text-white' : 'bg-gray-600 text-gray-300'}`}>
-                            {machine.is_active ? 'Actif' : 'Inactif'}
+                          <span
+                            className={`text-xs px-2 py-1 rounded ${machine.is_active ? "bg-green-600 text-white" : "bg-gray-600 text-gray-300"}`}
+                          >
+                            {machine.is_active ? "Actif" : "Inactif"}
                           </span>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-
               </CardContent>
             </Card>
           </TabsContent>
-
         </Tabs>
       </div>
     </div>

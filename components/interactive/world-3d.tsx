@@ -2829,7 +2829,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
               <button
                 onClick={() => {
-                  setShowArcade(true)
+                  handleEnterArcade()
                   setShowMap(false)
                 }}
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white p-4 md:p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
@@ -2845,7 +2845,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
               <button
                 onClick={() => {
-                  setShowStadium(true)
+                  handleEnterStadium()
                   setShowMap(false)
                 }}
                 className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white p-4 md:p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
