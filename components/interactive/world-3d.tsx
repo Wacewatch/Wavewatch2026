@@ -45,7 +45,7 @@ interface WorldProps {
 
 interface InteractiveWorldProps {
   userId: string
-  userProfile: any
+  userProfile: UserProfile | null
 }
 
 // Define UserProfile type for clarity
@@ -246,11 +246,11 @@ function RealisticLamppost({ position }: { position: [number, number, number] })
   )
 }
 
-export default function InteractiveWorld({
-  userProfile: initialUserProfile,
-}: {
-  userProfile: UserProfile | null
-}) {
+export default function InteractiveWorld({ userId, userProfile: initialUserProfile }: InteractiveWorldProps) {
+  console.log("[v0] InteractiveWorld component mounted")
+  console.log("[v0] User ID:", userId)
+  console.log("[v0] Initial user profile:", initialUserProfile)
+
   const router = useRouter() // Initialize router
   const [myProfile, setMyProfile] = useState<any>(null)
   const [otherPlayers, setOtherPlayers] = useState<any[]>([])
@@ -1427,17 +1427,30 @@ export default function InteractiveWorld({
 
   return (
     <div className="relative w-full h-screen">
+      {console.log("[v0] Rendering Canvas")}
       <Canvas
-        // Pass povMode to camera
-        camera={povMode ? undefined : { position: [0, 8, 12], fov: 60 }}
-        style={{ width: "100vw", height: "100vh" }}
         shadows
-        gl={{
-          antialias: graphicsQuality !== "low",
-          alpha: false,
-          powerPreference: graphicsQuality === "high" ? "high-performance" : "default",
-        }}
+        camera={{ position: [0, 3, 8], fov: 60 }}
+        gl={{ antialias: true }}
+        style={{ background: "linear-gradient(to bottom, #87CEEB, #E0F6FF)" }}
       >
+        {/* Added ambient and directional lights, removed Sky */}
+        <ambientLight intensity={0.5} />
+        <directionalLight
+          position={[10, 20, 10]}
+          intensity={1}
+          castShadow
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-camera-far={100}
+          shadow-camera-left={-20}
+          shadow-camera-right={20}
+          shadow-camera-top={20}
+          shadow-camera-bottom={-20}
+        />
+        <pointLight position={[-10, 10, -10]} intensity={0.3} />
+
+        {/* Pass povMode to camera */}
         {povMode && (
           <PerspectiveCamera makeDefault position={[myPosition.x, myPosition.y + 1.5, myPosition.z]} fov={75} />
         )}
