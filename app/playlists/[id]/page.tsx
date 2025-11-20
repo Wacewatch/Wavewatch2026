@@ -7,12 +7,12 @@ import { useAuth } from "@/components/auth-provider"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Globe, Lock, Calendar, Film, Trash2, Clock, Play } from 'lucide-react'
+import { ArrowLeft, Globe, Lock, Calendar, Film, Trash2, Clock, Play } from "lucide-react"
 import { usePlaylists } from "@/hooks/use-playlists"
 import { createClient } from "@/lib/supabase/client"
 import Image from "next/image"
 import Link from "next/link"
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter } from "next/navigation"
 import { toast } from "@/hooks/use-toast"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { IframeModal } from "@/components/iframe-modal"
@@ -133,34 +133,36 @@ export default function PlaylistContentPage() {
         .order("position", { ascending: true })
 
       if (!itemsError && itemsData) {
-        const processedItems = await Promise.all(itemsData.map(async (item) => {
-          if (item.media_type === "tv-channel" && item.tmdb_id) {
-            // Fetch full TV channel data including stream_url
-            const { data: channelData } = await supabase
-              .from("tv_channels")
-              .select("*")
-              .eq("id", item.tmdb_id)
-              .single()
-            
-            if (channelData) {
-              return {
-                ...item,
-                content_type: item.media_type,
-                content_id: item.tmdb_id,
-                stream_url: channelData.stream_url,
-                logo_url: channelData.logo_url || item.poster_path,
-                poster_path: channelData.logo_url || item.poster_path,
+        const processedItems = await Promise.all(
+          itemsData.map(async (item) => {
+            if (item.media_type === "tv-channel" && item.tmdb_id) {
+              // Fetch full TV channel data including stream_url
+              const { data: channelData } = await supabase
+                .from("tv_channels")
+                .select("*")
+                .eq("id", item.tmdb_id)
+                .single()
+
+              if (channelData) {
+                return {
+                  ...item,
+                  content_type: item.media_type,
+                  content_id: item.tmdb_id,
+                  stream_url: channelData.stream_url,
+                  logo_url: channelData.logo_url || item.poster_path,
+                  poster_path: channelData.logo_url || item.poster_path,
+                }
               }
             }
-          }
-          
-          return {
-            ...item,
-            content_type: item.media_type,
-            content_id: item.tmdb_id,
-          }
-        }))
-        
+
+            return {
+              ...item,
+              content_type: item.media_type,
+              content_id: item.tmdb_id,
+            }
+          }),
+        )
+
         console.log("[v0] Processed playlist items with TV channels:", processedItems)
         setPlaylistItems(processedItems)
       }
@@ -700,13 +702,13 @@ export default function PlaylistContentPage() {
                     <div key={item.id} className="space-y-2 group">
                       <div className="relative aspect-[2/3] rounded-lg overflow-hidden bg-gray-700 cursor-pointer">
                         {isPlayableItem ? (
-                          <button 
-                            onClick={handleItemClick} 
+                          <button
+                            onClick={handleItemClick}
                             className="w-full h-full flex items-center justify-center bg-gray-800"
                             type="button"
                           >
                             {item.media_type === "tv-channel" && (item.logo_url || item.poster_path) ? (
-                              <img 
+                              <img
                                 src={item.logo_url || item.poster_path}
                                 alt={item.title}
                                 className="w-full h-full object-contain p-4"
@@ -776,7 +778,17 @@ export default function PlaylistContentPage() {
                     )
                   } else if (itemUrl) {
                     return (
-                      <Link key={item.id} href={itemUrl}>
+                      <Link
+                        key={item.id}
+                        href={itemUrl}
+                        onClick={(e) => {
+                          // Allow navigation for music, software, and other types
+                          if (mediaType === "music" || mediaType === "software" || mediaType === "ebook") {
+                            e.preventDefault()
+                            handlePlayItem(item)
+                          }
+                        }}
+                      >
                         {content}
                       </Link>
                     )
