@@ -297,14 +297,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [currentEmoji, setCurrentEmoji] = useState<string | null>(null)
   const [isJumping, setIsJumping] = useState(false)
 
-  const [showAnimatedEmotes, setShowAnimatedEmotes] = useState(false)
-
   const [movement, setMovement] = useState({ x: 0, z: 0 })
   const [showChat, setShowChat] = useState(false)
   const [showChatInput, setShowChatInput] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showAvatarCustomizer, setShowAvatarCustomizer] = useState(false)
-  const [showCinema, setShowCinema] = useState(false)
+  const [showCinema, setShowCinema] = useState(false) // State for cinema modal
   const [showUserCard, setShowUserCard] = useState(false)
   const [currentCinemaRoom, setCurrentCinemaRoom] = useState<any>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -1107,7 +1105,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setCurrentArcadeMachine(null)
   }
 
-  const handleEnterRoom = async (room: any) => {
+  const handleEnterCinemaRoom = async (room: any) => {
     setCurrentCinemaRoom(room)
     setShowCinema(false)
 
@@ -1232,15 +1230,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }
 
-  const handleOpenStadiumModal = () => {
-    setShowStadium(true)
-  }
-
   const handleEnterStadium = () => {
     if (!stadium) return
     setShowStadium(false)
     setCurrentCinemaRoom(null)
-    setCurrentRoom("stadium")
+    setCurrentRoom("stadium") // Set local state immediately
 
     // Teleport player to stadium viewing position
     const stadiumPos = { x: 0, y: 0.5, z: 10 } // Center position facing the screen
@@ -1469,46 +1463,31 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <meshStandardMaterial color="#4ade80" roughness={0.95} metalness={0} />
             </mesh>
 
-            {/* Cinema building - OPEN */}
-            <group position={[15, 0, -5]}>
-              {/* Building */}
-              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
-                <boxGeometry args={[8, 5, 8]} />
-                <meshStandardMaterial color="#3b82f6" />
-              </mesh>
-              <mesh position={[0, 5.3, 0]} castShadow receiveShadow>
-                <coneGeometry args={[5, 1.2, 4]} rotation={[0, Math.PI / 4, 0]} />
-                <meshStandardMaterial color="#2563eb" />
-              </mesh>
-              <mesh position={[0, 1.2, 4.1]} receiveShadow>
-                <boxGeometry args={[2, 2.3, 0.2]} />
-                <meshStandardMaterial color="#1e293b" />
-              </mesh>
-              <Html position={[0, 6, 0]} center>
-                <button
-                  onClick={() => setShowCinema(true)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
-                >
-                  🎬 Voir les Salles
-                </button>
-              </Html>
-            </group>
-
-            {/* Arcade building - NOW OPEN */}
-            <group position={[-15, 0, -15]}>
+            {/* Arcade building - was Arcade Building - Now OPEN */}
+            <group position={[-25, 0, 0]}>
               <mesh position={[0, 3, 0]} castShadow>
                 <boxGeometry args={[10, 6, 10]} />
-                <meshStandardMaterial color="#9333ea" />
+                <meshStandardMaterial color="#8b5cf6" roughness={0.7} metalness={0.2} />
               </mesh>
-              <mesh position={[0, 6.3, 0]} castShadow>
-                <coneGeometry args={[6, 1.5, 4]} rotation={[0, Math.PI / 4, 0]} />
-                <meshStandardMaterial color="#7e22ce" />
+
+              <mesh position={[0, 6.5, 0]} castShadow>
+                <boxGeometry args={[10.5, 0.5, 10.5]} />
+                <meshStandardMaterial color="#6b21a8" roughness={0.6} metalness={0.3} />
               </mesh>
-              <mesh position={[0, 1.5, 5.1]}>
-                <boxGeometry args={[2.5, 3, 0.2]} />
-                <meshStandardMaterial color="#1e293b" />
+
+              <mesh position={[0, 7, 0]}>
+                <boxGeometry args={[8, 0.6, 0.3]} />
+                <meshStandardMaterial
+                  color="#f59e0b"
+                  emissive="#f59e0b"
+                  emissiveIntensity={1.5}
+                  roughness={0.3}
+                  metalness={0.5}
+                />
               </mesh>
-              <Html position={[0, 7, 0]} center>
+              <pointLight position={[0, 7, 0]} intensity={2} distance={10} color="#f59e0b" />
+
+              <Html position={[0, 8, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <button
                   onClick={handleEnterArcade}
                   className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
@@ -1518,31 +1497,145 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </Html>
             </group>
 
-            {/* Stadium building - NOW OPEN */}
+            {/* Stadium building - was Stadium Building - Now OPEN */}
             <group position={[25, 0, -15]}>
               <mesh position={[0, 3.5, 0]} castShadow>
-                <cylinderGeometry args={[8, 8, 7, 32]} />
-                <meshStandardMaterial color="#16a34a" />
+                <boxGeometry args={[12, 7, 10]} />
+                <meshStandardMaterial color="#16a34a" roughness={0.7} metalness={0.1} />
               </mesh>
+
               <mesh position={[0, 7.5, 0]} castShadow>
-                <torusGeometry args={[8, 0.5, 16, 32]} />
-                <meshStandardMaterial color="#15803d" />
+                <boxGeometry args={[12.5, 0.5, 10.5]} />
+                <meshStandardMaterial color="#15803d" roughness={0.6} metalness={0.2} />
               </mesh>
-              <mesh position={[0, 2, 8.1]}>
-                <boxGeometry args={[3, 4, 0.2]} />
-                <meshStandardMaterial color="#1e293b" />
+
+              <mesh position={[0, 8, 0]}>
+                <boxGeometry args={[10, 0.7, 0.3]} />
+                <meshStandardMaterial
+                  color="#22c55e"
+                  emissive="#22c55e"
+                  emissiveIntensity={1.5}
+                  roughness={0.3}
+                  metalness={0.5}
+                />
               </mesh>
-              <Html position={[0, 8, 0]} center>
+              <pointLight position={[0, 8, 0]} intensity={2} distance={10} color="#22c55e" />
+
+              <Html position={[0, 9, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
                 <button
-                  onClick={handleOpenStadiumModal}
+                  onClick={handleEnterStadium}
                   className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
                 >
-                  ⚽ Infos Match
+                  ⚽ Entrer au Stade
                 </button>
               </Html>
             </group>
 
+            <group position={[15, 0, -5]}>
+              {/* Building */}
+              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
+                <boxGeometry args={[6, 5, 5]} />
+                <meshStandardMaterial color="#9333ea" />
+              </mesh>
+              {/* Roof */}
+              <mesh position={[0, 5.2, 0]} castShadow>
+                <coneGeometry args={[4, 1.5, 4]} />
+                <meshStandardMaterial color="#7e22ce" />
+              </mesh>
+              {/* Sign */}
+              <Html position={[0, 4, 2.6]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+                <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
+                  <div className="text-xl">🕹️ ARCADE 🕹️</div>
+                  <div className="text-sm mt-1">Ouverture Prochainement</div>
+                </div>
+              </Html>
+            </group>
+
             {/* Additional decorative buildings */}
+            <group position={[-15, 0, 5]}>
+              <mesh position={[0, 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[5, 4, 4]} />
+                <meshStandardMaterial color="#0ea5e9" />
+              </mesh>
+              <mesh position={[0, 4.5, 0]} castShadow>
+                <boxGeometry args={[5.2, 1, 4.2]} />
+                <meshStandardMaterial color="#0284c7" />
+              </mesh>
+            </group>
+
+            <group position={[-15, 0, -8]}>
+              <mesh position={[0, 3, 0]} castShadow receiveShadow>
+                <boxGeometry args={[4, 6, 4]} />
+                <meshStandardMaterial color="#f59e0b" />
+              </mesh>
+              <mesh position={[0, 6.5, 0]} castShadow>
+                <coneGeometry args={[3, 1.5, 4]} />
+                <meshStandardMaterial color="#ea580c" />
+              </mesh>
+            </group>
+
+            {/* Cinema Building */}
+            <group position={[15, 0, 0]}>
+              <mesh position={[0, 2.5, 0]} castShadow>
+                <boxGeometry args={[8, 5, 8]} />
+                <meshStandardMaterial color="#1e3a8a" roughness={0.7} metalness={0.1} />
+              </mesh>
+
+              <mesh position={[0, 5.5, 0]} castShadow>
+                <boxGeometry args={[8.5, 0.5, 8.5]} />
+                <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.2} />
+              </mesh>
+
+              <mesh position={[0, 6, 0]}>
+                <boxGeometry args={[7, 0.8, 0.3]} />
+                <meshStandardMaterial
+                  color="#fbbf24"
+                  emissive="#fbbf24"
+                  emissiveIntensity={1.5}
+                  roughness={0.3}
+                  metalness={0.5}
+                />
+              </mesh>
+              <pointLight position={[0, 6, 0]} intensity={2} distance={10} color="#fbbf24" />
+
+              {[-2, 0, 2].map((x) => (
+                <mesh key={`window-${x}`} position={[x, 3, 4.1]}>
+                  <planeGeometry args={[1.5, 1.8]} />
+                  <meshStandardMaterial
+                    color="#60a5fa"
+                    emissive="#60a5fa"
+                    emissiveIntensity={0.5}
+                    metalness={0.8}
+                    roughness={0.1}
+                  />
+                </mesh>
+              ))}
+
+              <mesh position={[-3, 1.2, 4.1]} castShadow>
+                <boxGeometry args={[1.5, 2.4, 0.1]} />
+                <meshStandardMaterial color="#7c2d12" roughness={0.8} metalness={0.1} />
+              </mesh>
+              <mesh position={[-3, 1.2, 0]}>
+                <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
+                <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
+              </mesh>
+
+              <mesh position={[-3, 0.1, 5.5]}>
+                <boxGeometry args={[2, 0.2, 2]} />
+                <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
+              </mesh>
+
+              <Html position={[0, 7, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+                <button
+                  onClick={() => setShowCinema(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
+                >
+                  🎬 Cinéma
+                </button>
+              </Html>
+            </group>
+
+            {/* Additional decorative closed buildings */}
             <group position={[-15, 0, 5]}>
               <mesh position={[0, 2, 0]} castShadow receiveShadow>
                 <boxGeometry args={[5, 4, 4]} />
@@ -1889,7 +1982,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             <Html position={[0, 2, 20]} center>
               <button
                 onClick={handleLeaveStadium}
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg flex items-center gap-2"
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold shadow-xl flex items-center gap-2"
               >
                 <LogOut className="w-5 h-5" />
                 Quitter le Stade
@@ -2044,32 +2137,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             )
           })}
-
-        {!povMode && (
-          <group position={[myPosition.x, myPosition.y, myPosition.z]}>
-            <RealisticAvatar
-              position={[0, 0, 0]}
-              avatarStyle={myAvatarStyle}
-              isMoving={movement.x !== 0 || movement.z !== 0}
-            />
-
-            {worldSettings.showStatusBadges && userProfile && (
-              <Html position={[0, 2.3, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <div className="flex flex-col items-center gap-1 pointer-events-none">
-                  <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
-                    <span className="text-white text-xs font-medium">{userProfile.username || "Vous"}</span>
-                    {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
-                    {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
-                    {userProfile.is_vip && !userProfile.is_vip_plus && !userProfile.is_admin && (
-                      <Star className="w-3 h-3 text-yellow-400" />
-                    )}
-                  </div>
-                  {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
-                </div>
-              </Html>
-            )}
-          </group>
-        )}
 
         {!povMode && (
           <OrbitControls
@@ -2495,7 +2562,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
-      {/* Quick Actions and Emoji Menu */}
       {worldSettings.enableEmojis && (
         <button
           onClick={() => setShowQuickActions(!showQuickActions)}
@@ -2547,84 +2613,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <div className="border-t border-white/20 my-1"></div>
               </>
             )}
-            {currentRoom === "arcade" && (
-              <>
-                <button
-                  onClick={handleLeaveArcade}
-                  className="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
-                >
-                  <LogOut className="w-5 h-5" />
-                  Quitter l'Arcade
-                </button>
-                <div className="border-t border-white/20 my-1"></div>
-              </>
-            )}
             <button
               onClick={() => handleQuickAction("jump")}
               className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
             >
               <ArrowUp className="w-6 h-6" />
             </button>
-
-            <div className="flex gap-2 mb-2">
+            {["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"].map((emoji) => (
               <button
-                onClick={() => setShowAnimatedEmotes(false)}
-                className={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
-                  !showAnimatedEmotes ? "bg-yellow-500 text-black" : "bg-gray-700 text-white hover:bg-gray-600"
-                }`}
+                key={emoji}
+                onClick={() => handleEmoji(emoji)}
+                className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors text-center"
               >
-                😊 Emojis
+                {emoji}
               </button>
-              <button
-                onClick={() => setShowAnimatedEmotes(true)}
-                className={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
-                  showAnimatedEmotes ? "bg-yellow-500 text-black" : "bg-gray-700 text-white hover:bg-gray-600"
-                }`}
-              >
-                ✨ Animés
-              </button>
-            </div>
-
-            {!showAnimatedEmotes ? (
-              // Regular emojis
-              <>
-                {["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"].map((emoji) => (
-                  <button
-                    key={emoji}
-                    onClick={() => handleEmoji(emoji)}
-                    className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors text-center"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </>
-            ) : (
-              // Animated emotes using placeholder images (in real app, would use actual GIF URLs)
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { name: "dance", emoji: "💃" },
-                  { name: "celebrate", emoji: "🎊" },
-                  { name: "laugh", emoji: "🤣" },
-                  { name: "cry", emoji: "😢" },
-                  { name: "angry", emoji: "😡" },
-                  { name: "love", emoji: "😍" },
-                  { name: "clap", emoji: "👏" },
-                  { name: "wave", emoji: "👋" },
-                  { name: "thinking", emoji: "🤨" },
-                ].map((emote) => (
-                  <button
-                    key={emote.name}
-                    onClick={() => handleEmoji(emote.emoji)}
-                    className="relative bg-gradient-to-br from-purple-600 to-pink-600 p-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-110"
-                  >
-                    <div className="text-3xl animate-pulse">{emote.emoji}</div>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-lg flex items-end justify-center pb-1">
-                      <span className="text-[8px] text-white font-bold uppercase">{emote.name}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
         </div>
       )}
@@ -2734,9 +2737,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {showMap && (
-        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 rounded-2xl p-6 md:p-8 max-w-2xl w-full mx-4 shadow-2xl border-2 border-blue-400/30 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6 sticky top-0 bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 pb-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-6 md:p-8 max-w-2xl w-full mx-4 shadow-2xl border-2 border-white/20">
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
                 <Map className="w-6 h-6 md:w-8 md:h-8 text-cyan-400" />
                 Carte du Monde
@@ -2781,7 +2784,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
               <button
                 onClick={() => {
-                  setShowStadium(true)
+                  handleEnterStadium()
                   setShowMap(false)
                 }}
                 className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white p-4 md:p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
