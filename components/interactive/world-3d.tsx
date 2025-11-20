@@ -48,7 +48,7 @@ interface InteractiveWorldProps {
   userProfile: any
 }
 
-// RealisticAvatar is only used inside Canvas
+// RealisticAvatarComponent is only used inside Canvas
 function RealisticAvatarComponent({
   position,
   avatarStyle,
@@ -182,6 +182,158 @@ function RealisticAvatarComponent({
           <meshStandardMaterial color="#000000" />
         </mesh>
       )}
+    </group>
+  )
+}
+
+function RealisticAvatar({
+  position,
+  rotation,
+  avatarStyle,
+  isOtherPlayer = false,
+  username = "",
+  currentMessage = null,
+  currentEmoji = null,
+  grade = null,
+}: {
+  position: [number, number, number]
+  rotation: number
+  avatarStyle: any
+  isOtherPlayer?: boolean
+  username?: string
+  currentMessage?: string | null
+  currentEmoji?: string | null
+  grade?: string | null
+}) {
+  const meshRef = useRef<any>()
+  const groupRef = useRef<any>()
+
+  // Animation for idle movement
+  useFrame((state) => {
+    if (meshRef.current) {
+      meshRef.current.position.y = Math.sin(state.clock.elapsedTime * 2) * 0.05
+    }
+  })
+
+  // Apply avatar style and default values
+  const style = {
+    bodyColor: avatarStyle?.bodyColor || "#3b82f6",
+    headColor: avatarStyle?.headColor || "#fbbf24",
+    skinTone: avatarStyle?.skinTone || avatarStyle?.headColor || "#fbbf24",
+    hairStyle: avatarStyle?.hairStyle || "short",
+    hairColor: avatarStyle?.hairColor || "#1f2937",
+    accessory: avatarStyle?.accessory || "none",
+    faceSmiley: avatarStyle?.faceSmiley || "😊",
+  }
+
+  return (
+    <group ref={groupRef} position={position} rotation={[0, rotation, 0]}>
+      {/* Message bubble */}
+      {currentMessage && (
+        <Html position={[0, 3, 0]} center distanceFactor={8} style={{ pointerEvents: "none" }}>
+          <div className="bg-white text-black px-3 py-2 rounded-lg shadow-lg max-w-[200px] text-sm">
+            {currentMessage}
+          </div>
+        </Html>
+      )}
+
+      {/* Emoji display */}
+      {currentEmoji && (
+        <Html position={[0, 3.5, 0]} center distanceFactor={8} style={{ pointerEvents: "none" }}>
+          <div className="text-4xl animate-bounce">{currentEmoji}</div>
+        </Html>
+      )}
+
+      {/* Grade badge */}
+      {grade && (
+        <Html position={[0, 2.5, 0]} center distanceFactor={10} style={{ pointerEvents: "none" }}>
+          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-2 py-1 rounded-full text-xs font-bold shadow-lg">
+            {grade}
+          </div>
+        </Html>
+      )}
+
+      {/* Username label */}
+      {isOtherPlayer && username && (
+        <Html position={[0, 2, 0]} center distanceFactor={10} style={{ pointerEvents: "none" }}>
+          <div className="bg-gray-900 text-white px-2 py-1 rounded-full text-xs font-medium shadow-lg">{username}</div>
+        </Html>
+      )}
+
+      {/* Body */}
+      <mesh ref={meshRef} castShadow receiveShadow>
+        <capsuleGeometry args={[0.3, 0.8, 4, 8]} />
+        <meshStandardMaterial color={style.bodyColor || "#3b82f6"} />
+      </mesh>
+
+      {/* Head */}
+      <mesh position={[0, 1.1, 0]} castShadow>
+        <sphereGeometry args={[0.35, 16, 16]} />
+        <meshStandardMaterial color={style.skinTone || "#fbbf24"} />
+      </mesh>
+
+      {/* Face - Smiley emoji */}
+      <Html position={[0, 1.1, 0.36]} center distanceFactor={15} style={{ pointerEvents: "none" }}>
+        <div className="text-3xl">{style.faceSmiley || "😊"}</div>
+      </Html>
+
+      {/* Hair */}
+      {style.hairStyle === "short" && (
+        <mesh position={[0, 1.35, 0]} castShadow>
+          <sphereGeometry args={[0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
+          <meshStandardMaterial color={style.hairColor || "#1f2937"} />
+        </mesh>
+      )}
+
+      {style.hairStyle === "long" && (
+        <>
+          <mesh position={[0, 1.35, 0]} castShadow>
+            <sphereGeometry args={[0.36, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
+            <meshStandardMaterial color={style.hairColor || "#1f2937"} />
+          </mesh>
+          <mesh position={[0, 0.8, -0.3]} castShadow>
+            <boxGeometry args={[0.6, 0.8, 0.1]} />
+            <meshStandardMaterial color={style.hairColor || "#1f2937"} />
+          </mesh>
+        </>
+      )}
+
+      {style.hairStyle === "bald" && null}
+
+      {/* Accessory */}
+      {style.accessory === "glasses" && (
+        <mesh position={[0, 1.1, 0.35]} castShadow>
+          <boxGeometry args={[0.5, 0.1, 0.05]} />
+          <meshStandardMaterial color="#1f2937" transparent opacity={0.6} />
+        </mesh>
+      )}
+
+      {style.accessory === "hat" && (
+        <mesh position={[0, 1.5, 0]} castShadow>
+          <cylinderGeometry args={[0.4, 0.3, 0.2, 16]} />
+          <meshStandardMaterial color="#dc2626" />
+        </mesh>
+      )}
+
+      {/* Arms */}
+      <mesh position={[-0.45, 0.3, 0]} rotation={[0, 0, 0.2]} castShadow>
+        <capsuleGeometry args={[0.12, 0.6, 4, 8]} />
+        <meshStandardMaterial color={style.skinTone || "#fbbf24"} />
+      </mesh>
+      <mesh position={[0.45, 0.3, 0]} rotation={[0, 0, -0.2]} castShadow>
+        <capsuleGeometry args={[0.12, 0.6, 4, 8]} />
+        <meshStandardMaterial color={style.skinTone || "#fbbf24"} />
+      </mesh>
+
+      {/* Legs */}
+      <mesh position={[-0.15, -0.4, 0]} castShadow>
+        <capsuleGeometry args={[0.12, 0.6, 4, 8]} />
+        <meshStandardMaterial color={style.bodyColor || "#3b82f6"} />
+      </mesh>
+      <mesh position={[0.15, -0.4, 0]} castShadow>
+        <capsuleGeometry args={[0.12, 0.6, 4, 8]} />
+        <meshStandardMaterial color={style.bodyColor || "#3b82f6"} />
+      </mesh>
     </group>
   )
 }
@@ -2380,7 +2532,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <div>
                 <label className="text-white font-semibold mb-3 block">Style de cheveux</label>
                 <div className="grid grid-cols-3 gap-3">
-                  {["short", "long", "none"].map((style) => {
+                  {["short", "long", "bald"].map((style) => {
                     const option = customizationOptions.find((o) => o.category === "hair_style" && o.value === style)
                     const isLocked =
                       option?.is_premium && !userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin
@@ -2972,7 +3124,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       {!povMode && userProfile && (
         <group position={[myPosition.x, myPosition.y, myPosition.z]}>
-          <RealisticAvatarComponent position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
+          <RealisticAvatar position={[0, 0, 0]} rotation={myRotation} avatarStyle={myAvatarStyle} />
 
           {worldSettings.showStatusBadges && (
             <Html position={[0, 2.3, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
