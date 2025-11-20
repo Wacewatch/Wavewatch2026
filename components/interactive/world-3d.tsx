@@ -29,6 +29,8 @@ import {
   Building2,
   Gamepad2,
   Trophy,
+  Film,
+  Sparkles,
 } from "lucide-react"
 import type * as THREE from "three"
 import { useRouter } from "next/navigation" // Assuming router is needed for navigation
@@ -349,6 +351,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [playerActions, setPlayerActions] = useState<Record<string, { action: string; timestamp: number }>>({})
   const [quickAction, setQuickAction] = useState<string | null>(null) // State for current quick action animation
   const keysPressed = useRef<Set<string>>(new Set()) // Ref for tracking pressed keys
+
+  const isMoving = movement.x !== 0 || movement.z !== 0
 
   useEffect(() => {
     const checkMobile = () => {
@@ -1982,7 +1986,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             <Html position={[0, 2, 20]} center>
               <button
                 onClick={handleLeaveStadium}
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold shadow-xl flex items-center gap-2"
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg flex items-center gap-2"
               >
                 <LogOut className="w-5 h-5" />
                 Quitter le Stade
@@ -2916,6 +2920,133 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             allowFullScreen
           />
         </div>
+      )}
+
+      {showCinema && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-2xl p-6 md:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-purple-400/30">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
+                <Film className="w-6 h-6 md:w-8 md:h-8 text-purple-400" />
+                Salles de Cinéma
+              </h2>
+              <button onClick={() => setShowCinema(false)} className="text-white hover:text-red-400 transition-colors">
+                <X className="w-6 h-6 md:w-8 md:h-8" />
+              </button>
+            </div>
+
+            {cinemaRooms.length === 0 ? (
+              <div className="text-center text-white py-12">
+                <Film className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                <p className="text-lg">Aucune salle de cinéma disponible pour le moment</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2">
+                {cinemaRooms.map((room) => {
+                  const currentOccupancy = cinemaSeats.filter((s) => s.cinema_room_id === room.id && s.user_id).length
+                  const isFull = currentOccupancy >= room.capacity
+                  const isOpen = room.is_open
+
+                  return (
+                    <div
+                      key={room.id}
+                      className={`bg-white/10 backdrop-blur rounded-xl p-4 border-2 transition-all ${
+                        isFull || !isOpen
+                          ? "border-gray-500/30 opacity-60"
+                          : "border-purple-400/30 hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/20"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg font-bold text-white">Salle {room.room_number}</span>
+                            {isFull && (
+                              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                                Complète
+                              </span>
+                            )}
+                            {!isOpen && (
+                              <span className="bg-gray-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                                Fermée
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="text-white font-semibold text-sm mb-1">{room.movie_title}</h3>
+                          <div className="flex items-center gap-2 text-xs text-purple-300">
+                            <Sparkles className="w-3 h-3" />
+                            <span>{room.theme}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-sm mb-4">
+                        <div className="flex items-center gap-2 text-white">
+                          <Users className="w-4 h-4" />
+                          <span>
+                            {currentOccupancy}/{room.capacity}
+                          </span>
+                        </div>
+                        {room.schedule_start && (
+                          <div className="text-purple-300 text-xs">
+                            {new Date(room.schedule_start).toLocaleTimeString("fr-FR", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => {
+                          if (!isFull && isOpen) {
+                            setCurrentCinemaRoom(room)
+                            setShowCinema(false)
+                          }
+                        }}
+                        disabled={isFull || !isOpen}
+                        className={`w-full py-3 rounded-lg font-bold transition-all ${
+                          isFull || !isOpen
+                            ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                            : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white transform hover:scale-105"
+                        }`}
+                      >
+                        {isFull ? "Salle Complète" : !isOpen ? "Salle Fermée" : "Entrer"}
+                      </button>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {!povMode && userProfile && (
+        <group position={[myPosition.x, myPosition.y, myPosition.z]}>
+          <RealisticAvatar position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
+
+          {worldSettings.showStatusBadges && (
+            <Html position={[0, 2.3, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+              <div className="flex flex-col items-center gap-1 pointer-events-none">
+                <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
+                  <span className="text-white text-xs font-medium">{userProfile.username || "Vous"}</span>
+                  {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
+                  {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
+                  {userProfile.is_vip && !userProfile.is_vip_plus && !userProfile.is_admin && (
+                    <Star className="w-3 h-3 text-yellow-400" />
+                  )}
+                </div>
+                {playerChatBubbles[userProfile.id] &&
+                  Date.now() - playerChatBubbles[userProfile.id].timestamp < 5000 && (
+                    <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
+                      {playerChatBubbles[userProfile.id].message}
+                    </div>
+                  )}
+                {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
+              </div>
+            </Html>
+          )}
+        </group>
       )}
     </div>
   )
