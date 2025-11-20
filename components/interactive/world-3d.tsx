@@ -297,6 +297,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [currentEmoji, setCurrentEmoji] = useState<string | null>(null)
   const [isJumping, setIsJumping] = useState(false)
 
+  const [showAnimatedEmotes, setShowAnimatedEmotes] = useState(false)
+
   const [movement, setMovement] = useState({ x: 0, z: 0 })
   const [showChat, setShowChat] = useState(false)
   const [showChatInput, setShowChatInput] = useState(false)
@@ -324,6 +326,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [showStadium, setShowStadium] = useState(false)
   const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
   const [showMenu, setShowMenu] = useState(false) // Added this state
+
+  const [currentRoom, setCurrentRoom] = useState<string | null>(null)
 
   const [worldSettings, setWorldSettings] = useState({
     maxCapacity: 100,
@@ -411,62 +415,50 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const checkCollision = (newX: number, newZ: number): boolean => {
     // Collision zones for objects in the world
     const collisionZones = [
-      // Cinema building
-      { x: 15, z: 0, width: 9, depth: 9 },
+      // Buildings in main world (only check if NOT in a room)
+      currentRoom === null && { x: 15, z: 0, width: 9, depth: 9 },
+      currentRoom === null && { x: -15, z: -15, width: 5, depth: 5 },
+      currentRoom === null && { x: -15, z: 5, width: 5, depth: 4 },
+      currentRoom === null && { x: -15, z: -8, width: 4, depth: 4 },
+      currentRoom === null && { x: -25, z: 0, width: 8, depth: 8 },
+      currentRoom === null && { x: 25, z: -10, width: 10, depth: 10 },
+      currentRoom === null && { x: -20, z: 15, width: 9, depth: 9 },
+      currentRoom === null && { x: 20, z: 10, width: 7, depth: 7 },
+      currentRoom === null && { x: 0, z: 25, width: 12, depth: 12 },
 
       // Trees
-      { x: -15, z: -15, width: 2, depth: 2 },
-      { x: -8, z: -18, width: 2, depth: 2 },
-      { x: 8, z: -18, width: 2, depth: 2 },
-      { x: 15, z: -15, width: 2, depth: 2 },
-      { x: -18, z: 10, width: 2, depth: 2 },
-      { x: 18, z: 10, width: 2, depth: 2 },
-      { x: -10, z: 15, width: 2, depth: 2 },
-      { x: 10, z: 15, width: 2, depth: 2 },
+      currentRoom === null && { x: -15, z: -15, width: 2, depth: 2 },
+      currentRoom === null && { x: -8, z: -18, width: 2, depth: 2 },
+      currentRoom === null && { x: 8, z: -18, width: 2, depth: 2 },
+      currentRoom === null && { x: 15, z: -15, width: 2, depth: 2 },
+      currentRoom === null && { x: -18, z: 10, width: 2, depth: 2 },
+      currentRoom === null && { x: 18, z: 10, width: 2, depth: 2 },
+      currentRoom === null && { x: -10, z: 15, width: 2, depth: 2 },
+      currentRoom === null && { x: 10, z: 15, width: 2, depth: 2 },
 
       // Lampposts
-      { x: -20, z: -10, width: 1, depth: 1 },
-      { x: -20, z: 0, width: 1, depth: 1 },
-      { x: -20, z: 10, width: 1, depth: 1 },
+      currentRoom === null && { x: -20, z: -10, width: 1, depth: 1 },
+      currentRoom === null && { x: -20, z: 0, width: 1, depth: 1 },
+      currentRoom === null && { x: -20, z: 10, width: 1, depth: 1 },
 
       // Fountain
-      { x: -15, z: 0, width: 6, depth: 6 },
+      currentRoom === null && { x: -15, z: 0, width: 6, depth: 6 },
 
       // Bushes
-      { x: 5, z: -10, width: 2, depth: 2 },
-      { x: -5, z: -10, width: 2, depth: 2 },
-      { x: 10, z: 5, width: 2, depth: 2 },
-      { x: -10, z: 5, width: 2, depth: 2 },
-      { x: 12, z: -5, width: 2, depth: 2 },
-      { x: -12, z: -5, width: 2, depth: 2 },
+      currentRoom === null && { x: 5, z: -10, width: 2, depth: 2 },
+      currentRoom === null && { x: -5, z: -10, width: 2, depth: 2 },
+      currentRoom === null && { x: 10, z: 5, width: 2, depth: 2 },
+      currentRoom === null && { x: -10, z: 5, width: 2, depth: 2 },
+      currentRoom === null && { x: 12, z: -5, width: 2, depth: 2 },
+      currentRoom === null && { x: -12, z: -5, width: 2, depth: 2 },
 
-      // Arcade building
-      { x: -15, z: -15, width: 5, depth: 5 },
-      // Additional buildings
-      { x: -15, z: 5, width: 5, depth: 4 },
-      { x: -15, z: -8, width: 4, depth: 4 },
-      // Decorative closed buildings
-      { x: -25, z: 0, width: 8, depth: 8 },
-      { x: 25, z: -10, width: 10, depth: 10 },
-      { x: -20, z: 15, width: 9, depth: 9 },
-      { x: 20, z: 10, width: 7, depth: 7 },
-      { x: 0, z: 25, width: 12, depth: 12 },
-
-      // Arcade Room (if player is inside)
-      userProfile?.current_room === "arcade" && { x: -25, z: 0, width: 10, depth: 40 },
+      // Arcade Room boundaries (if player is inside)
+      currentRoom === "arcade" && { x: 0, z: 0, width: 50, depth: 40 },
       // Stadium Room (if player is inside)
-      userProfile?.current_room === "stadium" && { x: 25, z: -15, width: 60, depth: 40 },
-    ]
+      currentRoom === "stadium" && { x: 0, z: 0, width: 60, depth: 40 },
+    ].filter(Boolean) // Filter out null values from the conditional zones
 
     for (const zone of collisionZones) {
-      // Skip checking collision for the current room if the player is inside it
-      if (
-        (userProfile?.current_room === "arcade" && zone.x === -25 && zone.z === 0) ||
-        (userProfile?.current_room === "stadium" && zone.x === 25 && zone.z === -15)
-      ) {
-        continue
-      }
-
       const halfWidth = zone.width / 2
       const halfDepth = zone.depth / 2
 
@@ -1067,6 +1059,54 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     [userId, supabase, isSeatsLocked, mySeat],
   ) // isSeatsLocked and mySeat are now effectively unused here
 
+  const handleEnterArcade = () => {
+    setShowArcade(false)
+    setCurrentCinemaRoom(null)
+    setCurrentRoom("arcade") // Set local state immediately
+
+    // Teleport player to arcade room
+    const arcadePos = { x: 0, y: 0.5, z: 0 } // Center of arcade room
+    setMyPosition(arcadePos)
+
+    // Update position in database
+    supabase
+      .from("interactive_profiles")
+      .update({
+        position_x: arcadePos.x,
+        position_y: arcadePos.y,
+        position_z: arcadePos.z,
+        current_room: "arcade",
+      })
+      .eq("user_id", userId)
+      .then(() => console.log("[v0] Teleported to arcade room"))
+  }
+
+  const handleLeaveArcade = () => {
+    const mainPos = { x: 0, y: 0.5, z: 0 }
+    setMyPosition(mainPos)
+    setCurrentRoom(null) // Clear local state
+
+    supabase
+      .from("interactive_profiles")
+      .update({
+        position_x: mainPos.x,
+        position_y: mainPos.y,
+        position_z: mainPos.z,
+        current_room: null,
+      })
+      .eq("user_id", userId)
+      .then(() => console.log("[v0] Left arcade room"))
+  }
+
+  const handleSelectArcadeMachine = (machine: any) => {
+    setCurrentArcadeMachine(machine)
+    setShowArcade(false) // Close the list of machines
+  }
+
+  const handleCloseArcadeMachine = () => {
+    setCurrentArcadeMachine(null)
+  }
+
   const handleEnterRoom = async (room: any) => {
     setCurrentCinemaRoom(room)
     setShowCinema(false)
@@ -1192,6 +1232,50 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }
 
+  const handleOpenStadiumModal = () => {
+    setShowStadium(true)
+  }
+
+  const handleEnterStadium = () => {
+    if (!stadium) return
+    setShowStadium(false)
+    setCurrentCinemaRoom(null)
+    setCurrentRoom("stadium")
+
+    // Teleport player to stadium viewing position
+    const stadiumPos = { x: 0, y: 0.5, z: 10 } // Center position facing the screen
+    setMyPosition(stadiumPos)
+
+    // Update position in database
+    supabase
+      .from("interactive_profiles")
+      .update({
+        position_x: stadiumPos.x,
+        position_y: stadiumPos.y,
+        position_z: stadiumPos.z,
+        current_room: "stadium",
+      })
+      .eq("user_id", userId)
+      .then(() => console.log("[v0] Teleported to stadium"))
+  }
+
+  const handleLeaveStadium = () => {
+    const mainPos = { x: 0, y: 0.5, z: 0 }
+    setMyPosition(mainPos)
+    setCurrentRoom(null) // Clear local state
+
+    supabase
+      .from("interactive_profiles")
+      .update({
+        position_x: mainPos.x,
+        position_y: mainPos.y,
+        position_z: mainPos.z,
+        current_room: null,
+      })
+      .eq("user_id", userId)
+      .then(() => console.log("[v0] Left stadium"))
+  }
+
   useEffect(() => {
     const checkCapacity = async () => {
       const { count } = await supabase
@@ -1293,6 +1377,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       if (data) {
         setMyPosition({ x: data.position_x, y: data.position_y, z: data.position_z })
         setMyRotation(data.rotation || 0)
+        setCurrentRoom(data.current_room) // Initialize local currentRoom state
       }
     }
 
@@ -1312,90 +1397,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     // Redirect to home
     router.push("/")
-  }
-
-  const handleEnterArcade = () => {
-    setShowArcade(false)
-    setCurrentCinemaRoom(null)
-
-    // Teleport player to arcade room
-    const arcadePos = { x: -25, y: 0.5, z: 0 }
-    setMyPosition(arcadePos)
-
-    // Update position in database
-    supabase
-      .from("interactive_profiles")
-      .update({
-        position_x: arcadePos.x,
-        position_y: arcadePos.y,
-        position_z: arcadePos.z,
-        current_room: "arcade",
-      })
-      .eq("user_id", userId)
-      .then(() => console.log("[v0] Teleported to arcade room"))
-  }
-
-  const handleLeaveArcade = () => {
-    const mainPos = { x: 0, y: 0.5, z: 0 }
-    setMyPosition(mainPos)
-
-    supabase
-      .from("interactive_profiles")
-      .update({
-        position_x: mainPos.x,
-        position_y: mainPos.y,
-        position_z: mainPos.z,
-        current_room: null,
-      })
-      .eq("user_id", userId)
-      .then(() => console.log("[v0] Left arcade room"))
-  }
-
-  const handleSelectArcadeMachine = (machine: any) => {
-    setCurrentArcadeMachine(machine)
-    setShowArcade(false)
-  }
-
-  const handleCloseArcadeMachine = () => {
-    setCurrentArcadeMachine(null)
-  }
-
-  const handleEnterStadium = () => {
-    if (!stadium) return
-    setShowStadium(false)
-    setCurrentCinemaRoom(null)
-
-    // Teleport player to stadium viewing position
-    const stadiumPos = { x: 25, y: 0.5, z: -15 }
-    setMyPosition(stadiumPos)
-
-    // Update position in database
-    supabase
-      .from("interactive_profiles")
-      .update({
-        position_x: stadiumPos.x,
-        position_y: stadiumPos.y,
-        position_z: stadiumPos.z,
-        current_room: "stadium",
-      })
-      .eq("user_id", userId)
-      .then(() => console.log("[v0] Teleported to stadium"))
-  }
-
-  const handleLeaveStadium = () => {
-    const mainPos = { x: 0, y: 0.5, z: 0 }
-    setMyPosition(mainPos)
-
-    supabase
-      .from("interactive_profiles")
-      .update({
-        position_x: mainPos.x,
-        position_y: mainPos.y,
-        position_z: mainPos.z,
-        current_room: null,
-      })
-      .eq("user_id", userId)
-      .then(() => console.log("[v0] Left stadium"))
   }
 
   return (
@@ -1459,7 +1460,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         <fog attach="fog" args={["#87CEEB", 10, 50]} />
         <hemisphereLight intensity={0.3} groundColor="#6b7280" />
 
-        {!currentCinemaRoom && userProfile?.current_room !== "stadium" && userProfile?.current_room !== "arcade" ? (
+        {/* Update rendering logic to use currentRoom state instead of userProfile */}
+        {!currentCinemaRoom && currentRoom !== "stadium" && currentRoom !== "arcade" ? (
           <>
             {/* Ground */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
@@ -1467,31 +1469,46 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <meshStandardMaterial color="#4ade80" roughness={0.95} metalness={0} />
             </mesh>
 
-            {/* Arcade building - was Arcade Building - Now OPEN */}
-            <group position={[-25, 0, 0]}>
+            {/* Cinema building - OPEN */}
+            <group position={[15, 0, -5]}>
+              {/* Building */}
+              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
+                <boxGeometry args={[8, 5, 8]} />
+                <meshStandardMaterial color="#3b82f6" />
+              </mesh>
+              <mesh position={[0, 5.3, 0]} castShadow receiveShadow>
+                <coneGeometry args={[5, 1.2, 4]} rotation={[0, Math.PI / 4, 0]} />
+                <meshStandardMaterial color="#2563eb" />
+              </mesh>
+              <mesh position={[0, 1.2, 4.1]} receiveShadow>
+                <boxGeometry args={[2, 2.3, 0.2]} />
+                <meshStandardMaterial color="#1e293b" />
+              </mesh>
+              <Html position={[0, 6, 0]} center>
+                <button
+                  onClick={() => setShowCinema(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
+                >
+                  🎬 Voir les Salles
+                </button>
+              </Html>
+            </group>
+
+            {/* Arcade building - NOW OPEN */}
+            <group position={[-15, 0, -15]}>
               <mesh position={[0, 3, 0]} castShadow>
                 <boxGeometry args={[10, 6, 10]} />
-                <meshStandardMaterial color="#8b5cf6" roughness={0.7} metalness={0.2} />
+                <meshStandardMaterial color="#9333ea" />
               </mesh>
-
-              <mesh position={[0, 6.5, 0]} castShadow>
-                <boxGeometry args={[10.5, 0.5, 10.5]} />
-                <meshStandardMaterial color="#6b21a8" roughness={0.6} metalness={0.3} />
+              <mesh position={[0, 6.3, 0]} castShadow>
+                <coneGeometry args={[6, 1.5, 4]} rotation={[0, Math.PI / 4, 0]} />
+                <meshStandardMaterial color="#7e22ce" />
               </mesh>
-
-              <mesh position={[0, 7, 0]}>
-                <boxGeometry args={[8, 0.6, 0.3]} />
-                <meshStandardMaterial
-                  color="#f59e0b"
-                  emissive="#f59e0b"
-                  emissiveIntensity={1.5}
-                  roughness={0.3}
-                  metalness={0.5}
-                />
+              <mesh position={[0, 1.5, 5.1]}>
+                <boxGeometry args={[2.5, 3, 0.2]} />
+                <meshStandardMaterial color="#1e293b" />
               </mesh>
-              <pointLight position={[0, 7, 0]} intensity={2} distance={10} color="#f59e0b" />
-
-              <Html position={[0, 8, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+              <Html position={[0, 7, 0]} center>
                 <button
                   onClick={handleEnterArcade}
                   className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
@@ -1501,145 +1518,31 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </Html>
             </group>
 
-            {/* Stadium building - was Stadium Building - Now OPEN */}
+            {/* Stadium building - NOW OPEN */}
             <group position={[25, 0, -15]}>
               <mesh position={[0, 3.5, 0]} castShadow>
-                <boxGeometry args={[12, 7, 10]} />
-                <meshStandardMaterial color="#16a34a" roughness={0.7} metalness={0.1} />
+                <cylinderGeometry args={[8, 8, 7, 32]} />
+                <meshStandardMaterial color="#16a34a" />
               </mesh>
-
               <mesh position={[0, 7.5, 0]} castShadow>
-                <boxGeometry args={[12.5, 0.5, 10.5]} />
-                <meshStandardMaterial color="#15803d" roughness={0.6} metalness={0.2} />
+                <torusGeometry args={[8, 0.5, 16, 32]} />
+                <meshStandardMaterial color="#15803d" />
               </mesh>
-
-              <mesh position={[0, 8, 0]}>
-                <boxGeometry args={[10, 0.7, 0.3]} />
-                <meshStandardMaterial
-                  color="#22c55e"
-                  emissive="#22c55e"
-                  emissiveIntensity={1.5}
-                  roughness={0.3}
-                  metalness={0.5}
-                />
+              <mesh position={[0, 2, 8.1]}>
+                <boxGeometry args={[3, 4, 0.2]} />
+                <meshStandardMaterial color="#1e293b" />
               </mesh>
-              <pointLight position={[0, 8, 0]} intensity={2} distance={10} color="#22c55e" />
-
-              <Html position={[0, 9, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+              <Html position={[0, 8, 0]} center>
                 <button
-                  onClick={handleEnterStadium}
+                  onClick={handleOpenStadiumModal}
                   className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
                 >
-                  ⚽ Entrer au Stade
+                  ⚽ Infos Match
                 </button>
-              </Html>
-            </group>
-
-            <group position={[15, 0, -5]}>
-              {/* Building */}
-              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
-                <boxGeometry args={[6, 5, 5]} />
-                <meshStandardMaterial color="#9333ea" />
-              </mesh>
-              {/* Roof */}
-              <mesh position={[0, 5.2, 0]} castShadow>
-                <coneGeometry args={[4, 1.5, 4]} />
-                <meshStandardMaterial color="#7e22ce" />
-              </mesh>
-              {/* Sign */}
-              <Html position={[0, 4, 2.6]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
-                  <div className="text-xl">🕹️ ARCADE 🕹️</div>
-                  <div className="text-sm mt-1">Ouverture Prochainement</div>
-                </div>
               </Html>
             </group>
 
             {/* Additional decorative buildings */}
-            <group position={[-15, 0, 5]}>
-              <mesh position={[0, 2, 0]} castShadow receiveShadow>
-                <boxGeometry args={[5, 4, 4]} />
-                <meshStandardMaterial color="#0ea5e9" />
-              </mesh>
-              <mesh position={[0, 4.5, 0]} castShadow>
-                <boxGeometry args={[5.2, 1, 4.2]} />
-                <meshStandardMaterial color="#0284c7" />
-              </mesh>
-            </group>
-
-            <group position={[-15, 0, -8]}>
-              <mesh position={[0, 3, 0]} castShadow receiveShadow>
-                <boxGeometry args={[4, 6, 4]} />
-                <meshStandardMaterial color="#f59e0b" />
-              </mesh>
-              <mesh position={[0, 6.5, 0]} castShadow>
-                <coneGeometry args={[3, 1.5, 4]} />
-                <meshStandardMaterial color="#ea580c" />
-              </mesh>
-            </group>
-
-            {/* Cinema Building */}
-            <group position={[15, 0, 0]}>
-              <mesh position={[0, 2.5, 0]} castShadow>
-                <boxGeometry args={[8, 5, 8]} />
-                <meshStandardMaterial color="#1e3a8a" roughness={0.7} metalness={0.1} />
-              </mesh>
-
-              <mesh position={[0, 5.5, 0]} castShadow>
-                <boxGeometry args={[8.5, 0.5, 8.5]} />
-                <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.2} />
-              </mesh>
-
-              <mesh position={[0, 6, 0]}>
-                <boxGeometry args={[7, 0.8, 0.3]} />
-                <meshStandardMaterial
-                  color="#fbbf24"
-                  emissive="#fbbf24"
-                  emissiveIntensity={1.5}
-                  roughness={0.3}
-                  metalness={0.5}
-                />
-              </mesh>
-              <pointLight position={[0, 6, 0]} intensity={2} distance={10} color="#fbbf24" />
-
-              {[-2, 0, 2].map((x) => (
-                <mesh key={`window-${x}`} position={[x, 3, 4.1]}>
-                  <planeGeometry args={[1.5, 1.8]} />
-                  <meshStandardMaterial
-                    color="#60a5fa"
-                    emissive="#60a5fa"
-                    emissiveIntensity={0.5}
-                    metalness={0.8}
-                    roughness={0.1}
-                  />
-                </mesh>
-              ))}
-
-              <mesh position={[-3, 1.2, 4.1]} castShadow>
-                <boxGeometry args={[1.5, 2.4, 0.1]} />
-                <meshStandardMaterial color="#7c2d12" roughness={0.8} metalness={0.1} />
-              </mesh>
-              <mesh position={[-3, 1.2, 0]}>
-                <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
-                <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
-              </mesh>
-
-              <mesh position={[-3, 0.1, 5.5]}>
-                <boxGeometry args={[2, 0.2, 2]} />
-                <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
-              </mesh>
-
-              <Html position={[0, 7, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <button
-                  onClick={() => setShowCinema(true)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
-                >
-                  🎬 Entrer au Cinéma
-                </button>
-              </Html>
-            </group>
-
-            {/* Additional decorative closed buildings */}
             <group position={[-15, 0, 5]}>
               <mesh position={[0, 2, 0]} castShadow receiveShadow>
                 <boxGeometry args={[5, 4, 4]} />
@@ -1757,7 +1660,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 </group>
               ))}
           </>
-        ) : userProfile?.current_room === "arcade" ? (
+        ) : currentRoom === "arcade" ? (
           <>
             {/* Arcade Room Interior */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
@@ -1877,7 +1780,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </button>
             </Html>
           </>
-        ) : userProfile?.current_room === "stadium" ? (
+        ) : currentRoom === "stadium" ? (
           <>
             {/* Stadium Interior - Proper football stadium */}
             {/* Field */}
@@ -1986,14 +1889,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             <Html position={[0, 2, 20]} center>
               <button
                 onClick={handleLeaveStadium}
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold shadow-xl flex items-center gap-2"
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg flex items-center gap-2"
               >
                 <LogOut className="w-5 h-5" />
                 Quitter le Stade
               </button>
             </Html>
           </>
-        ) : (
+        ) : currentCinemaRoom ? (
           <>
             {/* Cinema Interior */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
@@ -2084,72 +1987,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               )
             })}
           </>
-        )}
-
-        {/* My avatar with username and badge */}
-        <group>
-          <RealisticAvatar
-            position={[myPosition.x, myPosition.y + (isJumping ? 1 : 0), myPosition.z]}
-            avatarStyle={myAvatarStyle}
-            isMoving={movement.x !== 0 || movement.z !== 0}
-          />
-
-          <Html
-            position={[myPosition.x, myPosition.y + 1.8, myPosition.z]}
-            center
-            depthTest={true}
-            occlude
-            zIndexRange={[0, 0]}
-          >
-            <div className="flex items-center gap-1 bg-black/70 px-3 py-1 rounded-full backdrop-blur-sm shadow-lg pointer-events-none">
-              <span className="text-white text-sm font-bold">{myProfile?.username || "Vous"}</span>
-              {userProfile?.is_admin && <Shield className="w-4 h-4 text-red-500" title="Admin" />}
-              {userProfile?.is_vip_plus && !userProfile?.is_admin && (
-                <Crown className="w-4 h-4 text-purple-400" title="VIP+" />
-              )}
-              {userProfile?.is_vip && !userProfile?.is_vip_plus && !userProfile?.is_admin && (
-                <Star className="w-4 h-4 text-yellow-400" title="VIP" />
-              )}
-            </div>
-          </Html>
-
-          {currentEmoji && (
-            <Html
-              position={[myPosition.x, myPosition.y + 2.5, myPosition.z]}
-              center
-              depthTest={true}
-              occlude
-              zIndexRange={[0, 0]}
-            >
-              <div className="text-5xl animate-bounce pointer-events-none">{currentEmoji}</div>
-            </Html>
-          )}
-
-          {playerChatBubbles[userId] && (
-            <Html
-              position={[myPosition.x, myPosition.y + 2.2, myPosition.z]}
-              center
-              depthTest={true}
-              occlude
-              zIndexRange={[0, 0]}
-            >
-              <div className="bg-white/95 text-black px-3 py-2 rounded-lg shadow-xl max-w-xs text-sm border-2 border-blue-500 pointer-events-none">
-                {playerChatBubbles[userId].message}
-              </div>
-            </Html>
-          )}
-        </group>
+        ) : null}
 
         {/* Player avatars with badges */}
         {otherPlayers
-          .filter(
-            (p) =>
-              !currentCinemaRoom ||
-              p.current_room === `cinema_${currentCinemaRoom.id}` ||
-              (userProfile?.current_room === "stadium" && p.current_room === "stadium") ||
-              (userProfile?.current_room === "arcade" && p.current_room === "arcade") ||
-              (!currentCinemaRoom && !p.current_room),
-          )
+          .filter((p) => {
+            const playerIsInSameRoom =
+              currentRoom === p.current_room || (currentRoom === null && p.current_room === null)
+            return playerIsInSameRoom
+          })
           .map((player) => {
             const playerProfile = player.user_profiles
             const avatarStyle = player.avatar_style || { bodyColor: "#ef4444", headColor: "#fbbf24", faceSmiley: "😊" }
@@ -2623,6 +2469,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
+      {/* Quick Actions and Emoji Menu */}
       {worldSettings.enableEmojis && (
         <button
           onClick={() => setShowQuickActions(!showQuickActions)}
@@ -2662,7 +2509,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <div className="border-t border-white/20 my-1"></div>
               </>
             )}
-            {userProfile?.current_room === "stadium" && (
+            {currentRoom === "stadium" && (
               <>
                 <button
                   onClick={handleLeaveStadium}
@@ -2674,21 +2521,84 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <div className="border-t border-white/20 my-1"></div>
               </>
             )}
+            {currentRoom === "arcade" && (
+              <>
+                <button
+                  onClick={handleLeaveArcade}
+                  className="bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 whitespace-nowrap font-medium"
+                >
+                  <LogOut className="w-5 h-5" />
+                  Quitter l'Arcade
+                </button>
+                <div className="border-t border-white/20 my-1"></div>
+              </>
+            )}
             <button
               onClick={() => handleQuickAction("jump")}
               className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
             >
               <ArrowUp className="w-6 h-6" />
             </button>
-            {["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"].map((emoji) => (
+
+            <div className="flex gap-2 mb-2">
               <button
-                key={emoji}
-                onClick={() => handleEmoji(emoji)}
-                className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors text-center"
+                onClick={() => setShowAnimatedEmotes(false)}
+                className={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
+                  !showAnimatedEmotes ? "bg-yellow-500 text-black" : "bg-gray-700 text-white hover:bg-gray-600"
+                }`}
               >
-                {emoji}
+                😊 Emojis
               </button>
-            ))}
+              <button
+                onClick={() => setShowAnimatedEmotes(true)}
+                className={`flex-1 px-3 py-2 rounded-lg font-medium transition-colors ${
+                  showAnimatedEmotes ? "bg-yellow-500 text-black" : "bg-gray-700 text-white hover:bg-gray-600"
+                }`}
+              >
+                ✨ Animés
+              </button>
+            </div>
+
+            {!showAnimatedEmotes ? (
+              // Regular emojis
+              <>
+                {["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"].map((emoji) => (
+                  <button
+                    key={emoji}
+                    onClick={() => handleEmoji(emoji)}
+                    className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors text-center"
+                  >
+                    {emoji}
+                  </button>
+                ))}
+              </>
+            ) : (
+              // Animated emotes using placeholder images (in real app, would use actual GIF URLs)
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { name: "dance", emoji: "💃" },
+                  { name: "celebrate", emoji: "🎊" },
+                  { name: "laugh", emoji: "🤣" },
+                  { name: "cry", emoji: "😢" },
+                  { name: "angry", emoji: "😡" },
+                  { name: "love", emoji: "😍" },
+                  { name: "clap", emoji: "👏" },
+                  { name: "wave", emoji: "👋" },
+                  { name: "thinking", emoji: "🤨" },
+                ].map((emote) => (
+                  <button
+                    key={emote.name}
+                    onClick={() => handleEmoji(emote.emoji)}
+                    className="relative bg-gradient-to-br from-purple-600 to-pink-600 p-3 rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all transform hover:scale-110"
+                  >
+                    <div className="text-3xl animate-pulse">{emote.emoji}</div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent rounded-lg flex items-end justify-center pb-1">
+                      <span className="text-[8px] text-white font-bold uppercase">{emote.name}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2798,9 +2708,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {showMap && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-6 md:p-8 max-w-2xl w-full mx-4 shadow-2xl border-2 border-white/20">
-            <div className="flex items-center justify-between mb-6">
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 rounded-2xl p-6 md:p-8 max-w-2xl w-full mx-4 shadow-2xl border-2 border-blue-400/30 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6 sticky top-0 bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 pb-4">
               <h2 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
                 <Map className="w-6 h-6 md:w-8 md:h-8 text-cyan-400" />
                 Carte du Monde
@@ -2845,7 +2755,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
               <button
                 onClick={() => {
-                  handleEnterStadium()
+                  setShowStadium(true)
                   setShowMap(false)
                 }}
                 className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white p-4 md:p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
@@ -2955,7 +2865,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
-      {userProfile?.current_room === "stadium" && stadium?.embed_url && (
+      {currentRoom === "stadium" && stadium?.embed_url && (
         <div className="fixed inset-0 bg-black z-40 flex flex-col">
           <div className="bg-green-900 px-4 py-3 flex items-center justify-between border-b-2 border-green-400">
             <div className="flex items-center gap-3 text-white">

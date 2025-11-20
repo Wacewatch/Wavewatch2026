@@ -987,23 +987,39 @@ export default function AdminPage() {
     try {
       console.log("[v0] Saving world settings:", worldSettings)
 
-      const { error } = await supabase.from("interactive_world_settings").upsert(
-        {
+      const { data: existing } = await supabase
+        .from("interactive_world_settings")
+        .select("*")
+        .eq("setting_key", "world_config")
+        .maybeSingle()
+
+      let result
+
+      if (existing) {
+        // Update existing record
+        result = await supabase
+          .from("interactive_world_settings")
+          .update({
+            setting_value: worldSettings,
+            updated_at: new Date().toISOString(),
+            updated_by: user?.id,
+          })
+          .eq("setting_key", "world_config")
+      } else {
+        // Insert new record
+        result = await supabase.from("interactive_world_settings").insert({
           setting_key: "world_config",
           setting_value: worldSettings,
           updated_at: new Date().toISOString(),
           updated_by: user?.id,
-        },
-        {
-          onConflict: "setting_key",
-        },
-      )
+        })
+      }
 
-      if (error) {
-        console.error("[v0] Error saving world settings:", error)
+      if (result.error) {
+        console.error("[v0] Error saving world settings:", result.error)
         toast({
           title: "Erreur",
-          description: "Impossible de sauvegarder les paramètres du monde interactif",
+          description: `Impossible de sauvegarder: ${result.error.message}`,
           variant: "destructive",
         })
         return
@@ -1014,11 +1030,11 @@ export default function AdminPage() {
         title: "Paramètres sauvegardés",
         description: "Les paramètres du monde interactif ont été mis à jour.",
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error("[v0] Error saving world settings:", error)
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la sauvegarde des paramètres du monde interactif",
+        description: error?.message || "Une erreur est survenue lors de la sauvegarde",
         variant: "destructive",
       })
     }
