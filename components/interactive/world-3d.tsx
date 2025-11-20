@@ -49,7 +49,7 @@ interface InteractiveWorldProps {
 }
 
 // RealisticAvatar is only used inside Canvas
-function RealisticAvatar({
+function RealisticAvatarComponent({
   position,
   avatarStyle,
   isMoving,
@@ -79,6 +79,8 @@ function RealisticAvatar({
     faceSmiley: avatarStyle?.faceSmiley || "😊",
   }
 
+  // The useFrame hook must be called at the top level of the component, not inside a conditional block.
+  // Moved useFrame outside of the try-catch block and into the main component body.
   useFrame((state, delta) => {
     if (isMoving && groupRef.current) {
       setTime((t) => t + delta * 5)
@@ -1683,30 +1685,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 </group>
               ))}
 
-            {graphicsQuality !== "low" && (
-              <group position={[-15, 0, 0]}>
-                <mesh position={[0, 0.3, 0]} castShadow>
-                  <cylinderGeometry args={[2, 2.5, 0.6, 16]} />
-                  <meshStandardMaterial color="#6b7280" roughness={0.3} metalness={0.8} />
-                </mesh>
-                <mesh position={[0, 1, 0]}>
-                  <cylinderGeometry args={[0.3, 0.3, 1.4, 8]} />
-                  <meshStandardMaterial color="#94a3b8" roughness={0.2} metalness={0.9} />
-                </mesh>
-                <mesh position={[0, 1.8, 0]}>
-                  <sphereGeometry args={[0.4, 16, 16]} />
-                  <meshStandardMaterial
-                    color="#60a5fa"
-                    emissive="#60a5fa"
-                    emissiveIntensity={0.3}
-                    transparent
-                    opacity={0.7}
-                  />
-                </mesh>
-                <pointLight position={[0, 2, 0]} intensity={1} distance={8} color="#60a5fa" />
-              </group>
-            )}
-
             {graphicsQuality !== "low" &&
               [
                 [5, -10],
@@ -2030,7 +2008,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
                     {/* Movie Iframe - Display when movie has started */}
                     {isMovieStarted && room.embed_url && (
-                      <Html transform style={{ width: "1300px", height: "720px" }}>
+                      <Html transform position={[0, 0, 0.2]} style={{ width: "1300px", height: "720px" }}>
                         <iframe
                           src={room.embed_url}
                           className="w-full h-full rounded"
@@ -2074,7 +2052,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 key={player.user_id}
                 position={[player.position_x || 0, player.position_y || 0, player.position_z || 0]}
               >
-                <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={false} />
+                <RealisticAvatarComponent position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={false} />
 
                 {worldSettings.showStatusBadges && (
                   <Html
@@ -2994,7 +2972,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       {!povMode && userProfile && (
         <group position={[myPosition.x, myPosition.y, myPosition.z]}>
-          <RealisticAvatar position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
+          <RealisticAvatarComponent position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
 
           {worldSettings.showStatusBadges && (
             <Html position={[0, 2.3, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
