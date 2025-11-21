@@ -371,6 +371,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const isMoving = movement.x !== 0 || movement.z !== 0
 
+  // Recalculate online count based on actually displayed players (with same filters as rendering)
+  useEffect(() => {
+    const actualPlayersInWorld = otherPlayers.filter((p) => {
+      const playerIsInSameRoom =
+        currentRoom === p.current_room || (currentRoom === null && p.current_room === null)
+      const hasValidProfile = (p.user_profiles?.username || p.username) ? true : false
+      const isAtDefaultPosition = (p.position_x === 0 && p.position_z === 0 && (p.position_y === 0 || p.position_y === 0.5))
+      return playerIsInSameRoom && hasValidProfile && !isAtDefaultPosition
+    })
+    setOnlineCount(actualPlayersInWorld.length + 1) // +1 for current user
+  }, [otherPlayers, currentRoom])
+
   useEffect(() => {
     const checkMobile = () => {
       if (controlMode === "pc") {
@@ -524,13 +536,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           .not("position_x", "is", null)
           .not("position_y", "is", null)
           .not("position_z", "is", null)
+          // Exclude players at default spawn position (0, 0.5, 0) - they haven't really entered the world
+          .or("position_x.neq.0,position_z.neq.0,and(position_y.neq.0,position_y.neq.0.5)")
 
         if (profilesError) {
           console.error("[v0] Error loading profiles:", profilesError)
           return
         }
 
-        console.log("[v0] Found profiles:", profiles?.length || 0)
+        // Debug: Log all profiles with their positions
+        console.log("[DEBUG] All profiles from DB:", profiles?.map(p => ({
+          user_id: p.user_id,
+          username: p.username,
+          position_x: p.position_x,
+          position_y: p.position_y,
+          position_z: p.position_z,
+          is_online: p.is_online,
+        })))
 
         if (profiles && profiles.length > 0) {
           const userIds = profiles.map((p) => p.user_id)
@@ -554,12 +576,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             },
           }))
 
-          console.log("[v0] Merged player data:", mergedData.length)
           setOtherPlayers(mergedData)
-          setOnlineCount(mergedData.length + 1)
         } else {
           setOtherPlayers([])
-          setOnlineCount(1)
         }
       } catch (err) {
         console.error("[v0] Failed to load players:", err)
@@ -2144,37 +2163,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             // Filter out players at default spawn position (not really in interactive)
             const isAtDefaultPosition = (p.position_x === 0 && p.position_z === 0 && (p.position_y === 0 || p.position_y === 0.5))
 
-            // Debug log
-            if (playerIsInSameRoom && !hasValidProfile) {
-              console.log("[DEBUG] Filtered out player without valid profile:", {
-                user_id: p.user_id,
-                username: p.username,
-                user_profiles: p.user_profiles,
-              })
-            }
-
-            if (playerIsInSameRoom && hasValidProfile && isAtDefaultPosition) {
-              console.log("[DEBUG] Filtered out player at default position:", {
-                user_id: p.user_id,
-                username: p.username,
-                position: { x: p.position_x, y: p.position_y, z: p.position_z },
-              })
-            }
-
             return playerIsInSameRoom && hasValidProfile && !isAtDefaultPosition
           })
           .map((player) => {
-            // Debug log for rendered players
-            console.log("[DEBUG] Rendering player:", {
-              user_id: player.user_id,
-              username: player.username,
-              profile_username: player.user_profiles?.username,
-              position: {
-                x: player.position_x,
-                y: player.position_y,
-                z: player.position_z,
-              },
-            })
 
             const playerProfile = player.user_profiles
             const avatarStyle = player.avatar_style || { bodyColor: "#ef4444", headColor: "#fbbf24", faceSmiley: "😊" }
@@ -2230,7 +2221,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <RealisticAvatar position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
             </group>
 
-            <Html position={[0, 2.3, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
+            <Html position={[0, 2.3, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
               <div className="flex flex-col items-center gap-1 pointer-events-none">
                 {worldSettings.showStatusBadges && (
                   <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
