@@ -300,6 +300,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [onlineCount, setOnlineCount] = useState(0)
   const [myPosition, setMyPosition] = useState({ x: 0, y: -0.35, z: 0 })
   const [myRotation, setMyRotation] = useState(0) // State for player rotation
+  const [savedMapPosition, setSavedMapPosition] = useState({ x: 0, y: 0.5, z: 0 }) // Save position before entering rooms
   const [myAvatarStyle, setMyAvatarStyle] = useState({
     bodyColor: "#3b82f6",
     headColor: "#fbbf24",
@@ -1110,10 +1111,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const handleEnterArcade = () => {
     setShowArcade(false)
     setCurrentCinemaRoom(null)
+
+    // Save current map position before entering arcade
+    setSavedMapPosition({ x: myPosition.x, y: myPosition.y, z: myPosition.z })
+
     setCurrentRoom("arcade") // Set local state immediately
 
-    // Teleport player to arcade room
-    const arcadePos = { x: 0, y: 0.5, z: 0 } // Center of arcade room
+    // Teleport player to arcade room (spawn position)
+    const arcadePos = { x: -2.6145599903373125, y: -0.35, z: 10.641204270993434 }
     setMyPosition(arcadePos)
 
     // Update position in database
@@ -1130,16 +1135,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const handleLeaveArcade = () => {
-    const mainPos = { x: 0, y: 0.5, z: 0 }
-    setMyPosition(mainPos)
+    setMyPosition(savedMapPosition) // Restore saved position
     setCurrentRoom(null) // Clear local state
 
     supabase
       .from("interactive_profiles")
       .update({
-        position_x: mainPos.x,
-        position_y: mainPos.y,
-        position_z: mainPos.z,
+        position_x: savedMapPosition.x,
+        position_y: savedMapPosition.y,
+        position_z: savedMapPosition.z,
         current_room: null,
       })
       .eq("user_id", userId)
@@ -1159,15 +1163,20 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setCurrentCinemaRoom(room)
     setShowCinema(false)
 
-    setMyPosition({ x: 0, y: 0.5, z: 0 })
+    // Save current map position before entering cinema
+    setSavedMapPosition({ x: myPosition.x, y: myPosition.y, z: myPosition.z })
+
+    // Position d'arrivée dans le cinéma (au fond de la salle)
+    const cinemaSpawnPos = { x: -0.7003322451885853, y: -0.35, z: 11.633941158451258 }
+    setMyPosition(cinemaSpawnPos)
 
     await supabase
       .from("interactive_profiles")
       .update({
         current_room: `cinema_${room.id}`,
-        position_x: 0,
-        position_y: 0.5,
-        position_z: 0,
+        position_x: cinemaSpawnPos.x,
+        position_y: cinemaSpawnPos.y,
+        position_z: cinemaSpawnPos.z,
       })
       .eq("user_id", userId)
 
@@ -1206,15 +1215,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setIsSeatsLocked(false) // Ensure seats are unlocked when leaving
     setCountdown("") // Clear countdown when leaving room
 
-    setMyPosition({ x: 0, y: 0.5, z: 0 }) // Reset position to world origin
+    setMyPosition(savedMapPosition) // Restore saved position
 
     await supabase
       .from("interactive_profiles")
       .update({
         current_room: null,
-        position_x: 0,
-        position_y: 0.5,
-        position_z: 0,
+        position_x: savedMapPosition.x,
+        position_y: savedMapPosition.y,
+        position_z: savedMapPosition.z,
       })
       .eq("user_id", userId)
   }
@@ -1283,10 +1292,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     if (!stadium) return
     setShowStadium(false)
     setCurrentCinemaRoom(null)
+
+    // Save current map position before entering stadium
+    setSavedMapPosition({ x: myPosition.x, y: myPosition.y, z: myPosition.z })
+
     setCurrentRoom("stadium") // Set local state immediately
 
     // Teleport player to stadium viewing position
-    const stadiumPos = { x: 0, y: 0.5, z: 10 } // Center position facing the screen
+    const stadiumPos = { x: 0, y: 0.5, z: 0 } // Center position at spawn
     setMyPosition(stadiumPos)
 
     // Update position in database
@@ -1303,16 +1316,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const handleLeaveStadium = () => {
-    const mainPos = { x: 0, y: 0.5, z: 0 }
-    setMyPosition(mainPos)
+    setMyPosition(savedMapPosition) // Restore saved position
     setCurrentRoom(null) // Clear local state
 
     supabase
       .from("interactive_profiles")
       .update({
-        position_x: mainPos.x,
-        position_y: mainPos.y,
-        position_z: mainPos.z,
+        position_x: savedMapPosition.x,
+        position_y: savedMapPosition.y,
+        position_z: savedMapPosition.z,
         current_room: null,
       })
       .eq("user_id", userId)
@@ -1414,9 +1426,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       setMyProfile(data)
 
       if (data) {
-        setMyPosition({ x: data.position_x, y: data.position_y, z: data.position_z })
+        const loadedPosition = { x: data.position_x, y: data.position_y, z: data.position_z }
+        setMyPosition(loadedPosition)
         setMyRotation(data.rotation || 0)
         setCurrentRoom(data.current_room) // Initialize local currentRoom state
+
+        // If user is not in a special room, save current position as the map position
+        const isInSpecialRoom = data.current_room === "stadium" || data.current_room === "arcade" || (data.current_room && data.current_room.startsWith('cinema_'))
+        if (!isInSpecialRoom) {
+          setSavedMapPosition(loadedPosition)
+        }
       }
     }
 
@@ -1424,13 +1443,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }, [userId])
 
   const handleQuitWorld = async () => {
-    // Save current position
+    // If user is in a special room (cinema, stadium, arcade), reset to spawn
+    // Otherwise, save current position to restore it next time
+    const isInSpecialRoom = currentRoom === "stadium" || currentRoom === "arcade" || (typeof currentRoom === 'object' && currentRoom !== null)
+
+    const positionToSave = isInSpecialRoom
+      ? { x: 0, y: 0.5, z: 0 }
+      : { x: myPosition.x, y: myPosition.y, z: myPosition.z }
+
+    // Save position in database
     await supabase
       .from("interactive_profiles")
       .update({
-        position_x: myPosition.x,
-        position_y: myPosition.y,
-        position_z: myPosition.z,
+        position_x: positionToSave.x,
+        position_y: positionToSave.y,
+        position_z: positionToSave.z,
+        is_online: false,
+        last_seen: new Date().toISOString(),
       })
       .eq("user_id", userId)
 
@@ -3084,8 +3113,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                       <button
                         onClick={() => {
                           if (!isFull && isOpen) {
-                            setCurrentCinemaRoom(room)
-                            setShowCinema(false)
+                            handleEnterCinemaRoom(room)
                           }
                         }}
                         disabled={isFull || !isOpen}
