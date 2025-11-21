@@ -108,19 +108,6 @@ export default function RealisticAvatar({ position, avatarStyle, isMoving }: Rea
         <meshStandardMaterial color={style.bodyColor} />
       </mesh>
 
-      {/* Face Smiley */}
-      <Html
-        position={[0, 1.8, 0.21]}
-        center
-        distanceFactor={1}
-        style={{
-          pointerEvents: "none",
-          userSelect: "none",
-        }}
-      >
-        <div className="text-2xl">{style.faceSmiley}</div>
-      </Html>
-
       {/* Accessory */}
       {style.accessory === "hat" && (
         <mesh castShadow position={[0, 2.25, 0]}>
