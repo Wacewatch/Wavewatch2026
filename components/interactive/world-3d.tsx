@@ -1,9 +1,16 @@
 "use client"
 
-import { Canvas, useFrame } from "@react-three/fiber"
+import { Canvas } from "@react-three/fiber"
 import { OrbitControls, Sky, Html, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
+import dynamic from 'next/dynamic'
+
+// Load RealisticAvatar dynamically to avoid SSR issues with useFrame
+const RealisticAvatar = dynamic(
+  () => import("./realistic-avatar"),
+  { ssr: false }
+)
 import {
   Minimize,
   MessageSquare,
@@ -46,142 +53,6 @@ interface WorldProps {
 interface InteractiveWorldProps {
   userId: string
   userProfile: any
-}
-
-// RealisticAvatar is only used inside Canvas
-function RealisticAvatar({
-  position,
-  avatarStyle,
-  isMoving,
-}: {
-  position: [number, number, number]
-  avatarStyle: {
-    bodyColor?: string
-    headColor?: string
-    skinTone?: string
-    hairStyle?: string
-    hairColor?: string
-    accessory?: string
-    faceSmiley?: string
-  }
-  isMoving: boolean
-}) {
-  const groupRef = useRef<THREE.Group>(null)
-  const [time, setTime] = useState(0)
-
-  const style = {
-    bodyColor: avatarStyle?.bodyColor || "#3b82f6",
-    headColor: avatarStyle?.headColor || "#fbbf24",
-    skinTone: avatarStyle?.skinTone || avatarStyle?.headColor || "#fbbf24",
-    hairStyle: avatarStyle?.hairStyle || "short",
-    hairColor: avatarStyle?.hairColor || "#1f2937",
-    accessory: avatarStyle?.accessory || "none",
-    faceSmiley: avatarStyle?.faceSmiley || "😊",
-  }
-
-  useFrame((state, delta) => {
-    if (isMoving && groupRef.current) {
-      setTime((t) => t + delta * 5)
-      // Animate legs walking
-      const leftLeg = groupRef.current.children[3]
-      const rightLeg = groupRef.current.children[4]
-      if (leftLeg) leftLeg.rotation.x = Math.sin(time) * 0.5
-      if (rightLeg) rightLeg.rotation.x = Math.sin(time + Math.PI) * 0.5
-
-      // Animate arms swinging
-      const leftArm = groupRef.current.children[1]
-      const rightArm = groupRef.current.children[2]
-      if (leftArm) leftArm.rotation.x = Math.sin(time + Math.PI) * 0.3
-      if (rightArm) rightArm.rotation.x = Math.sin(time) * 0.3
-    }
-  })
-
-  return (
-    <group ref={groupRef} position={position}>
-      {/* Torso - height divided by 2 */}
-      <mesh castShadow position={[0, 1.2, 0]}>
-        <boxGeometry args={[0.5, 0.6, 0.3]} />
-        <meshStandardMaterial color={style.bodyColor} />
-      </mesh>
-
-      {/* Head */}
-      <mesh castShadow position={[0, 1.8, 0]}>
-        <boxGeometry args={[0.4, 0.4, 0.4]} />
-        <meshStandardMaterial color={style.skinTone} />
-      </mesh>
-
-      {/* Hair */}
-      {style.hairStyle === "short" && (
-        <mesh castShadow position={[0, 2.05, 0]}>
-          <boxGeometry args={[0.42, 0.15, 0.42]} />
-          <meshStandardMaterial color={style.hairColor} />
-        </mesh>
-      )}
-      {style.hairStyle === "long" && (
-        <>
-          <mesh castShadow position={[0, 2.05, 0]}>
-            <boxGeometry args={[0.42, 0.15, 0.42]} />
-            <meshStandardMaterial color={style.hairColor} />
-          </mesh>
-          <mesh castShadow position={[0, 1.7, 0.2]}>
-            <boxGeometry args={[0.42, 0.4, 0.1]} />
-            <meshStandardMaterial color={style.hairColor} />
-          </mesh>
-        </>
-      )}
-
-      {/* Left Arm */}
-      <mesh castShadow position={[-0.35, 1.2, 0]}>
-        <boxGeometry args={[0.15, 0.5, 0.15]} />
-        <meshStandardMaterial color={style.skinTone} />
-      </mesh>
-
-      {/* Right Arm */}
-      <mesh castShadow position={[0.35, 1.2, 0]}>
-        <boxGeometry args={[0.15, 0.5, 0.15]} />
-        <meshStandardMaterial color={style.skinTone} />
-      </mesh>
-
-      {/* Left Leg */}
-      <mesh castShadow position={[-0.15, 0.65, 0]}>
-        <boxGeometry args={[0.15, 0.6, 0.15]} />
-        <meshStandardMaterial color={style.bodyColor} />
-      </mesh>
-
-      {/* Right Leg */}
-      <mesh castShadow position={[0.15, 0.65, 0]}>
-        <boxGeometry args={[0.15, 0.6, 0.15]} />
-        <meshStandardMaterial color={style.bodyColor} />
-      </mesh>
-
-      {/* Face Smiley */}
-      <Html
-        position={[0, 1.8, 0.21]}
-        center
-        distanceFactor={1}
-        style={{
-          pointerEvents: "none",
-          userSelect: "none",
-        }}
-      >
-        <div className="text-2xl">{style.faceSmiley}</div>
-      </Html>
-
-      {/* Accessory */}
-      {style.accessory === "hat" && (
-        <mesh castShadow position={[0, 2.25, 0]}>
-          <cylinderGeometry args={[0.25, 0.3, 0.15, 16]} />
-          <meshStandardMaterial color="#1f2937" />
-        </mesh>
-      )}
-      {style.accessory === "glasses" && (
-        <mesh position={[0, 1.85, 0.22]}>
-          <boxGeometry args={[0.35, 0.08, 0.02]} />
-          <meshStandardMaterial color="#000000" />
-        </mesh>
-      )}
-    </group>
-  )
 }
 
 function RealisticTree({ position }: { position: [number, number, number] }) {
@@ -2113,6 +1984,34 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             )
           })}
 
+        {!povMode && userProfile && (
+          <group position={[myPosition.x, myPosition.y, myPosition.z]}>
+            <RealisticAvatar position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
+
+            {worldSettings.showStatusBadges && (
+              <Html position={[0, 2.3, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+                <div className="flex flex-col items-center gap-1 pointer-events-none">
+                  <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
+                    <span className="text-white text-xs font-medium">{userProfile.username || "Vous"}</span>
+                    {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
+                    {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
+                    {userProfile.is_vip && !userProfile.is_vip_plus && !userProfile.is_admin && (
+                      <Star className="w-3 h-3 text-yellow-400" />
+                    )}
+                  </div>
+                  {playerChatBubbles[userProfile.id] &&
+                    Date.now() - playerChatBubbles[userProfile.id].timestamp < 5000 && (
+                      <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
+                        {playerChatBubbles[userProfile.id].message}
+                      </div>
+                    )}
+                  {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
+                </div>
+              </Html>
+            )}
+          </group>
+        )}
+
         {!povMode && (
           <OrbitControls
             target={[myPosition.x, myPosition.y, myPosition.z]}
@@ -2990,34 +2889,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             )}
           </div>
         </div>
-      )}
-
-      {!povMode && userProfile && (
-        <group position={[myPosition.x, myPosition.y, myPosition.z]}>
-          <RealisticAvatar position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
-
-          {worldSettings.showStatusBadges && (
-            <Html position={[0, 2.3, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-              <div className="flex flex-col items-center gap-1 pointer-events-none">
-                <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
-                  <span className="text-white text-xs font-medium">{userProfile.username || "Vous"}</span>
-                  {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
-                  {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
-                  {userProfile.is_vip && !userProfile.is_vip_plus && !userProfile.is_admin && (
-                    <Star className="w-3 h-3 text-yellow-400" />
-                  )}
-                </div>
-                {playerChatBubbles[userProfile.id] &&
-                  Date.now() - playerChatBubbles[userProfile.id].timestamp < 5000 && (
-                    <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
-                      {playerChatBubbles[userProfile.id].message}
-                    </div>
-                  )}
-                {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
-              </div>
-            </Html>
-          )}
-        </group>
       )}
     </div>
   )
