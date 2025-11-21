@@ -394,7 +394,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         const isSmallScreen = window.innerWidth < 1024
         setIsMobileMode(isTouchDevice || isSmallScreen)
       }
-      console.log("[v0] Mobile mode:", isMobileMode, "Control mode:", controlMode)
     }
 
     checkMobile()
@@ -431,7 +430,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           .update({ is_online: false, last_seen: new Date().toISOString() })
           .eq("user_id", userId)
           .then(() => {
-            console.log("[v0] User disconnected due to AFK")
             window.location.href = "/"
           })
       }
@@ -515,7 +513,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         .maybeSingle()
 
       if (data && data.setting_value) {
-        console.log("[v0] Loaded world settings:", data.setting_value)
         setWorldSettings(data.setting_value as any)
       }
     }
@@ -525,8 +522,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   useEffect(() => {
     const loadPlayers = async () => {
-      console.log("[v0] Loading other players...")
-
       try {
         const { data: profiles, error: profilesError } = await supabase
           .from("interactive_profiles")
@@ -543,16 +538,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           console.error("[v0] Error loading profiles:", profilesError)
           return
         }
-
-        // Debug: Log all profiles with their positions
-        console.log("[DEBUG] All profiles from DB:", profiles?.map(p => ({
-          user_id: p.user_id,
-          username: p.username,
-          position_x: p.position_x,
-          position_y: p.position_y,
-          position_z: p.position_z,
-          is_online: p.is_online,
-        })))
 
         if (profiles && profiles.length > 0) {
           const userIds = profiles.map((p) => p.user_id)
@@ -604,7 +589,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           table: "interactive_profiles",
         },
         () => {
-          console.log("[v0] Player data changed, reloading...")
           loadPlayers()
         },
       )
@@ -682,7 +666,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         const seconds = Math.floor((distance % (1000 * 60)) / 1000)
         setCountdown(`${hours}h ${minutes}m ${seconds}s`)
       }
-    }, 1000)
+    }, 5000)
 
     return () => clearInterval(interval)
   }, [currentCinemaRoom, cinemaRooms]) // Added currentCinemaRoom to dependencies
@@ -732,7 +716,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       const { data } = await supabase.from("avatar_customization_options").select("*").order("category")
 
       if (data) {
-        console.log("[v0] Loaded customization options:", data.length)
         setCustomizationOptions(data)
       }
     }
@@ -877,17 +860,17 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }, [])
 
+  const loadCinemaRooms = useCallback(async () => {
+    const { data } = await supabase
+      .from("interactive_cinema_rooms")
+      .select("*")
+      .eq("is_open", true)
+      .order("room_number")
+
+    if (data) setCinemaRooms(data)
+  }, [])
+
   useEffect(() => {
-    const loadCinemaRooms = async () => {
-      const { data } = await supabase
-        .from("interactive_cinema_rooms")
-        .select("*")
-        .eq("is_open", true)
-        .order("room_number")
-
-      if (data) setCinemaRooms(data)
-    }
-
     loadCinemaRooms()
 
     const channel = supabase
@@ -906,16 +889,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [loadCinemaRooms])
+
+  const loadSeats = useCallback(async () => {
+    if (!currentCinemaRoom) return
+    const { data } = await supabase.from("interactive_cinema_seats").select("*").eq("room_id", currentCinemaRoom.id)
+    if (data) setCinemaSeats(data)
+  }, [currentCinemaRoom])
 
   useEffect(() => {
     if (!currentCinemaRoom) return
-
-    const loadSeats = async () => {
-      const { data } = await supabase.from("interactive_cinema_seats").select("*").eq("room_id", currentCinemaRoom.id)
-
-      if (data) setCinemaSeats(data)
-    }
 
     loadSeats()
 
@@ -936,21 +919,33 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     return () => {
       supabase.removeChannel(channel)
     }
+  }, [currentCinemaRoom, loadSeats])
+
+  const loadRoomMessages = useCallback(async () => {
+    if (!currentCinemaRoom) return
+    const { data } = await supabase
+      .from("interactive_chat_messages")
+      .select("*")
+      .eq("room", `cinema_${currentCinemaRoom.id}`)
+      .order("created_at", { ascending: false })
+      .limit(50)
+
+    if (data) setRoomMessages(data.reverse())
   }, [currentCinemaRoom])
+
+  const handleNewMessage = useCallback((payload: any) => {
+    setRoomMessages((prev) => [...prev, payload.new])
+    setPlayerChatBubbles((prev) => ({
+      ...prev,
+      [payload.new.user_id]: {
+        message: payload.new.message,
+        timestamp: Date.now(),
+      },
+    }))
+  }, [])
 
   useEffect(() => {
     if (!currentCinemaRoom) return
-
-    const loadRoomMessages = async () => {
-      const { data } = await supabase
-        .from("interactive_chat_messages")
-        .select("*")
-        .eq("room", `cinema_${currentCinemaRoom.id}`)
-        .order("created_at", { ascending: false })
-        .limit(50)
-
-      if (data) setRoomMessages(data.reverse())
-    }
 
     loadRoomMessages()
 
@@ -964,23 +959,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           table: "interactive_chat_messages",
           filter: `room=eq.cinema_${currentCinemaRoom.id}`,
         },
-        (payload) => {
-          setRoomMessages((prev) => [...prev, payload.new])
-          setPlayerChatBubbles((prev) => ({
-            ...prev,
-            [payload.new.user_id]: {
-              message: payload.new.message,
-              timestamp: Date.now(),
-            },
-          }))
-        },
+        handleNewMessage,
       )
       .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [currentCinemaRoom])
+  }, [currentCinemaRoom, loadRoomMessages, handleNewMessage])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -1001,7 +987,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const handleEmoji = (emoji: string) => {
     if (!userProfile) {
-      console.log("[v0] Cannot send emoji: userProfile is null")
       return
     }
 
@@ -1025,7 +1010,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const handleJump = () => {
     if (!userProfile) {
-      console.log("[v0] Cannot jump: userProfile is null")
       return
     }
 
@@ -1047,12 +1031,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const sendMessage = async () => {
     if (!userProfile || !userProfile.id) {
-      console.log("[v0] Cannot send message: userProfile is missing")
       return
     }
 
     if (!worldSettings.enableChat) {
-      console.log("[v0] Chat is disabled by admin")
       return
     }
 
@@ -1065,14 +1047,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         created_at: new Date().toISOString(),
       }
 
-      console.log("[v0] Sending message:", message)
 
       const { error } = await supabase.from("interactive_chat_messages").insert(message)
 
       if (error) {
         console.error("[v0] Error sending message:", error)
       } else {
-        console.log("[v0] Message sent successfully")
         setPlayerChatBubbles((prev) => ({
           ...prev,
           [userProfile.id]: {
@@ -1146,7 +1126,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         current_room: "arcade",
       })
       .eq("user_id", userId)
-      .then(() => console.log("[v0] Teleported to arcade room"))
+      .then(() => {})
   }
 
   const handleLeaveArcade = () => {
@@ -1163,7 +1143,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         current_room: null,
       })
       .eq("user_id", userId)
-      .then(() => console.log("[v0] Left arcade room"))
+      .then(() => {})
   }
 
   const handleSelectArcadeMachine = (machine: any) => {
@@ -1247,7 +1227,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     const availableSeat = cinemaSeats.find((s) => !occupiedSeats.find((os) => os.seat_number === s.seat_number))
 
     if (!availableSeat) {
-      console.log("[v0] No available seats")
       return
     }
 
@@ -1320,7 +1299,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         current_room: "stadium",
       })
       .eq("user_id", userId)
-      .then(() => console.log("[v0] Teleported to stadium"))
+      .then(() => {})
   }
 
   const handleLeaveStadium = () => {
@@ -1337,7 +1316,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         current_room: null,
       })
       .eq("user_id", userId)
-      .then(() => console.log("[v0] Left stadium"))
+      .then(() => {})
   }
 
   useEffect(() => {
@@ -1348,7 +1327,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         .eq("is_online", true)
 
       if (count && count >= worldSettings.maxCapacity) {
-        console.log("[v0] World is at max capacity:", count, "/", worldSettings.maxCapacity)
         // Could show a message to user here
       }
     }
@@ -1392,7 +1370,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }, [userId])
 
   const broadcastAction = async (action: string) => {
-    console.log("[v0] Broadcasting action:", action)
     await supabase.channel("player-actions").send({
       type: "broadcast",
       event: "action",
@@ -1403,7 +1380,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   // Handle quick actions (emotes, jumps)
   const handleQuickAction = (action: string) => {
     if (!userProfile) {
-      console.log("[v0] Cannot perform quick action: userProfile is null")
       return
     }
 
@@ -1435,7 +1411,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         return
       }
 
-      console.log("[v0] Loaded my profile:", data)
       setMyProfile(data)
 
       if (data) {
@@ -1965,8 +1940,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             </mesh>
 
             {/* Goals */}
-            {[-15, 15].map((z, idx) => (
-              <group key={idx} position={[0, 0, z]}>
+            {[-15, 15].map((z) => (
+              <group key={`goal-${z}`} position={[0, 0, z]}>
                 <mesh position={[-3.5, 1.5, 0]}>
                   <boxGeometry args={[0.2, 3, 0.2]} />
                   <meshStandardMaterial color="#ffffff" />
@@ -1988,8 +1963,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               { x: 0, z: 25, rot: Math.PI, w: 70, h: 15 },
               { x: -35, z: 0, rot: Math.PI / 2, w: 60, h: 15 },
               { x: 35, z: 0, rot: -Math.PI / 2, w: 60, h: 15 },
-            ].map((wall, idx) => (
-              <group key={idx} position={[wall.x, 0, wall.z]} rotation={[0, wall.rot, 0]}>
+            ].map((wall) => (
+              <group key={`stadium-wall-${wall.x}-${wall.z}`} position={[wall.x, 0, wall.z]} rotation={[0, wall.rot, 0]}>
                 {/* Stadium structure */}
                 <mesh position={[0, wall.h / 2, 0]}>
                   <boxGeometry args={[wall.w, wall.h, 2]} />
@@ -1998,7 +1973,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
                 {/* Seating rows */}
                 {[0, 1, 2, 3, 4].map((row) => (
-                  <mesh key={row} position={[0, 3 + row * 2, -1 - row * 0.5]}>
+                  <mesh key={`${wall.x}-${wall.z}-row-${row}`} position={[0, 3 + row * 2, -1 - row * 0.5]}>
                     <boxGeometry args={[wall.w - 2, 0.5, 2]} />
                     <meshStandardMaterial color={row % 2 === 0 ? "#1e3a8a" : "#3b82f6"} />
                   </mesh>
@@ -2031,8 +2006,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               [25, 20, -15],
               [-25, 20, 15],
               [25, 20, 15],
-            ].map((pos, idx) => (
-              <group key={idx} position={pos as [number, number, number]}>
+            ].map((pos) => (
+              <group key={`stadium-light-${pos[0]}-${pos[2]}`} position={pos as [number, number, number]}>
                 <mesh>
                   <cylinderGeometry args={[0.5, 0.5, 4]} />
                   <meshStandardMaterial color="#333333" />
@@ -2123,8 +2098,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                       </>
                     )}
 
-                    {/* Movie Iframe - Display when movie has started */}
-                    {isMovieStarted && room.embed_url && (
+                    {/* Movie Iframe - Display when movie has started and NOT in fullscreen */}
+                    {isMovieStarted && room.embed_url && !showMovieFullscreen && (
                       <Html transform style={{ width: "1300px", height: "720px" }}>
                         <iframe
                           src={room.embed_url}
@@ -2141,7 +2116,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               const isMySeat = mySeat === seat.seat_number // Use seat.seat_number for comparison
 
               return (
-                <group key={seat.seat_number} position={[seat.position_x, seat.position_y, seat.position_z]}>
+                <group key={seat.id || `seat-${seat.seat_number}-${seat.position_x}-${seat.position_z}`} position={[seat.position_x, seat.position_y, seat.position_z]}>
                   <mesh castShadow>
                     <boxGeometry args={[1, 0.8, 0.9]} />
                     <meshStandardMaterial color={isMySeat ? "#ef4444" : seat.color} />
