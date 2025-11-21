@@ -1,6 +1,6 @@
 "use client"
 
-import { Canvas } from "@react-three/fiber"
+import { Canvas, useThree } from "@react-three/fiber"
 import { OrbitControls, Sky, Html, PerspectiveCamera } from "@react-three/drei"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
@@ -53,6 +53,50 @@ interface WorldProps {
 interface InteractiveWorldProps {
   userId: string
   userProfile: any
+}
+
+// CameraFollower - fait suivre la caméra avec le personnage
+function CameraFollower({
+  characterPosition,
+  orbitControlsRef
+}: {
+  characterPosition: { x: number, y: number, z: number }
+  orbitControlsRef: React.MutableRefObject<any>
+}) {
+  const { camera } = useThree()
+  const lastPosition = useRef({ x: 0, y: 0, z: 0 })
+
+  useEffect(() => {
+    if (!orbitControlsRef.current) return
+
+    const controls = orbitControlsRef.current
+
+    // Calculer le déplacement du personnage
+    const deltaX = characterPosition.x - lastPosition.current.x
+    const deltaY = characterPosition.y - lastPosition.current.y
+    const deltaZ = characterPosition.z - lastPosition.current.z
+
+    // Déplacer la caméra du même vecteur pour suivre le personnage
+    if (deltaX !== 0 || deltaY !== 0 || deltaZ !== 0) {
+      camera.position.x += deltaX
+      camera.position.y += deltaY
+      camera.position.z += deltaZ
+
+      // Mettre à jour la cible d'OrbitControls
+      controls.target.set(
+        characterPosition.x,
+        characterPosition.y + 1,
+        characterPosition.z
+      )
+
+      controls.update()
+    }
+
+    // Sauvegarder la position actuelle
+    lastPosition.current = { ...characterPosition }
+  })
+
+  return null
 }
 
 function RealisticTree({ position }: { position: [number, number, number] }) {
@@ -125,7 +169,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [myProfile, setMyProfile] = useState<any>(null)
   const [otherPlayers, setOtherPlayers] = useState<any[]>([])
   const [onlineCount, setOnlineCount] = useState(0)
-  const [myPosition, setMyPosition] = useState({ x: 0, y: 0.5, z: 0 })
+  const [myPosition, setMyPosition] = useState({ x: 0, y: -0.35, z: 0 })
   const [myRotation, setMyRotation] = useState(0) // State for player rotation
   const [myAvatarStyle, setMyAvatarStyle] = useState({
     bodyColor: "#3b82f6",
@@ -193,6 +237,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [playerActions, setPlayerActions] = useState<Record<string, { action: string; timestamp: number }>>({})
   const [quickAction, setQuickAction] = useState<string | null>(null) // State for current quick action animation
   const keysPressed = useRef<Set<string>>(new Set()) // Ref for tracking pressed keys
+  const cameraAngle = useRef<number>(0) // Ref for tracking camera azimuth angle
+  const orbitControlsRef = useRef<any>(null) // Ref for OrbitControls
 
   const isMoving = movement.x !== 0 || movement.z !== 0
 
@@ -346,6 +392,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           .select("*")
           .eq("is_online", true)
           .neq("user_id", userId)
+          .not("position_x", "is", null)
+          .not("position_y", "is", null)
+          .not("position_z", "is", null)
 
         if (profilesError) {
           console.error("[v0] Error loading profiles:", profilesError)
@@ -562,20 +611,47 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }, [isSeatsLocked, mySeat]) // isSeatsLocked is now effectively unused
 
+  // Suivi de l'angle de la caméra pour les mouvements
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (orbitControlsRef.current) {
+        const angle = orbitControlsRef.current.getAzimuthalAngle()
+        cameraAngle.current = angle
+      }
+    }, 16) // ~60fps
+
+    return () => clearInterval(interval)
+  }, [])
+
   useEffect(() => {
     const interval = setInterval(() => {
       // if (isSeatsLocked && mySeat !== null) return // Removed seat lock check
 
-      let dx = 0
-      let dz = 0
+      let forward = 0
+      let right = 0
       const speed = 0.15
 
-      if (keysPressed.current.has("w") || keysPressed.current.has("arrowup")) dz -= speed
-      if (keysPressed.current.has("s") || keysPressed.current.has("arrowdown")) dz += speed
-      if (keysPressed.current.has("a") || keysPressed.current.has("arrowleft")) dx -= speed
-      if (keysPressed.current.has("d") || keysPressed.current.has("arrowright")) dx += speed
+      // Support QWERTY (WASD) et AZERTY (ZQSD) + Flèches
+      if (keysPressed.current.has("w") || keysPressed.current.has("z") || keysPressed.current.has("arrowup")) forward += speed
+      if (keysPressed.current.has("s") || keysPressed.current.has("arrowdown")) forward -= speed
+      if (keysPressed.current.has("a") || keysPressed.current.has("q") || keysPressed.current.has("arrowleft")) right += speed
+      if (keysPressed.current.has("d") || keysPressed.current.has("arrowright")) right -= speed
 
-      if (dx !== 0 || dz !== 0) {
+      if (forward !== 0 || right !== 0) {
+        // Mouvement relatif à l'angle de la caméra
+        const camAngle = cameraAngle.current
+        // La direction "avant" est opposée à la caméra (caméra regarde le personnage)
+        const forwardAngle = camAngle + Math.PI
+
+        // Calculer le mouvement en coordonnées monde
+        const dx = Math.sin(forwardAngle) * forward + Math.cos(forwardAngle) * right
+        const dz = Math.cos(forwardAngle) * forward - Math.sin(forwardAngle) * right
+
+        // Faire tourner le personnage vers la direction du mouvement
+        if (dx !== 0 || dz !== 0) {
+          const targetRotation = Math.atan2(dx, dz)
+          setMyRotation(targetRotation)
+        }
         setMovement({ x: dx, z: dz })
         setMyPosition((prev) => {
           const newX = Math.max(-20, Math.min(20, prev.x + dx))
@@ -587,7 +663,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
           const newPos = {
             x: newX,
-            y: 0.5,
+            y: -0.35,
             z: newZ,
           }
 
@@ -1933,9 +2009,44 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           .filter((p) => {
             const playerIsInSameRoom =
               currentRoom === p.current_room || (currentRoom === null && p.current_room === null)
-            return playerIsInSameRoom
+            // Filter out players without valid username
+            const hasValidProfile = (p.user_profiles?.username || p.username) ? true : false
+
+            // Filter out players at default spawn position (not really in interactive)
+            const isAtDefaultPosition = (p.position_x === 0 && p.position_z === 0 && (p.position_y === 0 || p.position_y === 0.5))
+
+            // Debug log
+            if (playerIsInSameRoom && !hasValidProfile) {
+              console.log("[DEBUG] Filtered out player without valid profile:", {
+                user_id: p.user_id,
+                username: p.username,
+                user_profiles: p.user_profiles,
+              })
+            }
+
+            if (playerIsInSameRoom && hasValidProfile && isAtDefaultPosition) {
+              console.log("[DEBUG] Filtered out player at default position:", {
+                user_id: p.user_id,
+                username: p.username,
+                position: { x: p.position_x, y: p.position_y, z: p.position_z },
+              })
+            }
+
+            return playerIsInSameRoom && hasValidProfile && !isAtDefaultPosition
           })
           .map((player) => {
+            // Debug log for rendered players
+            console.log("[DEBUG] Rendering player:", {
+              user_id: player.user_id,
+              username: player.username,
+              profile_username: player.user_profiles?.username,
+              position: {
+                x: player.position_x,
+                y: player.position_y,
+                z: player.position_z,
+              },
+            })
+
             const playerProfile = player.user_profiles
             const avatarStyle = player.avatar_style || { bodyColor: "#ef4444", headColor: "#fbbf24", faceSmiley: "😊" }
             const playerAction = playerActions[player.user_id]
@@ -1949,7 +2060,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
                 {worldSettings.showStatusBadges && (
                   <Html
-                    position={[player.position_x || 0, 2.3, player.position_z || 0]}
+                    position={[0, 2.3, 0]}
                     center
                     depthTest={true}
                     occlude
@@ -1986,11 +2097,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
         {!povMode && userProfile && (
           <group position={[myPosition.x, myPosition.y, myPosition.z]}>
-            <RealisticAvatar position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
+            <group rotation={[0, myRotation, 0]}>
+              <RealisticAvatar position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
+            </group>
 
-            {worldSettings.showStatusBadges && (
-              <Html position={[0, 2.3, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <div className="flex flex-col items-center gap-1 pointer-events-none">
+            <Html position={[0, 2.3, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
+              <div className="flex flex-col items-center gap-1 pointer-events-none">
+                {worldSettings.showStatusBadges && (
                   <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
                     <span className="text-white text-xs font-medium">{userProfile.username || "Vous"}</span>
                     {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
@@ -1999,26 +2112,33 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                       <Star className="w-3 h-3 text-yellow-400" />
                     )}
                   </div>
-                  {playerChatBubbles[userProfile.id] &&
-                    Date.now() - playerChatBubbles[userProfile.id].timestamp < 5000 && (
-                      <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
-                        {playerChatBubbles[userProfile.id].message}
-                      </div>
-                    )}
-                  {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
-                </div>
-              </Html>
-            )}
+                )}
+                {playerChatBubbles[userProfile.id] &&
+                  Date.now() - playerChatBubbles[userProfile.id].timestamp < 5000 && (
+                    <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
+                      {playerChatBubbles[userProfile.id].message}
+                    </div>
+                  )}
+                {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
+              </div>
+            </Html>
           </group>
         )}
 
         {!povMode && (
-          <OrbitControls
-            target={[myPosition.x, myPosition.y, myPosition.z]}
-            maxPolarAngle={Math.PI / 2.5}
-            minDistance={6}
-            maxDistance={25}
-          />
+          <>
+            <CameraFollower
+              characterPosition={myPosition}
+              orbitControlsRef={orbitControlsRef}
+            />
+            <OrbitControls
+              ref={orbitControlsRef}
+              target={[myPosition.x, myPosition.y + 1, myPosition.z]}
+              maxPolarAngle={Math.PI / 2.5}
+              minDistance={6}
+              maxDistance={25}
+            />
+          </>
         )}
       </Canvas>
 
