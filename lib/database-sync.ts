@@ -15,6 +15,11 @@ export class DatabaseSync {
       return
     }
 
+    if (!Array.isArray(favorites)) {
+      console.error("[v0] syncFavorites called with invalid data:", favorites)
+      return
+    }
+
     try {
       syncInProgress = true
       lastSyncTime = Date.now()
@@ -68,6 +73,11 @@ export class DatabaseSync {
   static async syncHistory(watchedItems: any[]) {
     if (syncInProgress || Date.now() - lastSyncTime < SYNC_DEBOUNCE) {
       console.log("[v0] Sync debounced, skipping...")
+      return
+    }
+
+    if (!Array.isArray(watchedItems)) {
+      console.error("[v0] syncHistory called with invalid data:", watchedItems)
       return
     }
 

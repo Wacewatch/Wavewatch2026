@@ -108,6 +108,48 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
     rarity: "legendary",
     created_at: "",
   },
+  {
+    id: "51",
+    code: "movie_25",
+    name: "Explorateur de Films",
+    description: "Regardez 25 films différents",
+    category: "movie",
+    icon: "Film",
+    color: "text-blue-400",
+    requirement_type: "count",
+    requirement_value: 25,
+    points: 35,
+    rarity: "common",
+    created_at: "",
+  },
+  {
+    id: "52",
+    code: "movie_250",
+    name: "Collectionneur de Films",
+    description: "Regardez 250 films",
+    category: "movie",
+    icon: "Film",
+    color: "text-purple-400",
+    requirement_type: "count",
+    requirement_value: 250,
+    points: 175,
+    rarity: "epic",
+    created_at: "",
+  },
+  {
+    id: "53",
+    code: "movie_likes_50",
+    name: "Critique de Cinéma",
+    description: "Likez 50 films",
+    category: "movie",
+    icon: "ThumbsUp",
+    color: "text-green-400",
+    requirement_type: "count",
+    requirement_value: 50,
+    points: 40,
+    rarity: "rare",
+    created_at: "",
+  },
 
   // TV Shows
   {
@@ -180,6 +222,134 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
     rarity: "legendary",
     created_at: "",
   },
+  {
+    id: "54",
+    code: "tv_5",
+    name: "Découvreur de Séries",
+    description: "Regardez 5 séries différentes",
+    category: "tv",
+    icon: "Tv",
+    color: "text-green-400",
+    requirement_type: "count",
+    requirement_value: 5,
+    points: 15,
+    rarity: "common",
+    created_at: "",
+  },
+  {
+    id: "55",
+    code: "tv_25",
+    name: "Passionné de Séries",
+    description: "Regardez 25 séries",
+    category: "tv",
+    icon: "Tv",
+    color: "text-green-400",
+    requirement_type: "count",
+    requirement_value: 25,
+    points: 40,
+    rarity: "rare",
+    created_at: "",
+  },
+  {
+    id: "56",
+    code: "tv_episodes_50",
+    name: "Binge Watcher",
+    description: "Regardez 50 épisodes",
+    category: "tv",
+    icon: "Calendar",
+    color: "text-blue-400",
+    requirement_type: "count",
+    requirement_value: 50,
+    points: 30,
+    rarity: "common",
+    created_at: "",
+  },
+  {
+    id: "57",
+    code: "tv_episodes_250",
+    name: "Addict aux Séries",
+    description: "Regardez 250 épisodes",
+    category: "tv",
+    icon: "Trophy",
+    color: "text-yellow-400",
+    requirement_type: "count",
+    requirement_value: 250,
+    points: 75,
+    rarity: "rare",
+    created_at: "",
+  },
+  {
+    id: "58",
+    code: "tv_likes_50",
+    name: "Fan de Séries",
+    description: "Likez 50 séries",
+    category: "tv",
+    icon: "ThumbsUp",
+    color: "text-green-400",
+    requirement_type: "count",
+    requirement_value: 50,
+    points: 45,
+    rarity: "rare",
+    created_at: "",
+  },
+
+  // Anime
+  {
+    id: "59",
+    code: "anime_first",
+    name: "Premier Anime",
+    description: "Regardez votre premier anime",
+    category: "anime",
+    icon: "Sparkles",
+    color: "text-pink-400",
+    requirement_type: "count",
+    requirement_value: 1,
+    points: 10,
+    rarity: "common",
+    created_at: "",
+  },
+  {
+    id: "60",
+    code: "anime_10",
+    name: "Otaku Débutant",
+    description: "Regardez 10 animes",
+    category: "anime",
+    icon: "Sparkles",
+    color: "text-pink-400",
+    requirement_type: "count",
+    requirement_value: 10,
+    points: 25,
+    rarity: "common",
+    created_at: "",
+  },
+  {
+    id: "61",
+    code: "anime_50",
+    name: "Otaku Confirmé",
+    description: "Regardez 50 animes",
+    category: "anime",
+    icon: "Sparkles",
+    color: "text-pink-400",
+    requirement_type: "count",
+    requirement_value: 50,
+    points: 60,
+    rarity: "rare",
+    created_at: "",
+  },
+  {
+    id: "62",
+    code: "anime_100",
+    name: "Maître Otaku",
+    description: "Regardez 100 animes",
+    category: "anime",
+    icon: "Sparkles",
+    color: "text-purple-400",
+    requirement_type: "count",
+    requirement_value: 100,
+    points: 120,
+    rarity: "epic",
+    created_at: "",
+  },
 
   // TV Channels
   {
@@ -224,6 +394,34 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
     rarity: "rare",
     created_at: "",
   },
+  {
+    id: "63",
+    code: "tv_channel_10",
+    name: "Collectionneur de Chaînes",
+    description: "Ajoutez 10 chaînes TV en favoris",
+    category: "tv-channel",
+    icon: "Tv2",
+    color: "text-cyan-400",
+    requirement_type: "count",
+    requirement_value: 10,
+    points: 35,
+    rarity: "rare",
+    created_at: "",
+  },
+  {
+    id: "64",
+    code: "tv_channel_like_25",
+    name: "Amoureux de la TV",
+    description: "Likez 25 chaînes TV",
+    category: "tv-channel",
+    icon: "ThumbsUp",
+    color: "text-green-400",
+    requirement_type: "count",
+    requirement_value: 25,
+    points: 50,
+    rarity: "epic",
+    created_at: "",
+  },
 
   // Radio
   {
@@ -252,6 +450,34 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
     requirement_value: 5,
     points: 20,
     rarity: "common",
+    created_at: "",
+  },
+  {
+    id: "65",
+    code: "radio_10",
+    name: "Passionné de Radio",
+    description: "Ajoutez 10 radios en favoris",
+    category: "radio",
+    icon: "Radio",
+    color: "text-orange-400",
+    requirement_type: "count",
+    requirement_value: 10,
+    points: 35,
+    rarity: "rare",
+    created_at: "",
+  },
+  {
+    id: "66",
+    code: "radio_likes_20",
+    name: "Mélomane Radio",
+    description: "Likez 20 stations radio",
+    category: "radio",
+    icon: "ThumbsUp",
+    color: "text-green-400",
+    requirement_type: "count",
+    requirement_value: 20,
+    points: 40,
+    rarity: "rare",
     created_at: "",
   },
 
@@ -284,6 +510,48 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
     rarity: "common",
     created_at: "",
   },
+  {
+    id: "67",
+    code: "game_25",
+    name: "Nostalgique Confirmé",
+    description: "Jouez à 25 jeux rétro",
+    category: "retrogaming",
+    icon: "Gamepad2",
+    color: "text-red-400",
+    requirement_type: "count",
+    requirement_value: 25,
+    points: 45,
+    rarity: "rare",
+    created_at: "",
+  },
+  {
+    id: "68",
+    code: "game_50",
+    name: "Légende du Rétrogaming",
+    description: "Jouez à 50 jeux rétro",
+    category: "retrogaming",
+    icon: "Gamepad2",
+    color: "text-purple-400",
+    requirement_type: "count",
+    requirement_value: 50,
+    points: 80,
+    rarity: "epic",
+    created_at: "",
+  },
+  {
+    id: "69",
+    code: "game_likes_25",
+    name: "Collectionneur Rétro",
+    description: "Likez 25 jeux rétro",
+    category: "retrogaming",
+    icon: "ThumbsUp",
+    color: "text-green-400",
+    requirement_type: "count",
+    requirement_value: 25,
+    points: 45,
+    rarity: "rare",
+    created_at: "",
+  },
 
   // Playlists
   {
@@ -298,6 +566,34 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
     requirement_value: 10,
     points: 30,
     rarity: "rare",
+    created_at: "",
+  },
+  {
+    id: "70",
+    code: "playlist_like_5",
+    name: "Amateur de Playlists",
+    description: "Likez 5 playlists",
+    category: "playlist",
+    icon: "List",
+    color: "text-blue-400",
+    requirement_type: "count",
+    requirement_value: 5,
+    points: 15,
+    rarity: "common",
+    created_at: "",
+  },
+  {
+    id: "71",
+    code: "playlist_like_25",
+    name: "Expert Playlists",
+    description: "Likez 25 playlists",
+    category: "playlist",
+    icon: "ThumbsUp",
+    color: "text-green-400",
+    requirement_type: "count",
+    requirement_value: 25,
+    points: 50,
+    rarity: "epic",
     created_at: "",
   },
 
@@ -344,6 +640,62 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
     rarity: "rare",
     created_at: "",
   },
+  {
+    id: "72",
+    code: "social_likes_25",
+    name: "Supporter Actif",
+    description: "Likez 25 contenus",
+    category: "social",
+    icon: "ThumbsUp",
+    color: "text-green-400",
+    requirement_type: "count",
+    requirement_value: 25,
+    points: 20,
+    rarity: "common",
+    created_at: "",
+  },
+  {
+    id: "73",
+    code: "social_likes_250",
+    name: "Ambassadeur",
+    description: "Likez 250 contenus",
+    category: "social",
+    icon: "Award",
+    color: "text-purple-400",
+    requirement_type: "count",
+    requirement_value: 250,
+    points: 100,
+    rarity: "epic",
+    created_at: "",
+  },
+  {
+    id: "74",
+    code: "social_favorites_25",
+    name: "Curateur",
+    description: "Ajoutez 25 favoris",
+    category: "social",
+    icon: "ThumbsUp",
+    color: "text-yellow-400",
+    requirement_type: "count",
+    requirement_value: 25,
+    points: 25,
+    rarity: "common",
+    created_at: "",
+  },
+  {
+    id: "75",
+    code: "social_favorites_100",
+    name: "Archiviste",
+    description: "Ajoutez 100 favoris",
+    category: "social",
+    icon: "Award",
+    color: "text-purple-400",
+    requirement_type: "count",
+    requirement_value: 100,
+    points: 75,
+    rarity: "epic",
+    created_at: "",
+  },
 
   // General
   {
@@ -374,6 +726,90 @@ const MOCK_ACHIEVEMENTS: Achievement[] = [
     rarity: "rare",
     created_at: "",
   },
+  {
+    id: "76",
+    code: "general_streak_3",
+    name: "Début de Série",
+    description: "Connectez-vous 3 jours de suite",
+    category: "general",
+    icon: "Calendar",
+    color: "text-blue-400",
+    requirement_type: "streak",
+    requirement_value: 3,
+    points: 15,
+    rarity: "common",
+    created_at: "",
+  },
+  {
+    id: "77",
+    code: "general_streak_14",
+    name: "Deux Semaines",
+    description: "Connectez-vous 14 jours de suite",
+    category: "general",
+    icon: "Trophy",
+    color: "text-yellow-400",
+    requirement_type: "streak",
+    requirement_value: 14,
+    points: 60,
+    rarity: "rare",
+    created_at: "",
+  },
+  {
+    id: "78",
+    code: "general_streak_30",
+    name: "Mois Complet",
+    description: "Connectez-vous 30 jours de suite",
+    category: "general",
+    icon: "Crown",
+    color: "text-purple-400",
+    requirement_type: "streak",
+    requirement_value: 30,
+    points: 120,
+    rarity: "epic",
+    created_at: "",
+  },
+  {
+    id: "79",
+    code: "general_time_10h",
+    name: "Marathon 10h",
+    description: "Regardez 10h de contenu",
+    category: "general",
+    icon: "Clock",
+    color: "text-blue-400",
+    requirement_type: "time",
+    requirement_value: 600,
+    points: 25,
+    rarity: "common",
+    created_at: "",
+  },
+  {
+    id: "80",
+    code: "general_time_50h",
+    name: "Marathon 50h",
+    description: "Regardez 50h de contenu",
+    category: "general",
+    icon: "Trophy",
+    color: "text-yellow-400",
+    requirement_type: "time",
+    requirement_value: 3000,
+    points: 80,
+    rarity: "rare",
+    created_at: "",
+  },
+  {
+    id: "81",
+    code: "general_time_100h",
+    name: "Centurion",
+    description: "Regardez 100h de contenu",
+    category: "general",
+    icon: "Award",
+    color: "text-purple-400",
+    requirement_type: "time",
+    requirement_value: 6000,
+    points: 150,
+    rarity: "epic",
+    created_at: "",
+  },
 ]
 
 export function AchievementsDashboard() {
@@ -381,44 +817,43 @@ export function AchievementsDashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [totalPoints, setTotalPoints] = useState(0)
   const [unlockedCount, setUnlockedCount] = useState(0)
+  const [filteredAchievements, setFilteredAchievements] = useState<AchievementProgress[]>([])
 
   useEffect(() => {
-    const stats = WatchTracker.getStats()
-    const favorites = WatchTracker.getFavoriteItems()
+    const loadAchievements = async () => {
+      const stats = WatchTracker.getStats()
+      const favorites = await WatchTracker.getFavoriteItems()
 
-    // Add additional stats
-    const enhancedStats = {
-      ...stats,
-      radioFavorites: favorites.filter((f) => f.type === "radio").length,
-      gamesFavorites: favorites.filter((f) => f.type === "game").length,
-      favoritesCount: favorites.length,
+      // Add additional stats
+      const enhancedStats = {
+        ...stats,
+        radioFavorites: favorites.filter((f) => f.type === "radio").length,
+        gamesFavorites: favorites.filter((f) => f.type === "game").length,
+        favoritesCount: favorites.length,
+      }
+
+      const unlockedCodes = AchievementSystem.checkAchievements(enhancedStats)
+
+      const progressList: AchievementProgress[] = MOCK_ACHIEVEMENTS.map((achievement) => {
+        const unlocked = unlockedCodes.includes(achievement.code)
+        const progress = AchievementSystem.calculateProgress(achievement, enhancedStats)
+        const percentage = Math.min((progress / achievement.requirement_value) * 100, 100)
+
+        return {
+          achievement,
+          unlocked,
+          progress,
+          percentage,
+        }
+      })
+
+      setAchievements(progressList)
+      setFilteredAchievements(progressList)
+      setUnlockedCount(unlockedCodes.length)
     }
 
-    const unlockedCodes = AchievementSystem.checkAchievements(enhancedStats)
-
-    const progressList: AchievementProgress[] = MOCK_ACHIEVEMENTS.map((achievement) => {
-      const unlocked = unlockedCodes.includes(achievement.code)
-      const progress = AchievementSystem.calculateProgress(achievement, enhancedStats)
-      const percentage = Math.min((progress / achievement.requirement_value) * 100, 100)
-
-      return {
-        achievement,
-        unlocked,
-        progress,
-        percentage,
-      }
-    })
-
-    setAchievements(progressList)
-
-    const points = progressList.filter((p) => p.unlocked).reduce((sum, p) => sum + p.achievement.points, 0)
-    setTotalPoints(points)
-
-    setUnlockedCount(progressList.filter((p) => p.unlocked).length)
+    loadAchievements()
   }, [])
-
-  const filteredAchievements =
-    selectedCategory === "all" ? achievements : achievements.filter((a) => a.achievement.category === selectedCategory)
 
   const categories = ["all", ...Array.from(new Set(MOCK_ACHIEVEMENTS.map((a) => a.category)))]
 

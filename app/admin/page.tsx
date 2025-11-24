@@ -67,6 +67,8 @@ import { useRouter } from "next/navigation"
 // REMOVED: import { supabase } from "@/lib/supabase" // Removed incorrect Supabase import
 import { createBrowserClient } from "@supabase/ssr" // Import for Supabase client
 import { Separator } from "@/components/ui/separator" // Import Separator
+import { Line, LineChart, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Bar, BarChart } from "recharts"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
 // Constants for user pagination
 const USERS_PER_PAGE = 10
@@ -343,6 +345,16 @@ export default function AdminPage() {
 
   const [activeTab, setActiveTab] = useState("dashboard") // State to track active tab
 
+  const [realTimeAnalytics, setRealTimeAnalytics] = useState({
+    onlineUsers: 0,
+    todayPageViews: 0,
+    todayUniqueVisitors: 0,
+    todayNewUsers: 0,
+    weeklyData: [] as any[],
+    monthlyData: [] as any[],
+    loading: true,
+  })
+
   // useEffect moved inside the AdminPage component if it depends on user state
   useEffect(() => {
     // Check if user is available and an admin before loading data
@@ -370,12 +382,12 @@ export default function AdminPage() {
       const { error } = await supabase.from("requests").update({ status }).eq("id", id)
       if (error) throw error
       setRequests((prev) => prev.map((req) => (req.id === id ? { ...req, status } : req)))
-      toast({ title: "Statut mis à jour", description: `La demande #${id} est maintenant ${status}.` })
+      toast({ title: "Statut mis a jour", description: `La demande #${id} est maintenant ${status}.` })
     } catch (error) {
-      console.error("Erreur lors de la mise à jour du statut de la demande:", error)
+      console.error("Erreur lors de la mise a jour du statut de la demande:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de mettre à jour le statut de la demande.",
+        description: "Impossible de mettre a jour le statut de la demande.",
         variant: "destructive",
       })
     }
@@ -390,7 +402,7 @@ export default function AdminPage() {
       const { error } = await supabase.from("requests").delete().eq("id", id)
       if (error) throw error
       setRequests((prev) => prev.filter((req) => req.id !== id))
-      toast({ title: "Demande supprimée", description: `La demande #${id} a été supprimée.` })
+      toast({ title: "Demande supprimee", description: `La demande #${id} a ete supprimee.` })
     } catch (error) {
       console.error("Erreur lors de la suppression de la demande:", error)
       toast({ title: "Erreur", description: "Impossible de supprimer la demande.", variant: "destructive" })
@@ -485,7 +497,7 @@ export default function AdminPage() {
       if (!allUsers || allUsers.length === 0) {
         toast({
           title: "Aucun utilisateur",
-          description: "Aucun utilisateur trouvé pour envoyer le message",
+          description: "Aucun utilisateur trouve pour envoyer le message",
           variant: "destructive",
         })
         return
@@ -511,8 +523,8 @@ export default function AdminPage() {
       if (insertError) throw insertError
 
       toast({
-        title: "Message envoyé",
-        description: `Message diffusé à ${allUsers.length} utilisateur(s)`,
+        title: "Message envoye",
+        description: `Message diffuse a ${allUsers.length} utilisateur(s)`,
       })
 
       setBroadcastForm({ subject: "", content: "" })
@@ -521,7 +533,7 @@ export default function AdminPage() {
       console.error("Error sending broadcast:", error)
       toast({
         title: "Erreur",
-        description: `Erreur lors de l'envoi: ${error.message}`,
+        description: `Erreur lors de lenvoi: ${error.message}`,
         variant: "destructive",
       })
     } finally {
@@ -533,7 +545,7 @@ export default function AdminPage() {
 
   const loadRealTVChannels = async (supabase) => {
     try {
-      console.log("🔄 Chargement des chaînes TV...")
+      console.log("🔄 Chargement des chaines TV...")
       const { data, error } = await supabase.from("tv_channels").select("*").order("created_at", { ascending: false })
 
       if (error) {
@@ -541,11 +553,11 @@ export default function AdminPage() {
         throw error
       }
 
-      console.log(`✅ ${data?.length || 0} chaînes TV chargées:`, data)
+      console.log(`✅ ${data?.length || 0} chaines TV chargees:`, data)
       setTvChannels(data || [])
       return data || []
     } catch (error) {
-      console.error("❌ Erreur lors du chargement des chaînes TV:", error)
+      console.error("❌ Erreur lors du chargement des chaines TV:", error)
       setTvChannels([])
       throw error
     }
@@ -564,7 +576,7 @@ export default function AdminPage() {
         throw error
       }
 
-      console.log(`✅ ${data?.length || 0} stations radio chargées:`, data)
+      console.log(`✅ ${data?.length || 0} stations radio chargees:`, data)
       setRadioStations(data || [])
       return data || []
     } catch (error) {
@@ -587,7 +599,7 @@ export default function AdminPage() {
         throw error
       }
 
-      console.log(`✅ ${data?.length || 0} sources retrogaming chargées:`, data)
+      console.log(`✅ ${data?.length || 0} sources retrogaming chargees:`, data)
       setRetrogamingSources(data || [])
       return data || []
     } catch (error) {
@@ -620,21 +632,21 @@ export default function AdminPage() {
 
       if (usersError) {
         console.error("❌ Erreur lors du chargement des utilisateurs:", usersError)
-        setUsers([]) // Ensure users state is empty if there's an error
+        setUsers([]) // Ensure users state is empty if there is an error
         throw usersError
       } else {
-        console.log(`✅ ${allUsers?.length || 0} utilisateurs chargés depuis Supabase (count: ${count})`)
+        console.log(`✅ ${allUsers?.length || 0} utilisateurs charges depuis Supabase (count: ${count})`)
 
         const correctedUsers = (allUsers || []).map((user) => ({
           ...user,
-          // S'assurer que les booléens sont bien définis
+          // Sassurer que les boolens sont bien definis
           is_admin: Boolean(user.is_admin),
           is_vip: Boolean(user.is_vip),
           is_vip_plus: Boolean(user.is_vip_plus),
           is_beta: Boolean(user.is_beta),
-          // Définir un statut par défaut si non défini
+          // Definir un statut par defaut si non defini
           status: user.status || "active",
-          // S'assurer que le nom d'utilisateur est défini
+          // Sassurer que le nom dutilisateur est defini
           username: user.username || user.email?.split("@")[0] || "Utilisateur",
         }))
 
@@ -697,27 +709,35 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      console.log("🔄 Chargement des activités récentes...")
+      console.log("🔄 Chargement des activites recentes...")
 
       const activities = []
 
+      // Get login history without problematic foreign key
       const { data: loginHistory, error: loginError } = await supabase
         .from("user_login_history")
-        .select(`
-          *,
-          user_profiles!user_login_history_user_id_fkey(username, email)
-        `)
+        .select("*")
         .order("login_at", { ascending: false })
         .limit(50)
 
       if (loginError) {
-        console.error("❌ Erreur login history:", loginError)
-      } else {
-        loginHistory?.forEach((login) => {
+        console.error("❌ Erreur login history:", loginError.message)
+      } else if (loginHistory) {
+        // Get user profiles separately
+        const userIds = [...new Set(loginHistory.map((l) => l.user_id).filter(Boolean))]
+        const { data: profiles } = await supabase
+          .from("user_profiles")
+          .select("user_id, username, email")
+          .in("user_id", userIds)
+
+        const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
+
+        loginHistory.forEach((login) => {
+          const profile = profileMap.get(login.user_id)
           activities.push({
             id: `login_${login.id}`,
             type: "login",
-            user: login.user_profiles?.username || login.user_profiles?.email || "Utilisateur inconnu",
+            user: profile?.username || profile?.email || "Utilisateur inconnu",
             description: `Connexion depuis ${login.ip_address || "IP inconnue"}`,
             details: login.user_agent ? `${login.user_agent.substring(0, 50)}...` : null,
             timestamp: new Date(login.login_at),
@@ -735,9 +755,9 @@ export default function AdminPage() {
         .limit(20)
 
       if (usersError) {
-        console.error("❌ Erreur new users:", usersError)
-      } else {
-        newUsers?.forEach((user) => {
+        console.error("❌ Erreur new users:", usersError.message)
+      } else if (newUsers) {
+        newUsers.forEach((user) => {
           activities.push({
             id: `user_${user.id}`,
             type: "new_user",
@@ -754,23 +774,29 @@ export default function AdminPage() {
 
       const { data: watchHistory, error: watchError } = await supabase
         .from("user_watch_history")
-        .select(`
-          *,
-          user_profiles!user_watch_history_user_id_fkey(username, email)
-        `)
+        .select("*")
         .order("last_watched_at", { ascending: false })
         .limit(30)
 
       if (watchError) {
-        console.error("❌ Erreur watch history:", watchError)
-      } else {
-        watchHistory?.forEach((watch) => {
+        console.error("❌ Erreur watch history:", watchError.message)
+      } else if (watchHistory) {
+        const userIds = [...new Set(watchHistory.map((w) => w.user_id).filter(Boolean))]
+        const { data: profiles } = await supabase
+          .from("user_profiles")
+          .select("user_id, username, email")
+          .in("user_id", userIds)
+
+        const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
+
+        watchHistory.forEach((watch) => {
+          const profile = profileMap.get(watch.user_id)
           activities.push({
             id: `watch_${watch.id}`,
             type: "watched",
-            user: watch.user_profiles?.username || watch.user_profiles?.email || "Utilisateur inconnu",
-            description: `A regardé "${watch.content_title}"`,
-            details: `${watch.content_type === "movie" ? "Film" : "Série"} - ${Math.round(watch.progress || 0)}% terminé`,
+            user: profile?.username || profile?.email || "Utilisateur inconnu",
+            description: `A regarde "${watch.content_title}"`,
+            details: `${watch.content_type === "movie" ? "Film" : "Serie"} - ${Math.round(watch.progress || 0)}% termine`,
             timestamp: new Date(watch.last_watched_at),
             contentType: watch.content_type,
             icon: Play,
@@ -782,23 +808,29 @@ export default function AdminPage() {
 
       const { data: ratings, error: ratingsError } = await supabase
         .from("user_ratings")
-        .select(`
-          *,
-          user_profiles!user_ratings_user_id_fkey(username, email)
-        `)
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(30)
 
       if (ratingsError) {
-        console.error("❌ Erreur ratings:", ratingsError)
-      } else {
-        ratings?.forEach((rating) => {
+        console.error("❌ Erreur ratings:", ratingsError.message)
+      } else if (ratings) {
+        const userIds = [...new Set(ratings.map((r) => r.user_id).filter(Boolean))]
+        const { data: profiles } = await supabase
+          .from("user_profiles")
+          .select("user_id, username, email")
+          .in("user_id", userIds)
+
+        const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
+
+        ratings.forEach((rating) => {
+          const profile = profileMap.get(rating.user_id)
           activities.push({
             id: `rating_${rating.id}`,
             type: "rating",
-            user: rating.user_profiles?.username || rating.user_profiles?.email || "Utilisateur inconnu",
-            description: `A ${rating.rating === "like" ? "liké" : "disliké"} un contenu`,
-            details: `${rating.content_type === "movie" ? "Film" : "Série"}`,
+            user: profile?.username || profile?.email || "Utilisateur inconnu",
+            description: `A ${rating.rating === "like" ? "like" : "dislike"} un contenu`,
+            details: `${rating.content_type === "movie" ? "Film" : "Serie"}`,
             timestamp: new Date(rating.created_at),
             contentType: rating.content_type,
             rating: rating.rating,
@@ -811,23 +843,29 @@ export default function AdminPage() {
 
       const { data: wishlistItems, error: wishlistError } = await supabase
         .from("user_wishlist")
-        .select(`
-          *,
-          user_profiles!user_wishlist_user_id_fkey(username, email)
-        `)
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(20)
 
       if (wishlistError) {
-        console.error("❌ Erreur wishlist:", wishlistError)
-      } else {
-        wishlistItems?.forEach((item) => {
+        console.error("❌ Erreur wishlist:", wishlistError.message)
+      } else if (wishlistItems) {
+        const userIds = [...new Set(wishlistItems.map((w) => w.user_id).filter(Boolean))]
+        const { data: profiles } = await supabase
+          .from("user_profiles")
+          .select("user_id, username, email")
+          .in("user_id", userIds)
+
+        const profileMap = new Map(profiles?.map((p) => [p.user_id, p]) || [])
+
+        wishlistItems.forEach((item) => {
+          const profile = profileMap.get(item.user_id)
           activities.push({
             id: `wishlist_${item.id}`,
             type: "wishlist",
-            user: item.user_profiles?.username || item.user_profiles?.email || "Utilisateur inconnu",
-            description: `A ajouté "${item.content_title}" à sa wishlist`,
-            details: `${item.content_type === "movie" ? "Film" : "Série"}`,
+            user: profile?.username || profile?.email || "Utilisateur inconnu",
+            description: `A ajoute "${item.content_title}" a sa wishlist`,
+            details: `${item.content_type === "movie" ? "Film" : "Serie"}`,
             timestamp: new Date(item.created_at),
             contentType: item.content_type,
             icon: Heart,
@@ -840,13 +878,13 @@ export default function AdminPage() {
       // Sort all activities by timestamp
       activities.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 
-      console.log(`✅ ${activities.length} activités chargées`)
+      console.log(`✅ ${activities.length} activites chargees`)
       setRecentActivities(activities.slice(0, 100)) // Limit to 100 most recent
     } catch (error) {
-      console.error("❌ Erreur lors du chargement des activités:", error)
+      console.error("❌ Erreur lors du chargement des activites:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de charger les activités récentes",
+        description: "Impossible de charger les activites recentes",
         variant: "destructive",
       })
     } finally {
@@ -898,7 +936,7 @@ export default function AdminPage() {
         console.error("Error saving site settings:", error)
         toast({
           title: "Erreur",
-          description: "Impossible de sauvegarder les paramètres",
+          description: "Impossible de sauvegarder les parametres",
           variant: "destructive",
         })
         return
@@ -911,9 +949,8 @@ export default function AdminPage() {
       }
 
       toast({
-        title: "Paramètres sauvegardés",
-        description:
-          "Les modules de la page d'accueil ont été mis à jour. Rechargez la page pour voir les changements.",
+        title: "Parametres sauvegardes",
+        description: "Les modules de la page daccueil ont ete mis a jour. Rechargez la page pour voir les changements.",
       })
     } catch (error) {
       console.error("Error saving site settings:", error)
@@ -945,7 +982,7 @@ export default function AdminPage() {
           console.log("[v0] No world settings found, using defaults")
           return
         }
-        // Log other errors but don't crash
+        // Log other errors but dont crash
         console.warn("[v0] Error loading world settings:", error.message || error)
         return
       }
@@ -1027,8 +1064,8 @@ export default function AdminPage() {
 
       console.log("[v0] World settings saved successfully")
       toast({
-        title: "Paramètres sauvegardés",
-        description: "Les paramètres du monde interactif ont été mis à jour.",
+        title: "Parametres sauvegardes",
+        description: "Les parametres du monde interactif ont ete mis a jour.",
       })
     } catch (error: any) {
       console.error("[v0] Error saving world settings:", error)
@@ -1090,15 +1127,15 @@ export default function AdminPage() {
       if (error) throw error
 
       toast({
-        title: "Salle créée",
-        description: "Une nouvelle salle de cinéma a été créée.",
+        title: "Salle creée",
+        description: "Une nouvelle salle de cinema a ete creée.",
       })
       loadCinemaRooms() // Reload the list to include the new room
     } catch (error) {
       console.error("Error creating cinema room:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de créer la salle de cinéma.",
+        description: "Impossible de créer la salle de cinema.",
         variant: "destructive",
       })
     }
@@ -1133,15 +1170,15 @@ export default function AdminPage() {
       if (error) throw error
 
       toast({
-        title: "Salle mise à jour",
-        description: `La salle '${room.name}' a été mise à jour avec succès.`,
+        title: "Salle mise a jour",
+        description: `La salle '${room.name}' a ete mise a jour avec succes.`,
       })
       loadCinemaRooms() // Reload to reflect changes
     } catch (error) {
       console.error("Error updating cinema room:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de mettre à jour la salle de cinéma.",
+        description: "Impossible de mettre a jour la salle de cinema.",
         variant: "destructive",
       })
     }
@@ -1154,7 +1191,7 @@ export default function AdminPage() {
     )
     try {
       const { data, error } = await supabase
-        .from("interactive_avatar_options")
+        .from("avatar_customization_options")
         .select("*")
         .order("id", { ascending: true })
 
@@ -1198,8 +1235,8 @@ export default function AdminPage() {
       if (error) throw error
 
       toast({
-        title: "Option ajoutée",
-        description: "L'option de personnalisation a été ajoutée avec succès.",
+        title: "Option ajoutee",
+        description: "Loption de personnalisation a ete ajoutee avec succes.",
       })
       // Reset the form
       setNewOption({
@@ -1213,7 +1250,7 @@ export default function AdminPage() {
       console.error("Error adding avatar option:", error)
       toast({
         title: "Erreur",
-        description: "Impossible d'ajouter l'option de personnalisation. Vérifiez les logs.",
+        description: "Impossible dajouter loption de personnalisation. Verifiez les logs.",
         variant: "destructive",
       })
     }
@@ -1230,15 +1267,15 @@ export default function AdminPage() {
       if (error) throw error
 
       toast({
-        title: "Option supprimée",
-        description: "L'option de personnalisation a été supprimée avec succès.",
+        title: "Option supprimee",
+        description: "Loption de personnalisation a ete supprimee avec succes.",
       })
       loadAvatarOptions() // Refresh the list
     } catch (error) {
       console.error("Error deleting avatar option:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de supprimer l'option. Vérifiez les logs.",
+        description: "Impossible de supprimer loption. Verifiez les logs.",
         variant: "destructive",
       })
     }
@@ -1325,7 +1362,7 @@ export default function AdminPage() {
     )
 
     if (!stadium) {
-      toast({ title: "Erreur", description: "Aucun stade configuré à mettre à jour.", variant: "destructive" })
+      toast({ title: "Erreur", description: "Aucun stade configure a mettre a jour.", variant: "destructive" })
       return
     }
 
@@ -1347,14 +1384,14 @@ export default function AdminPage() {
       if (error) throw error
 
       toast({
-        title: "Stade mis à jour",
-        description: `Le stade '${stadium.name}' a été mis à jour avec succès.`,
+        title: "Stade mis a jour",
+        description: `Le stade '${stadium.name}' a ete mis a jour avec succes.`,
       })
     } catch (error) {
       console.error("Error updating stadium:", error)
       toast({
         title: "Erreur",
-        description: "Impossible de mettre à jour le stade.",
+        description: "Impossible de mettre a jour le stade.",
         variant: "destructive",
       })
     }
@@ -1375,10 +1412,10 @@ export default function AdminPage() {
         const { data: statsData, error: statsError } = await supabase.rpc("get_admin_stats")
         if (!statsError && statsData) {
           dbStats = statsData
-          console.log("✅ Statistiques depuis la base de données:", dbStats)
+          console.log("✅ Statistiques depuis la base de donnees:", dbStats)
         }
       } catch (error) {
-        console.warn("⚠️ Impossible d'utiliser get_admin_stats, calcul manuel:", error)
+        console.warn("⚠️ Impossible dutiliser get_admin_stats, calcul manuel:", error)
       }
 
       const { count: userCount, error: countError } = await supabase
@@ -1388,7 +1425,7 @@ export default function AdminPage() {
       if (!countError && userCount !== null) {
         supabaseUserCount = userCount
       } else if (countError) {
-        console.error("❌ Erreur lors de la récupération du compte utilisateur:", countError)
+        console.error("❌ Erreur lors de la recuperation du compte utilisateur:", countError)
       }
 
       const [tvChannelsResult, radioResult, retrogamingResult, musicResult, softwareResult, gamesResult, ebooksResult] =
@@ -1427,13 +1464,13 @@ export default function AdminPage() {
         activeUsers,
       })
 
-      // Charger les vraies données TMDB avec comptage précis
-      let tmdbMovies = 50000 // Valeur par défaut
-      let tmdbTVShows = 25000 // Valeur par défaut
-      let tmdbAnime = 8000 // Valeur par défaut
+      // Charger les vraies donnees TMDB avec comptage precis
+      let tmdbMovies = 50000 // Valeur par defaut
+      let tmdbTVShows = 25000 // Valeur par defaut
+      let tmdbAnime = 8000 // Valeur par defaut
 
       try {
-        console.log("🔄 Chargement des données TMDB...")
+        console.log("🔄 Chargement des donnees TMDB...")
         const [moviesResponse, tvResponse, animeResponse] = await Promise.allSettled([
           fetch(`/api/content/movies?page=1`),
           fetch(`/api/content/tv-shows?page=1`),
@@ -1455,12 +1492,12 @@ export default function AdminPage() {
           tmdbAnime = animeData.total_results || 8000
         }
 
-        console.log("✅ Données TMDB chargées:", { tmdbMovies, tmdbTVShows, tmdbAnime })
+        console.log("✅ Donnees TMDB chargees:", { tmdbMovies, tmdbTVShows, tmdbAnime })
       } catch (error) {
-        console.error("⚠️ Erreur lors du chargement des données TMDB, utilisation des valeurs par défaut:", error)
+        console.error("⚠️ Erreur lors du chargement des donnees TMDB, utilisation des valeurs par defaut:", error)
       }
 
-      // Charger les statistiques d'activité depuis Supabase
+      // Charger les statistiques d'activite depuis Supabase
       let totalViews = dbStats?.watched_items || 0
       if (!dbStats?.watched_items) {
         try {
@@ -1503,7 +1540,7 @@ export default function AdminPage() {
         },
         userGrowth: [
           { month: "Jan", users: Math.floor(totalUsers * 0.6) },
-          { month: "Fév", users: Math.floor(totalUsers * 0.7) },
+          { month: "Fev", users: Math.floor(totalUsers * 0.7) },
           { month: "Mar", users: Math.floor(totalUsers * 0.8) },
           { month: "Avr", users: Math.floor(totalUsers * 0.85) },
           { month: "Mai", users: Math.floor(totalUsers * 0.92) },
@@ -1511,7 +1548,7 @@ export default function AdminPage() {
         ],
         revenueByMonth: [
           { month: "Jan", revenue: Math.floor(vipUsers * 1.99 * 0.6) },
-          { month: "Fév", revenue: Math.floor(vipUsers * 1.99 * 0.7) },
+          { month: "Fev", revenue: Math.floor(vipUsers * 1.99 * 0.7) },
           { month: "Mar", revenue: Math.floor(vipUsers * 1.99 * 0.8) },
           { month: "Avr", revenue: Math.floor(vipUsers * 1.99 * 0.9) },
           { month: "Mai", revenue: Math.floor(vipUsers * 1.99 * 0.95) },
@@ -1532,7 +1569,7 @@ export default function AdminPage() {
         },
       }
 
-      console.log("✅ Statistiques calculées:", newStats)
+      console.log("✅ Statistiques calculees:", newStats)
       setStats(newStats)
     } catch (error) {
       console.error("❌ Erreur lors du chargement des statistiques:", error)
@@ -1555,19 +1592,19 @@ export default function AdminPage() {
       if (result.success) {
         setLastUpdate(new Date().toLocaleString("fr-FR"))
         toast({
-          title: "Mise à jour réussie",
+          title: "Mise a jour reussie",
           description: result.message,
         })
-        // Recharger les statistiques après la mise à jour
+        // Recharger les statistiques apres la mise a jour
         await loadStatistics()
       } else {
-        throw new Error(result.error || "Erreur lors de la mise à jour")
+        throw new Error(result.error || "Erreur lors de la mise a jour")
       }
     } catch (error) {
-      console.error("Erreur lors de la mise à jour:", error)
+      console.error("Erreur lors de la mise a jour:", error)
       toast({
         title: "Erreur",
-        description: `Erreur lors de la mise à jour: ${error instanceof Error ? error.message : "Erreur inconnue"}`,
+        description: `Erreur lors de la mise a jour: ${error instanceof Error ? error.message : "Erreur inconnue"}`,
         variant: "destructive",
       })
     } finally {
@@ -1592,20 +1629,20 @@ export default function AdminPage() {
       })
 
       toast({
-        title: "Vérification terminée",
-        description: "Tous les systèmes sont opérationnels",
+        title: "Verification terminee",
+        description: "Tous les systemes sont operationnels",
       })
     } catch (error) {
       setSystemCheck((prev) => ({ ...prev, checking: false }))
       toast({
-        title: "Erreur de vérification",
-        description: "Impossible de vérifier l'état du système",
+        title: "Erreur de verification",
+        description: "Impossible de verifier l'etat du systeme",
         variant: "destructive",
       })
     }
   }
 
-  // Fonctions CRUD avec vraie base de données
+  // Fonctions CRUD avec vraie base de donnees
   const handleAdd = async (type, formData) => {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -1646,71 +1683,71 @@ export default function AdminPage() {
           result = await supabase.from(tableName).insert([formData]).select().single()
           break
         default:
-          throw new Error(`Type ${type} non supporté`)
+          throw new Error(`Type ${type} non supporte`)
       }
 
       if (result.error) {
         console.error(`❌ Erreur lors de l'ajout dans ${tableName}:`, result.error)
 
-        // Message d'erreur plus spécifique pour RLS
+        // Message d'erreur plus specifique pour RLS
         if (result.error.code === "42501" || result.error.message.includes("row level security")) {
-          throw new Error("Permissions insuffisantes. Assurez-vous d'être connecté en tant qu'administrateur.")
+          throw new Error("Permissions insuffisantes. Assurez-vous d'etre connecte en tant qu'administrateur.")
         }
 
         throw result.error
       }
 
-      console.log(`✅ ${type} ajouté avec succès:`, result.data)
+      console.log(`✅ ${type} ajoute avec succes:`, result.data)
 
-      // Mettre à jour l'état local
+      // Mettre a jour l'etat local
       switch (type) {
         case "tvchannel":
           setTvChannels((prev) => [result.data, ...prev])
           toast({
-            title: "Chaîne TV ajoutée",
-            description: `${formData.name} a été ajoutée avec succès.`,
+            title: "Chaine TV ajoutee",
+            description: `${formData.name} a ete ajoutee avec succes.`,
           })
           break
         case "radio":
           setRadioStations((prev) => [result.data, ...prev])
           toast({
-            title: "Station radio ajoutée",
-            description: `${formData.name} a été ajoutée avec succès.`,
+            title: "Station radio ajoutee",
+            description: `${formData.name} a ete ajoutee avec succes.`,
           })
           break
         case "retrogaming-source":
           setRetrogamingSources((prev) => [result.data, ...prev])
           toast({
-            title: "Source retrogaming ajoutée",
-            description: `${formData.name} a été ajoutée avec succès.`,
+            title: "Source retrogaming ajoutee",
+            description: `${formData.name} a ete ajoutee avec succes.`,
           })
           break
         case "music":
           setMusicContent((prev) => [result.data, ...prev])
           toast({
-            title: "Contenu musical ajouté",
-            description: `${formData.title} a été ajouté avec succès.`,
+            title: "Contenu musical ajoute",
+            description: `${formData.title} a ete ajoute avec succes.`,
           })
           break
         case "software":
           setSoftware((prev) => [result.data, ...prev])
           toast({
-            title: "Logiciel ajouté",
-            description: `${formData.name} a été ajouté avec succès.`,
+            title: "Logiciel ajoute",
+            description: `${formData.name} a ete ajoute avec succes.`,
           })
           break
         case "game":
           setGames((prev) => [result.data, ...prev])
           toast({
-            title: "Jeu ajouté",
-            description: `${formData.title} a été ajouté avec succès.`,
+            title: "Jeu ajoute",
+            description: `${formData.title} a ete ajoute avec succes.`,
           })
           break
         case "ebook":
           setEbooks((prev) => [result.data, ...prev])
           toast({
-            title: "Ebook ajouté",
-            description: `${formData.title} a été ajouté avec succès.`,
+            title: "Ebook ajoute",
+            description: `${formData.title} a ete ajoute avec succes.`,
           })
           break
       }
@@ -1718,7 +1755,7 @@ export default function AdminPage() {
       setActiveModal(null)
       setEditingItem(null)
 
-      // Réinitialiser les formulaires
+      // Reinitialiser les formulaires
       switch (type) {
         case "tvchannel":
           setTvChannelForm({
@@ -1838,7 +1875,7 @@ export default function AdminPage() {
   }
 
   const handleEdit = (type, item) => {
-    console.log(`🔄 Édition d'un ${type}:`, item)
+    console.log(`🔄 Edition d'un ${type}:`, item)
     setEditingItem(item)
     setActiveModal(type)
 
@@ -1965,12 +2002,12 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     if (!editingItem) {
-      console.error("❌ Aucun élément en cours d'édition")
+      console.error("❌ Aucun element en cours dedition")
       return
     }
 
     try {
-      console.log(`🔄 Mise à jour d'un ${type}:`, { id: editingItem.id, formData })
+      console.log(`🔄 Mise a jour d'un ${type}:`, { id: editingItem.id, formData })
       let tableName
 
       switch (type) {
@@ -1998,13 +2035,13 @@ export default function AdminPage() {
                 toast({
                   title: "Avertissement",
                   description:
-                    "Profil mis à jour mais le mot de passe n'a pas pu être changé. Utilisez la fonctionnalité de réinitialisation par email.",
+                    "Profil mis a jour mais le mot de passe na pas pu etre change. Utilisez la fonctionnalite de reinitialisation par email.",
                   variant: "destructive",
                 })
               } else {
                 toast({
-                  title: "Mot de passe modifié",
-                  description: "Le mot de passe de l'utilisateur a été changé",
+                  title: "Mot de passe modifie",
+                  description: "Le mot de passe de lutilisateur a ete change",
                 })
               }
             } catch (pwError) {
@@ -2026,27 +2063,27 @@ export default function AdminPage() {
           tableName = "ebooks"
           break
         default:
-          throw new Error(`Type ${type} non supporté`)
+          throw new Error(`Type ${type} non supporte`)
       }
 
       const { error } = await supabase.from(tableName).update(formData).eq("id", editingItem.id)
 
       if (error) {
-        console.error(`❌ Erreur lors de la mise à jour dans ${tableName}:`, error)
+        console.error(`❌ Erreur lors de la mise a jour dans ${tableName}:`, error)
 
-        // Message d'erreur plus spécifique pour RLS
+        // Message d'erreur plus specifique pour RLS
         if (error.code === "42501" || error.message.includes("row level security")) {
-          throw new Error("Permissions insuffisantes. Assurez-vous d'être connecté en tant qu'administrateur.")
+          throw new Error("Permissions insuffisantes. Assurez-vous d'etre connecte en tant qu'administrateur.")
         }
 
         throw error
       }
 
-      console.log(`✅ ${type} mis à jour avec succès`)
+      console.log(`✅ ${type} mis a jour avec succes`)
 
       const updatedItem = { ...editingItem, ...formData }
 
-      // Mettre à jour l'état local
+      // Mettre a jour l'etat local
       switch (type) {
         case "tvchannel":
           setTvChannels((prev) => prev.map((item) => (item.id === editingItem.id ? updatedItem : item)))
@@ -2078,14 +2115,14 @@ export default function AdminPage() {
       setEditingItem(null)
 
       toast({
-        title: "Modifié avec succès",
-        description: `${type} mis à jour dans la base de données.`,
+        title: "Modifie avec succes",
+        description: `${type} mis a jour dans la base de donnees.`,
       })
 
       // Recharger les statistiques
       await loadStatistics()
     } catch (error) {
-      console.error("❌ Erreur lors de la mise à jour:", error)
+      console.error("❌ Erreur lors de la mise a jour:", error)
       toast({
         title: "Erreur",
         description: `Erreur lors de la modification: ${error.message}`,
@@ -2100,7 +2137,7 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      console.log(`🔄 Suppression d'un ${type} avec l'ID:`, id)
+      console.log(`🔄 Suppression d'un ${type} avec l ID:`, id)
       let tableName
 
       switch (type) {
@@ -2126,7 +2163,7 @@ export default function AdminPage() {
           tableName = "ebooks"
           break
         default:
-          throw new Error(`Type ${type} non supporté`)
+          throw new Error(`Type ${type} non supporte`)
       }
 
       const { error } = await supabase.from(tableName).delete().eq("id", id)
@@ -2134,17 +2171,17 @@ export default function AdminPage() {
       if (error) {
         console.error(`❌ Erreur lors de la suppression dans ${tableName}:`, error)
 
-        // Message d'erreur plus spécifique pour RLS
+        // Message d'erreur plus specifique pour RLS
         if (error.code === "42501" || error.message.includes("row level security")) {
-          throw new Error("Permissions insuffisantes. Assurez-vous d'être connecté en tant qu'administrateur.")
+          throw new Error("Permissions insuffisantes. Assurez-vous d'etre connecte en tant qu'administrateur.")
         }
 
         throw error
       }
 
-      console.log(`✅ ${type} supprimé avec succès`)
+      console.log(`✅ ${type} supprime avec succes`)
 
-      // Mettre à jour l'état local
+      // Mettre a jour l'etat local
       switch (type) {
         case "tvchannel":
           setTvChannels((prev) => prev.filter((item) => item.id !== id))
@@ -2169,7 +2206,7 @@ export default function AdminPage() {
           break
       }
 
-      toast({ title: "Supprimé avec succès", description: `${type} supprimé de la base de données.` })
+      toast({ title: "Supprime avec succes", description: `${type} supprime de la base de donnees.` })
 
       // Recharger les statistiques
       await loadStatistics()
@@ -2189,7 +2226,7 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      console.log(`🔄 Changement de statut pour ${type} avec l'ID:`, id)
+      console.log(`🔄 Changement de statut pour ${type} avec l ID:`, id)
       let currentItem
       let tableName
 
@@ -2223,11 +2260,11 @@ export default function AdminPage() {
           tableName = "ebooks"
           break
         default:
-          throw new Error(`Type ${type} non supporté`)
+          throw new Error(`Type ${type} non supporte`)
       }
 
       if (!currentItem) {
-        throw new Error(`Élément non trouvé pour le type ${type}`)
+        throw new Error(`Element non trouve pour le type ${type}`)
       }
 
       const newStatus = !currentItem.is_active
@@ -2240,19 +2277,19 @@ export default function AdminPage() {
       if (error) {
         console.error(`❌ Erreur lors du changement de statut dans ${tableName}:`, error)
 
-        // Message d'erreur plus spécifique pour RLS
+        // Message d'erreur plus specifique pour RLS
         if (error.code === "42501" || error.message.includes("row level security")) {
-          throw new Error("Permissions insuffisantes. Assurez-vous d'être connecté en tant qu'administrateur.")
+          throw new Error("Permissions insuffisantes. Assurez-vous d'etre connecte en tant qu'administrateur.")
         }
 
         throw error
       }
 
-      console.log(`✅ Statut changé avec succès`)
+      console.log(`✅ Statut change avec succes`)
 
       const updatedItem = { ...currentItem, is_active: newStatus }
 
-      // Mettre à jour l'état local
+      // Mettre a jour l'etat local
       switch (type) {
         case "tvchannel":
           setTvChannels((prev) => prev.map((item) => (item.id === id ? updatedItem : item)))
@@ -2278,8 +2315,8 @@ export default function AdminPage() {
       }
 
       toast({
-        title: "Statut modifié",
-        description: `Le statut a été ${newStatus ? "activé" : "désactivé"} avec succès.`,
+        title: "Statut modifie",
+        description: `Le statut a ete ${newStatus ? "active" : "desactive"} avec succes.`,
       })
     } catch (error) {
       console.error("❌ Erreur lors du changement de statut:", error)
@@ -2298,9 +2335,9 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      console.log(`🔄 Changement de statut VIP pour l'utilisateur:`, id)
+      console.log(`🔄 Changement de statut VIP pour l utilisateur:`, id)
       const currentUser = users.find((user) => user.id === id)
-      if (!currentUser) throw new Error("Utilisateur non trouvé")
+      if (!currentUser) throw new Error("Utilisateur non trouve")
 
       const newVipStatus = !currentUser.is_vip
 
@@ -2309,20 +2346,20 @@ export default function AdminPage() {
       if (error) {
         console.error("❌ Erreur lors du changement VIP:", error)
 
-        // Message d'erreur plus spécifique pour RLS
+        // Message d'erreur plus specifique pour RLS
         if (error.code === "42501" || error.message.includes("row level security")) {
-          throw new Error("Permissions insuffisantes. Assurez-vous d'être connecté en tant qu'administrateur.")
+          throw new Error("Permissions insuffisantes. Assurez-vous d'etre connecte en tant qu'administrateur.")
         }
 
         throw error
       }
 
-      console.log(`✅ Statut VIP changé: ${newVipStatus}`)
+      console.log(`✅ Statut VIP changed: ${newVipStatus}`)
 
       const updatedUser = { ...currentUser, is_vip: newVipStatus }
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))
 
-      toast({ title: "Statut VIP modifié", description: "Le statut VIP de l'utilisateur a été modifié." })
+      toast({ title: "Statut VIP modifie", description: "Le statut VIP de l utilisateur a ete modifie." })
 
       // Recharger les statistiques
       await loadStatistics()
@@ -2342,9 +2379,9 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      console.log(`🔄 Changement de statut Admin pour l'utilisateur:`, id)
+      console.log(`🔄 Changement de statut Admin pour l utilisateur:`, id)
       const currentUser = users.find((user) => user.id === id)
-      if (!currentUser) throw new Error("Utilisateur non trouvé")
+      if (!currentUser) throw new Error("Utilisateur non trouve")
 
       const newAdminStatus = !currentUser.is_admin
 
@@ -2353,20 +2390,20 @@ export default function AdminPage() {
       if (error) {
         console.error("❌ Erreur lors du changement Admin:", error)
 
-        // Message d'erreur plus spécifique pour RLS
+        // Message d'erreur plus specifique pour RLS
         if (error.code === "42501" || error.message.includes("row level security")) {
-          throw new Error("Permissions insuffisantes. Assurez-vous d'être connecté en tant qu'administrateur.")
+          throw new Error("Permissions insuffisantes. Assurez-vous d'etre connecte en tant qu'administrateur.")
         }
 
         throw error
       }
 
-      console.log(`✅ Statut Admin changé: ${newAdminStatus}`)
+      console.log(`✅ Statut Admin changed: ${newAdminStatus}`)
 
       const updatedUser = { ...currentUser, is_admin: newAdminStatus }
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))
 
-      toast({ title: "Statut Admin modifié", description: "Le statut administrateur a été modifié." })
+      toast({ title: "Statut Admin modifie", description: "Le statut administrateur a ete modifie." })
     } catch (error) {
       console.error("❌ Erreur lors du changement Admin:", error)
       toast({
@@ -2383,9 +2420,9 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      console.log(`🔄 Changement de statut VIP+ pour l'utilisateur:`, id)
+      console.log(`🔄 Changement de statut VIP+ pour l utilisateur:`, id)
       const currentUser = users.find((user) => user.id === id)
-      if (!currentUser) throw new Error("Utilisateur non trouvé")
+      if (!currentUser) throw new Error("Utilisateur non trouve")
 
       const newVipPlusStatus = !currentUser.is_vip_plus
 
@@ -2394,20 +2431,20 @@ export default function AdminPage() {
       if (error) {
         console.error("❌ Erreur lors du changement VIP+:", error)
 
-        // Message d'erreur plus spécifique pour RLS
+        // Message d'erreur plus specifique pour RLS
         if (error.code === "42501" || error.message.includes("row level security")) {
-          throw new Error("Permissions insuffisantes. Assurez-vous d'être connecté en tant qu'administrateur.")
+          throw new Error("Permissions insuffisantes. Assurez-vous d'etre connecte en tant qu'administrateur.")
         }
 
         throw error
       }
 
-      console.log(`✅ Statut VIP+ changé: ${newVipPlusStatus}`)
+      console.log(`✅ Statut VIP+ changed: ${newVipPlusStatus}`)
 
       const updatedUser = { ...currentUser, is_vip_plus: newVipPlusStatus }
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))
 
-      toast({ title: "Statut VIP+ modifié", description: "Le statut VIP+ de l'utilisateur a été modifié." })
+      toast({ title: "Statut VIP+ modifie", description: "Le statut VIP+ de l utilisateur a ete modifie." })
 
       // Recharger les statistiques
       await loadStatistics()
@@ -2427,9 +2464,9 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      console.log(`🔄 Changement de statut Beta pour l'utilisateur:`, id)
+      console.log(`🔄 Changement de statut Beta pour l utilisateur:`, id)
       const currentUser = users.find((user) => user.id === id)
-      if (!currentUser) throw new Error("Utilisateur non trouvé")
+      if (!currentUser) throw new Error("Utilisateur non trouve")
 
       const newBetaStatus = !currentUser.is_beta
 
@@ -2438,20 +2475,20 @@ export default function AdminPage() {
       if (error) {
         console.error("❌ Erreur lors du changement Beta:", error)
 
-        // Message d'erreur plus spécifique pour RLS
+        // Message d'erreur plus specifique pour RLS
         if (error.code === "42501" || error.message.includes("row level security")) {
-          throw new Error("Permissions insuffisantes. Assurez-vous d'être connecté en tant qu'administrateur.")
+          throw new Error("Permissions insuffisantes. Assurez-vous d'etre connecte en tant qu'administrateur.")
         }
 
         throw error
       }
 
-      console.log(`✅ Statut Beta changé: ${newBetaStatus}`)
+      console.log(`✅ Statut Beta changed: ${newBetaStatus}`)
 
       const updatedUser = { ...currentUser, is_beta: newBetaStatus }
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))
 
-      toast({ title: "Statut Beta modifié", description: "Le statut Beta de l'utilisateur a été modifié." })
+      toast({ title: "Statut Beta modifie", description: "Le statut Beta de l utilisateur a ete modifie." })
     } catch (error) {
       console.error("❌ Erreur lors du changement Beta:", error)
       toast({
@@ -2468,9 +2505,9 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      console.log(`🔄 Bannissement/débannissement de l'utilisateur:`, id)
+      console.log(`🔄 Bannissement/debannissement de l utilisateur:`, id)
       const currentUser = users.find((user) => user.id === id)
-      if (!currentUser) throw new Error("Utilisateur non trouvé")
+      if (!currentUser) throw new Error("Utilisateur non trouve")
 
       const newStatus = currentUser.status === "banned" ? "active" : "banned"
 
@@ -2479,9 +2516,9 @@ export default function AdminPage() {
       if (error) {
         console.error("❌ Erreur lors du bannissement:", error)
 
-        // Message d'erreur plus spécifique pour RLS
+        // Message d'erreur plus specifique pour RLS
         if (error.code === "42501" || error.message.includes("row level security")) {
-          throw new Error("Permissions insuffisantes. Assurez-vous d'être connecté en tant qu'administrateur.")
+          throw new Error("Permissions insuffisantes. Assurez-vous d'etre connecte en tant qu'administrateur.")
         }
 
         throw error
@@ -2493,8 +2530,8 @@ export default function AdminPage() {
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))
 
       toast({
-        title: newStatus === "banned" ? "Utilisateur banni" : "Utilisateur débanni",
-        description: "Le statut de l'utilisateur a été modifié.",
+        title: newStatus === "banned" ? "Utilisateur banni" : "Utilisateur debanni",
+        description: "Le statut de l utilisateur a ete modifie.",
       })
     } catch (error) {
       console.error("❌ Erreur lors du bannissement:", error)
@@ -2511,7 +2548,7 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cette action est irréversible.")) {
+    if (!confirm("Etes-vous sur de vouloir supprimer cet utilisateur ? Cette action est irreversible.")) {
       return
     }
 
@@ -2527,13 +2564,13 @@ export default function AdminPage() {
         throw error
       }
 
-      console.log(`✅ Utilisateur supprimé avec succès`)
+      console.log(`✅ Utilisateur supprime avec succes`)
 
       setUsers((prev) => prev.filter((user) => user.id !== userId))
 
       toast({
-        title: "Utilisateur supprimé",
-        description: "L'utilisateur a été supprimé avec succès",
+        title: "Utilisateur supprime",
+        description: "L utilisateur a ete supprime avec succes",
       })
 
       await loadStatistics()
@@ -2603,7 +2640,7 @@ export default function AdminPage() {
     const diffInSeconds = Math.floor((now - date) / 1000)
 
     if (diffInSeconds < 60) {
-      return "À l'instant"
+      return "A linstant"
     } else if (diffInSeconds < 3600) {
       const minutes = Math.floor(diffInSeconds / 60)
       return `Il y a ${minutes} min`
@@ -2647,8 +2684,8 @@ export default function AdminPage() {
       })
     } else {
       toast({
-        title: "Succès",
-        description: "Changelog créé avec succès",
+        title: "Succes",
+        description: "Changelog cree avec succes",
       })
       setNewChangelog({
         version: "",
@@ -2677,8 +2714,8 @@ export default function AdminPage() {
       })
     } else {
       toast({
-        title: "Succès",
-        description: "Changelog supprimé",
+        title: "Succes",
+        description: "Changelog supprime",
       })
       fetchAllData()
     }
@@ -2767,14 +2804,55 @@ export default function AdminPage() {
         loadStadium()
       }
     } catch (error) {
-      console.error("❌ Erreur lors du chargement des données admin:", error)
+      console.error("❌ Erreur lors du chargement des donnees admin:", error)
       toast({
         title: "Erreur de chargement",
-        description: "Impossible de charger les données d'administration",
+        description: "Impossible de charger les donnees d'administration",
         variant: "destructive",
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  // ADDED: Function to fetch Real-time Analytics Data
+  const loadRealTimeAnalytics = async () => {
+    setRealTimeAnalytics((prev) => ({ ...prev, loading: true }))
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+
+    try {
+      // Load analytics data
+      const today = new Date()
+      const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString()
+
+      // Get today's page views and unique visitors
+      const { data: todayData } = await supabase.from("analytics_events").select("*").gte("created_at", startOfDay)
+
+      const todayPageViews = todayData?.length || 0
+      const todayUniqueVisitors = new Set(todayData?.map((d) => d.user_id)).size
+
+      // Get online users
+      const { count: onlineCount } = await supabase
+        .from("interactive_profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("is_online", true)
+
+      setRealTimeAnalytics({
+        onlineUsers: onlineCount || 0,
+        todayPageViews,
+        todayUniqueVisitors,
+        todayNewUsers: 0, // This needs a specific query if required
+        weeklyData: [], // Placeholder, needs separate fetching logic
+        monthlyData: [], // Placeholder, needs separate fetching logic
+        loading: false,
+      })
+    } catch (error) {
+      console.error("Error loading real-time analytics:", error)
+      setRealTimeAnalytics((prev) => ({ ...prev, loading: false }))
     }
   }
 
@@ -2815,8 +2893,8 @@ export default function AdminPage() {
       setActiveModal(null)
       setEditingLog(null) // Clear editing state
       toast({
-        title: "Log modifié",
-        description: "Le log a été mis à jour avec succès",
+        title: "Log modifie",
+        description: "Le log a ete mis a jour avec succes",
       })
     } catch (error) {
       console.error("Error updating log:", error)
@@ -2836,6 +2914,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (user?.isAdmin) {
       fetchAllData() // Initial load when component mounts and user is admin
+      loadRealTimeAnalytics() // Load real-time analytics on mount
       // Reload online users periodically if the interactive-world tab is active
       const intervalId = setInterval(() => {
         if (activeTab === "interactive-world") {
@@ -2853,8 +2932,8 @@ export default function AdminPage() {
       <div className="min-h-screen bg-gray-900 text-white">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Accès refusé</h1>
-            <p>Vous n'avez pas les permissions d'administrateur.</p>
+            <h1 className="text-2xl font-bold mb-4">Acces refuse</h1>
+            <p>Vous navez pas les permissions dadministrateur.</p>
           </div>
         </div>
       </div>
@@ -2868,7 +2947,7 @@ export default function AdminPage() {
           <div className="text-center">
             <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
             <h1 className="text-2xl font-bold mb-4 mt-4">Chargement...</h1>
-            <p>Chargement des données d'administration...</p>
+            <p>Chargement des donnees d'administration...</p>
           </div>
         </div>
       </div>
@@ -2893,17 +2972,17 @@ export default function AdminPage() {
   // }, [user])
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-background text-foreground">
       <div className="container mx-auto px-4 py-8 space-y-8">
         <div className="flex items-center gap-4">
           {/* Removed logo */}
           <div className="space-y-2">
             <h1 className="text-3xl font-bold text-white">Administration WaveWatch</h1>
-            <p className="text-gray-400">Tableau de bord complet pour gérer votre plateforme de streaming</p>
+            <p className="text-gray-400">Tableau de bord complet pour gerer votre plateforme de streaming</p>
           </div>
         </div>
 
-        <Tabs defaultValue="dashboard" className="space-y-6" onValueChange={(value) => setActiveTab(value)}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="inline-flex w-auto min-w-full bg-gray-800 border-gray-700 flex-nowrap">
               <TabsTrigger
@@ -2973,8 +3052,8 @@ export default function AdminPage() {
                 className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
               >
                 <Trophy className="w-4 h-4" />
-                <span className="hidden sm:inline">Rétro ({retrogamingSources.length})</span>
-                <span className="sm:hidden">Rétro</span>
+                <span className="hidden sm:inline">Retro ({retrogamingSources.length})</span>
+                <span className="sm:hidden">Retro</span>
               </TabsTrigger>
               <TabsTrigger
                 value="users"
@@ -3006,7 +3085,7 @@ export default function AdminPage() {
                 className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
               >
                 <SettingsIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">Paramètres</span>
+                <span className="hidden sm:inline">Parametres</span>
               </TabsTrigger>
               {/* Added new Interactive World tab to the TabsList */}
               <TabsTrigger
@@ -3021,6 +3100,196 @@ export default function AdminPage() {
 
           {/* Dashboard avec Statistiques */}
           <TabsContent value="dashboard" className="space-y-6">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold">Statistiques en temps reel</h2>
+                  <p className="text-muted-foreground">Donnees actualisees toutes les 30 secondes</p>
+                </div>
+                <Button
+                  onClick={loadRealTimeAnalytics}
+                  variant="outline"
+                  size="sm"
+                  disabled={realTimeAnalytics.loading}
+                >
+                  <Activity className="w-4 h-4 mr-2" />
+                  {realTimeAnalytics.loading ? "Chargement..." : "Actualiser"}
+                </Button>
+              </div>
+
+              {/* Real-time Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/20">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-green-600 dark:text-green-400">
+                      Utilisateurs en ligne
+                    </CardTitle>
+                    <Activity className="h-4 w-4 text-green-600 dark:text-green-400 animate-pulse" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-green-600 dark:text-green-400">
+                      {realTimeAnalytics.onlineUsers}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Actifs maintenant</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/10 border-blue-500/20">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                      Pages vues aujourdhui
+                    </CardTitle>
+                    <Eye className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                      {realTimeAnalytics.todayPageViews.toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Total de vues</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-purple-500/10 to-purple-600/10 border-purple-500/20">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                      Visiteurs uniques
+                    </CardTitle>
+                    <Users className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">
+                      {realTimeAnalytics.todayUniqueVisitors.toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Aujourdhui</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-orange-500/10 to-orange-600/10 border-orange-500/20">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                      Nouveaux utilisateurs
+                    </CardTitle>
+                    <UserPlus className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold text-orange-600 dark:text-orange-400">
+                      {realTimeAnalytics.todayNewUsers}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Aujourdhui</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Weekly Chart */}
+              {realTimeAnalytics.weeklyData.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5" />
+                      Statistiques hebdomadaires
+                    </CardTitle>
+                    <CardDescription>Evolution des 7 derniers jours</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer
+                      config={{
+                        page_views: {
+                          label: "Pages vues",
+                          color: "hsl(var(--chart-1))",
+                        },
+                        unique_visitors: {
+                          label: "Visiteurs uniques",
+                          color: "hsl(var(--chart-2))",
+                        },
+                        new_users: {
+                          label: "Nouveaux utilisateurs",
+                          color: "hsl(var(--chart-3))",
+                        },
+                      }}
+                      className="h-[300px]"
+                    >
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={realTimeAnalytics.weeklyData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="date"
+                            tickFormatter={(value) =>
+                              new Date(value).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
+                            }
+                          />
+                          <YAxis />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Legend />
+                          <Bar dataKey="total_page_views" fill="var(--color-page_views)" name="Pages vues" />
+                          <Bar dataKey="unique_visitors" fill="var(--color-unique_visitors)" name="Visiteurs uniques" />
+                          <Bar dataKey="new_users" fill="var(--color-new_users)" name="Nouveaux utilisateurs" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Monthly Chart */}
+              {realTimeAnalytics.monthlyData.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5" />
+                      Statistiques mensuelles
+                    </CardTitle>
+                    <CardDescription>Evolution des 30 derniers jours</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ChartContainer
+                      config={{
+                        page_views: {
+                          label: "Pages vues",
+                          color: "hsl(var(--chart-1))",
+                        },
+                        unique_visitors: {
+                          label: "Visiteurs uniques",
+                          color: "hsl(var(--chart-2))",
+                        },
+                      }}
+                      className="h-[300px]"
+                    >
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={realTimeAnalytics.monthlyData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis
+                            dataKey="date"
+                            tickFormatter={(value) =>
+                              new Date(value).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
+                            }
+                          />
+                          <YAxis />
+                          <ChartTooltip content={<ChartTooltipContent />} />
+                          <Legend />
+                          <Line
+                            type="monotone"
+                            dataKey="total_page_views"
+                            stroke="var(--color-page_views)"
+                            name="Pages vues"
+                            strokeWidth={2}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="unique_visitors"
+                            stroke="var(--color-unique_visitors)"
+                            name="Visiteurs uniques"
+                            strokeWidth={2}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Separator className="my-6" />
+            </div>
+
             {/* Stats Cards - Only showing Total Content and Total Users */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="bg-card border-border">
@@ -3031,7 +3300,7 @@ export default function AdminPage() {
                 <CardContent>
                   <div className="text-2xl font-bold">{stats.totalContent.toLocaleString()}</div>
                   <p className="text-xs text-muted-foreground">
-                    Films, séries, chaînes TV, radios, jeux, musique, logiciels, ebooks
+                    Films, series, chaines TV, radios, jeux, musique, logiciels, ebooks
                   </p>
                 </CardContent>
               </Card>
@@ -3048,16 +3317,16 @@ export default function AdminPage() {
               </Card>
             </div>
 
-            {/* Modules de mise à jour TMDB et état du système */}
+            {/* Modules de mise a jour TMDB et etat du systeme */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Module de mise à jour TMDB */}
+              {/* Module de mise a jour TMDB */}
               <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Activity className="w-5 h-5 text-primary" />
-                    Mise à jour TMDB
+                    Mise a jour TMDB
                   </CardTitle>
-                  <CardDescription>Forcer la mise à jour du contenu depuis l'API TMDB</CardDescription>
+                  <CardDescription>Forcer la mise a jour du contenu depuis l API TMDB</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-3 mb-4">
@@ -3078,7 +3347,7 @@ export default function AdminPage() {
                       size="sm"
                     >
                       <Tv className="w-4 h-4 mr-2" />
-                      {isUpdating ? "..." : "Séries"}
+                      {isUpdating ? "..." : "Series"}
                     </Button>
 
                     <Button
@@ -3088,7 +3357,7 @@ export default function AdminPage() {
                       size="sm"
                     >
                       <Tv className="w-4 h-4 mr-2" />
-                      {isUpdating ? "..." : "Animés"}
+                      {isUpdating ? "..." : "Animes"}
                     </Button>
 
                     <Button
@@ -3104,26 +3373,26 @@ export default function AdminPage() {
 
                   <Button onClick={() => handleContentUpdate("all")} disabled={isUpdating} className="w-full" size="sm">
                     <Zap className="w-4 h-4 mr-2" />
-                    {isUpdating ? "Mise à jour en cours..." : "Tout mettre à jour"}
+                    {isUpdating ? "Mise a jour en cours..." : "Tout mettre a jour"}
                   </Button>
 
                   {lastUpdate && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground mt-3">
                       <Clock className="w-4 h-4" />
-                      Dernière mise à jour : {lastUpdate}
+                      Derniere mise a jour : {lastUpdate}
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Module d'état du système amélioré */}
+              {/* Module d'etat du systeme ameliore */}
               <Card className="bg-card border-border">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Shield className="w-5 h-5 text-primary" />
-                    État du système
+                    Etat du systeme
                   </CardTitle>
-                  <CardDescription>Surveillance en temps réel</CardDescription>
+                  <CardDescription>Surveillance en temps reel</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -3132,7 +3401,7 @@ export default function AdminPage() {
                       <div className="flex-1">
                         <p className="font-medium">API TMDB</p>
                         <p className="text-sm text-muted-foreground">
-                          {systemCheck.results.tmdb.status === "operational" ? "Opérationnel" : "Hors ligne"}
+                          {systemCheck.results.tmdb.status === "operational" ? "Operationnel" : "Hors ligne"}
                         </p>
                       </div>
                       <div className="text-xs text-muted-foreground font-mono">
@@ -3143,9 +3412,9 @@ export default function AdminPage() {
                     <div className="flex items-center gap-3 p-4 bg-secondary rounded-lg border border-border">
                       <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
                       <div className="flex-1">
-                        <p className="font-medium">Base de données</p>
+                        <p className="font-medium">Base de donnees</p>
                         <p className="text-sm text-muted-foreground">
-                          {systemCheck.results.database.status === "connected" ? "Connectée" : "Déconnectée"}
+                          {systemCheck.results.database.status === "connected" ? "Connectee" : "Deconnectee"}
                         </p>
                       </div>
                       <div className="text-xs text-muted-foreground font-mono">
@@ -3171,12 +3440,12 @@ export default function AdminPage() {
                         {systemCheck.checking ? (
                           <>
                             <Clock className="w-4 h-4 mr-2 animate-spin" />
-                            Vérification en cours...
+                            Verification en cours...
                           </>
                         ) : (
                           <>
                             <Shield className="w-4 h-4 mr-2" />
-                            Vérifier le système
+                            Verifier le systeme
                           </>
                         )}
                       </Button>
@@ -3184,7 +3453,7 @@ export default function AdminPage() {
                       {systemCheck.lastCheck && (
                         <div className="flex items-center gap-2 text-xs text-muted-foreground mt-3 justify-center">
                           <Clock className="w-3 h-3" />
-                          Dernière vérification : {systemCheck.lastCheck}
+                          Derniere verification : {systemCheck.lastCheck}
                         </div>
                       )}
                     </div>
@@ -3193,14 +3462,14 @@ export default function AdminPage() {
               </Card>
             </div>
 
-            {/* Module Contenu par Type - Design amélioré */}
+            {/* Module Contenu par Type - Design ameliore */}
             <Card className="col-span-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5" />
                   Contenu par Type
                 </CardTitle>
-                <CardDescription>Répartition du contenu disponible sur la plateforme</CardDescription>
+                <CardDescription>Repartition du contenu disponible sur la plateforme</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -3220,7 +3489,7 @@ export default function AdminPage() {
                       <div className="flex flex-col items-center text-center">
                         <Clapperboard className="w-8 h-8 mb-3 opacity-90" />
                         <div className="text-2xl font-bold mb-1">{stats.contentByType.tvShows.toLocaleString()}</div>
-                        <div className="text-sm opacity-90">Séries</div>
+                        <div className="text-sm opacity-90">Series</div>
                       </div>
                       <div className="absolute inset-0 bg-gradient-to-br from-blue-400/20 to-transparent rounded-xl"></div>
                     </div>
@@ -3231,7 +3500,7 @@ export default function AdminPage() {
                       <div className="flex flex-col items-center text-center">
                         <Sparkles className="w-8 h-8 mb-3 opacity-90" />
                         <div className="text-2xl font-bold mb-1">{stats.contentByType.anime.toLocaleString()}</div>
-                        <div className="text-sm opacity-90">Animés</div>
+                        <div className="text-sm opacity-90">Animes</div>
                       </div>
                       <div className="absolute inset-0 bg-gradient-to-br from-purple-400/20 to-transparent rounded-xl"></div>
                     </div>
@@ -3242,7 +3511,7 @@ export default function AdminPage() {
                       <div className="flex flex-col items-center text-center">
                         <Monitor className="w-8 h-8 mb-3 opacity-90" />
                         <div className="text-2xl font-bold mb-1">{stats.contentByType.tvChannels.toLocaleString()}</div>
-                        <div className="text-sm opacity-90">Chaînes TV</div>
+                        <div className="text-sm opacity-90">Chaines TV</div>
                       </div>
                       <div className="absolute inset-0 bg-gradient-to-br from-green-400/20 to-transparent rounded-xl"></div>
                     </div>
@@ -3330,21 +3599,21 @@ export default function AdminPage() {
                     ></div>
                   </div>
                   <div className="mt-2 text-xs text-muted-foreground">
-                    Croissance de +12% ce mois • Mise à jour automatique via TMDB
+                    Croissance de +12% ce mois • Mise a jour automatique via TMDB
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Module d'activités récentes */}
+            {/* Module d'activites recentes */}
             <Card className="col-span-full">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Activity className="w-5 h-5" />
-                    Activités Récentes
+                    Activites Recentes
                   </CardTitle>
-                  <CardDescription>Toutes les actions des utilisateurs en temps réel</CardDescription>
+                  <CardDescription>Toutes les actions des utilisateurs en temps reel</CardDescription>
                 </div>
                 <Button variant="outline" size="sm" onClick={loadRecentActivities} disabled={activityLoading}>
                   <Clock className="w-4 h-4 mr-2" />
@@ -3356,7 +3625,7 @@ export default function AdminPage() {
                   {recentActivities.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Activity className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p>Aucune activité récente</p>
+                      <p>Aucune activite recente</p>
                     </div>
                   ) : (
                     recentActivities.map((activity) => {
@@ -3380,9 +3649,9 @@ export default function AdminPage() {
                                   {activity.contentType === "movie"
                                     ? "Film"
                                     : activity.contentType === "tv"
-                                      ? "Série"
+                                      ? "Serie"
                                       : activity.contentType === "anime"
-                                        ? "Animé"
+                                        ? "Anime"
                                         : activity.contentType === "tv-channel"
                                           ? "TV"
                                           : activity.contentType === "radio"
@@ -3439,9 +3708,9 @@ export default function AdminPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Envoyer un message à tous les utilisateurs</CardTitle>
+                  <CardTitle>Envoyer un message a tous les utilisateurs</CardTitle>
                   <CardDescription>
-                    Diffusez un message à tous les utilisateurs inscrits via leur messagerie interne
+                    Diffusez un message a tous les utilisateurs inscrits via leur messagerie interne
                   </CardDescription>
                 </div>
               </CardHeader>
@@ -3451,7 +3720,7 @@ export default function AdminPage() {
                     <Label htmlFor="broadcast-subject">Sujet du message</Label>
                     <Input
                       id="broadcast-subject"
-                      placeholder="Ex: Nouvelle fonctionnalité disponible"
+                      placeholder="Ex: Nouvelle fonctionnalite disponible"
                       value={broadcastForm.subject}
                       onChange={(e) => setBroadcastForm({ ...broadcastForm, subject: e.target.value })}
                     />
@@ -3460,7 +3729,7 @@ export default function AdminPage() {
                     <Label htmlFor="broadcast-content">Contenu du message</Label>
                     <Textarea
                       id="broadcast-content"
-                      placeholder="Écrivez votre message ici..."
+                      placeholder="Ecrivez votre message ici..."
                       value={broadcastForm.content}
                       onChange={(e) => setBroadcastForm({ ...broadcastForm, content: e.target.value })}
                       rows={8}
@@ -3469,7 +3738,7 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
                     <Users className="w-5 h-5 text-blue-400" />
                     <span className="text-sm text-blue-300">
-                      Ce message sera envoyé à {totalUsersInDB} utilisateur(s) inscrit(s) (filtré:{" "}
+                      Ce message sera envoye a {totalUsersInDB} utilisateur(s) inscrit(s) (filtre:{" "}
                       {getFilteredUsers().length})
                     </span>
                   </div>
@@ -3486,7 +3755,7 @@ export default function AdminPage() {
                     ) : (
                       <>
                         <Send className="w-4 h-4 mr-2" />
-                        Envoyer le message à tous
+                        Envoyer le message a tous
                       </>
                     )}
                   </Button>
@@ -3495,13 +3764,13 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Gestion des Chaînes TV */}
+          {/* Gestion des Chaines TV */}
           <TabsContent value="tvchannels" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Gestion des Chaînes TV</CardTitle>
-                  <CardDescription>Gérez votre catalogue de chaînes de télévision en direct</CardDescription>
+                  <CardTitle>Gestion des Chaines TV</CardTitle>
+                  <CardDescription>Gerez votre catalogue de chaines de television en direct</CardDescription>
                 </div>
                 <Dialog open={activeModal === "tvchannel"} onOpenChange={(open) => !open && setActiveModal(null)}>
                   <DialogTrigger asChild>
@@ -3523,16 +3792,16 @@ export default function AdminPage() {
                       }}
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Ajouter une chaîne
+                      Ajouter une chaine
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} une chaîne TV</DialogTitle>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} une chaine TV</DialogTitle>
                     </DialogHeader>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label>Nom de la chaîne</Label>
+                        <Label>Nom de la chaine</Label>
                         <Input
                           value={tvChannelForm.name}
                           onChange={(e) => setTvChannelForm({ ...tvChannelForm, name: e.target.value })}
@@ -3540,13 +3809,13 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Catégorie</Label>
+                        <Label>Categorie</Label>
                         <Select
                           value={tvChannelForm.category}
                           onValueChange={(value) => setTvChannelForm({ ...tvChannelForm, category: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une catégorie" />
+                            <SelectValue placeholder="Selectionner une categorie" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Généraliste">Généraliste</SelectItem>
@@ -3595,13 +3864,13 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Qualité</Label>
+                        <Label>Qualite</Label>
                         <Select
                           value={tvChannelForm.quality}
                           onValueChange={(value) => setTvChannelForm({ ...tvChannelForm, quality: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une qualité" />
+                            <SelectValue placeholder="Selectionner une qualite" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="HD">HD</SelectItem>
@@ -3632,7 +3901,7 @@ export default function AdminPage() {
                         <Textarea
                           value={tvChannelForm.description}
                           onChange={(e) => setTvChannelForm({ ...tvChannelForm, description: e.target.value })}
-                          placeholder="Description de la chaîne..."
+                          placeholder="Description de la chaine..."
                           rows={3}
                         />
                       </div>
@@ -3657,7 +3926,7 @@ export default function AdminPage() {
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                     <Input
-                      placeholder="Rechercher une chaîne TV..."
+                      placeholder="Rechercher une chaine TV..."
                       value={searchTerms.tvchannels || ""}
                       onChange={(e) => setSearchTerms({ ...searchTerms, tvchannels: e.target.value })}
                       className="pl-10"
@@ -3669,9 +3938,9 @@ export default function AdminPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nom</TableHead>
-                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Categorie</TableHead>
                       <TableHead>Pays</TableHead>
-                      <TableHead>Qualité</TableHead>
+                      <TableHead>Qualite</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -3717,8 +3986,8 @@ export default function AdminPage() {
                 {tvChannels.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Tv className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucune chaîne TV trouvée</p>
-                    <p className="text-sm">Ajoutez votre première chaîne TV pour commencer</p>
+                    <p>Aucune chaine TV trouvee</p>
+                    <p className="text-sm">Ajoutez votre premiere chaine TV pour commencer</p>
                   </div>
                 )}
               </CardContent>
@@ -3731,7 +4000,7 @@ export default function AdminPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Gestion des Stations Radio FM</CardTitle>
-                  <CardDescription>Gérez votre catalogue de stations radio en direct</CardDescription>
+                  <CardDescription>Gerez votre catalogue de stations radio en direct</CardDescription>
                 </div>
                 <Dialog open={activeModal === "radio"} onOpenChange={(open) => !open && setActiveModal(null)}>
                   <DialogTrigger asChild>
@@ -3776,7 +4045,7 @@ export default function AdminPage() {
                           onValueChange={(value) => setRadioForm({ ...radioForm, genre: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner un genre" />
+                            <SelectValue placeholder="Selectionner un genre" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Pop">Pop</SelectItem>
@@ -3790,7 +4059,7 @@ export default function AdminPage() {
                             <SelectItem value="Blues">Blues</SelectItem>
                             <SelectItem value="Folk">Folk</SelectItem>
                             <SelectItem value="Talk/News">Talk/News</SelectItem>
-                            <SelectItem value="Variété">Variété</SelectItem>
+                            <SelectItem value="Variete">Variete</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -3801,7 +4070,7 @@ export default function AdminPage() {
                           onValueChange={(value) => setRadioForm({ ...radioForm, country: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner un pays" />
+                            <SelectValue placeholder="Selectionner un pays" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="France">France</SelectItem>
@@ -3818,7 +4087,7 @@ export default function AdminPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Fréquence</Label>
+                        <Label>Frequence</Label>
                         <Input
                           value={radioForm.frequency}
                           onChange={(e) => setRadioForm({ ...radioForm, frequency: e.target.value })}
@@ -3906,7 +4175,7 @@ export default function AdminPage() {
                       <TableHead>Nom</TableHead>
                       <TableHead>Genre</TableHead>
                       <TableHead>Pays</TableHead>
-                      <TableHead>Fréquence</TableHead>
+                      <TableHead>Frequence</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -3952,8 +4221,8 @@ export default function AdminPage() {
                 {radioStations.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Radio className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucune station radio trouvée</p>
-                    <p className="text-sm">Ajoutez votre première station radio pour commencer</p>
+                    <p>Aucune station radio trouvee</p>
+                    <p className="text-sm">Ajoutez votre premiere station radio pour commencer</p>
                   </div>
                 )}
               </CardContent>
@@ -3966,7 +4235,7 @@ export default function AdminPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Gestion des Sources Retrogaming</CardTitle>
-                  <CardDescription>Gérez votre catalogue de sources de jeux rétro</CardDescription>
+                  <CardDescription>Gerez votre catalogue de sources de jeux retro</CardDescription>
                 </div>
                 <Dialog
                   open={activeModal === "retrogaming-source"}
@@ -4005,7 +4274,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Catégorie</Label>
+                        <Label>Categorie</Label>
                         <Select
                           value={retrogamingSourceForm.category}
                           onValueChange={(value) =>
@@ -4013,7 +4282,7 @@ export default function AdminPage() {
                           }
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une catégorie" />
+                            <SelectValue placeholder="Selectionner une categorie" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Émulateur">Émulateur</SelectItem>
@@ -4119,7 +4388,7 @@ export default function AdminPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nom</TableHead>
-                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Categorie</TableHead>
                       <TableHead>Couleur</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
@@ -4173,8 +4442,8 @@ export default function AdminPage() {
                 {retrogamingSources.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucune source retrogaming trouvée</p>
-                    <p className="text-sm">Ajoutez votre première source retrogaming pour commencer</p>
+                    <p>Aucune source retrogaming trouvee</p>
+                    <p className="text-sm">Ajoutez votre premiere source retrogaming pour commencer</p>
                   </div>
                 )}
               </CardContent>
@@ -4187,7 +4456,7 @@ export default function AdminPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Gestion des Utilisateurs</CardTitle>
-                  <CardDescription>Gérez les comptes utilisateurs et leurs privilèges</CardDescription>
+                  <CardDescription>Gerez les comptes utilisateurs et leurs privileges</CardDescription>
                 </div>
               </CardHeader>
               <CardContent>
@@ -4218,9 +4487,9 @@ export default function AdminPage() {
                   </div>
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>
-                      Affichage {(userCurrentPage - 1) * USERS_PER_PAGE + 1} à{" "}
+                      Affichage {(userCurrentPage - 1) * USERS_PER_PAGE + 1} a{" "}
                       {Math.min(userCurrentPage * USERS_PER_PAGE, getFilteredUsers().length)} sur {totalUsersInDB}{" "}
-                      utilisateurs (filtré: {getFilteredUsers().length})
+                      utilisateurs (filtre: {getFilteredUsers().length})
                     </span>
                     <div className="flex items-center gap-2">
                       <Button
@@ -4256,7 +4525,7 @@ export default function AdminPage() {
                       <TableHead>Utilisateur</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Statut</TableHead>
-                      <TableHead>Privilèges</TableHead>
+                      <TableHead>Privileges</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -4346,11 +4615,11 @@ export default function AdminPage() {
                               {/* Modified user edit dialog to include password field */}
                               <DialogContent>
                                 <DialogHeader>
-                                  <DialogTitle>Modifier l'utilisateur</DialogTitle>
+                                  <DialogTitle>Modifier l utilisateur</DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-4">
                                   <div className="space-y-2">
-                                    <Label>Nom d'utilisateur</Label>
+                                    <Label>Nom d utilisateur</Label>
                                     <Input
                                       value={userForm.username}
                                       onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
@@ -4408,7 +4677,7 @@ export default function AdminPage() {
                                         checked={userForm.is_beta}
                                         onCheckedChange={(checked) => setUserForm({ ...userForm, is_beta: !!checked })}
                                       />
-                                      <Label htmlFor="is_beta">Bêta Testeur</Label>
+                                      <Label htmlFor="is_beta">Beta Testeur</Label>
                                     </div>
                                   </div>
                                 </div>
@@ -4427,8 +4696,8 @@ export default function AdminPage() {
                 {users.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun utilisateur trouvé</p>
-                    <p className="text-sm">Les utilisateurs apparaîtront ici une fois inscrits</p>
+                    <p>Aucun utilisateur trouve</p>
+                    <p className="text-sm">Les utilisateurs apparaitront ici une fois inscrits</p>
                   </div>
                 )}
               </CardContent>
@@ -4440,7 +4709,7 @@ export default function AdminPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Gestion des Demandes</CardTitle>
-                  <CardDescription>Gérez les demandes de contenu des utilisateurs</CardDescription>
+                  <CardDescription>Gerez les demandes de contenu des utilisateurs</CardDescription>
                 </div>
               </CardHeader>
               <CardContent>
@@ -4461,7 +4730,7 @@ export default function AdminPage() {
                     <TableRow>
                       <TableHead>Utilisateur</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Titre demandé</TableHead>
+                      <TableHead>Titre demande</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
@@ -4489,10 +4758,10 @@ export default function AdminPage() {
                             }
                           >
                             {request.status === "completed"
-                              ? "Complété"
+                              ? "Complete"
                               : request.status === "pending"
                                 ? "En attente"
-                                : "Rejeté"}
+                                : "Rejete"}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -4523,8 +4792,8 @@ export default function AdminPage() {
 
                 {requests.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p>Aucune demande trouvée dans la base de données</p>
-                    <p className="text-sm mt-2">Les nouvelles demandes apparaîtront ici automatiquement</p>
+                    <p>Aucune demande trouvee dans la base de donnees</p>
+                    <p className="text-sm mt-2">Les nouvelles demandes apparaitront ici automatiquement</p>
                   </div>
                 )}
               </CardContent>
@@ -4537,7 +4806,7 @@ export default function AdminPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Gestion du Contenu Musical</CardTitle>
-                  <CardDescription>Gérez votre catalogue de musique et concerts</CardDescription>
+                  <CardDescription>Gerez votre catalogue de musique et concerts</CardDescription>
                 </div>
                 <Dialog open={activeModal === "music"} onOpenChange={(open) => !open && setActiveModal(null)}>
                   <DialogTrigger asChild>
@@ -4593,7 +4862,7 @@ export default function AdminPage() {
                           onValueChange={(value) => setMusicForm({ ...musicForm, genre: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner un genre" />
+                            <SelectValue placeholder="Selectionner un genre" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Pop">Pop</SelectItem>
@@ -4619,7 +4888,7 @@ export default function AdminPage() {
                           onValueChange={(value) => setMusicForm({ ...musicForm, type: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner un type" />
+                            <SelectValue placeholder="Selectionner un type" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Single">Single</SelectItem>
@@ -4633,7 +4902,7 @@ export default function AdminPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Année de sortie</Label>
+                        <Label>Annee de sortie</Label>
                         <Input
                           type="number"
                           value={musicForm.release_year}
@@ -4644,13 +4913,13 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Qualité</Label>
+                        <Label>Qualite</Label>
                         <Select
                           value={musicForm.quality}
                           onValueChange={(value) => setMusicForm({ ...musicForm, quality: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une qualité" />
+                            <SelectValue placeholder="Selectionner une qualite" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="SD">SD</SelectItem>
@@ -4669,7 +4938,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2 col-span-2">
-                        <Label>URL de la vidéo/audio</Label>
+                        <Label>URL de la video/audio</Label>
                         <Input
                           value={musicForm.video_url}
                           onChange={(e) => setMusicForm({ ...musicForm, video_url: e.target.value })}
@@ -4683,10 +4952,10 @@ export default function AdminPage() {
                           onChange={(e) => setMusicForm({ ...musicForm, streaming_url: e.target.value })}
                           placeholder="https://stream.wavewatch.xyz/listen/..."
                         />
-                        <p className="text-xs text-muted-foreground">Lien pour le bouton "Écouter" (optionnel)</p>
+                        <p className="text-xs text-muted-foreground">Lien pour le bouton "Ecouter" (optionnel)</p>
                       </div>
                       <div className="space-y-2">
-                        <Label>Durée (secondes)</Label>
+                        <Label>Duree (secondes)</Label>
                         <Input
                           type="number"
                           value={musicForm.duration}
@@ -4754,7 +5023,7 @@ export default function AdminPage() {
                       <TableHead>Artiste</TableHead>
                       <TableHead>Genre</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>Qualité</TableHead>
+                      <TableHead>Qualite</TableHead>
                       <TableHead>Statut</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -4803,7 +5072,7 @@ export default function AdminPage() {
                 {musicContent.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Music className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun contenu musical trouvé</p>
+                    <p>Aucun contenu musical trouve</p>
                     <p className="text-sm">Ajoutez votre premier morceau ou concert pour commencer</p>
                   </div>
                 )}
@@ -4817,7 +5086,7 @@ export default function AdminPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Gestion des Logiciels</CardTitle>
-                  <CardDescription>Gérez votre catalogue de logiciels et applications</CardDescription>
+                  <CardDescription>Gerez votre catalogue de logiciels et applications</CardDescription>
                 </div>
                 <Dialog open={activeModal === "software"} onOpenChange={(open) => !open && setActiveModal(null)}>
                   <DialogTrigger asChild>
@@ -4858,7 +5127,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Développeur</Label>
+                        <Label>Developpeur</Label>
                         <Input
                           value={softwareForm.developer}
                           onChange={(e) => setSoftwareForm({ ...softwareForm, developer: e.target.value })}
@@ -4866,23 +5135,23 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Catégorie</Label>
+                        <Label>Categorie</Label>
                         <Select
                           value={softwareForm.category}
                           onValueChange={(value) => setSoftwareForm({ ...softwareForm, category: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une catégorie" />
+                            <SelectValue placeholder="Selectionner une categorie" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Productivité">Productivité</SelectItem>
+                            <SelectItem value="Productivite">Productivite</SelectItem>
                             <SelectItem value="Design">Design</SelectItem>
-                            <SelectItem value="Développement">Développement</SelectItem>
+                            <SelectItem value="Developpement">Developpement</SelectItem>
                             <SelectItem value="Utilitaires">Utilitaires</SelectItem>
-                            <SelectItem value="Multimédia">Multimédia</SelectItem>
+                            <SelectItem value="Multimedia">Multimedia</SelectItem>
                             <SelectItem value="Jeux">Jeux</SelectItem>
-                            <SelectItem value="Sécurité">Sécurité</SelectItem>
-                            <SelectItem value="Système">Système</SelectItem>
+                            <SelectItem value="Securite">Securite</SelectItem>
+                            <SelectItem value="Systeme">Systeme</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -4893,7 +5162,7 @@ export default function AdminPage() {
                           onValueChange={(value) => setSoftwareForm({ ...softwareForm, platform: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une plateforme" />
+                            <SelectValue placeholder="Selectionner une plateforme" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Windows">Windows</SelectItem>
@@ -4921,7 +5190,7 @@ export default function AdminPage() {
                           onValueChange={(value) => setSoftwareForm({ ...softwareForm, license: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une licence" />
+                            <SelectValue placeholder="Selectionner une licence" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Gratuit">Gratuit</SelectItem>
@@ -4932,7 +5201,7 @@ export default function AdminPage() {
                         </Select>
                       </div>
                       <div className="space-y-2 col-span-2">
-                        <Label>URL de l'icône</Label>
+                        <Label>URL de l icon</Label>
                         <Input
                           value={softwareForm.icon_url}
                           onChange={(e) => setSoftwareForm({ ...softwareForm, icon_url: e.target.value })}
@@ -4940,7 +5209,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2 col-span-2">
-                        <Label>URL de téléchargement</Label>
+                        <Label>URL de telechargement</Label>
                         <Input
                           value={softwareForm.download_url}
                           onChange={(e) => setSoftwareForm({ ...softwareForm, download_url: e.target.value })}
@@ -5012,8 +5281,8 @@ export default function AdminPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nom</TableHead>
-                      <TableHead>Développeur</TableHead>
-                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Developpeur</TableHead>
+                      <TableHead>Categorie</TableHead>
                       <TableHead>Plateforme</TableHead>
                       <TableHead>Version</TableHead>
                       <TableHead>Licence</TableHead>
@@ -5064,7 +5333,7 @@ export default function AdminPage() {
                 {software.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Download className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun logiciel trouvé</p>
+                    <p>Aucun logiciel trouve</p>
                     <p className="text-sm">Ajoutez votre premier logiciel pour commencer</p>
                   </div>
                 )}
@@ -5078,7 +5347,7 @@ export default function AdminPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Gestion des Jeux</CardTitle>
-                  <CardDescription>Gérez votre catalogue de jeux</CardDescription>
+                  <CardDescription>Gerez votre catalogue de jeux</CardDescription>
                 </div>
                 <Dialog open={activeModal === "game"} onOpenChange={(open) => !open && setActiveModal(null)}>
                   <DialogTrigger asChild>
@@ -5120,7 +5389,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Développeur</Label>
+                        <Label>Developpeur</Label>
                         <Input
                           value={gameForm.developer}
                           onChange={(e) => setGameForm({ ...gameForm, developer: e.target.value })}
@@ -5128,7 +5397,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Éditeur</Label>
+                        <Label>Editeur</Label>
                         <Input
                           value={gameForm.publisher}
                           onChange={(e) => setGameForm({ ...gameForm, publisher: e.target.value })}
@@ -5142,18 +5411,18 @@ export default function AdminPage() {
                           onValueChange={(value) => setGameForm({ ...gameForm, genre: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner un genre" />
+                            <SelectValue placeholder="Selectionner un genre" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Action">Action</SelectItem>
                             <SelectItem value="Aventure">Aventure</SelectItem>
                             <SelectItem value="RPG">RPG</SelectItem>
-                            <SelectItem value="Stratégie">Stratégie</SelectItem>
+                            <SelectItem value="Strategie">Strategie</SelectItem>
                             <SelectItem value="Simulation">Simulation</SelectItem>
                             <SelectItem value="Sport">Sport</SelectItem>
                             <SelectItem value="Course">Course</SelectItem>
                             <SelectItem value="Puzzle">Puzzle</SelectItem>
-                            <SelectItem value="Indépendant">Indépendant</SelectItem>
+                            <SelectItem value="Independant">Independant</SelectItem>
                             <SelectItem value="MMO">MMO</SelectItem>
                           </SelectContent>
                         </Select>
@@ -5165,7 +5434,7 @@ export default function AdminPage() {
                           onValueChange={(value) => setGameForm({ ...gameForm, platform: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une plateforme" />
+                            <SelectValue placeholder="Selectionner une plateforme" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="PC">PC</SelectItem>
@@ -5185,7 +5454,7 @@ export default function AdminPage() {
                           onValueChange={(value) => setGameForm({ ...gameForm, rating: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une classification" />
+                            <SelectValue placeholder="Selectionner une classification" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="PEGI 3">PEGI 3</SelectItem>
@@ -5205,7 +5474,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2 col-span-2">
-                        <Label>URL de téléchargement</Label>
+                        <Label>URL de telechargement</Label>
                         <Input
                           value={gameForm.download_url}
                           onChange={(e) => setGameForm({ ...gameForm, download_url: e.target.value })}
@@ -5283,7 +5552,7 @@ export default function AdminPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Titre</TableHead>
-                      <TableHead>Développeur</TableHead>
+                      <TableHead>Developpeur</TableHead>
                       <TableHead>Genre</TableHead>
                       <TableHead>Plateforme</TableHead>
                       <TableHead>Classification</TableHead>
@@ -5335,7 +5604,7 @@ export default function AdminPage() {
                 {games.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <Gamepad2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun jeu trouvé</p>
+                    <p>Aucun jeu trouve</p>
                     <p className="text-sm">Ajoutez votre premier jeu pour commencer</p>
                   </div>
                 )}
@@ -5349,7 +5618,7 @@ export default function AdminPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Gestion des Ebooks</CardTitle>
-                  <CardDescription>Gérez votre catalogue d'ebooks</CardDescription>
+                  <CardDescription>Gerez votre catalogue d ebooks</CardDescription>
                 </div>
                 <Dialog open={activeModal === "ebook"} onOpenChange={(open) => !open && setActiveModal(null)}>
                   <DialogTrigger asChild>
@@ -5403,7 +5672,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Éditeur</Label>
+                        <Label>Editeur</Label>
                         <Input
                           value={ebookForm.publisher}
                           onChange={(e) => setEbookForm({ ...ebookForm, publisher: e.target.value })}
@@ -5411,13 +5680,13 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Catégorie</Label>
+                        <Label>Categorie</Label>
                         <Select
                           value={ebookForm.category}
                           onValueChange={(value) => setEbookForm({ ...ebookForm, category: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une catégorie" />
+                            <SelectValue placeholder="Selectionner une categorie" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Fiction">Fiction</SelectItem>
@@ -5442,7 +5711,7 @@ export default function AdminPage() {
                           onValueChange={(value) => setEbookForm({ ...ebookForm, language: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner une langue" />
+                            <SelectValue placeholder="Selectionner une langue" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="Français">Français</SelectItem>
@@ -5461,7 +5730,7 @@ export default function AdminPage() {
                           onValueChange={(value) => setEbookForm({ ...ebookForm, file_format: value })}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Sélectionner un format" />
+                            <SelectValue placeholder="Selectionner un format" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="PDF">PDF</SelectItem>
@@ -5490,7 +5759,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2 col-span-2">
-                        <Label>URL de téléchargement</Label>
+                        <Label>URL de telechargement</Label>
                         <Input
                           value={ebookForm.download_url}
                           onChange={(e) => setEbookForm({ ...ebookForm, download_url: e.target.value })}
@@ -5571,7 +5840,7 @@ export default function AdminPage() {
                         <Textarea
                           value={ebookForm.description}
                           onChange={(e) => setEbookForm({ ...ebookForm, description: e.target.value })}
-                          placeholder="Description de l'ebook..."
+                          placeholder="Description de l ebook..."
                           rows={3}
                         />
                       </div>
@@ -5607,7 +5876,7 @@ export default function AdminPage() {
                     <TableRow>
                       <TableHead>Titre</TableHead>
                       <TableHead>Auteur</TableHead>
-                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Categorie</TableHead>
                       <TableHead>Langue</TableHead>
                       <TableHead>Format</TableHead>
                       <TableHead>Statut</TableHead>
@@ -5654,7 +5923,7 @@ export default function AdminPage() {
                 {ebooks.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun ebook trouvé</p>
+                    <p>Aucun ebook trouve</p>
                     <p className="text-sm">Ajoutez votre premier ebook pour commencer</p>
                   </div>
                 )}
@@ -5667,7 +5936,7 @@ export default function AdminPage() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Gestion des Changelogs</CardTitle>
-                  <CardDescription>Gérez l'historique des versions et mises à jour</CardDescription>
+                  <CardDescription>Gerez l histoire des versions et mises a jour</CardDescription>
                 </div>
                 <Dialog open={activeModal === "changelog"} onOpenChange={(open) => !open && setActiveModal(null)}>
                   <DialogTrigger asChild>
@@ -5678,7 +5947,7 @@ export default function AdminPage() {
                   </DialogTrigger>
                   <DialogContent className="bg-blue-900 border-blue-700 max-w-2xl">
                     <DialogHeader>
-                      <DialogTitle className="text-white">Créer un Changelog</DialogTitle>
+                      <DialogTitle className="text-white">Creer un Changelog</DialogTitle>
                       <DialogDescription className="text-blue-300">
                         Ajoutez une nouvelle version avec ses changements
                       </DialogDescription>
@@ -5707,7 +5976,7 @@ export default function AdminPage() {
                       <div>
                         <label className="text-sm font-medium text-white mb-2 block">Titre</label>
                         <Input
-                          placeholder="Nouvelle fonctionnalité"
+                          placeholder="Nouvelle fonctionnalite"
                           value={newChangelog.title}
                           onChange={(e) => setNewChangelog({ ...newChangelog, title: e.target.value })}
                           className="bg-blue-800 border-blue-600 text-white"
@@ -5716,7 +5985,7 @@ export default function AdminPage() {
                       <div>
                         <label className="text-sm font-medium text-white mb-2 block">Description</label>
                         <textarea
-                          placeholder="Décrivez les changements de cette version..."
+                          placeholder="Decrivez les changements de cette version..."
                           value={newChangelog.description}
                           onChange={(e) => setNewChangelog({ ...newChangelog, description: e.target.value })}
                           className="w-full min-h-[200px] bg-blue-800 border-blue-600 text-white rounded-md p-3"
@@ -5728,7 +5997,7 @@ export default function AdminPage() {
                         Annuler
                       </Button>
                       <Button onClick={handleCreateChangelog} className="bg-blue-600 hover:bg-blue-700">
-                        Créer
+                        Creer
                       </Button>
                     </DialogFooter>
                   </DialogContent>
@@ -5792,16 +6061,16 @@ export default function AdminPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <SettingsIcon className="w-5 h-5" />
-                  Paramètres du Site
+                  Parametres du Site
                 </CardTitle>
-                <CardDescription>Gérez les modules affichés sur la page d'accueil</CardDescription>
+                <CardDescription>Gerez les modules affiches sur la page daccueil</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-lg font-medium mb-4">Modules de la page d'accueil</h3>
+                    <h3 className="text-lg font-medium mb-4">Modules de la page daccueil</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Activez ou désactivez les modules qui apparaissent sur la page d'accueil du site
+                      Activez ou desactivez les modules qui apparaissent sur la page daccueil du site
                     </p>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -5838,9 +6107,9 @@ export default function AdminPage() {
                       <div className="flex items-center justify-between p-4 border rounded-lg">
                         <div>
                           <Label htmlFor="trending_tv_shows" className="text-base font-medium">
-                            Séries Tendance
+                            Series Tendance
                           </Label>
-                          <p className="text-xs text-muted-foreground">Section des séries populaires</p>
+                          <p className="text-xs text-muted-foreground">Section des series populaires</p>
                         </div>
                         <Checkbox
                           id="trending_tv_shows"
@@ -5854,9 +6123,9 @@ export default function AdminPage() {
                       <div className="flex items-center justify-between p-4 border rounded-lg">
                         <div>
                           <Label htmlFor="popular_anime" className="text-base font-medium">
-                            Animés Populaires
+                            Animes Populaires
                           </Label>
-                          <p className="text-xs text-muted-foreground">Section des animés</p>
+                          <p className="text-xs text-muted-foreground">Section des animes</p>
                         </div>
                         <Checkbox
                           id="popular_anime"
@@ -5886,7 +6155,7 @@ export default function AdminPage() {
                           <Label htmlFor="public_playlists" className="text-base font-medium">
                             Playlists Publiques
                           </Label>
-                          <p className="text-xs text-muted-foreground">Section des playlists partagées</p>
+                          <p className="text-xs text-muted-foreground">Section des playlists partagees</p>
                         </div>
                         <Checkbox
                           id="public_playlists"
@@ -5916,9 +6185,9 @@ export default function AdminPage() {
                       <div className="flex items-center justify-between p-4 border rounded-lg">
                         <div>
                           <Label htmlFor="trending_tv_channels" className="text-base font-medium">
-                            Chaînes TV
+                            Chaines TV
                           </Label>
-                          <p className="text-xs text-muted-foreground">Section des chaînes télé</p>
+                          <p className="text-xs text-muted-foreground">Section des chaines tele</p>
                         </div>
                         <Checkbox
                           id="trending_tv_channels"
@@ -5948,7 +6217,7 @@ export default function AdminPage() {
                       <div className="flex items-center justify-between p-4 border rounded-lg">
                         <div>
                           <Label htmlFor="random_content" className="text-base font-medium">
-                            Contenu Aléatoire
+                            Contenu Aleatoire
                           </Label>
                           <p className="text-xs text-muted-foreground">Suggestion de contenu random</p>
                         </div>
@@ -5978,9 +6247,9 @@ export default function AdminPage() {
                       <div className="flex items-center justify-between p-4 border rounded-lg">
                         <div>
                           <Label htmlFor="calendar_widget" className="text-base font-medium">
-                            Calendrier Général
+                            Calendrier General
                           </Label>
-                          <p className="text-xs text-muted-foreground">Widget calendrier événements</p>
+                          <p className="text-xs text-muted-foreground">Widget calendrier evenements</p>
                         </div>
                         <Checkbox
                           id="calendar_widget"
@@ -5995,7 +6264,7 @@ export default function AdminPage() {
                     <div className="mt-6 flex justify-end">
                       <Button onClick={handleSaveSiteSettings}>
                         <Save className="w-4 h-4 mr-2" />
-                        Sauvegarder les paramètres
+                        Sauvegarder les parametres
                       </Button>
                     </div>
                   </div>
@@ -6009,19 +6278,19 @@ export default function AdminPage() {
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <Globe className="w-5 h-5" />
-                  Monde Interactif - Configuration Complète
+                  Monde Interactif - Configuration Complete
                 </CardTitle>
                 <CardDescription className="text-gray-400">
-                  Gérez tous les paramètres du monde interactif, salles de cinéma et options de personnalisation
+                  Gerez tous les parametres du monde interactif, salles de cinema et options de personnalisation
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Paramètres Généraux du Monde</h3>
+                  <h3 className="text-lg font-semibold text-white">Parametres Generaux du Monde</h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm text-gray-300">Capacité Maximale</label>
+                      <label className="text-sm text-gray-300">Capacite Maximale</label>
                       <Input
                         type="number"
                         value={worldSettings.maxCapacity}
@@ -6029,7 +6298,7 @@ export default function AdminPage() {
                           setWorldSettings({ ...worldSettings, maxCapacity: Number.parseInt(e.target.value, 10) })
                         }
                         className="bg-gray-700 border-gray-600 text-white"
-                        placeholder="Nombre max d'utilisateurs"
+                        placeholder="Nombre max d utilisateurs"
                       />
                     </div>
 
@@ -6084,7 +6353,7 @@ export default function AdminPage() {
                         checked={worldSettings.enableEmojis}
                         onChange={(e) => setWorldSettings({ ...worldSettings, enableEmojis: e.target.checked })}
                       />
-                      Activer les émojis
+                      Activer les emojis
                     </label>
                     <label className="flex items-center gap-2 text-sm text-gray-300">
                       <input
@@ -6098,10 +6367,9 @@ export default function AdminPage() {
                   </div>
 
                   <div className="flex justify-end pt-4">
-                    {/* CHANGE: Renamed handleWorldSettings to handleSaveWorldSettings */}
                     <Button onClick={handleSaveWorldSettings} className="bg-blue-600 hover:bg-blue-700">
                       <Save className="w-4 h-4 mr-2" />
-                      Sauvegarder les Paramètres
+                      Sauvegarder les Parametres
                     </Button>
                   </div>
                 </div>
@@ -6112,11 +6380,11 @@ export default function AdminPage() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                       <Film className="w-5 h-5" />
-                      Gestion des Salles de Cinéma
+                      Gestion des Salles de Cinema
                     </h3>
                     <Button onClick={handleCreateCinemaRoom} size="sm" className="bg-green-600 hover:bg-green-700">
                       <Plus className="w-4 h-4 mr-2" />
-                      Créer une Salle
+                      Creer une Salle
                     </Button>
                   </div>
 
@@ -6125,7 +6393,7 @@ export default function AdminPage() {
                       <div key={room.id} className="p-4 bg-gray-700 rounded-lg border border-gray-600">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Numéro de Salle</label>
+                            <label className="text-sm text-gray-300">Numero de Salle</label>
                             <Input
                               type="number"
                               value={room.room_number}
@@ -6154,7 +6422,7 @@ export default function AdminPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Capacité</label>
+                            <label className="text-sm text-gray-300">Capacite</label>
                             <Input
                               type="number"
                               value={room.capacity}
@@ -6170,7 +6438,7 @@ export default function AdminPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Thème</label>
+                            <label className="text-sm text-gray-300">Theme</label>
                             <select
                               value={room.theme}
                               onChange={(e) => {
@@ -6180,9 +6448,9 @@ export default function AdminPage() {
                               }}
                               className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
                             >
-                              <option value="default">Par défaut</option>
+                              <option value="default">Par defaut</option>
                               <option value="luxury">Luxe</option>
-                              <option value="retro">Rétro</option>
+                              <option value="retro">Retro</option>
                               <option value="modern">Moderne</option>
                             </select>
                           </div>
@@ -6250,7 +6518,7 @@ export default function AdminPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Heure de Début</label>
+                            <label className="text-sm text-gray-300">Heure de Debut</label>
                             <Input
                               type="datetime-local"
                               value={
@@ -6284,7 +6552,7 @@ export default function AdminPage() {
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Niveau d'Accès</label>
+                            <label className="text-sm text-gray-300">Niveau d Acces</label>
                             <select
                               value={room.access_level}
                               onChange={(e) => {
@@ -6331,144 +6599,6 @@ export default function AdminPage() {
                               Sauvegarder
                             </Button>
                           </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Separator className="bg-gray-700" />
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <Trophy className="w-5 h-5" />
-                      Stade de Football
-                    </h3>
-                  </div>
-
-                  {stadium && (
-                    <div className="p-4 bg-gray-700 rounded-lg border border-gray-600">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-sm text-gray-300">Nom du Stade</label>
-                          <Input
-                            value={stadium.name}
-                            onChange={(e) => setStadium({ ...stadium, name: e.target.value })}
-                            className="bg-gray-600 border-gray-500 text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm text-gray-300">Titre du Match</label>
-                          <Input
-                            value={stadium.match_title || ""}
-                            onChange={(e) => setStadium({ ...stadium, match_title: e.target.value })}
-                            className="bg-gray-600 border-gray-500 text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2 md:col-span-2">
-                          <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
-                          <Input
-                            value={stadium.embed_url || ""}
-                            onChange={(e) => setStadium({ ...stadium, embed_url: e.target.value })}
-                            placeholder="https://www.youtube.com/embed/..."
-                            className="bg-gray-600 border-gray-500 text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm text-gray-300">Heure de Début</label>
-                          <Input
-                            type="datetime-local"
-                            value={
-                              stadium.schedule_start ? new Date(stadium.schedule_start).toISOString().slice(0, 16) : ""
-                            }
-                            onChange={(e) => setStadium({ ...stadium, schedule_start: e.target.value })}
-                            className="bg-gray-600 border-gray-500 text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm text-gray-300">Heure de Fin</label>
-                          <Input
-                            type="datetime-local"
-                            value={
-                              stadium.schedule_end ? new Date(stadium.schedule_end).toISOString().slice(0, 16) : ""
-                            }
-                            onChange={(e) => setStadium({ ...stadium, schedule_end: e.target.value })}
-                            className="bg-gray-600 border-gray-500 text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm text-gray-300">Niveau d'Accès</label>
-                          <select
-                            value={stadium.access_level}
-                            onChange={(e) => setStadium({ ...stadium, access_level: e.target.value })}
-                            className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-                          >
-                            <option value="public">Public</option>
-                            <option value="vip">VIP</option>
-                            <option value="vip_plus">VIP+</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-2 flex items-center">
-                          <label className="flex items-center gap-2 text-sm text-gray-300">
-                            <input
-                              type="checkbox"
-                              className="rounded"
-                              checked={stadium.is_open}
-                              onChange={(e) => setStadium({ ...stadium, is_open: e.target.checked })}
-                            />
-                            Stade Ouvert
-                          </label>
-                        </div>
-
-                        <div className="md:col-span-2 flex justify-end">
-                          <Button onClick={handleUpdateStadium} size="sm" className="bg-green-600 hover:bg-green-700">
-                            <Save className="w-4 h-4 mr-2" />
-                            Sauvegarder le Stade
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <Separator className="bg-gray-700" />
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <Gamepad2 className="w-5 h-5" />
-                      Machines d'Arcade
-                    </h3>
-                    <div className="text-sm text-gray-400">{arcadeMachines.length} machines disponibles</div>
-                  </div>
-
-                  <div className="bg-blue-900/30 border border-blue-700 rounded-lg p-4">
-                    <p className="text-sm text-blue-200">
-                      Les machines d'arcade sont gérées via la table{" "}
-                      <span className="font-mono bg-blue-900/50 px-2 py-1 rounded">retrogaming_sources</span>. Les jeux
-                      actifs apparaissent automatiquement dans l'arcade du monde interactif.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto">
-                    {arcadeMachines.map((machine) => (
-                      <div key={machine.id} className="bg-gray-700 p-3 rounded-lg border border-gray-600">
-                        <div className="font-medium text-white">{machine.name}</div>
-                        <div className="text-xs text-gray-400 mt-1">{machine.category || "Jeu Rétro"}</div>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span
-                            className={`text-xs px-2 py-1 rounded ${machine.is_active ? "bg-green-600 text-white" : "bg-gray-600 text-gray-300"}`}
-                          >
-                            {machine.is_active ? "Actif" : "Inactif"}
-                          </span>
                         </div>
                       </div>
                     ))}

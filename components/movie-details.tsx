@@ -19,10 +19,11 @@ import { useMobile } from "@/hooks/use-mobile"
 
 interface MovieDetailsProps {
   movie: any
-  credits: any
+  credits?: any
 }
 
 export function MovieDetails({ movie, credits }: MovieDetailsProps) {
+  const { user } = useAuth()
   const [showStreamingModal, setShowStreamingModal] = useState(false)
   const [showDownloadModal, setShowDownloadModal] = useState(false)
   const [showTrailerModal, setShowTrailerModal] = useState(false)
@@ -34,12 +35,11 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
   const [userRating, setUserRating] = useState<"like" | "dislike" | null>(null)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const [certification, setCertification] = useState<string | null>(null)
-  const { user } = useAuth()
   const { toast } = useToast()
   const isMobile = useMobile()
 
-  // Get director from credits
-  const director = credits?.crew?.find((person: any) => person.job === "Director")
+  const movieCredits = credits || movie.credits
+  const director = movieCredits?.crew?.find((person: any) => person.job === "Director")
 
   // Simuler les votes totaux basés sur l'ID
   const getTotalVotes = (id: number, type: "like" | "dislike") => {
@@ -52,13 +52,24 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
 
   // Vérifier les états au chargement
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      setIsInWishlist(WatchTracker.isInWishlist("movie", movie.id))
-      setIsWatched(WatchTracker.isWatched("movie", movie.id))
-      setIsFavorite(WatchTracker.isFavorite("movie", movie.id))
-      setUserRating(WatchTracker.getRating("movie", movie.id))
+    const loadStatus = async () => {
+      if (typeof window !== "undefined" && user) {
+        const [watched, favorite, wishlist] = await Promise.all([
+          WatchTracker.isWatched("movie", movie.id),
+          WatchTracker.isFavorite("movie", movie.id),
+          WatchTracker.isInWishlist("movie", movie.id),
+        ])
+
+        setIsWatched(watched)
+        setIsFavorite(favorite)
+        setIsInWishlist(wishlist)
+
+        const rating = await WatchTracker.getRating("movie", movie.id)
+        setUserRating(rating)
+      }
     }
-  }, [movie.id])
+    loadStatus()
+  }, [movie.id, user])
 
   // Fetch similar movies and collection
   useEffect(() => {
@@ -123,7 +134,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
     if (user) {
       try {
         console.log("[v0] Tracking watch for movie:", movie.title)
-        WatchTracker.markAsWatched("movie", movie.id, movie.title, movie.runtime || 120, {
+        await WatchTracker.markAsWatched("movie", movie.id, movie.title, movie.runtime || 120, {
           genre: movie.genres[0]?.name,
           rating: Math.round(movie.vote_average),
           posterPath: movie.poster_path,
@@ -146,10 +157,10 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
     setShowDownloadModal(true)
   }
 
-  const handleLike = () => {
+  const handleLike = async () => {
     if (typeof window === "undefined") return
 
-    const newRating = WatchTracker.toggleLike("movie", movie.id, movie.title, {
+    const newRating = await WatchTracker.toggleLike("movie", movie.id, movie.title, {
       posterPath: movie.poster_path,
     })
     setUserRating(newRating)
@@ -159,10 +170,10 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
     })
   }
 
-  const handleDislike = () => {
+  const handleDislike = async () => {
     if (typeof window === "undefined") return
 
-    const newRating = WatchTracker.toggleDislike("movie", movie.id, movie.title, {
+    const newRating = await WatchTracker.toggleDislike("movie", movie.id, movie.title, {
       posterPath: movie.poster_path,
     })
     setUserRating(newRating)
@@ -200,7 +211,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
     }
   }
 
-  const handleAddToFavorites = async () => {
+  const toggleFavorite = async () => {
     if (!user) {
       toast({
         title: "Connexion requise",
@@ -210,21 +221,37 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
       return
     }
 
-    if (typeof window === "undefined") return
-
     try {
-      const newState = WatchTracker.toggleFavorite("movie", movie.id, movie.title, {
+      const currentStatus = await WatchTracker.isFavorite("movie", movie.id)
+
+      await WatchTracker.toggleFavorite("movie", movie.id, movie.title, {
+        genre: movie.genres[0]?.name,
+        rating: Math.round(movie.vote_average),
         posterPath: movie.poster_path,
       })
-      setIsFavorite(newState)
-      toast({
-        title: newState ? "Ajouté aux favoris" : "Retiré des favoris",
-        description: `${movie.title} a été ${newState ? "ajouté à" : "retiré de"} vos favoris.`,
-      })
+
+      // Update state with opposite status
+      const newFavoriteState = !currentStatus
+      setIsFavorite(newFavoriteState)
+
+      if (!isMobile) {
+        toast({
+          title: newFavoriteState ? "Ajouté aux favoris" : "Retiré des favoris",
+          description: newFavoriteState
+            ? `${movie.title} a été ajouté à vos favoris.`
+            : `${movie.title} a été retiré de vos favoris.`,
+        })
+      }
+
+      // Force favorites refresh
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new Event("favorites-updated"))
+      }
     } catch (error) {
+      console.error("Error toggling favorite:", error)
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue.",
+        description: "Impossible de modifier les favoris.",
         variant: "destructive",
       })
     }
@@ -243,15 +270,16 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
     if (typeof window === "undefined") return
 
     try {
-      // Use the existing markAsWatched method which handles toggling internally
-      WatchTracker.markAsWatched("movie", movie.id, movie.title, movie.runtime || 120, {
+      const currentStatus = await WatchTracker.isWatched("movie", movie.id)
+
+      await WatchTracker.markAsWatched("movie", movie.id, movie.title, movie.runtime || 120, {
         genre: movie.genres[0]?.name,
         rating: Math.round(movie.vote_average),
         posterPath: movie.poster_path,
       })
 
-      // Update the state based on the new watched status
-      const newWatchedState = WatchTracker.isWatched("movie", movie.id)
+      // Update the state with the NEW status (opposite of current)
+      const newWatchedState = !currentStatus
       setIsWatched(newWatchedState)
 
       if (!isMobile) {
@@ -263,7 +291,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
         })
       }
 
-      // Forcer la mise à jour des statistiques
+      // Force stats refresh
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event("watchlist-updated"))
       }
@@ -496,7 +524,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
                   className={`border-yellow-600 text-yellow-400 hover:bg-yellow-900/20 w-full sm:w-auto ${
                     isFavorite ? "bg-yellow-900/20" : ""
                   }`}
-                  onClick={handleAddToFavorites}
+                  onClick={toggleFavorite}
                 >
                   <Star
                     className={`w-4 h-4 md:w-5 md:h-5 mr-2 ${isFavorite ? "fill-yellow-500 text-yellow-500" : ""}`}
@@ -538,10 +566,10 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
             </div>
 
             {/* Cast */}
-            {credits.cast && credits.cast.length > 0 && (
+            {movieCredits?.cast && movieCredits.cast.length > 0 && (
               <div className="space-y-6">
                 <h2 className="text-2xl md:text-3xl font-bold text-white">Casting</h2>
-                <CastList cast={credits.cast} />
+                <CastList cast={movieCredits.cast} />
               </div>
             )}
 
@@ -664,3 +692,5 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
     </div>
   )
 }
+
+export default MovieDetails
