@@ -3133,34 +3133,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           </div>
         </div>
       )}
-
-      {!povMode && userProfile && (
-        <group position={[myPosition.x, myPosition.y, myPosition.z]}>
-          <RealisticAvatar position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
-
-          {worldSettings.showStatusBadges && (
-            <Html position={[0, 2.3, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-              <div className="flex flex-col items-center gap-1 pointer-events-none">
-                <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
-                  <span className="text-white text-xs font-medium">{userProfile.username || "Vous"}</span>
-                  {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
-                  {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
-                  {userProfile.is_vip && !userProfile.is_vip_plus && !userProfile.is_admin && (
-                    <Star className="w-3 h-3 text-yellow-400" />
-                  )}
-                </div>
-                {playerChatBubbles[userProfile.id] &&
-                  Date.now() - playerChatBubbles[userProfile.id].timestamp < 5000 && (
-                    <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
-                      {playerChatBubbles[userProfile.id].message}
-                    </div>
-                  )}
-                {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
-              </div>
-            </Html>
-          )}
-        </group>
-      )}
     </div>
   )
 }
