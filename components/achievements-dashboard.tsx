@@ -817,43 +817,44 @@ export function AchievementsDashboard() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all")
   const [totalPoints, setTotalPoints] = useState(0)
   const [unlockedCount, setUnlockedCount] = useState(0)
-  const [filteredAchievements, setFilteredAchievements] = useState<AchievementProgress[]>([])
 
   useEffect(() => {
-    const loadAchievements = async () => {
-      const stats = WatchTracker.getStats()
-      const favorites = await WatchTracker.getFavoriteItems()
+    const stats = WatchTracker.getStats()
+    const favorites = WatchTracker.getFavoriteItems()
 
-      // Add additional stats
-      const enhancedStats = {
-        ...stats,
-        radioFavorites: favorites.filter((f) => f.type === "radio").length,
-        gamesFavorites: favorites.filter((f) => f.type === "game").length,
-        favoritesCount: favorites.length,
-      }
-
-      const unlockedCodes = AchievementSystem.checkAchievements(enhancedStats)
-
-      const progressList: AchievementProgress[] = MOCK_ACHIEVEMENTS.map((achievement) => {
-        const unlocked = unlockedCodes.includes(achievement.code)
-        const progress = AchievementSystem.calculateProgress(achievement, enhancedStats)
-        const percentage = Math.min((progress / achievement.requirement_value) * 100, 100)
-
-        return {
-          achievement,
-          unlocked,
-          progress,
-          percentage,
-        }
-      })
-
-      setAchievements(progressList)
-      setFilteredAchievements(progressList)
-      setUnlockedCount(unlockedCodes.length)
+    // Add additional stats
+    const enhancedStats = {
+      ...stats,
+      radioFavorites: favorites.filter((f) => f.type === "radio").length,
+      gamesFavorites: favorites.filter((f) => f.type === "game").length,
+      favoritesCount: favorites.length,
     }
 
-    loadAchievements()
+    const unlockedCodes = AchievementSystem.checkAchievements(enhancedStats)
+
+    const progressList: AchievementProgress[] = MOCK_ACHIEVEMENTS.map((achievement) => {
+      const unlocked = unlockedCodes.includes(achievement.code)
+      const progress = AchievementSystem.calculateProgress(achievement, enhancedStats)
+      const percentage = Math.min((progress / achievement.requirement_value) * 100, 100)
+
+      return {
+        achievement,
+        unlocked,
+        progress,
+        percentage,
+      }
+    })
+
+    setAchievements(progressList)
+
+    const points = progressList.filter((p) => p.unlocked).reduce((sum, p) => sum + p.achievement.points, 0)
+    setTotalPoints(points)
+
+    setUnlockedCount(progressList.filter((p) => p.unlocked).length)
   }, [])
+
+  const filteredAchievements =
+    selectedCategory === "all" ? achievements : achievements.filter((a) => a.achievement.category === selectedCategory)
 
   const categories = ["all", ...Array.from(new Set(MOCK_ACHIEVEMENTS.map((a) => a.category)))]
 

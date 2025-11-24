@@ -75,8 +75,12 @@ export default function DashboardPage() {
   const [favoriteItems, setFavoriteItems] = useState<any[]>([])
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [monthlyGoal, setMonthlyGoal] = useState(10)
-  const [loading, setLoading] = useState(true)
+  const [monthlyGoal, setMonthlyGoal] = useState(() => {
+    if (typeof window !== "undefined") {
+      return Number.parseInt(localStorage.getItem("monthlyGoal") || "10")
+    }
+    return 10
+  })
 
   const isMobile = useMobile()
   const [isStatsOpen, setIsStatsOpen] = useState(true)
@@ -87,162 +91,145 @@ export default function DashboardPage() {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(true)
   const { unreadCount } = useMessaging()
 
-  useEffect(() => {
-    const loadGoal = async () => {
-      const goal = await WatchTracker.getMonthlyGoal()
-      setMonthlyGoal(goal)
-    }
-    loadGoal()
-  }, [])
-
-  const calculateRecentWatchTime = async (days: number): Promise<number> => {
+  const calculateRecentWatchTime = (days: number): number => {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - days)
 
-    const items = await WatchTracker.getWatchedItems()
-    return items.filter((item) => item.watchedAt >= cutoffDate).reduce((sum, item) => sum + (item.duration || 0), 0)
+    return WatchTracker.getWatchedItems()
+      .filter((item) => item.watchedAt >= cutoffDate)
+      .reduce((sum, item) => sum + (item.duration || 0), 0)
   }
 
-  const refreshStats = async () => {
-    try {
-      console.log("[v0] Dashboard: Refreshing all stats...")
+  const refreshStats = () => {
+    const userStats = WatchTracker.getStats()
+    setStats(userStats)
 
-      const userStats = await WatchTracker.getStats()
-      setStats(userStats)
+    const enhancedFacts = [
+      ...WatchTracker.getInterestingFacts(userStats),
+      `Vous avez visionné du contenu pendant ${Math.floor(userStats.totalWatchTime / 60)} heures au total, soit ${(userStats.totalWatchTime / 60 / 24).toFixed(1)} jours !`,
+      `Votre genre préféré est "${userStats.favoriteGenre}" - vous êtes fan !`,
+      userStats.watchingStreak > 0
+        ? `Vous êtes sur une série de ${userStats.watchingStreak} jours consécutifs ! 🔥`
+        : `Commencez une série de visionnage quotidien dès aujourd'hui !`,
+      `Vous avez donné ${userStats.totalLikes} likes et ${userStats.totalDislikes} dislikes au total`,
+      userStats.moviesWatched > userStats.showsWatched
+        ? `Vous préférez les films (${userStats.moviesWatched}) aux séries (${userStats.showsWatched})`
+        : userStats.showsWatched > userStats.moviesWatched
+          ? `Vous préférez les séries (${userStats.showsWatched}) aux films (${userStats.moviesWatched})`
+          : `Vous aimez autant les films que les séries !`,
+      `Vous avez regardé ${userStats.episodesWatched} épisodes de séries`,
+      userStats.averageRating > 0
+        ? `Votre note moyenne est de ${userStats.averageRating.toFixed(1)}/5 ⭐`
+        : `Commencez à noter vos contenus pour voir votre moyenne`,
+      userStats.tvChannelsFavorites > 0
+        ? `Vous avez ${userStats.tvChannelsFavorites} chaînes TV favorites`
+        : `Ajoutez des chaînes TV à vos favoris !`,
+      calculateRecentWatchTime(7) > 0
+        ? `Cette semaine, vous avez regardé ${Math.floor(calculateRecentWatchTime(7) / 60)} heures de contenu`
+        : `Aucun visionnage cette semaine, c'est le moment de reprendre !`,
+      calculateRecentWatchTime(30) > 0
+        ? `Ce mois-ci, vous avez visionné ${Math.floor(calculateRecentWatchTime(30) / 60)} heures`
+        : `Commencez votre mois avec du bon contenu !`,
+      userStats.likesMovies > 0
+        ? `Vous avez liké ${userStats.likesMovies} films`
+        : `N'oubliez pas de liker vos films préférés !`,
+      userStats.likesTVShows > 0
+        ? `Vous avez liké ${userStats.likesTVShows} séries`
+        : `Commencez à liker vos séries préférées !`,
+      userStats.likesGames > 0
+        ? `Vous avez liké ${userStats.likesGames} jeux rétro`
+        : `Explorez notre collection de jeux rétro !`,
+      userStats.likesRadio > 0
+        ? `Vous avez ${userStats.likesRadio} stations radio favorites`
+        : `Découvrez nos stations radio !`,
+      userStats.likesPlaylists > 0
+        ? `Vous avez liké ${userStats.likesPlaylists} playlists`
+        : `Créez votre première playlist !`,
+      favoritesCount > 10
+        ? `Impressionnant ! Vous avez ${favoritesCount} favoris`
+        : `Continuez à ajouter des favoris !`,
+      `Si vous regardiez tout votre contenu d'un coup, cela prendrait ${(userStats.totalWatchTime / 60 / 24).toFixed(1)} jours sans interruption !`,
+      userStats.moviesWatched + userStats.showsWatched > 50
+        ? `Vous êtes un cinéphile confirmé avec plus de ${userStats.moviesWatched + userStats.showsWatched} contenus visionnés !`
+        : `Continuez à explorer notre catalogue !`,
+      `Le ratio likes/dislikes est de ${userStats.totalDislikes > 0 ? (userStats.totalLikes / userStats.totalDislikes).toFixed(1) : "∞"} - ${userStats.totalLikes > userStats.totalDislikes * 2 ? "vous êtes très positif !" : "vous êtes critique !"}`,
+      userStats.genreStats.length > 0
+        ? `Vos 3 genres préférés : ${userStats.genreStats
+            .slice(0, 3)
+            .map((g) => g.genre)
+            .join(", ")}`
+        : `Regardez plus de contenu pour découvrir vos genres préférés`,
+      `Temps de visionnage moyen par contenu : ${userStats.moviesWatched + userStats.showsWatched > 0 ? Math.floor(userStats.totalWatchTime / (userStats.moviesWatched + userStats.showsWatched)) : 0} minutes`,
+    ]
 
-      const interestingFacts = await WatchTracker.getInterestingFacts(userStats)
+    // Shuffle and limit to 12 facts for variety
+    const shuffled = enhancedFacts.sort(() => 0.5 - Math.random())
+    setInterestingFacts(shuffled.slice(0, 12))
 
-      const recentWeekTime = await calculateRecentWatchTime(7)
-      const recentMonthTime = await calculateRecentWatchTime(30)
+    setFavoritesCount(WatchTracker.getFavoriteItems().length)
+    setWatchedItems(WatchTracker.getWatchedItems().slice(0, 12))
+    setFavoriteItems(WatchTracker.getFavoriteItems().slice(0, 12))
 
-      const enhancedFacts = [
-        ...interestingFacts,
-        `Vous avez visionne du contenu pendant ${Math.floor(userStats.totalWatchTime / 60)} heures au total, soit ${(userStats.totalWatchTime / 60 / 24).toFixed(1)} jours !`,
-        `Votre genre prefere est "${userStats.favoriteGenre}" - vous etes fan !`,
-        userStats.watchingStreak > 0
-          ? `Vous etes sur une serie de ${userStats.watchingStreak} jours consecutifs !`
-          : `Commencez une serie de visionnage quotidien des aujourd hui !`,
-        `Vous avez donne ${userStats.totalLikes} likes et ${userStats.totalDislikes} dislikes au total`,
-        userStats.moviesWatched > userStats.showsWatched
-          ? `Vous preferez les films (${userStats.moviesWatched}) aux series (${userStats.showsWatched})`
-          : userStats.showsWatched > userStats.moviesWatched
-            ? `Vous preferez les series (${userStats.showsWatched}) aux films (${userStats.moviesWatched})`
-            : `Vous aimez autant les films que les series !`,
-        `Vous avez regarde ${userStats.episodesWatched} episodes de series`,
-        userStats.averageRating > 0
-          ? `Votre note moyenne est de ${userStats.averageRating.toFixed(1)}/5`
-          : `Commencez a noter vos contenus pour voir votre moyenne`,
-        userStats.tvChannelsFavorites > 0
-          ? `Vous avez ${userStats.tvChannelsFavorites} chaines TV favorites`
-          : `Ajoutez des chaines TV a vos favoris !`,
-        recentWeekTime > 0
-          ? `Cette semaine, vous avez regarde ${Math.floor(recentWeekTime / 60)} heures de contenu`
-          : `Aucun visionnage cette semaine, c est le moment de reprendre !`,
-        recentMonthTime > 0
-          ? `Ce mois-ci, vous avez visionne ${Math.floor(recentMonthTime / 60)} heures`
-          : `Commencez votre mois avec du bon contenu !`,
-        userStats.likesMovies > 0
-          ? `Vous avez like ${userStats.likesMovies} films`
-          : `N oubliez pas de liker vos films preferes !`,
-        userStats.likesTVShows > 0
-          ? `Vous avez like ${userStats.likesTVShows} series`
-          : `Commencez a liker vos series preferees !`,
-      ]
-
-      const shuffled = enhancedFacts.sort(() => Math.random() - 0.5)
-      setInterestingFacts(shuffled.slice(0, 12))
-
-      const favoriteItems = await WatchTracker.getFavoriteItems()
-      const watchedItems = await WatchTracker.getWatchedItems()
-
-      console.log("[v0] Dashboard: Loaded favorites count:", favoriteItems.length)
-      console.log("[v0] Dashboard: Loaded watched count:", watchedItems.length)
-
-      setFavoritesCount(favoriteItems.length)
-      setWatchedItems(watchedItems.slice(0, 12))
-      setFavoriteItems(favoriteItems.slice(0, 12))
-
-      if (user) {
-        setUserVIPLevel(VIPSystem.getUserVIPStatus(user.id))
-      }
-
-      console.log("[v0] Dashboard: Stats refreshed successfully")
-    } catch (error) {
-      console.error("[v0] Dashboard: Error refreshing stats:", error)
+    if (user) {
+      setUserVIPLevel(VIPSystem.getUserVIPStatus(user.id))
     }
+
+    console.log("Stats refreshed:", userStats)
   }
 
-  const updateMonthlyGoal = async (newGoal: number) => {
+  const updateMonthlyGoal = (newGoal: number) => {
     setMonthlyGoal(newGoal)
-    await WatchTracker.setMonthlyGoal(newGoal)
+    localStorage.setItem("monthlyGoal", newGoal.toString())
   }
 
   const handlePlayItem = (item: any) => {
     let playUrl = ""
 
+    console.log("[v0] Attempting to play item:", item)
+
     if (item.type === "tv-channel") {
+      // Try multiple possible property names for TV channels
       playUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl || ""
     } else if (item.type === "radio") {
+      // Try multiple possible property names for radio stations
       playUrl = item.streamUrl || item.stream_url || item.url || item.streamingUrl || ""
     } else if (item.type === "game") {
+      // Try multiple possible property names for games
       playUrl = item.url || item.game_url || item.gameUrl || ""
     }
 
     if (playUrl) {
+      console.log("[v0] Opening player for:", item.title, "URL:", playUrl)
       setSelectedItem({ ...item, url: playUrl })
       setIsModalOpen(true)
     } else {
+      console.error("[v0] No playable URL found for item:", JSON.stringify(item))
+      // Show a toast notification to the user
       alert(`Impossible de lire "${item.title}". URL de streaming non disponible.`)
     }
   }
 
   useEffect(() => {
-    const loadData = async () => {
-      if (!user) {
-        setLoading(false)
-        return
-      }
-
-      try {
-        console.log("[v0] Dashboard: Starting initial load...")
-        setLoading(true)
-
-        await refreshStats()
-
-        console.log("[v0] Dashboard: Initial load complete!")
-        setLoading(false)
-      } catch (error) {
-        console.error("[v0] Dashboard: Error loading data:", error)
-        setLoading(false)
-      }
-    }
-
     setMounted(true)
-    loadData()
+    refreshStats()
 
-    // Listen for updates
     const handleUpdate = () => {
-      console.log("[v0] Dashboard: Detected update, refreshing...")
       refreshStats()
     }
 
     window.addEventListener("vip-updated", handleUpdate)
-    window.addEventListener("watchlist-updated", handleUpdate)
-    window.addEventListener("favorites-updated", handleUpdate)
+    window.addEventListener("storage", handleUpdate)
 
-    // Refresh every 30 seconds instead of 2 seconds to reduce load
-    const interval = setInterval(refreshStats, 30000)
+    const interval = setInterval(refreshStats, 2000)
 
     return () => {
       window.removeEventListener("vip-updated", handleUpdate)
-      window.removeEventListener("watchlist-updated", handleUpdate)
-      window.removeEventListener("favorites-updated", handleUpdate)
+      window.removeEventListener("storage", handleUpdate)
       clearInterval(interval)
     }
   }, [user])
 
-  if (!mounted || loading) {
-    // Added loading state to the condition
+  if (!mounted) {
     return (
       <div className="min-h-screen bg-gray-900 text-white">
         <div className="container mx-auto px-4 py-8">Chargement...</div>
@@ -266,6 +253,7 @@ export default function DashboardPage() {
   const vipBadge = VIPSystem.getVIPBadge(userVIPLevel)
   const usernameColor = VIPSystem.getUsernameColor(userVIPLevel)
 
+  // Calculs de statistiques supplémentaires
   const totalHours = Math.floor(stats.totalWatchTime / 60)
   const totalDays = Math.floor(totalHours / 24)
   const currentMonth = new Date().getMonth()
@@ -809,7 +797,6 @@ export default function DashboardPage() {
                         )
                       })}
                     </div>
-                    {/* Dynamically check if there are more items to show a "See All" button */}
                     {WatchTracker.getWatchedItems().length > 12 && (
                       <div className="text-center mt-6">
                         <Button
@@ -958,7 +945,6 @@ export default function DashboardPage() {
                         )
                       })}
                     </div>
-                    {/* Dynamically check if there are more items to show a "See All" button */}
                     {WatchTracker.getFavoriteItems().length > 12 && (
                       <div className="text-center mt-6">
                         <Button

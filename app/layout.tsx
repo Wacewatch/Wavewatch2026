@@ -7,7 +7,6 @@ import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/components/auth-provider"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
-import { DataMigration } from "@/components/data-migration"
 import Script from "next/script" // Import du composant Script
 
 const inter = Inter({ subsets: ["latin"] })
@@ -44,7 +43,6 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            <DataMigration />
             <Navigation />
             <main className="min-h-screen bg-background">{children}</main>
             <Footer />
