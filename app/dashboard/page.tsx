@@ -75,10 +75,12 @@ export default function DashboardPage() {
   const [favoriteItems, setFavoriteItems] = useState<any[]>([])
   const [selectedItem, setSelectedItem] = useState<any>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [monthlyGoal, setMonthlyGoal] = useState(10) // Initial value set to 10
-  const [loading, setLoading] = useState(true) // Added loading state
-  const [userStats, setUserStats] = useState<WatchStats>(stats) // Renamed stats to userStats for clarity
-  const [watchedCount, setWatchedCount] = useState(0) // Added watchedCount state
+  const [monthlyGoal, setMonthlyGoal] = useState(() => {
+    if (typeof window !== "undefined") {
+      return Number.parseInt(localStorage.getItem("monthlyGoal") || "10")
+    }
+    return 10
+  })
 
   const isMobile = useMobile()
   const [isStatsOpen, setIsStatsOpen] = useState(true)
@@ -89,68 +91,19 @@ export default function DashboardPage() {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(true)
   const { unreadCount } = useMessaging()
 
-  useEffect(() => {
-    const loadGoal = async () => {
-      const goal = await WatchTracker.getMonthlyGoal()
-      setMonthlyGoal(goal)
-    }
-    loadGoal()
-  }, [])
-
-  const calculateRecentWatchTime = async (days: number): Promise<number> => {
+  const calculateRecentWatchTime = (days: number): number => {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - days)
 
-    const items = await WatchTracker.getWatchedItems()
-    return items.filter((item) => item.watchedAt >= cutoffDate).reduce((sum, item) => sum + (item.duration || 0), 0)
+    return WatchTracker.getWatchedItems()
+      .filter((item) => item.watchedAt >= cutoffDate)
+      .reduce((sum, item) => sum + (item.duration || 0), 0)
   }
 
-  const refreshStats = async () => {
-    const userStats = await WatchTracker.getStats()
+  const refreshStats = () => {
+    const userStats = WatchTracker.getStats()
     setStats(userStats)
-
-    const interestingFacts = await WatchTracker.getInterestingFacts(userStats)
-
-    const recentWeekTime = await calculateRecentWatchTime(7)
-    const recentMonthTime = await calculateRecentWatchTime(30)
-
-    const enhancedFacts = [
-      ...interestingFacts,
-      `Vous avez visionne du contenu pendant ${Math.floor(userStats.totalWatchTime / 60)} heures au total, soit ${(userStats.totalWatchTime / 60 / 24).toFixed(1)} jours !`,
-      `Votre genre prefere est "${userStats.favoriteGenre}" - vous etes fan !`,
-      userStats.watchingStreak > 0
-        ? `Vous etes sur une serie de ${userStats.watchingStreak} jours consecutifs !`
-        : `Commencez une serie de visionnage quotidien des aujourd hui !`,
-      `Vous avez donne ${userStats.totalLikes} likes et ${userStats.totalDislikes} dislikes au total`,
-      userStats.moviesWatched > userStats.showsWatched
-        ? `Vous preferez les films (${userStats.moviesWatched}) aux series (${userStats.showsWatched})`
-        : userStats.showsWatched > userStats.moviesWatched
-          ? `Vous preferez les series (${userStats.showsWatched}) aux films (${userStats.moviesWatched})`
-          : `Vous aimez autant les films que les series !`,
-      `Vous avez regarde ${userStats.episodesWatched} episodes de series`,
-      userStats.averageRating > 0
-        ? `Votre note moyenne est de ${userStats.averageRating.toFixed(1)}/5`
-        : `Commencez a noter vos contenus pour voir votre moyenne`,
-      userStats.tvChannelsFavorites > 0
-        ? `Vous avez ${userStats.tvChannelsFavorites} chaines TV favorites`
-        : `Ajoutez des chaines TV a vos favoris !`,
-      recentWeekTime > 0
-        ? `Cette semaine, vous avez regarde ${Math.floor(recentWeekTime / 60)} heures de contenu`
-        : `Aucun visionnage cette semaine, c est le moment de reprendre !`,
-      recentMonthTime > 0
-        ? `Ce mois-ci, vous avez visionne ${Math.floor(recentMonthTime / 60)} heures`
-        : `Commencez votre mois avec du bon contenu !`,
-      userStats.likesMovies > 0
-        ? `Vous avez like ${userStats.likesMovies} films`
-        : `N oubliez pas de liker vos films preferes !`,
-      userStats.likesTVShows > 0
-        ? `Vous avez like ${userStats.likesTVShows} series`
-        : `Commencez a liker vos series preferees !`,
-    ]
-
-    const shuffled = enhancedFacts.sort(() => Math.random() - 0.5)
-    setInterestingFacts(shuffled.slice(0, 12))
-
+    setInterestingFacts(WatchTracker.getInterestingFacts(userStats))
     setFavoritesCount(WatchTracker.getFavoriteItems().length)
     setWatchedItems(WatchTracker.getWatchedItems().slice(0, 12))
     setFavoriteItems(WatchTracker.getFavoriteItems().slice(0, 12))
@@ -159,12 +112,13 @@ export default function DashboardPage() {
       setUserVIPLevel(VIPSystem.getUserVIPStatus(user.id))
     }
 
+    // Force un re-render pour s'assurer que les stats sont à jour
     console.log("Stats refreshed:", userStats)
   }
 
-  const updateMonthlyGoal = async (newGoal: number) => {
+  const updateMonthlyGoal = (newGoal: number) => {
     setMonthlyGoal(newGoal)
-    await WatchTracker.setMonthlyGoal(newGoal)
+    localStorage.setItem("monthlyGoal", newGoal.toString())
   }
 
   const handlePlayItem = (item: any) => {
@@ -195,42 +149,26 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
+    setMounted(true)
+    refreshStats()
 
-      const stats = await WatchTracker.getStats()
-      setUserStats(stats)
-
-      const watchedList = await WatchTracker.getWatchedItems()
-      setWatchedCount(watchedList.length)
-      setWatchedItems(watchedList.slice(0, 12))
-
-      const favoritesList = await WatchTracker.getFavoriteItems()
-      setFavoritesCount(favoritesList.length)
-      setFavoriteItems(favoritesList.slice(0, 12))
-
-      await refreshStats()
-
-      setLoading(false)
+    const handleUpdate = () => {
+      refreshStats()
     }
 
-    setMounted(true)
-    loadData()
-
-    window.addEventListener("vip-updated", refreshStats)
-    window.addEventListener("storage", refreshStats)
+    window.addEventListener("vip-updated", handleUpdate)
+    window.addEventListener("storage", handleUpdate)
 
     const interval = setInterval(refreshStats, 2000)
 
     return () => {
-      window.removeEventListener("vip-updated", refreshStats)
-      window.removeEventListener("storage", refreshStats)
+      window.removeEventListener("vip-updated", handleUpdate)
+      window.removeEventListener("storage", handleUpdate)
       clearInterval(interval)
     }
-  }, [user]) // Removed dependencies that are now handled by loadData or interval
+  }, [user])
 
-  if (!mounted || loading) {
-    // Added loading state to the condition
+  if (!mounted) {
     return (
       <div className="min-h-screen bg-gray-900 text-white">
         <div className="container mx-auto px-4 py-8">Chargement...</div>
@@ -255,10 +193,10 @@ export default function DashboardPage() {
   const usernameColor = VIPSystem.getUsernameColor(userVIPLevel)
 
   // Calculs de statistiques supplémentaires
-  const totalHours = Math.floor(userStats.totalWatchTime / 60) // Used userStats
+  const totalHours = Math.floor(stats.totalWatchTime / 60)
   const totalDays = Math.floor(totalHours / 24)
   const currentMonth = new Date().getMonth()
-  const monthlyProgress = Math.min((userStats.moviesWatched + userStats.showsWatched) % monthlyGoal, monthlyGoal) // Used userStats
+  const monthlyProgress = Math.min((stats.moviesWatched + stats.showsWatched) % monthlyGoal, monthlyGoal)
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -350,7 +288,7 @@ export default function DashboardPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-lg sm:text-2xl font-bold text-white">
-                      {totalHours}h {userStats.totalWatchTime % 60}m {/* Used userStats */}
+                      {totalHours}h {stats.totalWatchTime % 60}m
                     </div>
                     <p className="text-xs text-gray-400">
                       {totalDays > 0 ? `${totalDays} jour${totalDays > 1 ? "s" : ""}` : "de visionnage"}
@@ -364,8 +302,7 @@ export default function DashboardPage() {
                     <ThumbsUp className="h-4 w-4 text-green-500" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-lg sm:text-2xl font-bold text-green-400">{userStats.totalLikes}</div>{" "}
-                    {/* Used userStats */}
+                    <div className="text-lg sm:text-2xl font-bold text-green-400">{stats.totalLikes}</div>
                     <p className="text-xs text-gray-400">contenus likés</p>
                   </CardContent>
                 </Card>
@@ -376,8 +313,7 @@ export default function DashboardPage() {
                     <ThumbsDown className="h-4 w-4 text-red-500" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-lg sm:text-2xl font-bold text-red-400">{userStats.totalDislikes}</div>{" "}
-                    {/* Used userStats */}
+                    <div className="text-lg sm:text-2xl font-bold text-red-400">{stats.totalDislikes}</div>
                     <p className="text-xs text-gray-400">contenus dislikés</p>
                   </CardContent>
                 </Card>
@@ -417,32 +353,27 @@ export default function DashboardPage() {
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <div className="text-center p-3 bg-green-900/20 rounded-lg border border-green-800">
-                  <div className="text-xl font-bold text-green-400">{userStats.likesMovies}</div> {/* Used userStats */}
+                  <div className="text-xl font-bold text-green-400">{stats.likesMovies}</div>
                   <p className="text-xs text-green-400">Films likés</p>
                 </div>
                 <div className="text-center p-3 bg-red-900/20 rounded-lg border border-red-800">
-                  <div className="text-xl font-bold text-red-400">{userStats.dislikesMovies}</div>{" "}
-                  {/* Used userStats */}
+                  <div className="text-xl font-bold text-red-400">{stats.dislikesMovies}</div>
                   <p className="text-xs text-red-400">Films dislikés</p>
                 </div>
                 <div className="text-center p-3 bg-green-900/20 rounded-lg border border-green-800">
-                  <div className="text-xl font-bold text-green-400">{userStats.likesTVShows}</div>{" "}
-                  {/* Used userStats */}
+                  <div className="text-xl font-bold text-green-400">{stats.likesTVShows}</div>
                   <p className="text-xs text-green-400">Séries likées</p>
                 </div>
                 <div className="text-center p-3 bg-red-900/20 rounded-lg border border-red-800">
-                  <div className="text-xl font-bold text-red-400">{userStats.dislikesTVShows}</div>{" "}
-                  {/* Used userStats */}
+                  <div className="text-xl font-bold text-red-400">{stats.dislikesTVShows}</div>
                   <p className="text-xs text-red-400">Séries dislikées</p>
                 </div>
                 <div className="text-center p-3 bg-green-900/20 rounded-lg border border-green-800">
-                  <div className="text-xl font-bold text-green-400">{userStats.likesEpisodes}</div>{" "}
-                  {/* Used userStats */}
+                  <div className="text-xl font-bold text-green-400">{stats.likesEpisodes}</div>
                   <p className="text-xs text-green-400">Épisodes likés</p>
                 </div>
                 <div className="text-center p-3 bg-red-900/20 rounded-lg border border-red-800">
-                  <div className="text-xl font-bold text-red-400">{userStats.dislikesEpisodes}</div>{" "}
-                  {/* Used userStats */}
+                  <div className="text-xl font-bold text-red-400">{stats.dislikesEpisodes}</div>
                   <p className="text-xs text-red-400">Épisodes dislikés</p>
                 </div>
               </div>
@@ -450,40 +381,31 @@ export default function DashboardPage() {
               <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="text-center p-3 bg-blue-900/20 rounded-lg border border-blue-800">
                   <div className="text-xl font-bold text-blue-400">
-                    {userStats.likesTVChannels + userStats.dislikesTVChannels} {/* Used userStats */}
+                    {stats.likesTVChannels + stats.dislikesTVChannels}
                   </div>
                   <p className="text-xs text-blue-400">Chaînes TV évaluées</p>
                 </div>
                 <div className="text-center p-3 bg-purple-900/20 rounded-lg border border-purple-800">
-                  <div className="text-xl font-bold text-purple-400">
-                    {userStats.likesRadio + userStats.dislikesRadio}
-                  </div>{" "}
-                  {/* Used userStats */}
+                  <div className="text-xl font-bold text-purple-400">{stats.likesRadio + stats.dislikesRadio}</div>
                   <p className="text-xs text-purple-400">Radios évaluées</p>
                 </div>
                 <div className="text-center p-3 bg-orange-900/20 rounded-lg border border-orange-800">
-                  <div className="text-xl font-bold text-orange-400">
-                    {userStats.likesGames + userStats.dislikesGames}
-                  </div>{" "}
-                  {/* Used userStats */}
+                  <div className="text-xl font-bold text-orange-400">{stats.likesGames + stats.dislikesGames}</div>
                   <p className="text-xs text-orange-400">Jeux évalués</p>
                 </div>
                 <div className="text-center p-3 bg-indigo-900/20 rounded-lg border border-indigo-800">
                   <div className="text-xl font-bold text-indigo-400">
-                    {userStats.likesPlaylists + userStats.dislikesPlaylists} {/* Used userStats */}
+                    {stats.likesPlaylists + stats.dislikesPlaylists}
                   </div>
                   <p className="text-xs text-indigo-400">Playlists évaluées</p>
                 </div>
                 <div className="text-center p-3 bg-gray-700 rounded-lg border border-gray-600">
-                  <div className="text-xl font-bold text-gray-300">
-                    {userStats.totalLikes + userStats.totalDislikes}
-                  </div>{" "}
-                  {/* Used userStats */}
+                  <div className="text-xl font-bold text-gray-300">{stats.totalLikes + stats.totalDislikes}</div>
                   <p className="text-xs text-gray-400">Total évaluations</p>
                 </div>
               </div>
 
-              {(userStats.likesPlaylists > 0 || userStats.dislikesPlaylists > 0) && ( // Used userStats
+              {(stats.likesPlaylists > 0 || stats.dislikesPlaylists > 0) && (
                 <div className="mt-4 p-4 bg-indigo-900/10 rounded-lg border border-indigo-800">
                   <div className="flex items-center gap-2 mb-3">
                     <List className="h-4 w-4 text-indigo-400" />
@@ -491,13 +413,11 @@ export default function DashboardPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center p-2 bg-green-900/20 rounded border border-green-800">
-                      <div className="text-lg font-bold text-green-400">{userStats.likesPlaylists}</div>{" "}
-                      {/* Used userStats */}
+                      <div className="text-lg font-bold text-green-400">{stats.likesPlaylists}</div>
                       <p className="text-xs text-green-400">Playlists likées</p>
                     </div>
                     <div className="text-center p-2 bg-red-900/20 rounded border border-red-800">
-                      <div className="text-lg font-bold text-red-400">{userStats.dislikesPlaylists}</div>{" "}
-                      {/* Used userStats */}
+                      <div className="text-lg font-bold text-red-400">{stats.dislikesPlaylists}</div>
                       <p className="text-xs text-red-400">Playlists dislikées</p>
                     </div>
                   </div>
@@ -528,11 +448,8 @@ export default function DashboardPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl sm:text-3xl font-bold text-white">
-                      {userStats.averageRating.toFixed(1)}/10
-                    </div>{" "}
-                    {/* Used userStats */}
-                    <Progress value={userStats.averageRating * 10} className="mt-2" /> {/* Used userStats */}
+                    <div className="text-2xl sm:text-3xl font-bold text-white">{stats.averageRating.toFixed(1)}/10</div>
+                    <Progress value={stats.averageRating * 10} className="mt-2" />
                   </CardContent>
                 </Card>
 
@@ -548,7 +465,7 @@ export default function DashboardPage() {
                       variant="secondary"
                       className="text-sm sm:text-lg px-2 sm:px-3 py-1 bg-gray-700 text-gray-300"
                     >
-                      {userStats.favoriteGenre} {/* Used userStats */}
+                      {stats.favoriteGenre}
                     </Badge>
                   </CardContent>
                 </Card>
@@ -594,23 +511,19 @@ export default function DashboardPage() {
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="text-center p-4 bg-red-900/20 rounded-lg border border-red-800">
-                      <div className="text-2xl font-bold text-red-400">{userStats.moviesWatched}</div>{" "}
-                      {/* Used userStats */}
+                      <div className="text-2xl font-bold text-red-400">{stats.moviesWatched}</div>
                       <p className="text-sm text-red-400">Films</p>
                     </div>
                     <div className="text-center p-4 bg-blue-900/20 rounded-lg border border-blue-800">
-                      <div className="text-2xl font-bold text-blue-400">{userStats.showsWatched}</div>{" "}
-                      {/* Used userStats */}
+                      <div className="text-2xl font-bold text-blue-400">{stats.showsWatched}</div>
                       <p className="text-sm text-blue-400">Séries</p>
                     </div>
                     <div className="text-center p-4 bg-green-900/20 rounded-lg border border-green-800">
-                      <div className="text-2xl font-bold text-green-400">{userStats.episodesWatched}</div>{" "}
-                      {/* Used userStats */}
+                      <div className="text-2xl font-bold text-green-400">{stats.episodesWatched}</div>
                       <p className="text-sm text-green-400">Épisodes</p>
                     </div>
                     <div className="text-center p-4 bg-purple-900/20 rounded-lg border border-purple-800">
-                      <div className="text-2xl font-bold text-purple-400">{userStats.tvChannelsFavorites}</div>{" "}
-                      {/* Used userStats */}
+                      <div className="text-2xl font-bold text-purple-400">{stats.tvChannelsFavorites}</div>
                       <p className="text-sm text-purple-400">Chaînes TV</p>
                     </div>
                   </div>
@@ -647,7 +560,7 @@ export default function DashboardPage() {
                     Le saviez-vous ?
                   </CardTitle>
                   <CardDescription className="text-blue-400">
-                    Statistiques détaillées et faits amusants sur votre profil et votre activité
+                    Quelques statistiques amusantes sur votre visionnage et vos évaluations
                   </CardDescription>
                 </div>
                 <Button variant="ghost" size="sm" className="text-blue-400">
@@ -657,15 +570,15 @@ export default function DashboardPage() {
             </CardHeader>
             {isFactsOpen && (
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {interestingFacts.map((fact, index) => (
                     <div
                       key={index}
-                      className="bg-gray-800/80 backdrop-blur-sm p-4 rounded-lg border border-gray-700 shadow-sm hover:border-blue-500/50 transition-colors"
+                      className="bg-gray-800/80 backdrop-blur-sm p-4 rounded-lg border border-gray-700 shadow-sm"
                     >
-                      <p className="text-sm font-medium text-gray-200 flex items-start gap-2">
-                        <span className="text-blue-400 font-bold mt-1">•</span>
-                        <span>{fact}</span>
+                      <p className="text-sm font-medium text-gray-200 flex items-center gap-2">
+                        <span className="text-blue-400 font-bold">•</span>
+                        {fact}
                       </p>
                     </div>
                   ))}
@@ -684,7 +597,7 @@ export default function DashboardPage() {
                   Succès et Badges
                 </CardTitle>
                 <CardDescription className="text-gray-400">
-                  Débloquez plus de badges en explorant toutes les fonctionnalités de la plateforme
+                  Débloquez des badges en explorant la plateforme
                 </CardDescription>
               </div>
               <Button variant="ghost" size="sm" className="text-gray-400">

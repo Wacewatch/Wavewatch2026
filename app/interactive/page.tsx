@@ -4,16 +4,11 @@ import { useEffect, useState } from "react"
 import { useRouter } from 'next/navigation'
 import { useAuth } from "@/components/auth-provider"
 import { createClient } from "@/lib/supabase/client"
-import dynamic from 'next/dynamic'
+import InteractiveWorld from "@/components/interactive/world-3d"
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { User, AlertTriangle } from 'lucide-react'
 import { Button } from "@/components/ui/button"
-
-const InteractiveWorld = dynamic(() => import("@/components/interactive/world-3d"), {
-  ssr: false,
-  loading: () => <div className="fixed inset-0 bg-black flex items-center justify-center"><div className="text-white text-2xl">Chargement du monde 3D...</div></div>
-})
 
 export default function InteractivePage() {
   const [hasProfile, setHasProfile] = useState(false)
