@@ -1,3 +1,5 @@
+import { createClient } from "@/lib/supabase/client"
+
 export type VIPLevel = "free" | "vip" | "vip_plus" | "beta"
 
 export interface VIPUser {
@@ -10,76 +12,101 @@ export interface VIPUser {
 }
 
 export class VIPSystem {
-  private static STORAGE_KEY = "wavewatch_vip_users"
+  private static async getSupabase() {
+    return createClient()
+  }
 
-  static getVIPUsers(): VIPUser[] {
-    if (typeof window === "undefined") return []
-    try {
-      const users = localStorage.getItem(this.STORAGE_KEY)
-      return users
-        ? JSON.parse(users).map((user: any) => ({
-            ...user,
-            subscriptionDate: new Date(user.subscriptionDate),
-          }))
-        : []
-    } catch {
+  static async getVIPUsers(): Promise<VIPUser[]> {
+    const supabase = await this.getSupabase()
+
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("id, username, is_vip, is_vip_plus, is_beta, created_at")
+      .or("is_vip.eq.true,is_vip_plus.eq.true,is_beta.eq.true")
+
+    if (error) {
+      console.error("[v0] Error fetching VIP users:", error)
       return []
     }
+
+    return (data || []).map((user) => ({
+      id: user.id,
+      username: user.username || "Unknown",
+      level: user.is_vip_plus ? "vip_plus" : user.is_vip ? "vip" : user.is_beta ? "beta" : "free",
+      subscriptionDate: new Date(user.created_at),
+      totalContribution: user.is_vip_plus ? 1.99 : user.is_vip ? 0.99 : 0,
+      monthlyContribution: user.is_vip_plus ? 1.99 : user.is_vip ? 0.99 : 0,
+    }))
   }
 
-  static getUserVIPStatus(userId: string): VIPLevel {
+  static async getUserVIPStatus(userId: string): Promise<VIPLevel> {
     if (!userId) return "free"
-    const vipUsers = this.getVIPUsers()
-    const user = vipUsers.find((u) => u.id === userId)
-    return user?.level || "free"
+
+    const supabase = await this.getSupabase()
+
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .select("is_vip, is_vip_plus, is_beta")
+      .eq("id", userId)
+      .maybeSingle()
+
+    if (error || !data) {
+      return "free"
+    }
+
+    if (data.is_vip_plus) return "vip_plus"
+    if (data.is_vip) return "vip"
+    if (data.is_beta) return "beta"
+    return "free"
   }
 
-  static upgradeUser(userId: string, username: string, level: VIPLevel): void {
-    if (typeof window === "undefined" || !userId || !username) return
+  static async upgradeUser(userId: string, username: string, level: VIPLevel): Promise<void> {
+    if (!userId || !username) return
 
-    const vipUsers = this.getVIPUsers()
-    const existingUserIndex = vipUsers.findIndex((u) => u.id === userId)
+    const supabase = await this.getSupabase()
 
-    const monthlyPrice = level === "vip" ? 0.99 : level === "vip_plus" ? 1.99 : 0
-
-    if (existingUserIndex >= 0) {
-      // Mettre à jour l'utilisateur existant
-      vipUsers[existingUserIndex].level = level
-      vipUsers[existingUserIndex].monthlyContribution = monthlyPrice
-      if (level !== "free") {
-        vipUsers[existingUserIndex].totalContribution += monthlyPrice
-      }
-    } else if (level !== "free") {
-      // Ajouter un nouvel utilisateur VIP
-      const newVIPUser: VIPUser = {
-        id: userId,
-        username,
-        level,
-        subscriptionDate: new Date(),
-        totalContribution: monthlyPrice,
-        monthlyContribution: monthlyPrice,
-      }
-      vipUsers.push(newVIPUser)
+    const updates: any = {
+      is_vip: level === "vip" || level === "vip_plus",
+      is_vip_plus: level === "vip_plus",
+      is_beta: level === "beta",
+      updated_at: new Date().toISOString(),
     }
 
-    // Supprimer si retour au gratuit
-    if (level === "free" && existingUserIndex >= 0) {
-      vipUsers.splice(existingUserIndex, 1)
+    if (level === "vip" || level === "vip_plus") {
+      updates.vip_expires_at = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
     }
 
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(vipUsers))
+    const { error } = await supabase.from("user_profiles").update(updates).eq("id", userId)
+
+    if (error) {
+      console.error("[v0] Error upgrading user:", error)
+      return
+    }
+
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("vip-updated"))
     }
   }
 
-  static removeUserPrivileges(userId: string): void {
-    if (typeof window === "undefined" || !userId) return
+  static async removeUserPrivileges(userId: string): Promise<void> {
+    if (!userId) return
 
-    const vipUsers = this.getVIPUsers()
-    const filteredUsers = vipUsers.filter((u) => u.id !== userId)
+    const supabase = await this.getSupabase()
 
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(filteredUsers))
+    const { error } = await supabase
+      .from("user_profiles")
+      .update({
+        is_vip: false,
+        is_vip_plus: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId)
+
+    if (error) {
+      console.error("[v0] Error removing privileges:", error)
+      return
+    }
+
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("vip-updated"))
     }
@@ -111,27 +138,27 @@ export class VIPSystem {
     }
   }
 
-  static getTopSupporters(limit = 10): VIPUser[] {
-    const vipUsers = this.getVIPUsers()
+  static async getTopSupporters(limit = 10): Promise<VIPUser[]> {
+    const vipUsers = await this.getVIPUsers()
     return vipUsers
       .filter((user) => user.level !== "free" && user.level !== "beta")
       .sort((a, b) => b.totalContribution - a.totalContribution)
       .slice(0, limit)
   }
 
-  static getTotalRevenue(): number {
-    const vipUsers = this.getVIPUsers()
+  static async getTotalRevenue(): Promise<number> {
+    const vipUsers = await this.getVIPUsers()
     return vipUsers.reduce((total, user) => total + user.totalContribution, 0)
   }
 
-  static getVIPStats(): {
+  static async getVIPStats(): Promise<{
     totalVIP: number
     totalVIPPlus: number
     totalBeta: number
     monthlyRevenue: number
     totalRevenue: number
-  } {
-    const vipUsers = this.getVIPUsers()
+  }> {
+    const vipUsers = await this.getVIPUsers()
     return {
       totalVIP: vipUsers.filter((u) => u.level === "vip").length,
       totalVIPPlus: vipUsers.filter((u) => u.level === "vip_plus").length,
