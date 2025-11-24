@@ -344,6 +344,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [showMenu, setShowMenu] = useState(false) // Added this state
 
   const [currentRoom, setCurrentRoom] = useState<string | null>(null)
+  const [nearbyBuilding, setNearbyBuilding] = useState<{ name: string; type: string; emoji: string } | null>(null)
 
   const [worldSettings, setWorldSettings] = useState({
     maxCapacity: 100,
@@ -724,9 +725,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     loadCustomizationOptions()
   }, [])
 
+  // Gestion des touches du clavier pour le déplacement
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // if (isSeatsLocked && mySeat !== null) return // Removed seat lock check
       keysPressed.current.add(e.key.toLowerCase())
     }
 
@@ -741,7 +742,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("keyup", handleKeyUp)
     }
-  }, [isSeatsLocked, mySeat]) // isSeatsLocked is now effectively unused
+  }, [])
 
   // Suivi de l'angle de la caméra pour les mouvements
   useEffect(() => {
@@ -761,7 +762,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       let forward = 0
       let right = 0
-      const speed = 0.15
+      // Vitesse de base, doublée si Shift est enfoncé
+      const baseSpeed = 0.15
+      const isShiftPressed = keysPressed.current.has("shift")
+      const speed = isShiftPressed ? baseSpeed * 2 : baseSpeed
 
       // Support QWERTY (WASD) et AZERTY (ZQSD) + Flèches
       if (keysPressed.current.has("w") || keysPressed.current.has("z") || keysPressed.current.has("arrowup")) forward += speed
@@ -1108,7 +1112,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     [userId, supabase, isSeatsLocked, mySeat],
   ) // isSeatsLocked and mySeat are now effectively unused here
 
-  const handleEnterArcade = () => {
+  function handleEnterArcade() {
     setShowArcade(false)
     setCurrentCinemaRoom(null)
 
@@ -1288,7 +1292,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }
 
-  const handleEnterStadium = () => {
+  function handleEnterStadium() {
     if (!stadium) return
     setShowStadium(false)
     setCurrentCinemaRoom(null)
@@ -1330,6 +1334,61 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       .eq("user_id", userId)
       .then(() => {})
   }
+
+  function handleEnterBuilding() {
+    if (!nearbyBuilding) return
+
+    switch (nearbyBuilding.type) {
+      case "arcade":
+        handleEnterArcade()
+        break
+      case "cinema":
+        setShowCinema(true)
+        break
+      case "stadium":
+        handleEnterStadium()
+        break
+    }
+  }
+
+  // Gestion de la touche Enter pour entrer dans les bâtiments
+  useEffect(() => {
+    const handleEnterKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && nearbyBuilding && currentRoom === null) {
+        handleEnterBuilding()
+      }
+    }
+
+    window.addEventListener("keydown", handleEnterKey)
+
+    return () => {
+      window.removeEventListener("keydown", handleEnterKey)
+    }
+  }, [nearbyBuilding, currentRoom])
+
+  // Détecter la proximité des bâtiments
+  useEffect(() => {
+    if (currentRoom !== null) {
+      setNearbyBuilding(null)
+      return
+    }
+
+    const distanceToArcade = Math.sqrt(Math.pow(myPosition.x - (-25), 2) + Math.pow(myPosition.z - 0, 2))
+    const distanceToCinema = Math.sqrt(Math.pow(myPosition.x - 15, 2) + Math.pow(myPosition.z - 0, 2))
+    const distanceToStadium = Math.sqrt(Math.pow(myPosition.x - 25, 2) + Math.pow(myPosition.z - (-15), 2))
+
+    const proximityThreshold = 8
+
+    if (distanceToArcade < proximityThreshold) {
+      setNearbyBuilding({ name: "Arcade", type: "arcade", emoji: "🕹️" })
+    } else if (distanceToCinema < proximityThreshold) {
+      setNearbyBuilding({ name: "Cinéma", type: "cinema", emoji: "🎬" })
+    } else if (distanceToStadium < proximityThreshold) {
+      setNearbyBuilding({ name: "Stade", type: "stadium", emoji: "⚽" })
+    } else {
+      setNearbyBuilding(null)
+    }
+  }, [myPosition, currentRoom])
 
   useEffect(() => {
     const checkCapacity = async () => {
@@ -1561,14 +1620,27 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </mesh>
               <pointLight position={[0, 7, 0]} intensity={2} distance={10} color="#f59e0b" />
 
-              <Html position={[0, 8, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+              {/* Building name - always visible and clickable */}
+              <Html position={[0, 8, 0]} center occlude zIndexRange={[0, 0]}>
                 <button
                   onClick={handleEnterArcade}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-3 rounded-lg hover:from-purple-700 hover:to-pink-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg shadow-2xl font-bold flex items-center gap-2 transition-all cursor-pointer hover:scale-105"
                 >
-                  🕹️ Entrer à l'Arcade
+                  🕹️ Arcade
                 </button>
               </Html>
+
+              {/* Bouton d'entrée visible quand on est près */}
+              {Math.sqrt(Math.pow(myPosition.x - (-25), 2) + Math.pow(myPosition.z - 0, 2)) < 8 && (
+                <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
+                  <button
+                    onClick={handleEnterArcade}
+                    className="bg-purple-600/90 backdrop-blur-sm hover:bg-purple-700 text-white px-6 py-3 rounded-lg shadow-2xl text-base font-bold transition-all hover:scale-110 border-2 border-white/30"
+                  >
+                    Entrée
+                  </button>
+                </Html>
+              )}
             </group>
 
             {/* Stadium building - was Stadium Building - Now OPEN */}
@@ -1595,34 +1667,27 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </mesh>
               <pointLight position={[0, 8, 0]} intensity={2} distance={10} color="#22c55e" />
 
-              <Html position={[0, 9, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
+              {/* Building name - always visible and clickable */}
+              <Html position={[0, 9, 0]} center occlude zIndexRange={[0, 0]}>
                 <button
                   onClick={handleEnterStadium}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
+                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-lg shadow-2xl font-bold flex items-center gap-2 transition-all cursor-pointer hover:scale-105"
                 >
-                  ⚽ Entrer au Stade
+                  ⚽ Stade
                 </button>
               </Html>
-            </group>
 
-            <group position={[15, 0, -5]}>
-              {/* Building */}
-              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
-                <boxGeometry args={[6, 5, 5]} />
-                <meshStandardMaterial color="#9333ea" />
-              </mesh>
-              {/* Roof */}
-              <mesh position={[0, 5.2, 0]} castShadow>
-                <coneGeometry args={[4, 1.5, 4]} />
-                <meshStandardMaterial color="#7e22ce" />
-              </mesh>
-              {/* Sign */}
-              <Html position={[0, 4, 2.6]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <div className="bg-yellow-400 text-purple-900 px-6 py-3 rounded-lg font-bold text-center shadow-xl border-4 border-purple-900">
-                  <div className="text-xl">🕹️ ARCADE 🕹️</div>
-                  <div className="text-sm mt-1">Ouverture Prochainement</div>
-                </div>
-              </Html>
+              {/* Bouton d'entrée visible quand on est près */}
+              {Math.sqrt(Math.pow(myPosition.x - 25, 2) + Math.pow(myPosition.z - (-15), 2)) < 8 && (
+                <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
+                  <button
+                    onClick={handleEnterStadium}
+                    className="bg-green-600/90 backdrop-blur-sm hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-2xl text-base font-bold transition-all hover:scale-110 border-2 border-white/30"
+                  >
+                    Entrée
+                  </button>
+                </Html>
+              )}
             </group>
 
             {/* Additional decorative buildings */}
@@ -1672,6 +1737,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </mesh>
               <pointLight position={[0, 6, 0]} intensity={2} distance={10} color="#fbbf24" />
 
+              {/* Building name - always visible and clickable */}
+              <Html position={[0, 7, 0]} center occlude zIndexRange={[0, 0]}>
+                <button
+                  onClick={() => setShowCinema(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg shadow-2xl font-bold flex items-center gap-2 transition-all cursor-pointer hover:scale-105"
+                >
+                  🎬 Cinéma
+                </button>
+              </Html>
+
               {[-2, 0, 2].map((x) => (
                 <mesh key={`window-${x}`} position={[x, 3, 4.1]}>
                   <planeGeometry args={[1.5, 1.8]} />
@@ -1699,14 +1774,17 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
               </mesh>
 
-              <Html position={[0, 7, 0]} center depthTest={true} occlude zIndexRange={[0, 0]}>
-                <button
-                  onClick={() => setShowCinema(true)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 whitespace-nowrap shadow-2xl font-bold flex items-center gap-2 transform hover:scale-105 transition-transform"
-                >
-                  🎬 Cinéma
-                </button>
-              </Html>
+              {/* Bouton d'entrée visible quand on est près */}
+              {Math.sqrt(Math.pow(myPosition.x - 15, 2) + Math.pow(myPosition.z - 0, 2)) < 8 && (
+                <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
+                  <button
+                    onClick={() => setShowCinema(true)}
+                    className="bg-blue-600/90 backdrop-blur-sm hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-2xl text-base font-bold transition-all hover:scale-110 border-2 border-white/30"
+                  >
+                    Entrée
+                  </button>
+                </Html>
+              )}
             </group>
 
             {/* Additional decorative closed buildings */}
@@ -3133,6 +3211,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           </div>
         </div>
       )}
+
     </div>
   )
 }
