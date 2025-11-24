@@ -2,11 +2,6 @@ import { Shield, Globe, Lock, CheckCircle, ExternalLink } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 
-export const metadata = {
-  title: "DNS & VPN - WaveWatch",
-  description: "Guide pour configurer un DNS sécurisé et un VPN gratuit",
-}
-
 export default function DnsVpnPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -60,91 +55,212 @@ export default function DnsVpnPage() {
           </div>
 
           <div className="bg-gray-900 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-semibold text-white mb-4">Configuration sur Windows</h3>
-            <ol className="space-y-3 text-gray-300 list-decimal list-inside">
-              <li>
-                Ouvrez les <strong>Paramètres</strong> Windows
-              </li>
-              <li>
-                Allez dans <strong>Réseau et Internet</strong> → <strong>Paramètres réseau avancés</strong>
-              </li>
-              <li>
-                Cliquez sur votre connexion active, puis sur <strong>Afficher les propriétés supplémentaires</strong>
-              </li>
-              <li>
-                Cliquez sur <strong>Modifier</strong> à côté de "Attribution du serveur DNS"
-              </li>
-              <li>Sélectionnez "Manuel" et activez IPv4</li>
-              <li>
-                Entrez les serveurs DNS :
-                <div className="bg-gray-800 p-3 rounded mt-2 font-mono text-sm">
-                  <div>DNS préféré : 1.1.1.1</div>
-                  <div>DNS auxiliaire : 1.0.0.1</div>
+            <h3 className="text-lg font-semibold text-white mb-4">Configuration sur Windows 11</h3>
+            <ol className="space-y-4 text-gray-300">
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                <div>
+                  <strong className="text-white">Ouvrez les Paramètres Windows</strong>
+                  <p className="text-sm text-gray-400 mt-1">Appuyez sur <kbd className="bg-gray-800 px-2 py-1 rounded text-xs">Win + I</kbd> ou cherchez "Paramètres" dans le menu Démarrer</p>
                 </div>
               </li>
-              <li>
-                Cliquez sur <strong>Enregistrer</strong>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                <div>
+                  <strong className="text-white">Accédez aux paramètres réseau</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cliquez sur <strong>Réseau et Internet</strong> dans le menu de gauche</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                <div>
+                  <strong className="text-white">Trouvez votre connexion</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cliquez sur <strong>Wi-Fi</strong> ou <strong>Ethernet</strong> selon votre type de connexion</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                <div>
+                  <strong className="text-white">Modifiez les paramètres DNS</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cliquez sur votre connexion active, puis sur le bouton <strong>Modifier</strong> à côté de "Attribution du serveur DNS"</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">5</span>
+                <div>
+                  <strong className="text-white">Configurez les DNS</strong>
+                  <p className="text-sm text-gray-400 mt-1">Sélectionnez <strong>Manuel</strong> et activez <strong>IPv4</strong></p>
+                  <div className="bg-gray-800 p-4 rounded mt-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-sm w-32">DNS préféré :</span>
+                      <code className="font-mono text-blue-400 font-semibold">1.1.1.1</code>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-sm w-32">DNS auxiliaire :</span>
+                      <code className="font-mono text-blue-400 font-semibold">1.0.0.1</code>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">6</span>
+                <div>
+                  <strong className="text-white">Enregistrez les modifications</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cliquez sur <strong>Enregistrer</strong> et fermez la fenêtre. Votre DNS est maintenant configuré !</p>
+                </div>
               </li>
             </ol>
           </div>
 
           <div className="bg-gray-900 rounded-lg p-6 border border-gray-700">
             <h3 className="text-lg font-semibold text-white mb-4">Configuration sur macOS</h3>
-            <ol className="space-y-3 text-gray-300 list-decimal list-inside">
-              <li>
-                Ouvrez <strong>Préférences Système</strong> → <strong>Réseau</strong>
-              </li>
-              <li>Sélectionnez votre connexion active (Wi-Fi ou Ethernet)</li>
-              <li>
-                Cliquez sur <strong>Avancé</strong>
-              </li>
-              <li>
-                Allez dans l'onglet <strong>DNS</strong>
-              </li>
-              <li>
-                Cliquez sur le bouton <strong>+</strong> et ajoutez :
-                <div className="bg-gray-800 p-3 rounded mt-2 font-mono text-sm">
-                  <div>1.1.1.1</div>
-                  <div>1.0.0.1</div>
+            <ol className="space-y-4 text-gray-300">
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                <div>
+                  <strong className="text-white">Ouvrez les Réglages Système</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cliquez sur le menu  (Pomme) en haut à gauche, puis sur <strong>Réglages Système</strong></p>
                 </div>
               </li>
-              <li>
-                Cliquez sur <strong>OK</strong> puis <strong>Appliquer</strong>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                <div>
+                  <strong className="text-white">Accédez au réseau</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cliquez sur <strong>Réseau</strong> dans la barre latérale</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                <div>
+                  <strong className="text-white">Sélectionnez votre connexion</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cliquez sur <strong>Wi-Fi</strong> ou <strong>Ethernet</strong> selon votre connexion active</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                <div>
+                  <strong className="text-white">Accédez aux paramètres DNS</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cliquez sur <strong>Détails...</strong> puis sur l'onglet <strong>DNS</strong></p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">5</span>
+                <div>
+                  <strong className="text-white">Ajoutez les serveurs DNS</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cliquez sur le bouton <strong>+</strong> sous la liste des serveurs DNS et ajoutez :</p>
+                  <div className="bg-gray-800 p-4 rounded mt-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-sm">Serveur 1 :</span>
+                      <code className="font-mono text-blue-400 font-semibold">1.1.1.1</code>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-400 text-sm">Serveur 2 :</span>
+                      <code className="font-mono text-blue-400 font-semibold">1.0.0.1</code>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-400 mt-2">💡 Appuyez sur <kbd className="bg-gray-800 px-2 py-1 rounded text-xs">Entrée</kbd> après chaque adresse</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">6</span>
+                <div>
+                  <strong className="text-white">Enregistrez les modifications</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cliquez sur <strong>OK</strong> pour valider. Votre DNS est configuré !</p>
+                </div>
               </li>
             </ol>
           </div>
 
           <div className="bg-gray-900 rounded-lg p-6 border border-gray-700">
             <h3 className="text-lg font-semibold text-white mb-4">Configuration sur Android</h3>
-            <ol className="space-y-3 text-gray-300 list-decimal list-inside">
-              <li>
-                Ouvrez <strong>Paramètres</strong> → <strong>Réseau et Internet</strong>
+            <ol className="space-y-4 text-gray-300">
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                <div>
+                  <strong className="text-white">Ouvrez les Paramètres</strong>
+                  <p className="text-sm text-gray-400 mt-1">Appuyez sur l'icône <strong>Paramètres</strong> (roue dentée) de votre téléphone</p>
+                </div>
               </li>
-              <li>
-                Appuyez sur <strong>DNS privé</strong>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                <div>
+                  <strong className="text-white">Accédez aux paramètres réseau</strong>
+                  <p className="text-sm text-gray-400 mt-1">Appuyez sur <strong>Réseau et Internet</strong> ou <strong>Connexions</strong></p>
+                  <p className="text-xs text-gray-500 mt-1">Note : Le nom peut varier selon la marque de votre téléphone</p>
+                </div>
               </li>
-              <li>
-                Sélectionnez <strong>Nom d'hôte du fournisseur DNS privé</strong>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                <div>
+                  <strong className="text-white">Trouvez l'option DNS privé</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cherchez et appuyez sur <strong>DNS privé</strong> ou <strong>Private DNS</strong></p>
+                  <p className="text-xs text-gray-500 mt-1">💡 Si vous ne trouvez pas cette option, elle peut être dans "Plus de paramètres de connexion"</p>
+                </div>
               </li>
-              <li>
-                Entrez :{" "}
-                <span className="font-mono bg-gray-800 px-2 py-1 rounded">1dot1dot1dot1.cloudflare-dns.com</span>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                <div>
+                  <strong className="text-white">Configurez le DNS</strong>
+                  <p className="text-sm text-gray-400 mt-1">Sélectionnez <strong>Nom d'hôte du fournisseur DNS privé</strong></p>
+                  <div className="bg-gray-800 p-4 rounded mt-3">
+                    <p className="text-gray-400 text-sm mb-2">Entrez exactement :</p>
+                    <code className="font-mono text-blue-400 font-semibold text-sm break-all">1dot1dot1dot1.cloudflare-dns.com</code>
+                  </div>
+                </div>
               </li>
-              <li>
-                Appuyez sur <strong>Enregistrer</strong>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">5</span>
+                <div>
+                  <strong className="text-white">Enregistrez</strong>
+                  <p className="text-sm text-gray-400 mt-1">Appuyez sur <strong>Enregistrer</strong>. Votre Android utilise maintenant le DNS Cloudflare !</p>
+                </div>
               </li>
             </ol>
           </div>
 
           <div className="bg-gray-900 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-semibold text-white mb-4">Configuration sur iOS</h3>
-            <ol className="space-y-3 text-gray-300 list-decimal list-inside">
-              <li>
-                Téléchargez l'application <strong>1.1.1.1</strong> depuis l'App Store
+            <h3 className="text-lg font-semibold text-white mb-4">Configuration sur iOS (iPhone/iPad)</h3>
+            <p className="text-gray-400 text-sm mb-4">
+              Sur iOS, le moyen le plus simple est d'utiliser l'application officielle de Cloudflare :
+            </p>
+            <ol className="space-y-4 text-gray-300">
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                <div>
+                  <strong className="text-white">Téléchargez l'application</strong>
+                  <p className="text-sm text-gray-400 mt-1">Ouvrez l'<strong>App Store</strong> et recherchez <strong>1.1.1.1: Faster Internet</strong></p>
+                  <p className="text-xs text-gray-500 mt-1">🔍 C'est l'application officielle de Cloudflare (logo bleu et blanc)</p>
+                </div>
               </li>
-              <li>Ouvrez l'application</li>
-              <li>Appuyez sur le bouton pour activer le DNS 1.1.1.1</li>
-              <li>Autorisez l'ajout de la configuration VPN quand demandé</li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                <div>
+                  <strong className="text-white">Installez et ouvrez l'app</strong>
+                  <p className="text-sm text-gray-400 mt-1">Téléchargez l'application gratuitement et ouvrez-la</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                <div>
+                  <strong className="text-white">Activez le DNS</strong>
+                  <p className="text-sm text-gray-400 mt-1">Appuyez sur le gros bouton au centre de l'écran pour activer 1.1.1.1</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                <div>
+                  <strong className="text-white">Autorisez la configuration VPN</strong>
+                  <p className="text-sm text-gray-400 mt-1">iOS vous demandera d'autoriser l'ajout d'une configuration VPN. Appuyez sur <strong>Autoriser</strong></p>
+                  <p className="text-xs text-gray-500 mt-1">💡 Ne vous inquiétez pas : cela permet juste au DNS de fonctionner, ce n'est pas un VPN complet</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-sm font-bold">5</span>
+                <div>
+                  <strong className="text-white">C'est terminé !</strong>
+                  <p className="text-sm text-gray-400 mt-1">Quand le bouton est bleu, votre iPhone utilise le DNS sécurisé de Cloudflare</p>
+                </div>
+              </li>
             </ol>
           </div>
 
@@ -207,32 +323,85 @@ export default function DnsVpnPage() {
 
           <div className="bg-gray-900 rounded-lg p-6 border border-gray-700">
             <h3 className="text-lg font-semibold text-white mb-4">Installation et configuration</h3>
-            <ol className="space-y-3 text-gray-300 list-decimal list-inside">
-              <li>
-                Rendez-vous sur{" "}
-                <a
-                  href="https://protonvpn.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-purple-400 hover:text-purple-300 underline"
-                >
-                  protonvpn.com
-                </a>
+            <ol className="space-y-4 text-gray-300">
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-sm font-bold">1</span>
+                <div>
+                  <strong className="text-white">Créez un compte gratuit</strong>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Rendez-vous sur{" "}
+                    <a
+                      href="https://protonvpn.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-purple-400 hover:text-purple-300 underline"
+                    >
+                      protonvpn.com
+                    </a>{" "}
+                    et cliquez sur <strong>Get Proton VPN Free</strong>
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">✅ Aucune carte bancaire n'est requise pour le compte gratuit</p>
+                </div>
               </li>
-              <li>Créez un compte gratuit (aucune carte bancaire requise)</li>
-              <li>
-                Téléchargez l'application pour votre système :
-                <ul className="ml-6 mt-2 space-y-1 list-disc">
-                  <li>Windows, macOS, Linux</li>
-                  <li>Android, iOS</li>
-                  <li>Extensions navigateur (Chrome, Firefox)</li>
-                </ul>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-sm font-bold">2</span>
+                <div>
+                  <strong className="text-white">Remplissez le formulaire</strong>
+                  <p className="text-sm text-gray-400 mt-1">Entrez une adresse email et créez un mot de passe sécurisé</p>
+                  <p className="text-xs text-gray-500 mt-1">💡 Vous pouvez utiliser n'importe quelle adresse email</p>
+                </div>
               </li>
-              <li>Installez l'application et connectez-vous avec votre compte</li>
-              <li>
-                Cliquez sur <strong>Quick Connect</strong> pour vous connecter au serveur le plus rapide
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-sm font-bold">3</span>
+                <div>
+                  <strong className="text-white">Téléchargez l'application</strong>
+                  <p className="text-sm text-gray-400 mt-1">Choisissez votre système d'exploitation :</p>
+                  <div className="bg-gray-800 p-3 rounded mt-2 space-y-1 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500">💻</span>
+                      <span>Windows, macOS ou Linux</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500">📱</span>
+                      <span>Android (Google Play) ou iOS (App Store)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500">🌐</span>
+                      <span>Extension navigateur (Chrome, Firefox, Edge)</span>
+                    </div>
+                  </div>
+                </div>
               </li>
-              <li>Votre connexion est maintenant sécurisée et anonyme !</li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-sm font-bold">4</span>
+                <div>
+                  <strong className="text-white">Installez l'application</strong>
+                  <p className="text-sm text-gray-400 mt-1">Suivez les instructions d'installation habituelles pour votre système</p>
+                  <p className="text-xs text-gray-500 mt-1">Sur Windows : Exécutez le fichier .exe / Sur Mac : Ouvrez le fichier .dmg</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-sm font-bold">5</span>
+                <div>
+                  <strong className="text-white">Connectez-vous</strong>
+                  <p className="text-sm text-gray-400 mt-1">Ouvrez l'application et entrez l'email et le mot de passe que vous avez créés</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-sm font-bold">6</span>
+                <div>
+                  <strong className="text-white">Connectez-vous au VPN</strong>
+                  <p className="text-sm text-gray-400 mt-1">Cliquez sur le bouton <strong>Quick Connect</strong> (Connexion rapide)</p>
+                  <p className="text-xs text-gray-500 mt-1">🚀 L'application choisira automatiquement le serveur le plus rapide pour vous</p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-green-600 rounded-full flex items-center justify-center text-sm font-bold">✓</span>
+                <div>
+                  <strong className="text-white">Vous êtes protégé !</strong>
+                  <p className="text-sm text-gray-400 mt-1">Quand vous voyez "Connecté" en vert, votre connexion est sécurisée et votre IP est masquée</p>
+                </div>
+              </li>
             </ol>
           </div>
 
