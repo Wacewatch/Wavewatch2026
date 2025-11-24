@@ -143,31 +143,58 @@ export class WatchTrackerDB {
 
     console.log("[v0] Adding to watch history:", item.content_title)
 
-    const { error } = await this.supabase.from("user_watch_history").upsert(
-      {
-        user_id: userId,
-        content_id: item.content_id,
-        content_type: item.content_type,
-        content_title: item.content_title,
-        watch_duration: item.watch_duration,
-        total_duration: item.total_duration,
-        progress: item.progress,
-        last_watched_at: item.last_watched_at,
-        metadata: item.metadata,
-      },
-      {
-        onConflict: "user_id,content_id,content_type",
-      },
-    )
+    try {
+      const { data: existing } = await this.supabase
+        .from("user_watch_history")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("content_id", item.content_id)
+        .eq("content_type", item.content_type)
+        .maybeSingle()
 
-    if (error) {
+      let error
+      if (existing) {
+        // Update existing record
+        const result = await this.supabase
+          .from("user_watch_history")
+          .update({
+            content_title: item.content_title,
+            watch_duration: item.watch_duration,
+            total_duration: item.total_duration,
+            progress: item.progress,
+            last_watched_at: item.last_watched_at,
+            metadata: item.metadata,
+          })
+          .eq("id", existing.id)
+        error = result.error
+      } else {
+        // Insert new record
+        const result = await this.supabase.from("user_watch_history").insert({
+          user_id: userId,
+          content_id: item.content_id,
+          content_type: item.content_type,
+          content_title: item.content_title,
+          watch_duration: item.watch_duration,
+          total_duration: item.total_duration,
+          progress: item.progress,
+          last_watched_at: item.last_watched_at,
+          metadata: item.metadata,
+        })
+        error = result.error
+      }
+
+      if (error) {
+        console.error("[v0] Error adding to watch history:", error.message || error)
+        return false
+      }
+
+      this.cache.delete("watchHistory")
+      console.log("[v0] Successfully added to watch history")
+      return true
+    } catch (error) {
       console.error("[v0] Error adding to watch history:", error)
       return false
     }
-
-    this.cache.delete("watchHistory")
-    console.log("[v0] Successfully added to watch history")
-    return true
   }
 
   async removeFromWatchHistory(contentId: number, contentType: string): Promise<boolean> {
@@ -446,41 +473,64 @@ export class WatchTrackerDB {
     const userId = await this.getUserId()
     if (!userId) return false
 
-    if (rating === null) {
-      // Remove rating
-      const { error } = await this.supabase
-        .from("user_ratings")
-        .delete()
-        .eq("user_id", userId)
-        .eq("content_id", contentId)
-        .eq("content_type", contentType)
+    try {
+      if (rating === null) {
+        // Remove rating
+        const { error } = await this.supabase
+          .from("user_ratings")
+          .delete()
+          .eq("user_id", userId)
+          .eq("content_id", contentId)
+          .eq("content_type", contentType)
 
-      if (error) {
-        console.error("[v0] Error removing rating:", error)
-        return false
-      }
-    } else {
-      // Upsert rating
-      const { error } = await this.supabase.from("user_ratings").upsert(
-        {
-          user_id: userId,
-          content_id: contentId,
-          content_type: contentType,
-          rating: rating,
-          updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "user_id,content_id,content_type",
-        },
-      )
+        if (error) {
+          console.error("[v0] Error removing rating:", error.message || error)
+          return false
+        }
+      } else {
+        const { data: existing } = await this.supabase
+          .from("user_ratings")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("content_id", contentId)
+          .eq("content_type", contentType)
+          .maybeSingle()
 
-      if (error) {
-        console.error("[v0] Error setting rating:", error)
-        return false
+        let error
+        if (existing) {
+          // Update existing record
+          const result = await this.supabase
+            .from("user_ratings")
+            .update({
+              rating: rating,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existing.id)
+          error = result.error
+        } else {
+          // Insert new record
+          const result = await this.supabase.from("user_ratings").insert({
+            user_id: userId,
+            content_id: contentId,
+            content_type: contentType,
+            rating: rating,
+            updated_at: new Date().toISOString(),
+          })
+          error = result.error
+        }
+
+        if (error) {
+          console.error("[v0] Error setting rating:", error.message || error)
+          return false
+        }
       }
+
+      this.cache.delete("ratings")
+      return true
+    } catch (error) {
+      console.error("[v0] Error setting rating:", error)
+      return false
     }
-
-    return true
   }
 
   // === STATISTICS ===
@@ -515,23 +565,44 @@ export class WatchTrackerDB {
     const userId = await this.getUserId()
     if (!userId) return false
 
-    const { error } = await this.supabase.from("user_statistics").upsert(
-      {
-        user_id: userId,
-        ...updates,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "user_id",
-      },
-    )
+    try {
+      const { data: existing } = await this.supabase
+        .from("user_statistics")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle()
 
-    if (error) {
+      let error
+      if (existing) {
+        // Update existing record
+        const result = await this.supabase
+          .from("user_statistics")
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id)
+        error = result.error
+      } else {
+        // Insert new record
+        const result = await this.supabase.from("user_statistics").insert({
+          user_id: userId,
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        error = result.error
+      }
+
+      if (error) {
+        console.error("[v0] Error updating statistics:", error.message || error)
+        return false
+      }
+
+      return true
+    } catch (error) {
       console.error("[v0] Error updating statistics:", error)
       return false
     }
-
-    return true
   }
 
   // === MIGRATION FROM LOCALSTORAGE ===
