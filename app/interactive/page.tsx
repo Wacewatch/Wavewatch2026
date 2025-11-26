@@ -18,6 +18,7 @@ export default function InteractivePage() {
   const [userProfile, setUserProfile] = useState<any>(null)
   const [checkingProfile, setCheckingProfile] = useState(true)
   const [showConstructionWarning, setShowConstructionWarning] = useState(false)
+  const [hasAcceptedWarning, setHasAcceptedWarning] = useState(false)
   const [avatarStyle, setAvatarStyle] = useState({
     bodyColor: '#3b82f6',
     headColor: '#fde68a',
@@ -31,6 +32,14 @@ export default function InteractivePage() {
   const router = useRouter()
   const { user, loading } = useAuth()
   const supabase = createClient()
+
+  // Check if user has already accepted the construction warning
+  useEffect(() => {
+    const accepted = localStorage.getItem('wavewatch_construction_warning_accepted')
+    if (accepted === 'true') {
+      setHasAcceptedWarning(true)
+    }
+  }, [])
 
   useEffect(() => {
     if (loading) return
@@ -82,7 +91,13 @@ export default function InteractivePage() {
       if (interactiveProfile && interactiveProfile.username && interactiveProfile.username.trim() !== '') {
         console.log('[v0] Found existing interactive profile')
         setHasProfile(true)
-        setShowConstructionWarning(true)
+        // Check if user already accepted the warning
+        const alreadyAccepted = localStorage.getItem('wavewatch_construction_warning_accepted') === 'true'
+        if (alreadyAccepted) {
+          setShowWorld(true)
+        } else {
+          setShowConstructionWarning(true)
+        }
       } else {
         console.log('[v0] No interactive profile found, showing username input')
         setHasProfile(false)
@@ -132,10 +147,16 @@ export default function InteractivePage() {
       }
 
       console.log('[v0] Interactive profile created successfully:', data)
-      
+
       setHasProfile(true)
       setShowOnboarding(false)
-      setShowConstructionWarning(true)
+      // Check if user already accepted the warning
+      const alreadyAccepted = localStorage.getItem('wavewatch_construction_warning_accepted') === 'true'
+      if (alreadyAccepted) {
+        setShowWorld(true)
+      } else {
+        setShowConstructionWarning(true)
+      }
     } catch (err) {
       console.error('[v0] Unexpected error during profile creation:', err)
       alert(`Erreur inattendue: ${err}`)
@@ -143,6 +164,9 @@ export default function InteractivePage() {
   }
 
   const handleEnterWorld = () => {
+    // Save that user accepted the warning
+    localStorage.setItem('wavewatch_construction_warning_accepted', 'true')
+    setHasAcceptedWarning(true)
     setShowConstructionWarning(false)
     setShowWorld(true)
   }

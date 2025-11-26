@@ -228,6 +228,86 @@ function CameraFollower({
   return null
 }
 
+// FirstPersonCamera - Caméra première personne avec contrôle souris
+function FirstPersonCamera({
+  position,
+  rotation,
+  onRotationChange
+}: {
+  position: { x: number; y: number; z: number }
+  rotation: { yaw: number; pitch: number }
+  onRotationChange: (yaw: number, pitch: number) => void
+}) {
+  const { camera, gl } = useThree()
+  const isLocked = useRef(false)
+  const rotationRef = useRef(rotation)
+  const onRotationChangeRef = useRef(onRotationChange)
+
+  // Keep refs updated
+  useEffect(() => {
+    rotationRef.current = rotation
+  }, [rotation])
+
+  useEffect(() => {
+    onRotationChangeRef.current = onRotationChange
+  }, [onRotationChange])
+
+  useEffect(() => {
+    const canvas = gl.domElement
+
+    const handleClick = () => {
+      if (!isLocked.current) {
+        canvas.requestPointerLock()
+      }
+    }
+
+    const handleLockChange = () => {
+      isLocked.current = document.pointerLockElement === canvas
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isLocked.current) return
+
+      const sensitivity = 0.002
+      const currentRotation = rotationRef.current
+      const newYaw = currentRotation.yaw - e.movementX * sensitivity
+      const newPitch = Math.max(
+        -Math.PI / 2 + 0.1,
+        Math.min(Math.PI / 2 - 0.1, currentRotation.pitch - e.movementY * sensitivity)
+      )
+
+      onRotationChangeRef.current(newYaw, newPitch)
+    }
+
+    canvas.addEventListener('click', handleClick)
+    document.addEventListener('pointerlockchange', handleLockChange)
+    document.addEventListener('mousemove', handleMouseMove)
+
+    return () => {
+      canvas.removeEventListener('click', handleClick)
+      document.removeEventListener('pointerlockchange', handleLockChange)
+      document.removeEventListener('mousemove', handleMouseMove)
+      if (document.pointerLockElement === canvas) {
+        document.exitPointerLock()
+      }
+    }
+  }, [gl])
+
+  useFrame(() => {
+    // Position de la caméra à la hauteur des yeux
+    camera.position.set(position.x, position.y + 1.6, position.z)
+
+    // Direction de la caméra basée sur yaw et pitch
+    const lookX = position.x + Math.sin(rotation.yaw) * Math.cos(rotation.pitch)
+    const lookY = position.y + 1.6 + Math.sin(rotation.pitch)
+    const lookZ = position.z + Math.cos(rotation.yaw) * Math.cos(rotation.pitch)
+
+    camera.lookAt(lookX, lookY, lookZ)
+  })
+
+  return null
+}
+
 function RealisticTree({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
@@ -361,6 +441,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [isMobileMode, setIsMobileMode] = useState(false)
   const [controlMode, setControlMode] = useState<"auto" | "pc" | "mobile">("auto")
   const [povMode, setPovMode] = useState(false)
+  const [fpsRotation, setFpsRotation] = useState({ yaw: 0, pitch: 0 })
 
   const [countdown, setCountdown] = useState<string>("")
 
@@ -370,6 +451,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const keysPressed = useRef<Set<string>>(new Set()) // Ref for tracking pressed keys
   const cameraAngle = useRef<number>(0) // Ref for tracking camera azimuth angle
   const orbitControlsRef = useRef<any>(null) // Ref for OrbitControls
+  const lastDbUpdate = useRef<number>(0) // Throttle DB updates
 
   const isMoving = movement.x !== 0 || movement.z !== 0
 
@@ -775,13 +857,20 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       if (forward !== 0 || right !== 0) {
         // Mouvement relatif à l'angle de la caméra
-        const camAngle = cameraAngle.current
-        // La direction "avant" est opposée à la caméra (caméra regarde le personnage)
-        const forwardAngle = camAngle + Math.PI
+        let moveAngle: number
+        if (povMode) {
+          // En mode POV (première personne), utiliser fpsRotation.yaw directement
+          moveAngle = fpsRotation.yaw
+        } else {
+          // En mode 3ème personne, utiliser l'angle de la caméra orbitale
+          const camAngle = cameraAngle.current
+          // La direction "avant" est opposée à la caméra (caméra regarde le personnage)
+          moveAngle = camAngle + Math.PI
+        }
 
         // Calculer le mouvement en coordonnées monde
-        const dx = Math.sin(forwardAngle) * forward + Math.cos(forwardAngle) * right
-        const dz = Math.cos(forwardAngle) * forward - Math.sin(forwardAngle) * right
+        const dx = Math.sin(moveAngle) * forward + Math.cos(moveAngle) * right
+        const dz = Math.cos(moveAngle) * forward - Math.sin(moveAngle) * right
 
         // Faire tourner le personnage vers la direction du mouvement
         if (dx !== 0 || dz !== 0) {
@@ -803,15 +892,20 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             z: newZ,
           }
 
-          supabase
-            .from("interactive_profiles")
-            .update({
-              position_x: newPos.x,
-              position_y: newPos.y,
-              position_z: newPos.z,
-            })
-            .eq("user_id", userId)
-            .then()
+          // Throttle DB updates to every 300ms to reduce lag
+          const now = Date.now()
+          if (now - lastDbUpdate.current > 300) {
+            lastDbUpdate.current = now
+            supabase
+              .from("interactive_profiles")
+              .update({
+                position_x: newPos.x,
+                position_y: newPos.y,
+                position_z: newPos.z,
+              })
+              .eq("user_id", userId)
+              .then()
+          }
 
           return newPos
         })
@@ -821,7 +915,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }, 50)
 
     return () => clearInterval(interval)
-  }, [userId, isSeatsLocked, mySeat]) // isSeatsLocked is now effectively unused
+  }, [userId, isSeatsLocked, mySeat, povMode, fpsRotation.yaw]) // isSeatsLocked is now effectively unused
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -1025,6 +1119,27 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     return () => clearInterval(interval)
   }, [])
+
+  // Fonction pour basculer le mode POV en conservant la direction de vue
+  const togglePovMode = useCallback(() => {
+    if (!povMode && orbitControlsRef.current) {
+      // Passage en mode première personne - calculer la direction actuelle de la caméra
+      const controls = orbitControlsRef.current
+      const azimuth = controls.getAzimuthalAngle() // Angle horizontal
+      const polar = controls.getPolarAngle() // Angle vertical (0 = haut, PI = bas)
+
+      // Convertir l'angle polaire en pitch (0 = horizontal, négatif = vers le bas)
+      const pitch = Math.PI / 2 - polar
+
+      // Le yaw de OrbitControls est l'opposé de ce qu'on veut pour FPS
+      // En OrbitControls, la caméra regarde VERS le joueur depuis l'angle azimuth
+      // En FPS, on veut regarder DEPUIS le joueur vers l'extérieur
+      const yaw = azimuth + Math.PI
+
+      setFpsRotation({ yaw, pitch })
+    }
+    setPovMode(!povMode)
+  }, [povMode])
 
   const handleEmoji = (emoji: string) => {
     if (!userProfile) {
@@ -1623,7 +1738,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         }}
       >
         {povMode && (
-          <PerspectiveCamera makeDefault position={[myPosition.x, myPosition.y + 1.5, myPosition.z]} fov={75} />
+          <>
+            <PerspectiveCamera makeDefault fov={75} />
+            <FirstPersonCamera
+              position={myPosition}
+              rotation={fpsRotation}
+              onRotationChange={(yaw, pitch) => setFpsRotation({ yaw, pitch })}
+            />
+          </>
         )}
 
         {worldSettings.worldMode === "day" && (
@@ -2841,6 +2963,26 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
+      {/* Bouton Messages - à gauche du bouton emojis */}
+      {worldSettings.enableChat && (
+        <button
+          onClick={() => setShowChatInput(true)}
+          className="fixed bottom-6 right-28 w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
+        >
+          <MessageCircle className="w-8 h-8 text-white" />
+        </button>
+      )}
+
+      {/* Bouton changement de vue POV - au dessus du bouton emojis */}
+      <button
+        onClick={togglePovMode}
+        className="fixed bottom-28 right-6 w-16 h-16 bg-purple-600 hover:bg-purple-700 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
+        title={povMode ? "Vue troisième personne" : "Vue première personne"}
+      >
+        {povMode ? <Eye className="w-8 h-8 text-white" /> : <EyeOff className="w-8 h-8 text-white" />}
+      </button>
+
+      {/* Bouton Emojis */}
       {worldSettings.enableEmojis && (
         <button
           onClick={() => setShowQuickActions(!showQuickActions)}
@@ -2874,13 +3016,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       {/* Boutons fixes en bas à droite - visible dans une salle */}
       {(currentCinemaRoom || currentRoom === "stadium") && (
-        <div className="fixed bottom-6 right-32 z-30 flex items-center gap-3">
+        <div className="fixed bottom-6 right-48 z-30 flex items-center gap-3">
           {/* Bouton S'asseoir/Se lever - uniquement dans le cinéma */}
           {currentCinemaRoom && (
             mySeat === null ? (
               <button
                 onClick={handleSitInAnySeat}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 transition-all hover:scale-105 border-2 border-white/20"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
               >
                 <span className="text-lg">💺</span>
                 <span className="font-medium">S'asseoir</span>
@@ -2888,7 +3030,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             ) : (
               <button
                 onClick={() => handleSitInSeat(mySeat)}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 transition-all hover:scale-105 border-2 border-white/20"
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
               >
                 <span className="text-lg">🚶</span>
                 <span className="font-medium">Se lever</span>
@@ -2898,7 +3040,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           {/* Bouton Sortir */}
           <button
             onClick={currentCinemaRoom ? handleLeaveRoom : handleLeaveStadium}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 transition-all hover:scale-105 border-2 border-white/20"
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
           >
             <LogOut className="w-5 h-5" />
             <span className="font-medium">Sortir</span>
@@ -2906,27 +3048,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
-      {isMobileMode && !isFullscreen && (
-        <button
-          onClick={() => setPovMode(!povMode)}
-          className="fixed bottom-6 left-6 z-20 w-20 h-20 bg-blue-600 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30"
-        >
-          {povMode ? <Eye className="w-10 h-10 text-white" /> : <EyeOff className="w-10 h-10 text-white" />}
-        </button>
-      )}
 
-      {isMobileMode && worldSettings.enableChat && (
-        <button
-          onClick={() => setShowChatInput(true)}
-          className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-20 w-20 h-20 bg-green-500 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 transition-transform border-4 border-white/30"
-        >
-          <MessageCircle className="w-10 h-10 text-white" />
-        </button>
-      )}
 
       {!isMobileMode && (
         <div className="absolute bottom-4 left-4 bg-black/50 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-sm">
-          ⌨️ Touches ZQSD ou Flèches pour se déplacer
+          {povMode ? (
+            <>🎮 Cliquez pour contrôler la caméra | ESC pour libérer | ZQSD pour bouger | Shift = Sprint</>
+          ) : (
+            <>⌨️ Touches ZQSD ou Flèches pour se déplacer | Shift = Sprint</>
+          )}
         </div>
       )}
 
@@ -2988,7 +3118,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <div className="flex items-center justify-between">
                 <label className="text-white font-medium">Mode POV</label>
                 <button
-                  onClick={() => setPovMode(!povMode)}
+                  onClick={togglePovMode}
                   className={`w-12 h-6 rounded-full transition-colors ${povMode ? "bg-blue-500" : "bg-gray-600"}`}
                 >
                   <div
