@@ -257,7 +257,9 @@ function FirstPersonCamera({
 
     const handleClick = () => {
       if (!isLocked.current) {
-        canvas.requestPointerLock()
+        canvas.requestPointerLock().catch(() => {
+          // Ignore error when user exits lock before request completes
+        })
       }
     }
 
@@ -565,11 +567,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       currentRoom === null && { x: 12, z: -5, width: 2, depth: 2 },
       currentRoom === null && { x: -12, z: -5, width: 2, depth: 2 },
 
-      // Arcade Room boundaries (if player is inside)
-      currentRoom === "arcade" && { x: 0, z: 0, width: 50, depth: 40 },
-      // Stadium Room (if player is inside)
-      currentRoom === "stadium" && { x: 0, z: 0, width: 60, depth: 40 },
     ].filter(Boolean) // Filter out null values from the conditional zones
+
+    // Dans les salles spéciales (stade, arcade), pas de collision - libre mouvement
+    if (currentRoom === "stadium" || currentRoom === "arcade") {
+      return false
+    }
 
     for (const zone of collisionZones) {
       const halfWidth = zone.width / 2
@@ -879,8 +882,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         }
         setMovement({ x: dx, z: dz })
         setMyPosition((prev) => {
-          const newX = Math.max(-20, Math.min(20, prev.x + dx))
-          const newZ = Math.max(-20, Math.min(20, prev.z + dz))
+          // Limites différentes selon la salle
+          let maxX = 20, maxZ = 20
+          if (currentRoom === "stadium") {
+            maxX = 28 // Stade plus grand
+            maxZ = 18
+          } else if (currentRoom === "arcade") {
+            maxX = 23
+            maxZ = 18
+          }
+
+          const newX = Math.max(-maxX, Math.min(maxX, prev.x + dx))
+          const newZ = Math.max(-maxZ, Math.min(maxZ, prev.z + dz))
 
           if (checkCollision(newX, newZ)) {
             return prev // Don't move if collision detected
@@ -915,7 +928,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }, 50)
 
     return () => clearInterval(interval)
-  }, [userId, isSeatsLocked, mySeat, povMode, fpsRotation.yaw]) // isSeatsLocked is now effectively unused
+  }, [userId, isSeatsLocked, mySeat, povMode, fpsRotation.yaw, currentRoom]) // currentRoom for room-specific boundaries
 
   useEffect(() => {
     const loadMessages = async () => {
