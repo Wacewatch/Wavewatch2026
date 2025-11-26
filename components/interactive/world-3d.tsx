@@ -67,7 +67,11 @@ function RealisticAvatar({
   isMoving: boolean
 }) {
   const groupRef = useRef<THREE.Group>(null)
-  const [time, setTime] = useState(0)
+  const leftLegRef = useRef<THREE.Mesh>(null)
+  const rightLegRef = useRef<THREE.Mesh>(null)
+  const leftArmRef = useRef<THREE.Mesh>(null)
+  const rightArmRef = useRef<THREE.Mesh>(null)
+  const timeRef = useRef(0)
 
   const style = {
     bodyColor: avatarStyle?.bodyColor || "#3b82f6",
@@ -80,19 +84,22 @@ function RealisticAvatar({
   }
 
   useFrame((state, delta) => {
-    if (isMoving && groupRef.current) {
-      setTime((t) => t + delta * 5)
-      // Animate legs walking
-      const leftLeg = groupRef.current.children[3]
-      const rightLeg = groupRef.current.children[4]
-      if (leftLeg) leftLeg.rotation.x = Math.sin(time) * 0.5
-      if (rightLeg) rightLeg.rotation.x = Math.sin(time + Math.PI) * 0.5
+    if (isMoving) {
+      timeRef.current += delta * 8 // Vitesse d'animation
 
-      // Animate arms swinging
-      const leftArm = groupRef.current.children[1]
-      const rightArm = groupRef.current.children[2]
-      if (leftArm) leftArm.rotation.x = Math.sin(time + Math.PI) * 0.3
-      if (rightArm) rightArm.rotation.x = Math.sin(time) * 0.3
+      // Animate legs walking
+      if (leftLegRef.current) leftLegRef.current.rotation.x = Math.sin(timeRef.current) * 0.6
+      if (rightLegRef.current) rightLegRef.current.rotation.x = Math.sin(timeRef.current + Math.PI) * 0.6
+
+      // Animate arms swinging (opposé aux jambes)
+      if (leftArmRef.current) leftArmRef.current.rotation.x = Math.sin(timeRef.current + Math.PI) * 0.4
+      if (rightArmRef.current) rightArmRef.current.rotation.x = Math.sin(timeRef.current) * 0.4
+    } else {
+      // Reset position when not moving
+      if (leftLegRef.current) leftLegRef.current.rotation.x = 0
+      if (rightLegRef.current) rightLegRef.current.rotation.x = 0
+      if (leftArmRef.current) leftArmRef.current.rotation.x = 0
+      if (rightArmRef.current) rightArmRef.current.rotation.x = 0
     }
   })
 
@@ -131,25 +138,25 @@ function RealisticAvatar({
       )}
 
       {/* Left Arm */}
-      <mesh castShadow position={[-0.35, 1.2, 0]}>
+      <mesh ref={leftArmRef} castShadow position={[-0.35, 1.2, 0]}>
         <boxGeometry args={[0.15, 0.5, 0.15]} />
         <meshStandardMaterial color={style.skinTone} />
       </mesh>
 
       {/* Right Arm */}
-      <mesh castShadow position={[0.35, 1.2, 0]}>
+      <mesh ref={rightArmRef} castShadow position={[0.35, 1.2, 0]}>
         <boxGeometry args={[0.15, 0.5, 0.15]} />
         <meshStandardMaterial color={style.skinTone} />
       </mesh>
 
       {/* Left Leg */}
-      <mesh castShadow position={[-0.15, 0.65, 0]}>
+      <mesh ref={leftLegRef} castShadow position={[-0.15, 0.65, 0]}>
         <boxGeometry args={[0.15, 0.6, 0.15]} />
         <meshStandardMaterial color={style.bodyColor} />
       </mesh>
 
       {/* Right Leg */}
-      <mesh castShadow position={[0.15, 0.65, 0]}>
+      <mesh ref={rightLegRef} castShadow position={[0.15, 0.65, 0]}>
         <boxGeometry args={[0.15, 0.6, 0.15]} />
         <meshStandardMaterial color={style.bodyColor} />
       </mesh>
