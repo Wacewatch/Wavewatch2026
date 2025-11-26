@@ -34,6 +34,7 @@ import {
 } from "lucide-react"
 import type * as THREE from "three"
 import { useRouter } from "next/navigation" // Assuming router is needed for navigation
+import { HLSVideoScreen } from "./hls-video-screen"
 
 // Initialize Supabase client
 const supabase = createClient()
@@ -1809,7 +1810,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           </>
         )}
 
-        <fog attach="fog" args={["#87CEEB", 10, 50]} />
         <hemisphereLight intensity={0.3} groundColor="#6b7280" />
 
         {/* Update rendering logic to use currentRoom state instead of userProfile */}
@@ -2321,14 +2321,25 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </mesh>
 
               {stadium?.embed_url && (
-                <Html transform position={[0, 0, 0.6]} style={{ width: "3500px", height: "1800px" }}>
-                  <iframe
+                stadium.embed_url.includes('.m3u8') ? (
+                  <HLSVideoScreen
                     src={stadium.embed_url}
-                    className="w-full h-full rounded"
-                    allowFullScreen
-                    allow="autoplay; fullscreen"
+                    width={38}
+                    height={19}
+                    position={[0, 0, 0.6]}
+                    autoplay={true}
+                    muted={false}
                   />
-                </Html>
+                ) : (
+                  <Html transform position={[0, 0, 0.6]} style={{ width: "3500px", height: "1800px" }}>
+                    <iframe
+                      src={stadium.embed_url}
+                      className="w-full h-full rounded"
+                      allowFullScreen
+                      allow="autoplay; fullscreen"
+                    />
+                  </Html>
+                )
               )}
             </group>
 
@@ -2387,6 +2398,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <meshStandardMaterial color="#1a0f0a" />
             </mesh>
 
+            {/* Cinema Screen - HLS stream only for room 1 */}
+            {currentCinemaRoom?.room_number === 1 && !showMovieFullscreen && (
+              <group position={[0, 3, -15]}>
+                <HLSVideoScreen
+                  key={`hls-room-${currentCinemaRoom.id}`}
+                  src="https://amg02162-newenconnect-amg02162c2-rakuten-us-1981.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg02162-newenconnect-100pour100docs-rakutenus/playlist.m3u8"
+                  width={13.5}
+                  height={7.5}
+                  position={[0, 0, 0]}
+                  autoplay={true}
+                  muted={false}
+                />
+              </group>
+            )}
+
             {currentCinemaRoom &&
               currentCinemaRoom !== "world" &&
               (() => {
@@ -2397,18 +2423,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
                 return (
                   <group position={[0, 3, -20]}>
-                    {/* Cinema Screen Background */}
-                    <mesh>
-                      <planeGeometry args={[14, 8]} />
-                      <meshStandardMaterial color="#1a1a1a" />
-                    </mesh>
-
-                    {/* Screen Border */}
-                    <mesh position={[0, 0, 0.1]}>
-                      <planeGeometry args={[13.5, 7.5]} />
-                      <meshStandardMaterial color="#000000" />
-                    </mesh>
-
                     {/* Movie Info and Countdown - Display before movie starts */}
                     {!isMovieStarted && (
                       <>
@@ -2430,8 +2444,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                       </>
                     )}
 
-                    {/* Movie Iframe - Display when movie has started and NOT in fullscreen */}
-                    {isMovieStarted && room.embed_url && !showMovieFullscreen && (
+                    {/* Movie Display - iframe fallback for non-HLS URLs from DB */}
+                    {isMovieStarted && room.embed_url && !showMovieFullscreen && !room.embed_url.includes('.m3u8') && (
                       <Html transform style={{ width: "1300px", height: "720px" }}>
                         <iframe
                           src={room.embed_url}
@@ -2717,7 +2731,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       {mySeat !== null && currentCinemaRoom?.embed_url && !showMovieFullscreen && (
         <button
           onClick={() => setShowMovieFullscreen(true)}
-          className="absolute bottom-24 right-4 z-10 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 shadow-lg flex items-center gap-2"
+          className="absolute bottom-24 right-36 z-10 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 shadow-lg flex items-center gap-2"
         >
           <Play className="w-5 h-5" />
           Voir le Film en Plein Écran
