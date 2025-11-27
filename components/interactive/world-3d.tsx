@@ -31,10 +31,13 @@ import {
   Trophy,
   Film,
   Sparkles,
+  ExternalLink,
 } from "lucide-react"
 import type * as THREE from "three"
 import { useRouter } from "next/navigation" // Assuming router is needed for navigation
 import { HLSVideoScreen } from "./hls-video-screen"
+import { VideoScreen } from "./video-screen"
+import { ImageScreen } from "./image-screen"
 
 // Initialize Supabase client
 const supabase = createClient()
@@ -425,9 +428,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   // Map state
   const [showMap, setShowMap] = useState(false)
-  const [arcadeMachines, setArcadeMachines] = useState<any[]>([])
+
+  // Liste locale des machines d'arcade (plus de connexion BDD)
+  const localArcadeMachines = [
+    { id: 1, name: "Game.Onl", url: "https://gam.onl", media: { type: 'video', src: "https://gam.onl/user/main/videos/arcade.mp4" }, openInNewTab: false },
+    { id: 2, name: "RetroGames.onl", url: "https://www.retrogames.onl/", media: { type: 'image', src: "/arcade/RetroGames.onl.png" }, openInNewTab: true },
+    { id: 3, name: "EmuOS", url: "https://emupedia.net/beta/emuos/", media: { type: 'image', src: "/arcade/emupedia.net.png" }, openInNewTab: true },
+    { id: 4, name: "RetroGames.me", url: "https://retrogames.me", media: { type: 'image', src: "/arcade/RetroGames.me.png" }, openInNewTab: false },
+    { id: 5, name: "Venge.io", url: "https://venge.io", media: { type: 'image', src: "/arcade/Venge.io.png" }, openInNewTab: false },
+    { id: 6, name: "WebRcade", url: "https://play.webrcade.com", media: { type: 'image', src: "/arcade/WebArcade.png" }, openInNewTab: false },
+    { id: 7, name: "PointerPointer", url: "https://pointerpointer.com", media: { type: 'image', src: "https://pointerpointer.com/like3.jpg" }, openInNewTab: false },
+  ]
+
+  const [arcadeMachines, setArcadeMachines] = useState<any[]>(localArcadeMachines)
   const [showArcade, setShowArcade] = useState(false)
   const [currentArcadeMachine, setCurrentArcadeMachine] = useState<any>(null)
+  const [pendingExternalMachine, setPendingExternalMachine] = useState<any>(null) // Pour la modal pub avant ouverture externe
+  const [externalCountdown, setExternalCountdown] = useState(5) // Compte à rebours 5 secondes
   const [stadium, setStadium] = useState<any>(null)
   const [showStadium, setShowStadium] = useState(false)
   const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
@@ -700,15 +717,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }, [userId])
 
-  useEffect(() => {
-    const loadArcadeMachines = async () => {
-      const { data } = await supabase.from("retrogaming_sources").select("*").eq("is_active", true).order("name")
-
-      if (data) setArcadeMachines(data)
-    }
-
-    loadArcadeMachines()
-  }, [])
+  // Arcade machines sont maintenant définies localement dans localArcadeMachines
 
   useEffect(() => {
     const loadStadium = async () => {
@@ -1327,8 +1336,37 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const handleSelectArcadeMachine = (machine: any) => {
-    setCurrentArcadeMachine(machine)
-    setShowArcade(false) // Close the list of machines
+    if (machine.openInNewTab) {
+      // Afficher la modal avec compte à rebours avant d'ouvrir dans un nouvel onglet
+      setPendingExternalMachine(machine)
+      setExternalCountdown(5)
+      setShowArcade(false)
+    } else {
+      setCurrentArcadeMachine(machine)
+      setShowArcade(false) // Close the list of machines
+    }
+  }
+
+  // Effet pour le compte à rebours
+  useEffect(() => {
+    if (pendingExternalMachine && externalCountdown > 0) {
+      const timer = setTimeout(() => {
+        setExternalCountdown(externalCountdown - 1)
+      }, 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [pendingExternalMachine, externalCountdown])
+
+  const handleOpenExternalMachine = () => {
+    if (pendingExternalMachine && externalCountdown === 0) {
+      window.open(pendingExternalMachine.url, '_blank')
+      setPendingExternalMachine(null)
+    }
+  }
+
+  const handleCloseExternalModal = () => {
+    setPendingExternalMachine(null)
+    setExternalCountdown(5)
   }
 
   const handleCloseArcadeMachine = () => {
@@ -2169,15 +2207,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
 
-            {/* Arcade Machines - arranged in rows */}
-            {arcadeMachines.slice(0, 12).map((machine, idx) => {
-              const row = Math.floor(idx / 4)
-              const col = idx % 4
-              const x = -15 + col * 10
-              const z = -10 + row * 10
+            {/* Arcade Machines - aligned at the back wall */}
+            {arcadeMachines.slice(0, 7).map((machine, idx) => {
+              // All machines at back wall, spread evenly
+              const totalMachines = Math.min(arcadeMachines.length, 7)
+              const spacing = 5
+              const totalWidth = (totalMachines - 1) * spacing
+              const x = -totalWidth / 2 + idx * spacing
+              const z = -15
+              const rotationY = 0  // All face forward
 
               return (
-                <group key={machine.id} position={[x, 0, z]}>
+                <group key={machine.id} position={[x, 0, z]} rotation={[0, rotationY, 0]}>
                   {/* Machine Cabinet */}
                   <mesh position={[0, 1.5, 0]} castShadow>
                     <boxGeometry args={[2.5, 3, 1.5]} />
@@ -2188,11 +2229,29 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                     />
                   </mesh>
 
-                  {/* Screen */}
-                  <mesh position={[0, 2, 0.76]}>
-                    <planeGeometry args={[2, 1.5]} />
-                    <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={0.5} />
-                  </mesh>
+                  {/* Screen - Video or Image from machine.media */}
+                  <group position={[0, 2, 0.76]}>
+                    {machine.media?.type === 'video' ? (
+                      <VideoScreen
+                        src={machine.media.src}
+                        width={2}
+                        height={1.5}
+                        muted={true}
+                        loop={true}
+                      />
+                    ) : machine.media?.type === 'image' ? (
+                      <ImageScreen
+                        src={machine.media.src}
+                        width={2}
+                        height={1.5}
+                      />
+                    ) : (
+                      <mesh>
+                        <planeGeometry args={[2, 1.5]} />
+                        <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={0.5} />
+                      </mesh>
+                    )}
+                  </group>
 
                   {/* Control Panel */}
                   <mesh position={[0, 0.8, 1]} rotation={[-Math.PI / 6, 0, 0]}>
@@ -2200,22 +2259,26 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                     <meshStandardMaterial color="#1a1a1a" />
                   </mesh>
 
-                  {/* Machine name label */}
-                  <Html position={[0, 3.5, 0]} center>
-                    <div className="bg-black/80 text-white px-3 py-1 rounded text-sm font-bold whitespace-nowrap">
-                      {machine.name}
-                    </div>
-                  </Html>
+                  {/* Machine name label - hide when a game or modal is open */}
+                  {!currentArcadeMachine && !showArcade && !pendingExternalMachine && (
+                    <Html position={[0, 3.5, 0]} center occlude>
+                      <div className="bg-black/80 text-white px-3 py-1 rounded text-sm font-bold whitespace-nowrap">
+                        {machine.name}
+                      </div>
+                    </Html>
+                  )}
 
-                  {/* Interaction button */}
-                  <Html position={[0, 0.5, 1.5]} center>
-                    <button
-                      onClick={() => handleSelectArcadeMachine(machine)}
-                      className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white px-4 py-2 rounded-lg font-bold transform hover:scale-110 transition-all shadow-lg"
-                    >
-                      🎮 Jouer
-                    </button>
-                  </Html>
+                  {/* Interaction button - hide when a game or modal is open */}
+                  {!currentArcadeMachine && !showArcade && !pendingExternalMachine && (
+                    <Html position={[0, 0.5, 1.5]} center occlude>
+                      <button
+                        onClick={() => handleSelectArcadeMachine(machine)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1.5 rounded font-medium transition-all hover:scale-105 shadow-md"
+                      >
+                        Jouer
+                      </button>
+                    </Html>
+                  )}
 
                   {/* Light above machine */}
                   <pointLight position={[0, 4, 0]} intensity={1.5} distance={8} color="#ff00ff" />
@@ -2223,32 +2286,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               )
             })}
 
-            {/* Exit door at back */}
-            <group position={[0, 0, 18]}>
-              <mesh position={[0, 2.5, 0]}>
-                <boxGeometry args={[4, 5, 0.3]} />
-                <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={1} />
-              </mesh>
-              <Html position={[0, 5.5, 0]} center>
+            {/* Button to show all machines list */}
+            {!currentArcadeMachine && !showArcade && !pendingExternalMachine && (
+              <Html position={[0, 1, 15]} center occlude>
                 <button
-                  onClick={handleLeaveArcade}
-                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg"
+                  onClick={() => setShowArcade(true)}
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-bold shadow-xl flex items-center gap-2"
                 >
-                  🚪 Sortir de l'Arcade
+                  <Gamepad2 className="w-5 h-5" />
+                  Voir toutes les machines
                 </button>
               </Html>
-            </group>
-
-            {/* Button to show all machines list */}
-            <Html position={[0, 1, 15]} center>
-              <button
-                onClick={() => setShowArcade(true)}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-bold shadow-xl flex items-center gap-2"
-              >
-                <Gamepad2 className="w-5 h-5" />
-                Voir toutes les machines
-              </button>
-            </Html>
+            )}
           </>
         ) : currentRoom === "stadium" ? (
           <>
@@ -3049,7 +3098,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {/* Boutons fixes en bas à droite - visible dans une salle */}
-      {(currentCinemaRoom || currentRoom === "stadium") && (
+      {(currentCinemaRoom || currentRoom === "stadium" || currentRoom === "arcade") && (
         <div className="fixed bottom-6 right-48 z-30 flex items-center gap-3">
           {/* Bouton S'asseoir/Se lever - uniquement dans le cinéma */}
           {currentCinemaRoom && (
@@ -3073,7 +3122,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           )}
           {/* Bouton Sortir */}
           <button
-            onClick={currentCinemaRoom ? handleLeaveRoom : handleLeaveStadium}
+            onClick={currentCinemaRoom ? handleLeaveRoom : currentRoom === "arcade" ? handleLeaveArcade : handleLeaveStadium}
             className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
           >
             <LogOut className="w-5 h-5" />
@@ -3296,6 +3345,72 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             allow="gamepad; fullscreen"
             allowFullScreen
           />
+        </div>
+      )}
+
+      {/* Modal avec compte à rebours avant ouverture externe */}
+      {pendingExternalMachine && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-purple-900 to-pink-900 rounded-2xl max-w-lg w-full p-6 border-2 border-purple-400 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3 text-white">
+                <Gamepad2 className="w-6 h-6 text-pink-400" />
+                <span className="font-bold text-xl">{pendingExternalMachine.name}</span>
+              </div>
+              <button
+                onClick={handleCloseExternalModal}
+                className="text-white/60 hover:text-white transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Compte à rebours */}
+            <div className="flex flex-col items-center justify-center py-8">
+              {externalCountdown > 0 ? (
+                <>
+                  <div className="text-7xl font-bold text-white mb-4 animate-pulse">
+                    {externalCountdown}
+                  </div>
+                  <p className="text-white/70 text-lg">
+                    Veuillez patienter...
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-5xl mb-4">🎮</div>
+                  <p className="text-white text-lg font-medium">
+                    Prêt à jouer !
+                  </p>
+                </>
+              )}
+            </div>
+
+            <p className="text-white/60 text-sm mb-6 text-center">
+              Ce jeu va s&apos;ouvrir dans un nouvel onglet
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleCloseExternalModal}
+                className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 px-4 rounded-xl font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleOpenExternalMachine}
+                disabled={externalCountdown > 0}
+                className={`flex-1 py-3 px-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 ${
+                  externalCountdown > 0
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white'
+                }`}
+              >
+                <ExternalLink className="w-5 h-5" />
+                {externalCountdown > 0 ? `Attendre ${externalCountdown}s` : 'Jouer'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
