@@ -89,15 +89,15 @@ function RealisticAvatar({
 
   useFrame((state, delta) => {
     if (isMoving) {
-      timeRef.current += delta * 8 // Vitesse d'animation
+      timeRef.current += delta * 4 // Vitesse d'animation réduite (était 8)
 
-      // Animate legs walking
-      if (leftLegRef.current) leftLegRef.current.rotation.x = Math.sin(timeRef.current) * 0.6
-      if (rightLegRef.current) rightLegRef.current.rotation.x = Math.sin(timeRef.current + Math.PI) * 0.6
+      // Animate legs walking - amplitude réduite
+      if (leftLegRef.current) leftLegRef.current.rotation.x = Math.sin(timeRef.current) * 0.4
+      if (rightLegRef.current) rightLegRef.current.rotation.x = Math.sin(timeRef.current + Math.PI) * 0.4
 
-      // Animate arms swinging (opposé aux jambes)
-      if (leftArmRef.current) leftArmRef.current.rotation.x = Math.sin(timeRef.current + Math.PI) * 0.4
-      if (rightArmRef.current) rightArmRef.current.rotation.x = Math.sin(timeRef.current) * 0.4
+      // Animate arms swinging (opposé aux jambes) - amplitude réduite
+      if (leftArmRef.current) leftArmRef.current.rotation.x = Math.sin(timeRef.current + Math.PI) * 0.25
+      if (rightArmRef.current) rightArmRef.current.rotation.x = Math.sin(timeRef.current) * 0.25
     } else {
       // Reset position when not moving
       if (leftLegRef.current) leftLegRef.current.rotation.x = 0
@@ -519,6 +519,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const [lastActivity, setLastActivity] = useState(Date.now())
   const [showAFKWarning, setShowAFKWarning] = useState(false)
+  const [showCollisionDebug, setShowCollisionDebug] = useState(false)
 
   useEffect(() => {
     const updateActivity = () => {
@@ -552,54 +553,67 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }, [lastActivity, userId])
 
+  // Collision zones definition with labels for debug visualization
+  // ID format: TYPE_NUMBER (ex: BLDG_1, TREE_1, LAMP_1, BUSH_1)
+  // Pour déplacer un élément, modifie les valeurs x et z correspondantes
+  const collisionZonesData = [
+    // ========== BÂTIMENTS ==========
+    { id: "BLDG_CINEMA", x: 15, z: 0, width: 9, depth: 9, label: "Cinéma", color: "#ef4444" },
+    { id: "BLDG_ARCADE", x: 0, z: 15, width: 10, depth: 10, label: "Arcade", color: "#8b5cf6" },
+    { id: "BLDG_STADIUM", x: 25, z: -15, width: 12, depth: 10, label: "Stade", color: "#22c55e" },
+    // Bâtiments décoratifs (collision active mais pas d'interaction)
+    { id: "BLDG_2", x: -15, z: 5, width: 5, depth: 4, label: "Bâtiment Bleu", color: "#0ea5e9" },
+    { id: "BLDG_3", x: -15, z: -8, width: 4, depth: 4, label: "Bâtiment Orange", color: "#f59e0b" },
+    // Bâtiments désactivés (pas encore fonctionnels) - décommenter pour réactiver
+    // { id: "BLDG_1", x: -15, z: -15, width: 5, depth: 5, label: "Bibliothèque", color: "#7c3aed" },
+    // { id: "BLDG_4", x: -20, z: 15, width: 9, depth: 9, label: "Musée", color: "#dc2626" },
+    // { id: "BLDG_5", x: 20, z: 10, width: 7, depth: 7, label: "Restaurant", color: "#16a34a" },
+    // { id: "BLDG_6", x: 0, z: 25, width: 12, depth: 12, label: "Centre Commercial", color: "#0891b2" },
+
+    // ========== ARBRES ==========
+    { id: "TREE_1", x: -15, z: -15, width: 2, depth: 2, label: "Arbre 1", color: "#166534" },
+    { id: "TREE_2", x: -8, z: -18, width: 2, depth: 2, label: "Arbre 2", color: "#166534" },
+    { id: "TREE_3", x: 8, z: -18, width: 2, depth: 2, label: "Arbre 3", color: "#166534" },
+    { id: "TREE_4", x: 15, z: -15, width: 2, depth: 2, label: "Arbre 4", color: "#166534" },
+    { id: "TREE_5", x: -18, z: 10, width: 2, depth: 2, label: "Arbre 5", color: "#166534" },
+    { id: "TREE_6", x: 18, z: 10, width: 2, depth: 2, label: "Arbre 6", color: "#166534" },
+    { id: "TREE_7", x: -10, z: 15, width: 2, depth: 2, label: "Arbre 7", color: "#166534" },
+    { id: "TREE_8", x: 10, z: 15, width: 2, depth: 2, label: "Arbre 8", color: "#166534" },
+
+    // ========== LAMPADAIRES ==========
+    // Les lampadaires sont rendus à x=-20 avec z venant de [[-10,-10],[10,-10],[-10,10],[10,10]] -> z[1] = -10, -10, 10, 10
+    { id: "LAMP_1", x: -20, z: -10, width: 1, depth: 1, label: "Lampadaire 1", color: "#fbbf24" },
+    { id: "LAMP_2", x: -20, z: 10, width: 1, depth: 1, label: "Lampadaire 2", color: "#fbbf24" },
+
+    // ========== BANCS ==========
+    { id: "BENCH_1", x: -18, z: -12, width: 2, depth: 1, label: "Banc 1", color: "#8b4513" },
+    // BENCH_2 supprimé - trop proche de la fontaine
+    { id: "BENCH_3", x: -18, z: 12, width: 2, depth: 1, label: "Banc 3", color: "#8b4513" },
+
+    // ========== FONTAINE ==========
+    { id: "FOUNTAIN_1", x: -15, z: 0, width: 6, depth: 6, label: "Fontaine", color: "#0ea5e9" },
+
+    // ========== BUISSONS ==========
+    { id: "BUSH_1", x: 5, z: -10, width: 2, depth: 2, label: "Buisson 1", color: "#4ade80" },
+    { id: "BUSH_2", x: -5, z: -10, width: 2, depth: 2, label: "Buisson 2", color: "#4ade80" },
+    { id: "BUSH_3", x: 10, z: 5, width: 2, depth: 2, label: "Buisson 3", color: "#4ade80" },
+    { id: "BUSH_4", x: -10, z: 5, width: 2, depth: 2, label: "Buisson 4", color: "#4ade80" },
+    { id: "BUSH_5", x: 12, z: -5, width: 2, depth: 2, label: "Buisson 5", color: "#4ade80" },
+    { id: "BUSH_6", x: -12, z: -5, width: 2, depth: 2, label: "Buisson 6", color: "#4ade80" },
+  ]
+
   const checkCollision = (newX: number, newZ: number): boolean => {
-    // Collision zones for objects in the world
-    const collisionZones = [
-      // Buildings in main world (only check if NOT in a room)
-      currentRoom === null && { x: 15, z: 0, width: 9, depth: 9 },
-      currentRoom === null && { x: -15, z: -15, width: 5, depth: 5 },
-      currentRoom === null && { x: -15, z: 5, width: 5, depth: 4 },
-      currentRoom === null && { x: -15, z: -8, width: 4, depth: 4 },
-      currentRoom === null && { x: -25, z: 0, width: 8, depth: 8 },
-      currentRoom === null && { x: 25, z: -10, width: 10, depth: 10 },
-      currentRoom === null && { x: -20, z: 15, width: 9, depth: 9 },
-      currentRoom === null && { x: 20, z: 10, width: 7, depth: 7 },
-      currentRoom === null && { x: 0, z: 25, width: 12, depth: 12 },
-
-      // Trees
-      currentRoom === null && { x: -15, z: -15, width: 2, depth: 2 },
-      currentRoom === null && { x: -8, z: -18, width: 2, depth: 2 },
-      currentRoom === null && { x: 8, z: -18, width: 2, depth: 2 },
-      currentRoom === null && { x: 15, z: -15, width: 2, depth: 2 },
-      currentRoom === null && { x: -18, z: 10, width: 2, depth: 2 },
-      currentRoom === null && { x: 18, z: 10, width: 2, depth: 2 },
-      currentRoom === null && { x: -10, z: 15, width: 2, depth: 2 },
-      currentRoom === null && { x: 10, z: 15, width: 2, depth: 2 },
-
-      // Lampposts
-      currentRoom === null && { x: -20, z: -10, width: 1, depth: 1 },
-      currentRoom === null && { x: -20, z: 0, width: 1, depth: 1 },
-      currentRoom === null && { x: -20, z: 10, width: 1, depth: 1 },
-
-      // Fountain
-      currentRoom === null && { x: -15, z: 0, width: 6, depth: 6 },
-
-      // Bushes
-      currentRoom === null && { x: 5, z: -10, width: 2, depth: 2 },
-      currentRoom === null && { x: -5, z: -10, width: 2, depth: 2 },
-      currentRoom === null && { x: 10, z: 5, width: 2, depth: 2 },
-      currentRoom === null && { x: -10, z: 5, width: 2, depth: 2 },
-      currentRoom === null && { x: 12, z: -5, width: 2, depth: 2 },
-      currentRoom === null && { x: -12, z: -5, width: 2, depth: 2 },
-
-    ].filter(Boolean) // Filter out null values from the conditional zones
-
     // Dans les salles spéciales (stade, arcade), pas de collision - libre mouvement
     if (currentRoom === "stadium" || currentRoom === "arcade") {
       return false
     }
 
-    for (const zone of collisionZones) {
+    // Only check collisions in main world
+    if (currentRoom !== null) {
+      return false
+    }
+
+    for (const zone of collisionZonesData) {
       const halfWidth = zone.width / 2
       const halfDepth = zone.depth / 2
 
@@ -900,7 +914,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         setMovement({ x: dx, z: dz })
         setMyPosition((prev) => {
           // Limites différentes selon la salle
-          let maxX = 20, maxZ = 20
+          let maxX = 28, maxZ = 28
           if (currentRoom === "stadium") {
             maxX = 28 // Stade plus grand
             maxZ = 18
@@ -1253,13 +1267,63 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const handleJoystickMove = useCallback(
-    (dx: number, dz: number) => {
-      // if (isSeatsLocked && mySeat !== null) return // Removed seat lock check
+    (joystickX: number, joystickY: number) => {
+      // joystickX = gauche/droite (-1 à 1)
+      // joystickY = haut/bas (-1 à 1, haut = négatif pour "avancer")
+
+      if (joystickX === 0 && joystickY === 0) {
+        setMovement({ x: 0, z: 0 })
+        return
+      }
+
+      // Normaliser les inputs joystick pour avoir une vitesse constante (comme le clavier)
+      // Le clavier utilise toujours speed = 0.15, pas de valeurs variables
+      const magnitude = Math.sqrt(joystickX * joystickX + joystickY * joystickY)
+      const normalizedX = magnitude > 0 ? joystickX / magnitude : 0
+      const normalizedY = magnitude > 0 ? joystickY / magnitude : 0
+
+      // Convertir les inputs joystick en forward/right comme le clavier
+      // Utiliser les valeurs normalisées (toujours -1, 0, ou 1)
+      const forward = -normalizedY // Inverser Y car joystick haut = avancer
+      const right = -normalizedX   // Gauche/droite
+
+      const baseSpeed = 0.15
+
+      // Mouvement relatif à l'angle de la caméra (même logique que le clavier)
+      const camAngle = cameraAngle.current
+      // La direction "avant" est opposée à la caméra (caméra regarde le personnage)
+      const moveAngle = camAngle + Math.PI
+
+      // Calculer le mouvement en coordonnées monde avec la même vitesse que le clavier
+      const worldDx = (Math.sin(moveAngle) * forward + Math.cos(moveAngle) * right) * baseSpeed
+      const worldDz = (Math.cos(moveAngle) * forward - Math.sin(moveAngle) * right) * baseSpeed
+
+      // Faire tourner le personnage vers la direction du mouvement
+      if (worldDx !== 0 || worldDz !== 0) {
+        const targetRotation = Math.atan2(worldDx, worldDz)
+        setMyRotation(targetRotation)
+      }
+
+      // Normaliser pour l'animation : toujours 1 ou 0, pas de valeurs intermédiaires
+      const movementMagnitude = Math.sqrt(worldDx * worldDx + worldDz * worldDz)
+      const normalizedMovementX = movementMagnitude > 0.01 ? worldDx / movementMagnitude : 0
+      const normalizedMovementZ = movementMagnitude > 0.01 ? worldDz / movementMagnitude : 0
+      setMovement({ x: normalizedMovementX, z: normalizedMovementZ })
 
       setMyPosition((prev) => {
-        const speed = 0.15
-        const newX = Math.max(-20, Math.min(20, prev.x + dx * speed))
-        const newZ = Math.max(-20, Math.min(20, prev.z + dz * speed))
+        // Limites différentes selon la salle
+        let maxX = 20, maxZ = 20
+        if (currentRoom === "stadium") {
+          maxX = 28
+          maxZ = 18
+        } else if (currentRoom === "arcade") {
+          maxX = 23
+          maxZ = 18
+        }
+
+        // worldDx et worldDz incluent déjà baseSpeed, pas besoin de multiplier à nouveau
+        const newX = Math.max(-maxX, Math.min(maxX, prev.x + worldDx))
+        const newZ = Math.max(-maxZ, Math.min(maxZ, prev.z + worldDz))
 
         if (checkCollision(newX, newZ)) {
           return prev // Don't move if collision detected
@@ -1267,31 +1331,30 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
         const newPos = {
           x: newX,
-          y: 0.5,
+          y: -0.35,
           z: newZ,
         }
 
-        supabase
-          .from("interactive_profiles")
-          .update({
-            position_x: newPos.x,
-            position_y: newPos.y,
-            position_z: newPos.z,
-          })
-          .eq("user_id", userId)
-          .then()
+        // Throttle DB updates
+        const now = Date.now()
+        if (now - lastDbUpdate.current > 300) {
+          lastDbUpdate.current = now
+          supabase
+            .from("interactive_profiles")
+            .update({
+              position_x: newPos.x,
+              position_y: newPos.y,
+              position_z: newPos.z,
+            })
+            .eq("user_id", userId)
+            .then()
+        }
 
         return newPos
       })
-
-      if (dx !== 0 || dz !== 0) {
-        setMovement({ x: dx, z: dz })
-      } else {
-        setMovement({ x: 0, z: 0 })
-      }
     },
-    [userId, supabase, isSeatsLocked, mySeat],
-  ) // isSeatsLocked and mySeat are now effectively unused here
+    [userId, supabase, currentRoom],
+  )
 
   function handleEnterArcade() {
     setShowArcade(false)
@@ -1859,8 +1922,92 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <meshStandardMaterial color="#4ade80" roughness={0.95} metalness={0} />
             </mesh>
 
-            {/* Arcade building - was Arcade Building - Now OPEN */}
-            <group position={[-25, 0, 0]}>
+            {/* Collision Debug Visualization */}
+            {showCollisionDebug && (
+              <>
+                {/* World Boundary Walls (invisible walls at maxX=28, maxZ=28) */}
+                {/* North wall (Z = 28) */}
+                <mesh position={[0, 2, 28]}>
+                  <boxGeometry args={[56, 4, 0.2]} />
+                  <meshBasicMaterial color="#ff0000" transparent opacity={0.3} />
+                </mesh>
+                {/* South wall (Z = -28) */}
+                <mesh position={[0, 2, -28]}>
+                  <boxGeometry args={[56, 4, 0.2]} />
+                  <meshBasicMaterial color="#ff0000" transparent opacity={0.3} />
+                </mesh>
+                {/* East wall (X = 28) */}
+                <mesh position={[28, 2, 0]}>
+                  <boxGeometry args={[0.2, 4, 56]} />
+                  <meshBasicMaterial color="#ff0000" transparent opacity={0.3} />
+                </mesh>
+                {/* West wall (X = -28) */}
+                <mesh position={[-28, 2, 0]}>
+                  <boxGeometry args={[0.2, 4, 56]} />
+                  <meshBasicMaterial color="#ff0000" transparent opacity={0.3} />
+                </mesh>
+                {/* Floor boundary indicator */}
+                <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+                  <planeGeometry args={[56, 56]} />
+                  <meshBasicMaterial color="#ff0000" transparent opacity={0.1} wireframe />
+                </mesh>
+                {/* Boundary labels */}
+                <Html position={[0, 4.5, 28]} center zIndexRange={[0, 0]}>
+                  <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold pointer-events-none">
+                    MUR NORD (Z=28)
+                  </div>
+                </Html>
+                <Html position={[0, 4.5, -28]} center zIndexRange={[0, 0]}>
+                  <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold pointer-events-none">
+                    MUR SUD (Z=-28)
+                  </div>
+                </Html>
+                <Html position={[28, 4.5, 0]} center zIndexRange={[0, 0]}>
+                  <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold pointer-events-none">
+                    MUR EST (X=28)
+                  </div>
+                </Html>
+                <Html position={[-28, 4.5, 0]} center zIndexRange={[0, 0]}>
+                  <div className="bg-red-600/90 text-white px-3 py-1 rounded text-xs font-bold pointer-events-none">
+                    MUR OUEST (X=-28)
+                  </div>
+                </Html>
+
+                {/* Collision zones */}
+                {collisionZonesData.map((zone, idx) => (
+                  <group key={`collision-debug-${zone.x}-${zone.z}-${zone.label}-${idx}`} position={[zone.x, 0.05, zone.z]}>
+                    {/* Flat box showing collision area */}
+                    <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                      <planeGeometry args={[zone.width, zone.depth]} />
+                      <meshBasicMaterial color={zone.color} transparent opacity={0.5} />
+                    </mesh>
+                    {/* Wireframe border */}
+                    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+                      <planeGeometry args={[zone.width, zone.depth]} />
+                      <meshBasicMaterial color={zone.color} wireframe />
+                    </mesh>
+                    {/* Vertical box to show height */}
+                    <mesh position={[0, 1.5, 0]}>
+                      <boxGeometry args={[zone.width, 3, zone.depth]} />
+                      <meshBasicMaterial color={zone.color} transparent opacity={0.15} />
+                    </mesh>
+                    {/* Label */}
+                    <Html position={[0, 3.5, 0]} center zIndexRange={[0, 0]}>
+                      <div className="bg-black/90 text-white px-3 py-2 rounded-lg text-xs whitespace-nowrap shadow-lg pointer-events-none" style={{ borderColor: zone.color, borderWidth: 2, borderStyle: "solid" }}>
+                        <div className="font-bold text-sm" style={{ color: zone.color }}>{zone.id}</div>
+                        <div className="opacity-80">{zone.label}</div>
+                        <div className="text-[10px] opacity-60 mt-1">
+                          pos: ({zone.x}, {zone.z}) | size: {zone.width}x{zone.depth}
+                        </div>
+                      </div>
+                    </Html>
+                  </group>
+                ))}
+              </>
+            )}
+
+            {/* Arcade building - Entre TREE_7 (-10, 15) et TREE_8 (10, 15) */}
+            <group position={[0, 0, 15]}>
               <mesh position={[0, 3, 0]} castShadow>
                 <boxGeometry args={[10, 6, 10]} />
                 <meshStandardMaterial color="#8b5cf6" roughness={0.7} metalness={0.2} />
@@ -1894,7 +2041,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </Html>
 
               {/* Bouton d'entrée visible quand on est près */}
-              {Math.sqrt(Math.pow(myPosition.x - (-25), 2) + Math.pow(myPosition.z - 0, 2)) < 8 && (
+              {Math.sqrt(Math.pow(myPosition.x - 0, 2) + Math.pow(myPosition.z - 15, 2)) < 8 && (
                 <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
                   <button
                     onClick={handleEnterArcade}
@@ -1965,14 +2112,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </mesh>
             </group>
 
+            {/* BLDG_3 - Bâtiment Orange */}
             <group position={[-15, 0, -8]}>
               <mesh position={[0, 3, 0]} castShadow receiveShadow>
                 <boxGeometry args={[4, 6, 4]} />
                 <meshStandardMaterial color="#f59e0b" />
               </mesh>
-              <mesh position={[0, 6.5, 0]} castShadow>
-                <coneGeometry args={[3, 1.5, 4]} />
+              {/* Toit plat avec bordure */}
+              <mesh position={[0, 6.2, 0]} castShadow>
+                <boxGeometry args={[4.2, 0.4, 4.2]} />
                 <meshStandardMaterial color="#ea580c" />
+              </mesh>
+              {/* Petite structure sur le toit */}
+              <mesh position={[0, 6.8, 0]} castShadow>
+                <boxGeometry args={[1.5, 1, 1.5]} />
+                <meshStandardMaterial color="#dc2626" />
               </mesh>
             </group>
 
@@ -2062,16 +2216,129 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </mesh>
             </group>
 
-            <group position={[-15, 0, -8]}>
+            {/* Bâtiments désactivés - décommenter pour réactiver
+
+            {/* BLDG_1 - Bâtiment Sud-Ouest (Bibliothèque) */}
+            {/*
+            <group position={[-15, 0, -15]}>
+              <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
+                <boxGeometry args={[5, 5, 5]} />
+                <meshStandardMaterial color="#7c3aed" roughness={0.7} />
+              </mesh>
+              <mesh position={[0, 5.5, 0]} castShadow>
+                <boxGeometry args={[5.3, 0.5, 5.3]} />
+                <meshStandardMaterial color="#5b21b6" />
+              </mesh>
+              {[[-2, 2], [2, 2], [-2, -2], [2, -2]].map(([x, z]) => (
+                <mesh key={`col-${x}-${z}`} position={[x, 2.5, z]} castShadow>
+                  <cylinderGeometry args={[0.2, 0.25, 5, 8]} />
+                  <meshStandardMaterial color="#e5e7eb" />
+                </mesh>
+              ))}
+              <Html position={[0, 6.5, 0]} center>
+                <div className="bg-purple-600/90 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg">
+                  📚 Bibliothèque
+                </div>
+              </Html>
+            </group>
+            */}
+
+            {/* BLDG_4 - Bâtiment Nord-Ouest (Musée) */}
+            {/*
+            <group position={[-20, 0, 15]}>
               <mesh position={[0, 3, 0]} castShadow receiveShadow>
-                <boxGeometry args={[4, 6, 4]} />
-                <meshStandardMaterial color="#f59e0b" />
+                <boxGeometry args={[9, 6, 9]} />
+                <meshStandardMaterial color="#dc2626" roughness={0.6} />
               </mesh>
               <mesh position={[0, 6.5, 0]} castShadow>
-                <coneGeometry args={[3, 1.5, 4]} />
-                <meshStandardMaterial color="#ea580c" />
+                <boxGeometry args={[9.3, 0.6, 9.3]} />
+                <meshStandardMaterial color="#991b1b" />
               </mesh>
+              <mesh position={[0, 7.5, 0]} castShadow>
+                <sphereGeometry args={[2.5, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+                <meshStandardMaterial color="#fbbf24" metalness={0.6} roughness={0.3} />
+              </mesh>
+              {[-3, 0, 3].map((x) => (
+                <mesh key={`museum-win-${x}`} position={[x, 3.5, 4.6]}>
+                  <planeGeometry args={[1.8, 2.5]} />
+                  <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={0.3} />
+                </mesh>
+              ))}
+              <Html position={[0, 8.5, 0]} center>
+                <div className="bg-red-600/90 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg">
+                  🏛️ Musée
+                </div>
+              </Html>
             </group>
+            */}
+
+            {/* BLDG_5 - Bâtiment Nord-Est (Restaurant) */}
+            {/*
+            <group position={[20, 0, 10]}>
+              <mesh position={[0, 2, 0]} castShadow receiveShadow>
+                <boxGeometry args={[7, 4, 7]} />
+                <meshStandardMaterial color="#16a34a" roughness={0.7} />
+              </mesh>
+              <mesh position={[0, 4.5, 0]} castShadow>
+                <boxGeometry args={[7.3, 0.5, 7.3]} />
+                <meshStandardMaterial color="#15803d" />
+              </mesh>
+              <mesh position={[-2, 5, -2]} castShadow>
+                <coneGeometry args={[1.2, 0.8, 8]} />
+                <meshStandardMaterial color="#f97316" />
+              </mesh>
+              <mesh position={[2, 5, 2]} castShadow>
+                <coneGeometry args={[1.2, 0.8, 8]} />
+                <meshStandardMaterial color="#ef4444" />
+              </mesh>
+              <mesh position={[0, 4.8, 3.6]}>
+                <boxGeometry args={[4, 0.8, 0.1]} />
+                <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={1} />
+              </mesh>
+              <pointLight position={[0, 5, 3.6]} intensity={1.5} distance={8} color="#fbbf24" />
+              <Html position={[0, 6, 0]} center>
+                <div className="bg-green-600/90 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg">
+                  🍽️ Restaurant
+                </div>
+              </Html>
+            </group>
+            */}
+
+            {/* BLDG_6 - Bâtiment Nord (Centre Commercial) */}
+            {/*
+            <group position={[0, 0, 25]}>
+              <mesh position={[0, 4, 0]} castShadow receiveShadow>
+                <boxGeometry args={[12, 8, 12]} />
+                <meshStandardMaterial color="#0891b2" roughness={0.5} />
+              </mesh>
+              <mesh position={[0, 8.5, 0]} castShadow>
+                <boxGeometry args={[12.5, 0.6, 12.5]} />
+                <meshStandardMaterial color="#0e7490" />
+              </mesh>
+              <mesh position={[0, 10, 0]} castShadow>
+                <boxGeometry args={[4, 4, 4]} />
+                <meshStandardMaterial color="#06b6d4" />
+              </mesh>
+              <mesh position={[0, 12.5, 0]} castShadow>
+                <coneGeometry args={[2.5, 2, 4]} />
+                <meshStandardMaterial color="#0891b2" />
+              </mesh>
+              <mesh position={[0, 2.5, 6.1]}>
+                <planeGeometry args={[8, 4]} />
+                <meshStandardMaterial color="#67e8f9" emissive="#67e8f9" emissiveIntensity={0.4} transparent opacity={0.8} />
+              </mesh>
+              <mesh position={[0, 1.5, 6.1]}>
+                <boxGeometry args={[3, 3, 0.1]} />
+                <meshStandardMaterial color="#164e63" />
+              </mesh>
+              <Html position={[0, 13.5, 0]} center>
+                <div className="bg-cyan-600/90 text-white px-3 py-1.5 rounded-lg text-sm font-bold shadow-lg">
+                  🛒 Centre Commercial
+                </div>
+              </Html>
+            </group>
+            */}
+            {/* Fin bâtiments désactivés */}
 
             {(graphicsQuality === "low"
               ? [
@@ -2106,7 +2373,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             ))}
 
             {graphicsQuality !== "low" &&
-              [-12, 0, 12].map((z) => (
+              [-12, 12].map((z) => (
                 <group key={`bench-${z}`} position={[-18, 0, z]}>
                   <mesh position={[0, 0.4, 0]} castShadow>
                     <boxGeometry args={[2, 0.1, 0.8]} />
@@ -2633,7 +2900,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       </Canvas>
 
       {/* Menu Button */}
-      <div className="absolute top-6 left-6 z-10 flex flex-col gap-4">
+      <div className="absolute top-6 left-6 z-[100] flex flex-col gap-4">
         <button
           onClick={() => setShowMenu(!showMenu)}
           className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-4 border-white/40 active:scale-95"
@@ -3212,6 +3479,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 </button>
               </div>
 
+              {/* Debug Collisions - uniquement en développement local */}
+              {process.env.NODE_ENV === "development" && (
+                <div className="flex items-center justify-between">
+                  <label className="text-white font-medium">Debug Collisions</label>
+                  <button
+                    onClick={() => setShowCollisionDebug(!showCollisionDebug)}
+                    className={`w-12 h-6 rounded-full transition-colors ${showCollisionDebug ? "bg-red-500" : "bg-gray-600"}`}
+                  >
+                    <div
+                      className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                        showCollisionDebug ? "translate-x-6" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
+
               <button
                 onClick={() => setShowSettings(false)}
                 className="w-full bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition-colors font-medium mt-6"
@@ -3577,26 +3861,27 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
   const [isDragging, setIsDragging] = useState(false)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
-  const animationRef = useRef<number>()
+  const intervalRef = useRef<ReturnType<typeof setInterval>>()
 
   useEffect(() => {
     if (isDragging) {
-      const animate = () => {
+      // Utiliser setInterval à 50ms comme le clavier pour avoir la même cadence
+      const update = () => {
         const maxDistance = 60
         onMove(position.x / maxDistance, position.y / maxDistance)
-        animationRef.current = requestAnimationFrame(animate)
       }
-      animationRef.current = requestAnimationFrame(animate)
+      update() // Premier appel immédiat
+      intervalRef.current = setInterval(update, 50) // Même intervalle que le clavier
     } else {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
       }
       onMove(0, 0)
     }
 
     return () => {
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current)
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
       }
     }
   }, [isDragging, position.x, position.y, onMove])
@@ -3634,7 +3919,7 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
   return (
     <div
       ref={containerRef}
-      className="fixed bottom-24 left-8 w-36 h-36 bg-white/20 backdrop-blur-lg rounded-full z-20 md:hidden border-4 border-white/30"
+      className="fixed bottom-24 left-8 w-36 h-36 bg-white/20 backdrop-blur-lg rounded-full z-20 md:hidden border-4 border-white/30 select-none touch-none"
       onTouchStart={(e) => {
         e.preventDefault()
         handleStart(e.touches[0].clientX, e.touches[0].clientY)
@@ -3650,14 +3935,11 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
       onMouseLeave={handleEnd}
     >
       <div
-        className="absolute w-14 h-14 bg-white/60 rounded-full top-1/2 left-1/2 shadow-lg transition-transform"
+        className="absolute w-14 h-14 bg-white/60 rounded-full top-1/2 left-1/2 shadow-lg transition-transform pointer-events-none"
         style={{
           transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
         }}
       />
-      <div className="absolute inset-0 flex items-center justify-center text-white/50 text-xs font-medium">
-        Déplacer
-      </div>
     </div>
   )
 }
