@@ -88,8 +88,21 @@ export default function InteractivePage() {
 
       const interactiveProfile = interactiveResult.data
 
+      // Utiliser le username du profil utilisateur (user_profiles), sinon le début de l'email
+      const profileUsername = effectiveUserProfile.username || user.email?.split('@')[0] || `user_${user.id.substring(0, 8)}`
+
       if (interactiveProfile && interactiveProfile.username && interactiveProfile.username.trim() !== '') {
         console.log('[v0] Found existing interactive profile')
+
+        // Mettre à jour le username dans interactive_profiles avec celui de user_profiles si différent
+        if (interactiveProfile.username !== profileUsername) {
+          console.log('[v0] Updating interactive username to match user_profiles:', profileUsername)
+          await supabase
+            .from("interactive_profiles")
+            .update({ username: profileUsername })
+            .eq("user_id", user.id)
+        }
+
         setHasProfile(true)
         // Check if user already accepted the warning
         const alreadyAccepted = localStorage.getItem('wavewatch_construction_warning_accepted') === 'true'
@@ -101,7 +114,7 @@ export default function InteractivePage() {
       } else {
         console.log('[v0] No interactive profile found, showing username input')
         setHasProfile(false)
-        setUsername(effectiveUserProfile.username || '')
+        setUsername(profileUsername)
       }
     } catch (err) {
       console.error('[v0] Error checking profiles:', err)

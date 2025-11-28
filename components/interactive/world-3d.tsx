@@ -1,7 +1,7 @@
 "use client"
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { OrbitControls, Sky, Html, PerspectiveCamera } from "@react-three/drei"
+import { OrbitControls, Sky, Html, PerspectiveCamera, Billboard, Text } from "@react-three/drei"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import {
@@ -165,17 +165,19 @@ function RealisticAvatar({
         <meshStandardMaterial color={style.bodyColor} />
       </mesh>
 
-      {/* Face Smiley */}
+      {/* Face Smiley - positioned on the front of the head */}
       <Html
-        position={[0, 1.8, 0.21]}
+        position={[0, 1.8, 0.35]}
         center
-        distanceFactor={1}
+        distanceFactor={4}
+        occlude
+        zIndexRange={[0, 0]}
         style={{
           pointerEvents: "none",
           userSelect: "none",
         }}
       >
-        <div className="text-2xl">{style.faceSmiley}</div>
+        <div className="text-5xl">{style.faceSmiley}</div>
       </Html>
 
       {/* Accessory */}
@@ -473,7 +475,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [countdown, setCountdown] = useState<string>("")
 
   // Synchronized actions state
-  const [playerActions, setPlayerActions] = useState<Record<string, { action: string; timestamp: number }>>({})
+  const [playerActions, setPlayerActions] = useState<Record<string, { action: string; timestamp: number; emoji?: string }>>({})
+  const actionsChannelRef = useRef<any>(null)
   const [quickAction, setQuickAction] = useState<string | null>(null) // State for current quick action animation
   const keysPressed = useRef<Set<string>>(new Set()) // Ref for tracking pressed keys
   const cameraAngle = useRef<number>(0) // Ref for tracking camera azimuth angle
@@ -649,16 +652,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   useEffect(() => {
     const loadPlayers = async () => {
       try {
+        // Calculer le timestamp d'il y a 30 secondes pour filtrer les joueurs inactifs
+        const thirtySecondsAgo = new Date(Date.now() - 30 * 1000).toISOString()
+
         const { data: profiles, error: profilesError } = await supabase
           .from("interactive_profiles")
           .select("*")
           .eq("is_online", true)
           .neq("user_id", userId)
+          .gte("last_seen", thirtySecondsAgo)
           .not("position_x", "is", null)
           .not("position_y", "is", null)
           .not("position_z", "is", null)
-          // Exclude players at default spawn position (0, 0.5, 0) - they haven't really entered the world
-          .or("position_x.neq.0,position_z.neq.0,and(position_y.neq.0,position_y.neq.0.5)")
 
         if (profilesError) {
           console.error("[v0] Error loading profiles:", profilesError)
@@ -696,14 +701,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       }
     }
 
-    supabase
-      .from("interactive_profiles")
-      .update({ is_online: true, last_seen: new Date().toISOString() })
-      .eq("user_id", userId)
-      .then()
+    // Fonction pour mettre à jour le statut online
+    const updateOnlineStatus = () => {
+      supabase
+        .from("interactive_profiles")
+        .update({ is_online: true, last_seen: new Date().toISOString() })
+        .eq("user_id", userId)
+        .then()
+    }
+
+    // Mise à jour initiale
+    updateOnlineStatus()
 
     loadPlayers()
     const interval = setInterval(loadPlayers, 5000)
+
+    // Heartbeat toutes les 10 secondes pour maintenir le statut online
+    const heartbeatInterval = setInterval(updateOnlineStatus, 10000)
 
     const channel = supabase
       .channel("players")
@@ -720,9 +734,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )
       .subscribe()
 
+    // Gérer la visibilité de la page (onglet actif/inactif)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        updateOnlineStatus()
+        loadPlayers()
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
     return () => {
       clearInterval(interval)
+      clearInterval(heartbeatInterval)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
       supabase.removeChannel(channel)
+      // Mettre offline au cleanup (quand le composant est vraiment démonté)
       supabase
         .from("interactive_profiles")
         .update({ is_online: false, last_seen: new Date().toISOString() })
@@ -915,18 +941,26 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         setMyPosition((prev) => {
           // Limites différentes selon la salle
           let maxX = 28, maxZ = 28
+          let minX = -28, minZ = -28
           if (currentRoom === "stadium") {
             maxX = 28 // Stade plus grand
             maxZ = 18
           } else if (currentRoom === "arcade") {
             maxX = 23
             maxZ = 18
+          } else if (currentRoom?.startsWith("cinema_")) {
+            // Limites du cinéma - zone rectangulaire
+            minX = -8
+            maxX = 8
+            minZ = -5
+            maxZ = 15
           }
 
-          const newX = Math.max(-maxX, Math.min(maxX, prev.x + dx))
-          const newZ = Math.max(-maxZ, Math.min(maxZ, prev.z + dz))
+          const newX = Math.max(minX, Math.min(maxX, prev.x + dx))
+          const newZ = Math.max(minZ, Math.min(maxZ, prev.z + dz))
 
-          if (checkCollision(newX, newZ)) {
+          // Ne pas vérifier les collisions dans le cinéma (pas de zones de collision définies)
+          if (!currentRoom?.startsWith("cinema_") && checkCollision(newX, newZ)) {
             return prev // Don't move if collision detected
           }
 
@@ -940,12 +974,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           const now = Date.now()
           if (now - lastDbUpdate.current > 300) {
             lastDbUpdate.current = now
+            const targetRotation = Math.atan2(dx, dz)
             supabase
               .from("interactive_profiles")
               .update({
                 position_x: newPos.x,
                 position_y: newPos.y,
                 position_z: newPos.z,
+                rotation: targetRotation,
               })
               .eq("user_id", userId)
               .then()
@@ -1193,17 +1229,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setCurrentEmoji(emoji)
     setShowQuickActions(false)
 
-    const channel = supabase.channel("world-updates")
-    channel.send({
-      type: "broadcast",
-      event: "player-action",
-      payload: {
-        userId: userProfile.user_id,
-        action: "emoji",
-        emoji: emoji,
-        timestamp: Date.now(),
-      },
-    })
+    // Broadcast emoji action to other players via world-actions channel
+    if (actionsChannelRef.current) {
+      actionsChannelRef.current.send({
+        type: "broadcast",
+        event: "player-action",
+        payload: {
+          userId: userId,
+          action: "emoji",
+          emoji: emoji,
+          timestamp: Date.now(),
+        },
+      })
+    }
 
     setTimeout(() => setCurrentEmoji(null), 3000)
   }
@@ -1216,15 +1254,17 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setIsJumping(true)
 
     // Broadcast jump action to other players
-    supabase.channel("world-actions").send({
-      type: "broadcast",
-      event: "player-action",
-      payload: {
-        userId: userProfile.user_id,
-        action: "jump",
-        timestamp: Date.now(),
-      },
-    })
+    if (actionsChannelRef.current) {
+      actionsChannelRef.current.send({
+        type: "broadcast",
+        event: "player-action",
+        payload: {
+          userId: userId, // Use userId prop for consistency
+          action: "jump",
+          timestamp: Date.now(),
+        },
+      })
+    }
 
     setTimeout(() => setIsJumping(false), 500)
   }
@@ -1320,19 +1360,27 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       setMyPosition((prev) => {
         // Limites différentes selon la salle
         let maxX = 28, maxZ = 28
+        let minX = -28, minZ = -28
         if (currentRoom === "stadium") {
           maxX = 28
           maxZ = 18
         } else if (currentRoom === "arcade") {
           maxX = 23
           maxZ = 18
+        } else if (currentRoom?.startsWith("cinema_")) {
+          // Limites du cinéma - zone rectangulaire
+          minX = -8
+          maxX = 8
+          minZ = -5
+          maxZ = 15
         }
 
         // worldDx et worldDz incluent déjà baseSpeed, pas besoin de multiplier à nouveau
-        const newX = Math.max(-maxX, Math.min(maxX, prev.x + worldDx))
-        const newZ = Math.max(-maxZ, Math.min(maxZ, prev.z + worldDz))
+        const newX = Math.max(minX, Math.min(maxX, prev.x + worldDx))
+        const newZ = Math.max(minZ, Math.min(maxZ, prev.z + worldDz))
 
-        if (checkCollision(newX, newZ)) {
+        // Ne pas vérifier les collisions dans le cinéma
+        if (!currentRoom?.startsWith("cinema_") && checkCollision(newX, newZ)) {
           return prev // Don't move if collision detected
         }
 
@@ -1346,12 +1394,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         const now = Date.now()
         if (now - lastDbUpdate.current > 300) {
           lastDbUpdate.current = now
+          const targetRotation = Math.atan2(worldDx, worldDz)
           supabase
             .from("interactive_profiles")
             .update({
               position_x: newPos.x,
               position_y: newPos.y,
               position_z: newPos.z,
+              rotation: targetRotation,
             })
             .eq("user_id", userId)
             .then()
@@ -1445,6 +1495,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const handleEnterCinemaRoom = async (room: any) => {
     setCurrentCinemaRoom(room)
+    setCurrentRoom(`cinema_${room.id}`) // Set local state for player filtering
     setShowCinema(false)
 
     // Save current map position before entering cinema
@@ -1553,6 +1604,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
 
     setCurrentCinemaRoom(null)
+    setCurrentRoom(null) // Clear local state for player filtering
     setIsSeatsLocked(false) // Ensure seats are unlocked when leaving
     setCountdown("") // Clear countdown when leaving room
 
@@ -1735,15 +1787,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   useEffect(() => {
     const channel = supabase
       .channel("world-actions")
-      .on("broadcast", { event: "player-action" }, (payload: any) => {
-        if (payload.userId && payload.userId !== userId) {
+      .on("broadcast", { event: "player-action" }, ({ payload }: any) => {
+        if (payload && payload.userId && payload.userId !== userId) {
           // Handle actions like jump and emoji
           setPlayerActions((prev) => ({
             ...prev,
             [payload.userId]: {
               action: payload.action,
               timestamp: Date.now(),
-              ...(payload.action === "emoji" && { emoji: payload.emoji }), // Include emoji if it's an emoji action
+              ...(payload.action === "emoji" && { emoji: payload.emoji }),
             },
           }))
 
@@ -1757,13 +1809,17 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               })
             },
             payload.action === "emoji" ? 3000 : 2000,
-          ) // Emojis last longer
+          )
         }
       })
       .subscribe()
 
+    // Store channel ref for sending actions
+    actionsChannelRef.current = channel
+
     return () => {
       supabase.removeChannel(channel)
+      actionsChannelRef.current = null
     }
   }, [userId])
 
@@ -1785,15 +1841,17 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     setShowQuickActions(false)
 
     // Broadcast quick action to other players
-    supabase.channel("world-actions").send({
-      type: "broadcast",
-      event: "player-action",
-      payload: {
-        userId: userProfile.user_id,
-        action,
-        timestamp: Date.now(),
-      },
-    })
+    if (actionsChannelRef.current) {
+      actionsChannelRef.current.send({
+        type: "broadcast",
+        event: "player-action",
+        payload: {
+          userId: userId, // Use userId prop for consistency
+          action,
+          timestamp: Date.now(),
+        },
+      })
+    }
 
     setTimeout(() => setQuickAction(null), 3000)
   }
@@ -2038,14 +2096,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <pointLight position={[0, 7, 0]} intensity={2} distance={10} color="#f59e0b" />
 
               {/* Building name - always visible and clickable */}
-              <Html position={[0, 8, 0]} center occlude zIndexRange={[0, 0]}>
-                <button
-                  onClick={handleEnterArcade}
-                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg shadow-2xl font-bold flex items-center gap-2 transition-all cursor-pointer hover:scale-105"
-                >
-                  🕹️ Arcade
-                </button>
-              </Html>
+              <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+                <Html position={[0, 8, 0]} center zIndexRange={[0, 0]}>
+                  <button
+                    onClick={handleEnterArcade}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-xl shadow-2xl font-bold text-lg flex items-center gap-2 transition-all cursor-pointer hover:scale-105 pointer-events-auto whitespace-nowrap"
+                  >
+                    🕹️ Arcade
+                  </button>
+                </Html>
+              </Billboard>
 
               {/* Bouton d'entrée visible quand on est près */}
               {Math.sqrt(Math.pow(myPosition.x - 0, 2) + Math.pow(myPosition.z - 15, 2)) < 8 && (
@@ -2085,14 +2145,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <pointLight position={[0, 8, 0]} intensity={2} distance={10} color="#22c55e" />
 
               {/* Building name - always visible and clickable */}
-              <Html position={[0, 9, 0]} center occlude zIndexRange={[0, 0]}>
-                <button
-                  onClick={handleEnterStadium}
-                  className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-lg shadow-2xl font-bold flex items-center gap-2 transition-all cursor-pointer hover:scale-105"
-                >
-                  ⚽ Stade
-                </button>
-              </Html>
+              <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+                <Html position={[0, 9, 0]} center zIndexRange={[0, 0]}>
+                  <button
+                    onClick={handleEnterStadium}
+                    className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-xl shadow-2xl font-bold text-lg flex items-center gap-2 transition-all cursor-pointer hover:scale-105 pointer-events-auto whitespace-nowrap"
+                  >
+                    ⚽ Stade
+                  </button>
+                </Html>
+              </Billboard>
 
               {/* Bouton d'entrée visible quand on est près */}
               {Math.sqrt(Math.pow(myPosition.x - 25, 2) + Math.pow(myPosition.z - (-15), 2)) < 8 && (
@@ -2162,14 +2224,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <pointLight position={[0, 6, 0]} intensity={2} distance={10} color="#fbbf24" />
 
               {/* Building name - always visible and clickable */}
-              <Html position={[0, 7, 0]} center occlude zIndexRange={[0, 0]}>
-                <button
-                  onClick={() => setShowCinema(true)}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-lg shadow-2xl font-bold flex items-center gap-2 transition-all cursor-pointer hover:scale-105"
-                >
-                  🎬 Cinéma
-                </button>
-              </Html>
+              <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+                <Html position={[0, 7, 0]} center zIndexRange={[0, 0]}>
+                  <button
+                    onClick={() => setShowCinema(true)}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl shadow-2xl font-bold text-lg flex items-center gap-2 transition-all cursor-pointer hover:scale-105 pointer-events-auto whitespace-nowrap"
+                  >
+                    🎬 Cinéma
+                  </button>
+                </Html>
+              </Billboard>
 
               {[-2, 0, 2].map((x) => (
                 <mesh key={`window-${x}`} position={[x, 3, 4.1]}>
@@ -2820,19 +2884,20 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 key={player.user_id}
                 position={[player.position_x || 0, player.position_y || 0, player.position_z || 0]}
               >
-                <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={false} />
+                <group rotation={[0, player.rotation || 0, 0]}>
+                  <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={false} />
+                </group>
 
                 {worldSettings.showStatusBadges && (
                   <Html
-                    position={[0, 2.3, 0]}
+                    position={[0, 2.6, 0]}
                     center
-                    depthTest={true}
-                    occlude
+                    distanceFactor={10}
                     zIndexRange={[0, 0]}
                   >
                     <div className="flex flex-col items-center gap-1 pointer-events-none">
-                      <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
-                        <span className="text-white text-xs font-medium">
+                      <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
+                        <span className="text-white text-xs font-medium whitespace-nowrap">
                           {player.username || playerProfile?.username || "Joueur"}
                         </span>
                         {playerProfile?.is_admin && <Shield className="w-3 h-3 text-red-500" />}
@@ -2865,11 +2930,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <RealisticAvatar position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
             </group>
 
-            <Html position={[0, 2.3, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
+            <Html position={[0, 2.6, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
               <div className="flex flex-col items-center gap-1 pointer-events-none">
                 {worldSettings.showStatusBadges && (
-                  <div className="flex items-center gap-1 bg-black/80 px-2 py-1 rounded-full backdrop-blur-sm">
-                    <span className="text-white text-xs font-medium">{userProfile.username || "Vous"}</span>
+                  <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
+                    <span className="text-white text-xs font-medium whitespace-nowrap">{myProfile?.username || userProfile.username || "Vous"}</span>
                     {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
                     {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
                     {userProfile.is_vip && !userProfile.is_vip_plus && !userProfile.is_admin && (
