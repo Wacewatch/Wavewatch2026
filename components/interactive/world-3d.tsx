@@ -1290,9 +1290,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       const baseSpeed = 0.15
 
       // Mouvement relatif à l'angle de la caméra (même logique que le clavier)
-      const camAngle = cameraAngle.current
-      // La direction "avant" est opposée à la caméra (caméra regarde le personnage)
-      const moveAngle = camAngle + Math.PI
+      let moveAngle: number
+      if (povMode) {
+        // En mode POV (première personne), utiliser fpsRotation.yaw directement
+        moveAngle = fpsRotation.yaw
+      } else {
+        // En mode 3ème personne, utiliser l'angle de la caméra orbitale
+        const camAngle = cameraAngle.current
+        // La direction "avant" est opposée à la caméra (caméra regarde le personnage)
+        moveAngle = camAngle + Math.PI
+      }
 
       // Calculer le mouvement en coordonnées monde avec la même vitesse que le clavier
       const worldDx = (Math.sin(moveAngle) * forward + Math.cos(moveAngle) * right) * baseSpeed
@@ -1312,7 +1319,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       setMyPosition((prev) => {
         // Limites différentes selon la salle
-        let maxX = 20, maxZ = 20
+        let maxX = 28, maxZ = 28
         if (currentRoom === "stadium") {
           maxX = 28
           maxZ = 18
@@ -1353,7 +1360,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         return newPos
       })
     },
-    [userId, supabase, currentRoom],
+    [userId, supabase, currentRoom, povMode, fpsRotation.yaw],
   )
 
   function handleEnterArcade() {
