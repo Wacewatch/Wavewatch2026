@@ -1616,7 +1616,17 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     // Teleport player to arcade room (spawn position)
     const arcadePos = { x: -2.6145599903373125, y: -0.35, z: 10.641204270993434 }
+    const arcadeRotation = Math.PI // Tourner vers les machines (180°, regarde vers -z)
     setMyPosition(arcadePos)
+    setMyRotation(arcadeRotation)
+
+    // Positionner la caméra derrière le joueur
+    if (orbitControlsRef.current) {
+      const controls = orbitControlsRef.current
+      controls.target.set(arcadePos.x, arcadePos.y + 1, arcadePos.z)
+      controls.object.position.set(arcadePos.x, arcadePos.y + 8, arcadePos.z + 15)
+      controls.update()
+    }
 
     // Update position in database
     supabase
@@ -1625,6 +1635,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         position_x: arcadePos.x,
         position_y: arcadePos.y,
         position_z: arcadePos.z,
+        rotation: arcadeRotation,
         current_room: "arcade",
       })
       .eq("user_id", userId)
@@ -2034,18 +2045,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }
 
-  // Gestion de la touche Enter pour entrer dans les bâtiments
+  // Gestion des touches F ou Enter pour entrer dans les bâtiments
   useEffect(() => {
-    const handleEnterKey = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && nearbyBuilding && currentRoom === null) {
+    const handleInteractKey = (e: KeyboardEvent) => {
+      if ((e.key === "f" || e.key === "F" || e.key === "Enter") && nearbyBuilding && currentRoom === null) {
         handleEnterBuilding()
       }
     }
 
-    window.addEventListener("keydown", handleEnterKey)
+    window.addEventListener("keydown", handleInteractKey)
 
     return () => {
-      window.removeEventListener("keydown", handleEnterKey)
+      window.removeEventListener("keydown", handleInteractKey)
     }
   }, [nearbyBuilding, currentRoom])
 
@@ -2056,7 +2067,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       return
     }
 
-    const distanceToArcade = Math.sqrt(Math.pow(myPosition.x - (-25), 2) + Math.pow(myPosition.z - 0, 2))
+    const distanceToArcade = Math.sqrt(Math.pow(myPosition.x - 0, 2) + Math.pow(myPosition.z - 15, 2))
     const distanceToCinema = Math.sqrt(Math.pow(myPosition.x - 15, 2) + Math.pow(myPosition.z - 0, 2))
     const distanceToStadium = Math.sqrt(Math.pow(myPosition.x - 25, 2) + Math.pow(myPosition.z - (-15), 2))
 
@@ -2416,9 +2427,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
                   <button
                     onClick={handleEnterArcade}
-                    className="bg-purple-600/90 backdrop-blur-sm hover:bg-purple-700 text-white px-6 py-3 rounded-lg shadow-2xl text-base font-bold transition-all hover:scale-110 border-2 border-white/30"
+                    className="bg-purple-600/90 backdrop-blur-sm hover:bg-purple-700 text-white px-6 py-3 rounded-lg shadow-2xl text-base font-bold transition-all hover:scale-110 border-2 border-white/30 flex items-center gap-2"
                   >
-                    Entrée
+                    Entrer <kbd className="bg-white/20 px-2 py-0.5 rounded text-sm">F</kbd>
                   </button>
                 </Html>
               )}
@@ -2465,9 +2476,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
                   <button
                     onClick={handleEnterStadium}
-                    className="bg-green-600/90 backdrop-blur-sm hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-2xl text-base font-bold transition-all hover:scale-110 border-2 border-white/30"
+                    className="bg-green-600/90 backdrop-blur-sm hover:bg-green-700 text-white px-6 py-3 rounded-lg shadow-2xl text-base font-bold transition-all hover:scale-110 border-2 border-white/30 flex items-center gap-2"
                   >
-                    Entrée
+                    Entrer <kbd className="bg-white/20 px-2 py-0.5 rounded text-sm">F</kbd>
                   </button>
                 </Html>
               )}
@@ -2571,9 +2582,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
                   <button
                     onClick={() => setShowCinema(true)}
-                    className="bg-blue-600/90 backdrop-blur-sm hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-2xl text-base font-bold transition-all hover:scale-110 border-2 border-white/30"
+                    className="bg-blue-600/90 backdrop-blur-sm hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-2xl text-base font-bold transition-all hover:scale-110 border-2 border-white/30 flex items-center gap-2"
                   >
-                    Entrée
+                    Entrer <kbd className="bg-white/20 px-2 py-0.5 rounded text-sm">F</kbd>
                   </button>
                 </Html>
               )}
@@ -3780,6 +3791,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <Smile className="w-10 h-10 text-white" />
             </button>
           )}
+
         </>
       )}
 
