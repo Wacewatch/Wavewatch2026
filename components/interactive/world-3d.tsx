@@ -426,11 +426,34 @@ function InterpolatedPlayer({
 
   // Mettre à jour la position cible quand les données DB changent
   useEffect(() => {
-    targetPos.current = {
-      x: player.position_x || 0,
-      y: player.position_y || 0,
-      z: player.position_z || 0,
+    const newX = player.position_x || 0
+    const newY = player.position_y || 0
+    const newZ = player.position_z || 0
+
+    // Calculer la distance entre la position actuelle et la nouvelle
+    const distance = Math.sqrt(
+      Math.pow(newX - currentPos.current.x, 2) +
+      Math.pow(newY - currentPos.current.y, 2) +
+      Math.pow(newZ - currentPos.current.z, 2)
+    )
+
+    // Si la distance est grande (téléportation: s'asseoir/se lever), appliquer directement sans interpolation
+    const TELEPORT_THRESHOLD = 3 // Plus de 3 unités = téléportation
+    if (distance > TELEPORT_THRESHOLD) {
+      // Téléportation instantanée
+      currentPos.current = { x: newX, y: newY, z: newZ }
+      currentRotation.current = player.rotation || 0
+      // Mettre à jour immédiatement le groupe si disponible
+      if (groupRef.current) {
+        groupRef.current.position.set(newX, newY, newZ)
+      }
+      if (avatarGroupRef.current) {
+        avatarGroupRef.current.rotation.y = player.rotation || 0
+      }
     }
+
+    // Mettre à jour la cible (sera interpolée si distance < seuil)
+    targetPos.current = { x: newX, y: newY, z: newZ }
     targetRotation.current = player.rotation || 0
   }, [player.position_x, player.position_y, player.position_z, player.rotation])
 
@@ -582,6 +605,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [stadium, setStadium] = useState<any>(null)
   const [showStadium, setShowStadium] = useState(false)
   const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
+  const [stadiumSeat, setStadiumSeat] = useState<{ row: number; side: string } | null>(null) // Siège dans le stade
   const [showMenu, setShowMenu] = useState(false) // Added this state
 
   const [currentRoom, setCurrentRoom] = useState<string | null>(null)
@@ -1022,7 +1046,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // if (isSeatsLocked && mySeat !== null) return // Removed seat lock check
+      // Bloquer les mouvements si assis dans le stade ou le cinéma
+      if (stadiumSeat !== null || mySeat !== null) return
 
       let forward = 0
       let right = 0
@@ -1117,7 +1142,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }, 50)
 
     return () => clearInterval(interval)
-  }, [userId, isSeatsLocked, mySeat, povMode, fpsRotation.yaw, currentRoom]) // currentRoom for room-specific boundaries
+  }, [userId, isSeatsLocked, mySeat, stadiumSeat, povMode, fpsRotation.yaw, currentRoom]) // currentRoom for room-specific boundaries
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -1430,6 +1455,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const handleJoystickMove = useCallback(
     (joystickX: number, joystickY: number) => {
+      // Bloquer les mouvements si assis dans le stade ou le cinéma
+      if (stadiumSeat !== null || mySeat !== null) return
+
       // joystickX = gauche/droite (-1 à 1)
       // joystickY = haut/bas (-1 à 1, haut = négatif pour "avancer")
 
@@ -1532,7 +1560,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         return newPos
       })
     },
-    [userId, supabase, currentRoom, povMode, fpsRotation.yaw],
+    [userId, supabase, currentRoom, povMode, fpsRotation.yaw, stadiumSeat, mySeat],
   )
 
   // Handler pour le joystick de caméra (rotation de la vue)
@@ -1861,6 +1889,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const handleLeaveStadium = () => {
+    setStadiumSeat(null) // Reset stadium seat
     setMyPosition(savedMapPosition) // Restore saved position
     setCurrentRoom(null) // Clear local state
 
@@ -1871,6 +1900,117 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         position_y: savedMapPosition.y,
         position_z: savedMapPosition.z,
         current_room: null,
+      })
+      .eq("user_id", userId)
+      .then(() => {})
+  }
+
+  // S'asseoir sur un gradin du stade
+  const handleSitInStadium = () => {
+    if (stadiumSeat) return // Déjà assis
+
+    // Déterminer le côté le plus proche en fonction de la position du joueur
+    let side = "north" // côté z = -25 (derrière l'écran)
+    if (myPosition.z > 12) side = "south"
+    else if (myPosition.x < -15) side = "west"
+    else if (myPosition.x > 15) side = "east"
+    else if (myPosition.z < -12) side = "north"
+
+    // Choisir une rangée aléatoire (0-4)
+    const row = Math.floor(Math.random() * 5)
+
+    // Calculer la position du siège selon le côté
+    // Hauteur du gradin: base 1 + row * 1.5, hauteur box 1, donc surface à 1.5 + row * 1.5
+    // On ajoute 1 pour que le joueur soit assis SUR le gradin (pas dedans)
+    const seatY = 2.5 + row * 1.5
+    let seatPos = { x: 0, y: seatY, z: 0 }
+    let seatRotation = 0 // Rotation pour regarder vers le centre du stade (l'écran)
+    switch (side) {
+      case "north":
+        seatPos = { x: myPosition.x, y: seatY, z: -25 - 2 - row * 1.2 }
+        seatRotation = 0 // Regarder vers +z (sud, vers le centre)
+        break
+      case "south":
+        seatPos = { x: myPosition.x, y: seatY, z: 25 + 2 + row * 1.2 }
+        seatRotation = Math.PI // Regarder vers -z (nord, vers le centre)
+        break
+      case "west":
+        seatPos = { x: -35 - 2 - row * 1.2, y: seatY, z: myPosition.z }
+        seatRotation = -Math.PI / 2 // Regarder vers +x (est, vers le centre)
+        break
+      case "east":
+        seatPos = { x: 35 + 2 + row * 1.2, y: seatY, z: myPosition.z }
+        seatRotation = Math.PI / 2 // Regarder vers -x (ouest, vers le centre)
+        break
+    }
+
+    setStadiumSeat({ row, side })
+    setMyPosition(seatPos)
+    setMyRotation(seatRotation)
+
+    // Positionner la caméra derrière le joueur, regardant vers le centre du stade
+    if (orbitControlsRef.current) {
+      const controls = orbitControlsRef.current
+      const maxDist = 25 // Distance max de zoom (dézoom maximum)
+
+      // Calculer la position de la caméra derrière le joueur
+      // La caméra doit être du côté opposé au centre (derrière le joueur)
+      let cameraOffset = { x: 0, z: 0 }
+      switch (side) {
+        case "north":
+          cameraOffset = { x: 0, z: -maxDist } // Caméra au nord du joueur
+          break
+        case "south":
+          cameraOffset = { x: 0, z: maxDist } // Caméra au sud du joueur
+          break
+        case "west":
+          cameraOffset = { x: -maxDist, z: 0 } // Caméra à l'ouest du joueur
+          break
+        case "east":
+          cameraOffset = { x: maxDist, z: 0 } // Caméra à l'est du joueur
+          break
+      }
+
+      // Mettre à jour la cible des OrbitControls (le joueur)
+      controls.target.set(seatPos.x, seatPos.y + 1, seatPos.z)
+
+      // Positionner la caméra derrière le joueur avec un léger angle vers le haut
+      controls.object.position.set(
+        seatPos.x + cameraOffset.x * 0.6,
+        seatPos.y + 8, // Légèrement au-dessus
+        seatPos.z + cameraOffset.z * 0.6
+      )
+
+      controls.update()
+    }
+
+    supabase
+      .from("interactive_profiles")
+      .update({
+        position_x: seatPos.x,
+        position_y: seatPos.y,
+        position_z: seatPos.z,
+        rotation: seatRotation,
+      })
+      .eq("user_id", userId)
+      .then(() => {})
+  }
+
+  // Se lever du gradin
+  const handleStandUpFromStadium = () => {
+    if (!stadiumSeat) return
+
+    // Retourner sur le terrain
+    const standPos = { x: 0, y: 0.5, z: 0 }
+    setStadiumSeat(null)
+    setMyPosition(standPos)
+
+    supabase
+      .from("interactive_profiles")
+      .update({
+        position_x: standPos.x,
+        position_y: standPos.y,
+        position_z: standPos.z,
       })
       .eq("user_id", userId)
       .then(() => {})
@@ -2838,59 +2978,94 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
 
-            {/* Stadium walls and stands */}
+            {/* Stadium stands (gradins) */}
             {[
-              { x: 0, z: -25, rot: 0, w: 70, h: 15 },
-              { x: 0, z: 25, rot: Math.PI, w: 70, h: 15 },
-              { x: -35, z: 0, rot: Math.PI / 2, w: 60, h: 15 },
-              { x: 35, z: 0, rot: -Math.PI / 2, w: 60, h: 15 },
-            ].map((wall) => (
-              <group key={`stadium-wall-${wall.x}-${wall.z}`} position={[wall.x, 0, wall.z]} rotation={[0, wall.rot, 0]}>
-                {/* Stadium structure */}
-                <mesh position={[0, wall.h / 2, 0]}>
-                  <boxGeometry args={[wall.w, wall.h, 2]} />
-                  <meshStandardMaterial color="#2d4a3e" />
-                </mesh>
-
-                {/* Seating rows */}
+              { x: 0, z: -25, rot: 0, w: 70 },
+              { x: 0, z: 25, rot: Math.PI, w: 70 },
+              { x: -35, z: 0, rot: Math.PI / 2, w: 60 },
+              { x: 35, z: 0, rot: -Math.PI / 2, w: 60 },
+            ].map((stand) => (
+              <group key={`stadium-stand-${stand.x}-${stand.z}`} position={[stand.x, 0, stand.z]} rotation={[0, stand.rot, 0]}>
+                {/* Seating rows (gradins visibles) */}
                 {[0, 1, 2, 3, 4].map((row) => (
-                  <mesh key={`${wall.x}-${wall.z}-row-${row}`} position={[0, 3 + row * 2, -1 - row * 0.5]}>
-                    <boxGeometry args={[wall.w - 2, 0.5, 2]} />
+                  <mesh key={`${stand.x}-${stand.z}-row-${row}`} position={[0, 1 + row * 1.5, -2 - row * 1.2]}>
+                    <boxGeometry args={[stand.w - 2, 1, 3]} />
                     <meshStandardMaterial color={row % 2 === 0 ? "#1e3a8a" : "#3b82f6"} />
                   </mesh>
                 ))}
               </group>
             ))}
 
-            {/* Giant screen at one end */}
-            <group position={[0, 10, -24]}>
-              <mesh>
-                <boxGeometry args={[40, 20, 1]} />
-                <meshStandardMaterial color="#000000" />
-              </mesh>
-
-              {stadium?.embed_url && (
-                stadium.embed_url.includes('.m3u8') ? (
-                  <HLSVideoScreen
-                    src={stadium.embed_url}
-                    width={38}
-                    height={19}
-                    position={[0, 0, 0.6]}
-                    autoplay={true}
-                    muted={false}
-                  />
-                ) : (
-                  <Html transform position={[0, 0, 0.6]} style={{ width: "3500px", height: "1800px" }}>
-                    <iframe
-                      src={stadium.embed_url}
-                      className="w-full h-full rounded"
-                      allowFullScreen
-                      allow="autoplay; fullscreen"
-                    />
-                  </Html>
-                )
-              )}
-            </group>
+            {/* Écrans aux 4 côtés - visibles seulement quand assis du côté opposé */}
+            {/* Flux HLS de test (même que salle cinéma 1) */}
+            {/* Écran Nord (visible depuis tribune Sud) */}
+            {stadiumSeat?.side === "south" && (
+              <group position={[0, 8, -22]} rotation={[0, 0, 0]}>
+                <mesh>
+                  <boxGeometry args={[20, 12, 0.5]} />
+                  <meshStandardMaterial color="#111111" />
+                </mesh>
+                <HLSVideoScreen
+                  src="https://amg02162-newenconnect-amg02162c2-rakuten-us-1981.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg02162-newenconnect-100pour100docs-rakutenus/playlist.m3u8"
+                  width={19}
+                  height={11}
+                  position={[0, 0, 0.3]}
+                  autoplay={true}
+                  muted={false}
+                />
+              </group>
+            )}
+            {/* Écran Sud (visible depuis tribune Nord) */}
+            {stadiumSeat?.side === "north" && (
+              <group position={[0, 8, 22]} rotation={[0, Math.PI, 0]}>
+                <mesh>
+                  <boxGeometry args={[20, 12, 0.5]} />
+                  <meshStandardMaterial color="#111111" />
+                </mesh>
+                <HLSVideoScreen
+                  src="https://amg02162-newenconnect-amg02162c2-rakuten-us-1981.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg02162-newenconnect-100pour100docs-rakutenus/playlist.m3u8"
+                  width={19}
+                  height={11}
+                  position={[0, 0, 0.3]}
+                  autoplay={true}
+                  muted={false}
+                />
+              </group>
+            )}
+            {/* Écran Ouest (visible depuis tribune Est) */}
+            {stadiumSeat?.side === "east" && (
+              <group position={[-32, 8, 0]} rotation={[0, Math.PI / 2, 0]}>
+                <mesh>
+                  <boxGeometry args={[20, 12, 0.5]} />
+                  <meshStandardMaterial color="#111111" />
+                </mesh>
+                <HLSVideoScreen
+                  src="https://amg02162-newenconnect-amg02162c2-rakuten-us-1981.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg02162-newenconnect-100pour100docs-rakutenus/playlist.m3u8"
+                  width={19}
+                  height={11}
+                  position={[0, 0, 0.3]}
+                  autoplay={true}
+                  muted={false}
+                />
+              </group>
+            )}
+            {/* Écran Est (visible depuis tribune Ouest) */}
+            {stadiumSeat?.side === "west" && (
+              <group position={[32, 8, 0]} rotation={[0, -Math.PI / 2, 0]}>
+                <mesh>
+                  <boxGeometry args={[20, 12, 0.5]} />
+                  <meshStandardMaterial color="#111111" />
+                </mesh>
+                <HLSVideoScreen
+                  src="https://amg02162-newenconnect-amg02162c2-rakuten-us-1981.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg02162-newenconnect-100pour100docs-rakutenus/playlist.m3u8"
+                  width={19}
+                  height={11}
+                  position={[0, 0, 0.3]}
+                  autoplay={true}
+                  muted={false}
+                />
+              </group>
+            )}
 
             {/* Stadium lights */}
             {[
@@ -2915,16 +3090,6 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
 
-            {/* Exit button */}
-            <Html position={[0, 2, 20]} center>
-              <button
-                onClick={handleLeaveStadium}
-                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg flex items-center gap-2"
-              >
-                <LogOut className="w-5 h-5" />
-                Quitter le Stade
-              </button>
-            </Html>
           </>
         ) : currentCinemaRoom ? (
           <>
@@ -3666,7 +3831,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       {/* Boutons fixes en bas à droite - visible dans une salle */}
       {(currentCinemaRoom || currentRoom === "stadium" || currentRoom === "arcade") && (
         <div className="fixed bottom-6 right-48 z-30 flex items-center gap-3">
-          {/* Bouton S'asseoir/Se lever - uniquement dans le cinéma */}
+          {/* Bouton S'asseoir/Se lever - dans le cinéma */}
           {currentCinemaRoom && (
             mySeat === null ? (
               <button
@@ -3679,6 +3844,26 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             ) : (
               <button
                 onClick={() => handleSitInSeat(mySeat)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
+              >
+                <span className="text-lg">🚶</span>
+                <span className="font-medium">Se lever</span>
+              </button>
+            )
+          )}
+          {/* Bouton S'asseoir/Se lever - dans le stade */}
+          {currentRoom === "stadium" && (
+            stadiumSeat === null ? (
+              <button
+                onClick={handleSitInStadium}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
+              >
+                <span className="text-lg">💺</span>
+                <span className="font-medium">S'asseoir</span>
+              </button>
+            ) : (
+              <button
+                onClick={handleStandUpFromStadium}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
               >
                 <span className="text-lg">🚶</span>
@@ -4038,19 +4223,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
-      {currentRoom === "stadium" && stadium?.embed_url && (
+      {/* Écran vidéo du stade - s'affiche quand le joueur est assis dans les gradins */}
+      {currentRoom === "stadium" && stadiumSeat !== null && stadium?.embed_url && (
         <div className="fixed inset-0 bg-black z-40 flex flex-col">
           <div className="bg-green-900 px-4 py-3 flex items-center justify-between border-b-2 border-green-400">
             <div className="flex items-center gap-3 text-white">
               <Trophy className="w-5 h-5 text-yellow-400" />
               <span className="font-bold text-lg">{stadium.match_title || "Match en direct"}</span>
+              <span className="text-sm text-green-300">• Tribune {stadiumSeat.side.toUpperCase()} - Rangée {stadiumSeat.row + 1}</span>
             </div>
             <button
-              onClick={handleLeaveStadium}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium"
+              onClick={handleStandUpFromStadium}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium"
             >
-              <LogOut className="w-5 h-5" />
-              Quitter le Stade
+              <span className="text-lg">🚶</span>
+              Se lever
             </button>
           </div>
           <iframe
