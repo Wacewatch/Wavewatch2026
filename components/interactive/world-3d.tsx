@@ -498,27 +498,17 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }, [otherPlayers, currentRoom])
 
   useEffect(() => {
-    const checkMobile = () => {
-      if (controlMode === "pc") {
-        setIsMobileMode(false)
-      } else if (controlMode === "mobile") {
-        setIsMobileMode(true)
-      } else {
-        const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0
-        const isSmallScreen = window.innerWidth < 1024
-        setIsMobileMode(isTouchDevice || isSmallScreen)
-      }
+    if (controlMode === "pc") {
+      setIsMobileMode(false)
+    } else if (controlMode === "mobile") {
+      setIsMobileMode(true)
+    } else {
+      // Mode auto : détecter automatiquement
+      const isTouchDevice = "ontouchstart" in window || navigator.maxTouchPoints > 0
+      const isSmallScreen = window.innerWidth < 1024
+      setIsMobileMode(isTouchDevice || isSmallScreen)
     }
-
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
-    window.addEventListener("orientationchange", checkMobile)
-
-    return () => {
-      window.removeEventListener("resize", checkMobile)
-      window.removeEventListener("orientationchange", checkMobile)
-    }
-  }, [controlMode, isMobileMode])
+  }, [controlMode])
 
   const [lastActivity, setLastActivity] = useState(Date.now())
   const [showAFKWarning, setShowAFKWarning] = useState(false)
@@ -1412,6 +1402,46 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     },
     [userId, supabase, currentRoom, povMode, fpsRotation.yaw],
   )
+
+  // Handler pour le joystick de caméra (rotation de la vue)
+  const handleCameraRotate = useCallback((deltaYaw: number, deltaPitch: number) => {
+    if (povMode) {
+      // En mode première personne, mettre à jour fpsRotation
+      // Inverser le yaw pour que droite = regarder à droite
+      setFpsRotation(prev => ({
+        yaw: prev.yaw - deltaYaw,
+        pitch: Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, prev.pitch + deltaPitch))
+      }))
+    } else if (orbitControlsRef.current) {
+      // En mode 3ème personne, faire tourner l'OrbitControls autour du personnage
+      const controls = orbitControlsRef.current
+      // Rotation horizontale (yaw) - tourner autour du personnage
+      const currentAzimuth = controls.getAzimuthalAngle()
+      const currentPolar = controls.getPolarAngle()
+
+      // Appliquer la rotation
+      controls.minAzimuthAngle = -Infinity
+      controls.maxAzimuthAngle = Infinity
+
+      // Calculer les nouveaux angles (multiplicateur réduit pour une rotation plus lente)
+      // Inverser le pitch pour que haut = regarder vers le haut
+      const newAzimuth = currentAzimuth - deltaYaw * 0.8
+      const newPolar = Math.max(0.3, Math.min(Math.PI / 2 - 0.1, currentPolar + deltaPitch * 0.8))
+
+      // Appliquer via les limites temporaires
+      controls.minAzimuthAngle = newAzimuth
+      controls.maxAzimuthAngle = newAzimuth
+      controls.minPolarAngle = newPolar
+      controls.maxPolarAngle = newPolar
+      controls.update()
+
+      // Remettre les limites normales après l'update
+      controls.minAzimuthAngle = -Infinity
+      controls.maxAzimuthAngle = Infinity
+      controls.minPolarAngle = 0.3
+      controls.maxPolarAngle = Math.PI / 2 - 0.1
+    }
+  }, [povMode])
 
   function handleEnterArcade() {
     setShowArcade(false)
@@ -2971,24 +3001,25 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         )}
       </Canvas>
 
-      {/* Menu Button */}
-      <div className="absolute top-6 left-6 z-[100] flex flex-col gap-4">
+      {/* Menu Button - caché quand un jeu arcade est ouvert */}
+      {!currentArcadeMachine && (
+      <div className={`absolute z-[100] flex flex-col ${isMobileMode ? 'top-4 left-4 gap-2' : 'top-6 left-6 gap-4'}`}>
         <button
           onClick={() => setShowMenu(!showMenu)}
-          className="bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white p-4 rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl border-4 border-white/40 active:scale-95"
+          className={`bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl active:scale-95 ${isMobileMode ? 'p-2 border-2 border-white/40' : 'p-4 border-4 border-white/40'}`}
         >
-          <Menu className="w-8 h-8" />
+          <Menu className={isMobileMode ? 'w-5 h-5' : 'w-8 h-8'} />
         </button>
 
         {showMenu && (
-          <div className="absolute top-0 left-20 mt-0 bg-black/95 backdrop-blur-xl rounded-xl p-4 w-80 space-y-3 shadow-2xl border-2 border-white/30">
-            <div className="text-white mb-3 pb-3 border-b border-white/20">
-              <div className="font-bold text-lg flex items-center gap-2">
-                <User className="w-5 h-5" />
+          <div className={`absolute top-0 mt-0 bg-black/95 backdrop-blur-xl rounded-xl shadow-2xl border-2 border-white/30 ${isMobileMode ? 'left-12 p-2 w-48 space-y-1' : 'left-20 p-4 w-80 space-y-3'}`}>
+            <div className={`text-white border-b border-white/20 ${isMobileMode ? 'mb-2 pb-2' : 'mb-3 pb-3'}`}>
+              <div className={`font-bold flex items-center gap-2 ${isMobileMode ? 'text-sm' : 'text-lg'}`}>
+                <User className={isMobileMode ? 'w-4 h-4' : 'w-5 h-5'} />
                 {myProfile?.username || "Vous"}
               </div>
-              <div className="flex items-center gap-2 text-sm text-white/60 mt-1">
-                <Users className="w-4 h-4" />
+              <div className={`flex items-center gap-2 text-white/60 mt-1 ${isMobileMode ? 'text-xs' : 'text-sm'}`}>
+                <Users className={isMobileMode ? 'w-3 h-3' : 'w-4 h-4'} />
                 <span>{onlineCount} en ligne</span>
               </div>
             </div>
@@ -2998,9 +3029,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 setShowSettings(true)
                 setShowMenu(false)
               }}
-              className="w-full bg-blue-500/90 text-white py-3 rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+              className={`w-full bg-blue-500/90 text-white rounded-lg hover:bg-blue-600 flex items-center justify-center gap-2 font-medium transition-colors ${isMobileMode ? 'py-2 text-xs' : 'py-3 text-base'}`}
             >
-              <Settings className="w-5 h-5" />
+              <Settings className={isMobileMode ? 'w-4 h-4' : 'w-5 h-5'} />
               Paramètres
             </button>
 
@@ -3009,9 +3040,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 setShowAvatarCustomizer(true)
                 setShowMenu(false)
               }}
-              className="w-full bg-purple-500/90 text-white py-3 rounded-lg hover:bg-purple-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+              className={`w-full bg-purple-500/90 text-white rounded-lg hover:bg-purple-600 flex items-center justify-center gap-2 font-medium transition-colors ${isMobileMode ? 'py-2 text-xs' : 'py-3 text-base'}`}
             >
-              <Palette className="w-5 h-5" />
+              <Palette className={isMobileMode ? 'w-4 h-4' : 'w-5 h-5'} />
               Avatar
             </button>
 
@@ -3021,9 +3052,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   setShowChat(true)
                   setShowMenu(false)
                 }}
-                className="w-full bg-green-500/90 text-white py-3 rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+                className={`w-full bg-green-500/90 text-white rounded-lg hover:bg-green-600 flex items-center justify-center gap-2 font-medium transition-colors ${isMobileMode ? 'py-2 text-xs' : 'py-3 text-base'}`}
               >
-                <MessageSquare className="w-5 h-5" />
+                <MessageSquare className={isMobileMode ? 'w-4 h-4' : 'w-5 h-5'} />
                 Chat
               </button>
             )}
@@ -3033,33 +3064,27 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 setShowMap(true)
                 setShowMenu(false)
               }}
-              className="w-full bg-cyan-500/90 text-white py-3 rounded-lg hover:bg-cyan-600 flex items-center justify-center gap-2 text-base font-medium transition-colors"
+              className={`w-full bg-cyan-500/90 text-white rounded-lg hover:bg-cyan-600 flex items-center justify-center gap-2 font-medium transition-colors ${isMobileMode ? 'py-2 text-xs' : 'py-3 text-base'}`}
             >
-              <Map className="w-5 h-5" />
+              <Map className={isMobileMode ? 'w-4 h-4' : 'w-5 h-5'} />
               Carte
             </button>
 
             <button
               onClick={handleQuitWorld}
-              className="w-full bg-gray-600/90 text-white py-3 rounded-lg hover:bg-gray-700 flex items-center justify-center gap-2 text-base font-medium transition-colors border-t border-white/20 mt-2 pt-2"
+              className={`w-full bg-gray-600/90 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center gap-2 font-medium transition-colors border-t border-white/20 mt-2 pt-2 ${isMobileMode ? 'py-2 text-xs' : 'py-3 text-base'}`}
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className={isMobileMode ? 'w-4 h-4' : 'w-5 h-5'} />
               Quitter
             </button>
           </div>
         )}
       </div>
+      )}
 
-      {(!isFullscreen || isMobileMode) && (
+      {/* Bouton plein écran - caché en mode mobile */}
+      {(!isFullscreen || isMobileMode) && !currentArcadeMachine && !isMobileMode && (
         <div className="absolute top-4 right-4 z-10 flex gap-3">
-          <button
-            onClick={() => setShowQuickActions(!showQuickActions)}
-            className="bg-white/20 backdrop-blur-lg text-white p-3 rounded-lg hover:bg-white/30 transition-colors shadow-lg"
-            title="Actions rapides"
-          >
-            <Smile className="w-6 h-6" />
-          </button>
-
           <button
             onClick={handleFullscreen}
             className="bg-white/20 backdrop-blur-lg text-white p-3 rounded-lg hover:bg-white/30 transition-colors shadow-lg"
@@ -3071,39 +3096,77 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {showChatInput && !isFullscreen && (
-        <div className="absolute top-20 right-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 p-4">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-white font-bold text-sm">Envoyer un message</h3>
-            <button onClick={() => setShowChatInput(false)} className="text-white/60 hover:text-white">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
+        isMobileMode ? (
+          /* Mode mobile: input en bas de l'écran, style WhatsApp/Discord */
+          <div className="fixed bottom-44 left-4 right-4 z-30 bg-black/90 backdrop-blur-lg rounded-2xl p-3 border border-white/20 shadow-2xl">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    sendMessage()
+                    setShowChatInput(false)
+                  }
+                }}
+                placeholder="Votre message..."
+                className="flex-1 bg-white/10 text-white px-4 py-3 rounded-xl outline-none text-sm"
+                autoFocus
+              />
+              <button
+                onClick={() => {
                   sendMessage()
                   setShowChatInput(false)
-                }
-              }}
-              placeholder="Votre message..."
-              className="flex-1 bg-white/10 text-white px-3 py-2 rounded-lg outline-none text-sm"
-              autoFocus
-            />
-            <button
-              onClick={() => {
-                sendMessage()
-                setShowChatInput(false)
-              }}
-              className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
-            >
-              <Send className="w-4 h-4" />
-            </button>
+                }}
+                className="bg-blue-500 text-white p-3 rounded-xl hover:bg-blue-600 active:scale-95 transition-all"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setShowChatInput(false)}
+                className="bg-gray-600 text-white p-3 rounded-xl hover:bg-gray-700 active:scale-95 transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          /* Mode desktop: panneau à droite */
+          <div className="absolute top-20 right-4 w-80 bg-black/80 backdrop-blur-lg rounded-lg z-10 p-4">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-white font-bold text-sm">Envoyer un message</h3>
+              <button onClick={() => setShowChatInput(false)} className="text-white/60 hover:text-white">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    sendMessage()
+                    setShowChatInput(false)
+                  }
+                }}
+                placeholder="Votre message..."
+                className="flex-1 bg-white/10 text-white px-3 py-2 rounded-lg outline-none text-sm"
+                autoFocus
+              />
+              <button
+                onClick={() => {
+                  sendMessage()
+                  setShowChatInput(false)
+                }}
+                className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )
       )}
 
       {isFullscreen && (
@@ -3385,55 +3448,127 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
-      {/* Bouton Messages - à gauche du bouton emojis */}
-      {worldSettings.enableChat && (
-        <button
-          onClick={() => setShowChatInput(true)}
-          className="fixed bottom-6 right-28 w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
-        >
-          <MessageCircle className="w-8 h-8 text-white" />
-        </button>
-      )}
+      {/* Boutons d'actions - positionnés différemment selon le mode mobile */}
+      {isMobileMode ? (
+        /* Mode mobile: boutons en haut à droite, alignés verticalement */
+        <div className="fixed top-4 right-4 z-20 flex flex-col gap-2">
+          {/* Bouton Plein écran */}
+          <button
+            onClick={handleFullscreen}
+            className="w-12 h-12 bg-white/20 backdrop-blur-lg rounded-full shadow-xl flex items-center justify-center border-2 border-white/30"
+            title="Mode Immersif"
+          >
+            <Maximize2 className="w-6 h-6 text-white" />
+          </button>
 
-      {/* Bouton changement de vue POV - au dessus du bouton emojis */}
-      <button
-        onClick={togglePovMode}
-        className="fixed bottom-28 right-6 w-16 h-16 bg-purple-600 hover:bg-purple-700 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
-        title={povMode ? "Vue troisième personne" : "Vue première personne"}
-      >
-        {povMode ? <Eye className="w-8 h-8 text-white" /> : <EyeOff className="w-8 h-8 text-white" />}
-      </button>
+          {/* Bouton changement de vue POV */}
+          <button
+            onClick={togglePovMode}
+            className="w-12 h-12 bg-purple-600 hover:bg-purple-700 rounded-full shadow-xl flex items-center justify-center border-2 border-white/30"
+            title={povMode ? "Vue troisième personne" : "Vue première personne"}
+          >
+            {povMode ? <Eye className="w-6 h-6 text-white" /> : <EyeOff className="w-6 h-6 text-white" />}
+          </button>
 
-      {/* Bouton Emojis */}
-      {worldSettings.enableEmojis && (
-        <button
-          onClick={() => setShowQuickActions(!showQuickActions)}
-          className="fixed bottom-6 right-6 w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
-        >
-          <Smile className="w-10 h-10 text-white" />
-        </button>
-      )}
-
-      {showQuickActions && (
-        <div className="fixed bottom-28 right-6 z-20 bg-black/90 backdrop-blur-lg p-4 rounded-2xl border-2 border-white/20 max-h-[60vh] md:max-h-[70vh] overflow-y-auto">
-          <div className="flex flex-col gap-3">
+          {/* Bouton Messages */}
+          {worldSettings.enableChat && (
             <button
-              onClick={() => handleQuickAction("jump")}
-              className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
+              onClick={() => setShowChatInput(true)}
+              className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full shadow-xl flex items-center justify-center border-2 border-white/30"
             >
-              <ArrowUp className="w-6 h-6" />
+              <MessageCircle className="w-6 h-6 text-white" />
             </button>
-            {["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"].map((emoji) => (
-              <button
-                key={emoji}
-                onClick={() => handleEmoji(emoji)}
-                className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors text-center"
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
+          )}
+
+          {/* Bouton Emojis */}
+          {worldSettings.enableEmojis && (
+            <button
+              onClick={() => setShowQuickActions(!showQuickActions)}
+              className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-xl flex items-center justify-center border-2 border-white/30"
+            >
+              <Smile className="w-6 h-6 text-white" />
+            </button>
+          )}
         </div>
+      ) : (
+        /* Mode desktop: boutons en bas à droite */
+        <>
+          {/* Bouton Messages - à gauche du bouton emojis */}
+          {worldSettings.enableChat && (
+            <button
+              onClick={() => setShowChatInput(true)}
+              className="fixed bottom-6 right-28 w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
+            >
+              <MessageCircle className="w-8 h-8 text-white" />
+            </button>
+          )}
+
+          {/* Bouton changement de vue POV - au dessus du bouton emojis */}
+          <button
+            onClick={togglePovMode}
+            className="fixed bottom-28 right-6 w-16 h-16 bg-purple-600 hover:bg-purple-700 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
+            title={povMode ? "Vue troisième personne" : "Vue première personne"}
+          >
+            {povMode ? <Eye className="w-8 h-8 text-white" /> : <EyeOff className="w-8 h-8 text-white" />}
+          </button>
+
+          {/* Bouton Emojis */}
+          {worldSettings.enableEmojis && (
+            <button
+              onClick={() => setShowQuickActions(!showQuickActions)}
+              className="fixed bottom-6 right-6 w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
+            >
+              <Smile className="w-10 h-10 text-white" />
+            </button>
+          )}
+        </>
+      )}
+
+      {/* Panel Quick Actions - positionné selon le mode */}
+      {showQuickActions && (
+        isMobileMode ? (
+          /* Mode mobile: grille compacte en dessous des boutons */
+          <div className="fixed top-[220px] right-4 z-20 bg-black/90 backdrop-blur-lg p-2 rounded-xl border-2 border-white/20 max-h-[50vh] overflow-y-auto w-[140px]">
+            <div className="grid grid-cols-3 gap-1">
+              <button
+                onClick={() => handleQuickAction("jump")}
+                className="bg-gray-800 text-white p-2 rounded-lg shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
+              >
+                <ArrowUp className="w-5 h-5" />
+              </button>
+              {["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"].map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleEmoji(emoji)}
+                  className="text-2xl p-1 rounded-lg hover:bg-white/10 transition-colors text-center"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          /* Mode desktop: colonne verticale */
+          <div className="fixed bottom-28 right-6 z-20 bg-black/90 backdrop-blur-lg p-4 rounded-2xl border-2 border-white/20 max-h-[70vh] overflow-y-auto">
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => handleQuickAction("jump")}
+                className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
+              >
+                <ArrowUp className="w-6 h-6" />
+              </button>
+              {["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"].map((emoji) => (
+                <button
+                  key={emoji}
+                  onClick={() => handleEmoji(emoji)}
+                  className="text-4xl p-2 rounded-full hover:bg-white/10 transition-colors text-center"
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+        )
       )}
 
       {/* Boutons fixes en bas à droite - visible dans une salle */}
@@ -3483,6 +3618,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {isMobileMode && <MobileJoystick onMove={handleJoystickMove} />}
+      {isMobileMode && <CameraJoystick onRotate={handleCameraRotate} />}
 
       {showAFKWarning && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
@@ -3682,7 +3818,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       {currentArcadeMachine && (
         <div className="fixed inset-0 bg-black z-50 flex flex-col">
-          <div className="bg-purple-900 px-4 py-3 flex items-center justify-between border-b-2 border-purple-400">
+          {/* Header avec z-index élevé pour rester au-dessus de l'iframe */}
+          <div className="bg-purple-900 px-4 py-3 flex items-center justify-between border-b-2 border-purple-400 relative z-[100]">
             <div className="flex items-center gap-3 text-white">
               <Gamepad2 className="w-5 h-5 text-pink-400" />
               <span className="font-bold text-lg">{currentArcadeMachine.name}</span>
@@ -3695,12 +3832,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               Fermer
             </button>
           </div>
-          <iframe
-            src={currentArcadeMachine.url}
-            className="flex-1 w-full h-full border-0"
-            allow="gamepad; fullscreen"
-            allowFullScreen
-          />
+          {/* Container pour l'iframe avec overlay bloquant le menu */}
+          <div className="flex-1 relative">
+            {/* Overlay en haut à gauche pour bloquer le menu hamburger de webRcade */}
+            <div className="absolute top-0 left-0 w-24 h-24 z-10 bg-transparent" />
+            {/* Iframe - le contenu interne (comme le menu webRcade) reste dans son contexte */}
+            <iframe
+              src={currentArcadeMachine.url}
+              className="absolute inset-0 w-full h-full border-0"
+              allow="gamepad; fullscreen"
+              allowFullScreen
+            />
+          </div>
         </div>
       )}
 
@@ -3934,6 +4077,7 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval>>()
+  const touchIdRef = useRef<number | null>(null) // Track specific touch
 
   useEffect(() => {
     if (isDragging) {
@@ -3958,9 +4102,119 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
     }
   }, [isDragging, position.x, position.y, onMove])
 
-  const handleStart = (clientX: number, clientY: number) => {
-    setIsDragging(true)
+  const handleMove = (clientX: number, clientY: number) => {
+    if (!containerRef.current) return
+
+    const rect = containerRef.current.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+
+    let dx = clientX - centerX
+    let dy = clientY - centerY
+
+    const distance = Math.sqrt(dx * dx + dy * dy)
+    const maxDistance = 60
+
+    if (distance > maxDistance) {
+      dx = (dx / distance) * maxDistance
+      dy = (dy / distance) * maxDistance
+    }
+
+    setPosition({ x: dx, y: dy })
   }
+
+  const handleEnd = () => {
+    touchIdRef.current = null
+    setIsDragging(false)
+    setPosition({ x: 0, y: 0 })
+  }
+
+  // Find the touch with matching ID from TouchList
+  const findTouch = (touches: TouchList, id: number): Touch | null => {
+    for (let i = 0; i < touches.length; i++) {
+      if (touches[i].identifier === id) return touches[i]
+    }
+    return null
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="fixed bottom-24 left-8 w-36 h-36 bg-white/20 backdrop-blur-lg rounded-full z-20 border-4 border-white/30 select-none touch-none"
+      onTouchStart={(e) => {
+        e.stopPropagation()
+        if (touchIdRef.current === null) {
+          const touch = e.changedTouches[0]
+          touchIdRef.current = touch.identifier
+          setIsDragging(true)
+          handleMove(touch.clientX, touch.clientY)
+        }
+      }}
+      onTouchMove={(e) => {
+        e.stopPropagation()
+        if (touchIdRef.current !== null) {
+          const touch = findTouch(e.touches, touchIdRef.current)
+          if (touch) handleMove(touch.clientX, touch.clientY)
+        }
+      }}
+      onTouchEnd={(e) => {
+        e.stopPropagation()
+        if (touchIdRef.current !== null) {
+          const touch = findTouch(e.changedTouches, touchIdRef.current)
+          if (touch) handleEnd()
+        }
+      }}
+      onTouchCancel={handleEnd}
+      onMouseDown={(e) => {
+        setIsDragging(true)
+        handleMove(e.clientX, e.clientY)
+      }}
+      onMouseMove={(e) => isDragging && handleMove(e.clientX, e.clientY)}
+      onMouseUp={handleEnd}
+      onMouseLeave={handleEnd}
+    >
+      <div
+        className="absolute w-14 h-14 bg-white/60 rounded-full top-1/2 left-1/2 shadow-lg transition-transform pointer-events-none"
+        style={{
+          transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+        }}
+      />
+    </div>
+  )
+}
+
+// Joystick pour la rotation de la caméra (côté droit)
+function CameraJoystick({ onRotate }: { onRotate: (deltaYaw: number, deltaPitch: number) => void }) {
+  const [isDragging, setIsDragging] = useState(false)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const containerRef = useRef<HTMLDivElement>(null)
+  const intervalRef = useRef<ReturnType<typeof setInterval>>()
+  const touchIdRef = useRef<number | null>(null) // Track specific touch
+
+  useEffect(() => {
+    if (isDragging) {
+      const update = () => {
+        const maxDistance = 60
+        const sensitivity = 0.012 // Sensibilité de rotation (réduite pour une rotation plus lente)
+        onRotate(
+          (position.x / maxDistance) * sensitivity,
+          -(position.y / maxDistance) * sensitivity // Inverser Y pour que haut = regarder en haut
+        )
+      }
+      update()
+      intervalRef.current = setInterval(update, 16) // ~60fps pour une rotation fluide
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [isDragging, position.x, position.y, onRotate])
 
   const handleMove = (clientX: number, clientY: number) => {
     if (!containerRef.current) return
@@ -3984,30 +4238,61 @@ function MobileJoystick({ onMove }: { onMove: (dx: number, dz: number) => void }
   }
 
   const handleEnd = () => {
+    touchIdRef.current = null
     setIsDragging(false)
     setPosition({ x: 0, y: 0 })
+  }
+
+  // Find the touch with matching ID from TouchList
+  const findTouch = (touches: TouchList, id: number): Touch | null => {
+    for (let i = 0; i < touches.length; i++) {
+      if (touches[i].identifier === id) return touches[i]
+    }
+    return null
   }
 
   return (
     <div
       ref={containerRef}
-      className="fixed bottom-24 left-8 w-36 h-36 bg-white/20 backdrop-blur-lg rounded-full z-20 md:hidden border-4 border-white/30 select-none touch-none"
+      className="fixed bottom-24 right-8 w-36 h-36 bg-blue-500/20 backdrop-blur-lg rounded-full z-20 border-4 border-blue-400/30 select-none touch-none"
       onTouchStart={(e) => {
-        e.preventDefault()
-        handleStart(e.touches[0].clientX, e.touches[0].clientY)
+        e.stopPropagation()
+        if (touchIdRef.current === null) {
+          const touch = e.changedTouches[0]
+          touchIdRef.current = touch.identifier
+          setIsDragging(true)
+          handleMove(touch.clientX, touch.clientY)
+        }
       }}
       onTouchMove={(e) => {
-        e.preventDefault()
-        if (isDragging) handleMove(e.touches[0].clientX, e.touches[0].clientY)
+        e.stopPropagation()
+        if (touchIdRef.current !== null) {
+          const touch = findTouch(e.touches, touchIdRef.current)
+          if (touch) handleMove(touch.clientX, touch.clientY)
+        }
       }}
-      onTouchEnd={handleEnd}
-      onMouseDown={(e) => handleStart(e.clientX, e.clientY)}
+      onTouchEnd={(e) => {
+        e.stopPropagation()
+        if (touchIdRef.current !== null) {
+          const touch = findTouch(e.changedTouches, touchIdRef.current)
+          if (touch) handleEnd()
+        }
+      }}
+      onTouchCancel={handleEnd}
+      onMouseDown={(e) => {
+        setIsDragging(true)
+        handleMove(e.clientX, e.clientY)
+      }}
       onMouseMove={(e) => isDragging && handleMove(e.clientX, e.clientY)}
       onMouseUp={handleEnd}
       onMouseLeave={handleEnd}
     >
+      {/* Icône de caméra au centre */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-300/50 text-2xl pointer-events-none">
+        👁️
+      </div>
       <div
-        className="absolute w-14 h-14 bg-white/60 rounded-full top-1/2 left-1/2 shadow-lg transition-transform pointer-events-none"
+        className="absolute w-14 h-14 bg-blue-400/60 rounded-full top-1/2 left-1/2 shadow-lg transition-transform pointer-events-none"
         style={{
           transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
         }}
