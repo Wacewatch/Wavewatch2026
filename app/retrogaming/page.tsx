@@ -70,8 +70,29 @@ export default function RetrogamingPage() {
     setFilteredSources(filtered)
   }, [searchQuery, selectedCategory, gamingSources])
 
+  // Domaines qui nécessitent le proxy pour contourner le referer check
+  const domainsNeedingProxy = ["retrogames.onl", "www.retrogames.onl"]
+
+  const getProxiedUrl = (url: string): string => {
+    try {
+      const urlObj = new URL(url)
+      const needsProxy = domainsNeedingProxy.some(
+        (domain) => urlObj.hostname === domain || urlObj.hostname.endsWith(`.${domain}`)
+      )
+      if (needsProxy) {
+        return `/api/proxy/game?url=${encodeURIComponent(url)}`
+      }
+      return url
+    } catch {
+      return url
+    }
+  }
+
   const handlePlayGame = (source: RetrogamingSource) => {
-    setSelectedSource(source)
+    setSelectedSource({
+      ...source,
+      url: getProxiedUrl(source.url),
+    })
     setShowIframe(true)
   }
 

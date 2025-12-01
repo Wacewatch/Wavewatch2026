@@ -587,10 +587,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [showMap, setShowMap] = useState(false)
 
   // Liste locale des machines d'arcade (plus de connexion BDD)
+  // Les URLs avec useProxy: true passent par /api/proxy/game pour contourner les timers/modales
   const localArcadeMachines = [
     { id: 1, name: "Game.Onl", url: "https://gam.onl", media: { type: 'video', src: "https://gam.onl/user/main/videos/arcade.mp4" }, openInNewTab: false },
-    { id: 2, name: "RetroGames.onl", url: "https://www.retrogames.onl/", media: { type: 'image', src: "/arcade/RetroGames.onl.png" }, openInNewTab: true },
-    { id: 3, name: "EmuOS", url: "https://emupedia.net/beta/emuos/", media: { type: 'image', src: "/arcade/emupedia.net.png" }, openInNewTab: true },
+    { id: 2, name: "RetroGames.onl", url: "https://www.retrogames.onl/", media: { type: 'image', src: "/arcade/RetroGames.onl.png" }, openInNewTab: false, useProxy: true },
     { id: 4, name: "RetroGames.me", url: "https://retrogames.me", media: { type: 'image', src: "/arcade/RetroGames.me.png" }, openInNewTab: false },
     { id: 5, name: "Venge.io", url: "https://venge.io", media: { type: 'image', src: "/arcade/Venge.io.png" }, openInNewTab: false },
     { id: 6, name: "WebRcade", url: "https://play.webrcade.com", media: { type: 'image', src: "/arcade/WebArcade.png" }, openInNewTab: false },
@@ -665,6 +665,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       setIsMobileMode(isTouchDevice || isSmallScreen)
     }
   }, [controlMode])
+
+  // Désactiver le scroll quand un jeu arcade est ouvert
+  useEffect(() => {
+    if (currentArcadeMachine) {
+      document.body.style.overflow = 'hidden'
+      document.documentElement.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+      document.documentElement.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+      document.documentElement.style.overflow = ''
+    }
+  }, [currentArcadeMachine])
 
   const [lastActivity, setLastActivity] = useState(Date.now())
   const [showAFKWarning, setShowAFKWarning] = useState(false)
@@ -4108,7 +4123,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {currentArcadeMachine && (
-        <div className="fixed inset-0 bg-black z-50 flex flex-col">
+        <div className="fixed inset-0 bg-black z-50 flex flex-col overflow-hidden" style={{ touchAction: 'none' }}>
           {/* Header avec z-index élevé pour rester au-dessus de l'iframe */}
           <div className="bg-purple-900 px-4 py-3 flex items-center justify-between border-b-2 border-purple-400 relative z-[100]">
             <div className="flex items-center gap-3 text-white">
@@ -4128,11 +4143,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             {/* Overlay en haut à gauche pour bloquer le menu hamburger de webRcade */}
             <div className="absolute top-0 left-0 w-24 h-24 z-10 bg-transparent" />
             {/* Iframe - le contenu interne (comme le menu webRcade) reste dans son contexte */}
+            {/* Si useProxy est true, on passe par /api/proxy/game pour contourner les timers/modales */}
             <iframe
-              src={currentArcadeMachine.url}
+              src={currentArcadeMachine.useProxy
+                ? `/api/proxy/game?url=${encodeURIComponent(currentArcadeMachine.url)}`
+                : currentArcadeMachine.url}
               className="absolute inset-0 w-full h-full border-0"
-              allow="gamepad; fullscreen"
+              allow="gamepad *; fullscreen *; autoplay *; clipboard-write *; encrypted-media *"
               allowFullScreen
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals"
             />
           </div>
         </div>
