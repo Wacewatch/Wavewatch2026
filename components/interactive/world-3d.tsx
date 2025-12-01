@@ -605,6 +605,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [stadium, setStadium] = useState<any>(null)
   const [showStadium, setShowStadium] = useState(false)
   const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
+  const [isCinemaMuted, setIsCinemaMuted] = useState(true) // Muted par défaut pour éviter le son automatique
   const [stadiumSeat, setStadiumSeat] = useState<{ row: number; side: string } | null>(null) // Siège dans le stade
   const [showMenu, setShowMenu] = useState(false) // Added this state
 
@@ -1236,44 +1237,52 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const loadSeats = useCallback(async () => {
     if (!currentCinemaRoom) return
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("interactive_cinema_seats")
       .select("*")
       .eq("room_id", currentCinemaRoom.id)
       .order("row_number", { ascending: true })
       .order("seat_number", { ascending: true })
 
-    if (data && data.length > 0) {
-      // Group seats by row to find how many seats per row
-      const seatsByRow: Record<number, any[]> = {}
-      data.forEach(seat => {
-        if (!seatsByRow[seat.row_number]) seatsByRow[seat.row_number] = []
-        seatsByRow[seat.row_number].push(seat)
-      })
-
-      const maxSeatsInAnyRow = Math.max(...Object.values(seatsByRow).map(row => row.length))
-      const seatSpacing = 1.2 // Space between seats
-      const rowSpacing = 1.8 // Space between rows
-
-      // Add display positions to database seats
-      const seatsWithPositions = data.map((seat) => {
-        const seatsInThisRow = seatsByRow[seat.row_number].length
-        // Find seat index within its row (0-based)
-        const seatIndexInRow = seatsByRow[seat.row_number].findIndex(s => s.id === seat.id)
-        // Center each row independently
-        const rowOffset = (maxSeatsInAnyRow - seatsInThisRow) / 2
-
-        return {
-          ...seat,
-          position_x: (seatIndexInRow + rowOffset - maxSeatsInAnyRow / 2 + 0.5) * seatSpacing,
-          position_y: 0.4,
-          position_z: (seat.row_number - 1) * rowSpacing + 2,
-          color: seat.user_id ? "#ef4444" : "#374151",
-          is_occupied: !!seat.user_id,
-        }
-      })
-      setCinemaSeats(seatsWithPositions)
+    if (error) {
+      console.error("Error loading seats:", error)
+      return
     }
+
+    if (!data || data.length === 0) {
+      setCinemaSeats([])
+      return
+    }
+
+    // Group seats by row to find how many seats per row
+    const seatsByRow: Record<number, any[]> = {}
+    data.forEach(seat => {
+      if (!seatsByRow[seat.row_number]) seatsByRow[seat.row_number] = []
+      seatsByRow[seat.row_number].push(seat)
+    })
+
+    const maxSeatsInAnyRow = Math.max(...Object.values(seatsByRow).map(row => row.length))
+    const seatSpacing = 1.2 // Space between seats
+    const rowSpacing = 1.8 // Space between rows
+
+    // Add display positions to database seats - use user_id as source of truth
+    const seatsWithPositions = data.map((seat) => {
+      const seatsInThisRow = seatsByRow[seat.row_number].length
+      // Find seat index within its row (0-based)
+      const seatIndexInRow = seatsByRow[seat.row_number].findIndex(s => s.id === seat.id)
+      // Center each row independently
+      const rowOffset = (maxSeatsInAnyRow - seatsInThisRow) / 2
+
+      return {
+        ...seat,
+        position_x: (seatIndexInRow + rowOffset - maxSeatsInAnyRow / 2 + 0.5) * seatSpacing,
+        position_y: 0.4,
+        position_z: (seat.row_number - 1) * rowSpacing + 2,
+        // Use user_id as the single source of truth for occupancy
+        is_occupied: !!seat.user_id,
+      }
+    })
+    setCinemaSeats(seatsWithPositions)
   }, [currentCinemaRoom])
 
   useEffect(() => {
@@ -1299,6 +1308,45 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       supabase.removeChannel(channel)
     }
   }, [currentCinemaRoom, loadSeats])
+
+  // Libérer le siège quand l'utilisateur ferme la page ou quitte
+  useEffect(() => {
+    const releaseSeatOnExit = async () => {
+      if (mySeat !== null && currentCinemaRoom && userId) {
+        // Utiliser sendBeacon pour garantir l'envoi même si la page se ferme
+        const payload = JSON.stringify({
+          room_id: currentCinemaRoom.id,
+          user_id: userId,
+        })
+        navigator.sendBeacon?.('/api/cinema/release-seat', payload)
+      }
+    }
+
+    window.addEventListener('beforeunload', releaseSeatOnExit)
+    window.addEventListener('pagehide', releaseSeatOnExit)
+
+    return () => {
+      window.removeEventListener('beforeunload', releaseSeatOnExit)
+      window.removeEventListener('pagehide', releaseSeatOnExit)
+    }
+  }, [mySeat, currentCinemaRoom, userId])
+
+  // Nettoyer les sièges abandonnés au chargement de la salle (occupés depuis plus de 30 min)
+  useEffect(() => {
+    if (!currentCinemaRoom) return
+
+    const cleanupAbandonedSeats = async () => {
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+      await supabase
+        .from('interactive_cinema_seats')
+        .update({ is_occupied: false, user_id: null, occupied_at: null })
+        .eq('room_id', currentCinemaRoom.id)
+        .eq('is_occupied', true)
+        .lt('occupied_at', thirtyMinutesAgo)
+    }
+
+    cleanupAbandonedSeats()
+  }, [currentCinemaRoom])
 
   const loadRoomMessages = useCallback(async () => {
     if (!currentCinemaRoom) return
@@ -1712,9 +1760,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const handleEnterCinemaRoom = async (room: any) => {
-    setCurrentCinemaRoom(room)
-    setCurrentRoom(`cinema_${room.id}`) // Set local state for player filtering
-    setShowCinema(false)
+    // Clear old seat data immediately to prevent stale state
+    setCinemaSeats([])
+    setMySeat(null)
 
     // Save current map position before entering cinema
     setSavedMapPosition({ x: myPosition.x, y: myPosition.y, z: myPosition.z })
@@ -1723,6 +1771,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     const cinemaSpawnPos = { x: -0.7003322451885853, y: -0.35, z: 11.633941158451258 }
     setMyPosition(cinemaSpawnPos)
 
+    setShowCinema(false)
+
+    // Release only MY seat if I had one in this room (RLS prevents resetting others' seats)
+    await supabase
+      .from("interactive_cinema_seats")
+      .update({ user_id: null, is_occupied: false, occupied_at: null })
+      .eq("room_id", room.id)
+      .eq("user_id", userId)
+
+    // Update profile position
     await supabase
       .from("interactive_profiles")
       .update({
@@ -1733,82 +1791,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       })
       .eq("user_id", userId)
 
-    // Release only MY seat if I had one in this room (RLS prevents resetting others' seats)
-    await supabase
-      .from("interactive_cinema_seats")
-      .update({ user_id: null, is_occupied: false, occupied_at: null })
-      .eq("room_id", room.id)
-      .eq("user_id", userId)
-
-    // Load seats from database and add display positions
-    const { data: dbSeats, error: loadError } = await supabase
-      .from("interactive_cinema_seats")
-      .select("*")
-      .eq("room_id", room.id)
-      .order("row_number", { ascending: true })
-      .order("seat_number", { ascending: true })
-
-    if (loadError) {
-      console.error("Error loading seats:", loadError)
-    }
-
-    if (dbSeats && dbSeats.length > 0) {
-      // Group seats by row to find how many seats per row
-      const seatsByRow: Record<number, any[]> = {}
-      dbSeats.forEach(seat => {
-        if (!seatsByRow[seat.row_number]) seatsByRow[seat.row_number] = []
-        seatsByRow[seat.row_number].push(seat)
-      })
-
-      const maxSeatsInAnyRow = Math.max(...Object.values(seatsByRow).map(row => row.length))
-      const seatSpacing = 1.2 // Space between seats
-      const rowSpacing = 1.8 // Space between rows
-
-      // Add display positions to database seats
-      const seatsWithPositions = dbSeats.map((seat) => {
-        const seatsInThisRow = seatsByRow[seat.row_number].length
-        // Find seat index within its row (0-based)
-        const seatIndexInRow = seatsByRow[seat.row_number].findIndex(s => s.id === seat.id)
-        // Center each row independently
-        const rowOffset = (maxSeatsInAnyRow - seatsInThisRow) / 2
-
-        return {
-          ...seat,
-          position_x: (seatIndexInRow + rowOffset - maxSeatsInAnyRow / 2 + 0.5) * seatSpacing,
-          position_y: 0.4,
-          position_z: (seat.row_number - 1) * rowSpacing + 2,
-          color: seat.user_id ? "#ef4444" : "#374151",
-          is_occupied: !!seat.user_id,
-        }
-      })
-      setCinemaSeats(seatsWithPositions)
-    } else {
-      // Fallback: generate seats if none exist in DB
-      const capacity = room.capacity || 50
-      const seatsPerRow = 10
-      const rows = Math.ceil(capacity / seatsPerRow)
-
-      const generatedSeats = []
-      let totalSeats = 0
-      for (let row = 1; row <= rows; row++) {
-        for (let col = 1; col <= seatsPerRow; col++) {
-          totalSeats++
-          if (totalSeats > capacity) break
-
-          generatedSeats.push({
-            seat_number: col,
-            row_number: row,
-            position_x: (col - 5.5) * 1.5,
-            position_y: 0.4,
-            position_z: (row - 1) * 2 + 2,
-            color: "#374151",
-            is_occupied: false,
-            id: `seat-${row}-${col}`,
-          })
-        }
-      }
-      setCinemaSeats(generatedSeats)
-    }
+    // Set room LAST - this triggers the useEffect which will load seats correctly
+    setCurrentRoom(`cinema_${room.id}`) // Set local state for player filtering
+    setCurrentCinemaRoom(room) // This triggers useEffect -> loadSeats()
   }
 
   const handleLeaveRoom = async () => {
@@ -1820,6 +1805,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       }).eq("room_id", currentCinemaRoom.id).eq("user_id", userId)
       setMySeat(null)
     }
+
+    // Clear seat data when leaving to prevent stale state on re-entry
+    setCinemaSeats([])
 
     setCurrentCinemaRoom(null)
     setCurrentRoom(null) // Clear local state for player filtering
@@ -2200,14 +2188,48 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       setMyProfile(data)
 
       if (data) {
-        const loadedPosition = { x: data.position_x, y: data.position_y, z: data.position_z }
-        setMyPosition(loadedPosition)
-        setMyRotation(data.rotation || 0)
-        setCurrentRoom(data.current_room) // Initialize local currentRoom state
-
-        // If user is not in a special room, save current position as the map position
         const isInSpecialRoom = data.current_room === "stadium" || data.current_room === "arcade" || (data.current_room && data.current_room.startsWith('cinema_'))
-        if (!isInSpecialRoom) {
+
+        // Si l'utilisateur était dans une salle spéciale (cinéma, stade, arcade),
+        // on le remet au spawn et on libère son siège car c'est un nouveau chargement de page
+        if (isInSpecialRoom) {
+          const spawnPosition = { x: 0, y: 0.5, z: 0 }
+          setMyPosition(spawnPosition)
+          setMyRotation(0)
+          setCurrentRoom(null)
+          setSavedMapPosition(spawnPosition)
+
+          // Libérer le siège dans le cinéma si c'était une salle de cinéma
+          if (data.current_room && data.current_room.startsWith('cinema_')) {
+            const roomId = data.current_room.replace('cinema_', '')
+            supabase
+              .from('interactive_cinema_seats')
+              .update({ is_occupied: false, user_id: null, occupied_at: null })
+              .eq('user_id', data.user_id)
+              .then(() => {
+                console.log('[Cinema] Released seat on page reload')
+              })
+          }
+
+          // Mettre à jour la BDD pour refléter la nouvelle position
+          supabase
+            .from('interactive_profiles')
+            .update({
+              current_room: null,
+              position_x: spawnPosition.x,
+              position_y: spawnPosition.y,
+              position_z: spawnPosition.z,
+            })
+            .eq('user_id', userId)
+            .then(() => {
+              console.log('[Profile] Reset to spawn on page reload')
+            })
+        } else {
+          // Comportement normal pour les joueurs sur la map
+          const loadedPosition = { x: data.position_x, y: data.position_y, z: data.position_z }
+          setMyPosition(loadedPosition)
+          setMyRotation(data.rotation || 0)
+          setCurrentRoom(data.current_room)
           setSavedMapPosition(loadedPosition)
         }
       }
@@ -3150,7 +3172,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   height={7.5}
                   position={[0, 0, 0]}
                   autoplay={true}
-                  muted={false}
+                  muted={isCinemaMuted}
                 />
               </group>
             )}
@@ -3201,13 +3223,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               })()}
 
             {cinemaSeats.map((seat) => {
-              const isMySeat = mySeat === seat.seat_number // Use seat.seat_number for comparison
+              // mySeat is stored as (row * 100 + seat_number), so calculate the same way for comparison
+              const seatId = seat.row_number * 100 + seat.seat_number
+              const isMySeat = mySeat === seatId
+              // Use user_id as single source of truth for occupancy
+              const isOccupied = !!seat.user_id
+              const seatColor = isMySeat ? "#ef4444" : (isOccupied ? "#f97316" : "#374151")
 
               return (
                 <group key={seat.id || `seat-${seat.seat_number}-${seat.position_x}-${seat.position_z}`} position={[seat.position_x, seat.position_y, seat.position_z]}>
                   <mesh castShadow>
                     <boxGeometry args={[1, 0.8, 0.9]} />
-                    <meshStandardMaterial color={isMySeat ? "#ef4444" : seat.color} />
+                    <meshStandardMaterial color={seatColor} />
                   </mesh>
                 </group>
               )
@@ -3879,6 +3906,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <span className="font-medium">Se lever</span>
               </button>
             )
+          )}
+          {/* Bouton Mute/Unmute - dans le cinéma */}
+          {currentCinemaRoom && (
+            <button
+              onClick={() => setIsCinemaMuted(!isCinemaMuted)}
+              className={`${isCinemaMuted ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]`}
+            >
+              <span className="text-lg">{isCinemaMuted ? '🔇' : '🔊'}</span>
+              <span className="font-medium">{isCinemaMuted ? 'Unmute' : 'Mute'}</span>
+            </button>
           )}
           {/* Bouton S'asseoir/Se lever - dans le stade */}
           {currentRoom === "stadium" && (

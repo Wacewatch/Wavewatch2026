@@ -264,6 +264,13 @@ export function HLSVideoScreen({
     }
   }, [src, autoplay, muted, hasError, onReady, onError])
 
+  // Update muted state when prop changes
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = muted
+    }
+  }, [muted])
+
   // Update texture every frame when video is playing
   useFrame(() => {
     if (textureRef.current && videoRef.current) {
