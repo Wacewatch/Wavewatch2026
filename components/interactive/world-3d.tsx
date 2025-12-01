@@ -388,6 +388,138 @@ function RealisticLamppost({ position }: { position: [number, number, number] })
   )
 }
 
+// InterpolatedPlayer - Gère l'interpolation fluide des positions des autres joueurs
+function InterpolatedPlayer({
+  player,
+  avatarStyle,
+  playerAction,
+  worldSettings,
+  playerChatBubbles,
+}: {
+  player: any
+  avatarStyle: any
+  playerAction: any
+  worldSettings: any
+  playerChatBubbles: Record<string, { message: string; timestamp: number }>
+}) {
+  const groupRef = useRef<THREE.Group>(null)
+  const avatarGroupRef = useRef<THREE.Group>(null)
+
+  // Position et rotation interpolées
+  const currentPos = useRef({
+    x: player.position_x || 0,
+    y: player.position_y || 0,
+    z: player.position_z || 0,
+  })
+  const currentRotation = useRef(player.rotation || 0)
+
+  // Position cible (dernière reçue de la DB)
+  const targetPos = useRef({
+    x: player.position_x || 0,
+    y: player.position_y || 0,
+    z: player.position_z || 0,
+  })
+  const targetRotation = useRef(player.rotation || 0)
+
+  // Détecter si le joueur bouge pour l'animation
+  const [isMoving, setIsMoving] = useState(false)
+
+  // Mettre à jour la position cible quand les données DB changent
+  useEffect(() => {
+    targetPos.current = {
+      x: player.position_x || 0,
+      y: player.position_y || 0,
+      z: player.position_z || 0,
+    }
+    targetRotation.current = player.rotation || 0
+  }, [player.position_x, player.position_y, player.position_z, player.rotation])
+
+  // Interpolation à chaque frame
+  useFrame(() => {
+    if (!groupRef.current) return
+
+    // Facteur d'interpolation (0.08 = lent et fluide, 0.15 = plus rapide)
+    const lerpFactor = 0.1
+
+    // Interpoler la position
+    currentPos.current.x += (targetPos.current.x - currentPos.current.x) * lerpFactor
+    currentPos.current.y += (targetPos.current.y - currentPos.current.y) * lerpFactor
+    currentPos.current.z += (targetPos.current.z - currentPos.current.z) * lerpFactor
+
+    // Interpoler la rotation (gérer le wraparound autour de PI)
+    let rotationDiff = targetRotation.current - currentRotation.current
+    // Normaliser la différence de rotation pour prendre le chemin le plus court
+    while (rotationDiff > Math.PI) rotationDiff -= Math.PI * 2
+    while (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
+    currentRotation.current += rotationDiff * lerpFactor
+
+    // Appliquer la position interpolée au groupe
+    groupRef.current.position.set(
+      currentPos.current.x,
+      currentPos.current.y,
+      currentPos.current.z
+    )
+
+    // Appliquer la rotation interpolée au groupe avatar
+    if (avatarGroupRef.current) {
+      avatarGroupRef.current.rotation.y = currentRotation.current
+    }
+
+    // Détecter si le joueur est en mouvement (pour l'animation)
+    const distanceToTarget = Math.sqrt(
+      Math.pow(targetPos.current.x - currentPos.current.x, 2) +
+      Math.pow(targetPos.current.z - currentPos.current.z, 2)
+    )
+    const newIsMoving = distanceToTarget > 0.05
+    if (newIsMoving !== isMoving) {
+      setIsMoving(newIsMoving)
+    }
+  })
+
+  const playerProfile = player.user_profiles
+
+  return (
+    <group ref={groupRef}>
+      <group ref={avatarGroupRef}>
+        <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={isMoving} />
+      </group>
+
+      {worldSettings.showStatusBadges && (
+        <Html
+          position={[0, 2.6, 0]}
+          center
+          distanceFactor={10}
+          zIndexRange={[0, 0]}
+        >
+          <div className="flex flex-col items-center gap-1 pointer-events-none">
+            <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
+              <span className="text-white text-xs font-medium whitespace-nowrap">
+                {player.username || playerProfile?.username || "Joueur"}
+              </span>
+              {playerProfile?.is_admin && <Shield className="w-3 h-3 text-red-500" />}
+              {playerProfile?.is_vip_plus && !playerProfile?.is_admin && (
+                <Crown className="w-3 h-3 text-purple-400" />
+              )}
+              {playerProfile?.is_vip && !playerProfile?.is_vip_plus && !playerProfile?.is_admin && (
+                <Star className="w-3 h-3 text-yellow-400" />
+              )}
+            </div>
+            {playerChatBubbles[player.user_id] &&
+              Date.now() - playerChatBubbles[player.user_id].timestamp < 5000 && (
+                <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
+                  {playerChatBubbles[player.user_id].message}
+                </div>
+              )}
+            {playerAction && playerAction.action === "emoji" && (
+              <div className="text-4xl animate-bounce">{playerAction.emoji}</div>
+            )}
+          </div>
+        </Html>
+      )}
+    </group>
+  )
+}
+
 export default function InteractiveWorld({ userId, userProfile }: InteractiveWorldProps) {
   const router = useRouter() // Initialize router
   const [myProfile, setMyProfile] = useState<any>(null)
@@ -2890,7 +3022,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           </>
         ) : null}
 
-        {/* Player avatars with badges */}
+        {/* Player avatars with badges - using InterpolatedPlayer for smooth movement */}
         {otherPlayers
           .filter((p) => {
             const playerIsInSameRoom =
@@ -2903,56 +3035,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
             return playerIsInSameRoom && hasValidProfile && !isAtDefaultPosition
           })
-          .map((player) => {
-
-            const playerProfile = player.user_profiles
-            const avatarStyle = player.avatar_style || { bodyColor: "#ef4444", headColor: "#fbbf24", faceSmiley: "😊" }
-            const playerAction = playerActions[player.user_id]
-
-            return (
-              <group
-                key={player.user_id}
-                position={[player.position_x || 0, player.position_y || 0, player.position_z || 0]}
-              >
-                <group rotation={[0, player.rotation || 0, 0]}>
-                  <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={false} />
-                </group>
-
-                {worldSettings.showStatusBadges && (
-                  <Html
-                    position={[0, 2.6, 0]}
-                    center
-                    distanceFactor={10}
-                    zIndexRange={[0, 0]}
-                  >
-                    <div className="flex flex-col items-center gap-1 pointer-events-none">
-                      <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
-                        <span className="text-white text-xs font-medium whitespace-nowrap">
-                          {player.username || playerProfile?.username || "Joueur"}
-                        </span>
-                        {playerProfile?.is_admin && <Shield className="w-3 h-3 text-red-500" />}
-                        {playerProfile?.is_vip_plus && !playerProfile?.is_admin && (
-                          <Crown className="w-3 h-3 text-purple-400" />
-                        )}
-                        {playerProfile?.is_vip && !playerProfile?.is_vip_plus && !playerProfile?.is_admin && (
-                          <Star className="w-3 h-3 text-yellow-400" />
-                        )}
-                      </div>
-                      {playerChatBubbles[player.user_id] &&
-                        Date.now() - playerChatBubbles[player.user_id].timestamp < 5000 && (
-                          <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
-                            {playerChatBubbles[player.user_id].message}
-                          </div>
-                        )}
-                      {playerAction && playerAction.action === "emoji" && (
-                        <div className="text-4xl animate-bounce">{playerAction.emoji}</div>
-                      )}
-                    </div>
-                  </Html>
-                )}
-              </group>
-            )
-          })}
+          .map((player) => (
+            <InterpolatedPlayer
+              key={player.user_id}
+              player={player}
+              avatarStyle={player.avatar_style || { bodyColor: "#ef4444", headColor: "#fbbf24", faceSmiley: "😊" }}
+              playerAction={playerActions[player.user_id]}
+              worldSettings={worldSettings}
+              playerChatBubbles={playerChatBubbles}
+            />
+          ))}
 
         {!povMode && userProfile && (
           <group position={[myPosition.x, myPosition.y, myPosition.z]}>
