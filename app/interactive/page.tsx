@@ -9,6 +9,7 @@ import { Canvas } from "@react-three/fiber"
 import { OrbitControls } from "@react-three/drei"
 import { User, AlertTriangle } from 'lucide-react'
 import { Button } from "@/components/ui/button"
+import { AdGateModal, hasRecentAdView } from "@/components/ad-gate-modal"
 
 export default function InteractivePage() {
   const [hasProfile, setHasProfile] = useState(false)
@@ -19,6 +20,7 @@ export default function InteractivePage() {
   const [checkingProfile, setCheckingProfile] = useState(true)
   const [showConstructionWarning, setShowConstructionWarning] = useState(false)
   const [hasAcceptedWarning, setHasAcceptedWarning] = useState(false)
+  const [showAdGate, setShowAdGate] = useState(false)
   const [avatarStyle, setAvatarStyle] = useState({
     bodyColor: '#3b82f6',
     headColor: '#fde68a',
@@ -47,8 +49,10 @@ export default function InteractivePage() {
       router.push("/login")
       return
     }
+    // Ne pas re-vérifier le profil si on est déjà sur la gate pub ou dans le monde
+    if (showAdGate || showWorld) return
     checkProfile()
-  }, [user, loading])
+  }, [user, loading, showAdGate, showWorld])
 
   const checkProfile = async () => {
     if (!user) return
@@ -107,7 +111,12 @@ export default function InteractivePage() {
         // Check if user already accepted the warning
         const alreadyAccepted = localStorage.getItem('wavewatch_construction_warning_accepted') === 'true'
         if (alreadyAccepted) {
-          setShowWorld(true)
+          // Vérifier si la pub a déjà été vue récemment
+          if (hasRecentAdView()) {
+            setShowWorld(true)
+          } else {
+            setShowAdGate(true)
+          }
         } else {
           setShowConstructionWarning(true)
         }
@@ -166,7 +175,12 @@ export default function InteractivePage() {
       // Check if user already accepted the warning
       const alreadyAccepted = localStorage.getItem('wavewatch_construction_warning_accepted') === 'true'
       if (alreadyAccepted) {
-        setShowWorld(true)
+        // Vérifier si la pub a déjà été vue récemment
+        if (hasRecentAdView()) {
+          setShowWorld(true)
+        } else {
+          setShowAdGate(true)
+        }
       } else {
         setShowConstructionWarning(true)
       }
@@ -181,7 +195,23 @@ export default function InteractivePage() {
     localStorage.setItem('wavewatch_construction_warning_accepted', 'true')
     setHasAcceptedWarning(true)
     setShowConstructionWarning(false)
+
+    // Vérifier si l'utilisateur a déjà vu une pub récemment (24h)
+    if (hasRecentAdView()) {
+      setShowWorld(true)
+    } else {
+      setShowAdGate(true)
+    }
+  }
+
+  const handleAdComplete = () => {
+    setShowAdGate(false)
     setShowWorld(true)
+  }
+
+  const handleAdBack = () => {
+    setShowAdGate(false)
+    router.push('/')
   }
 
   useEffect(() => {
@@ -215,6 +245,15 @@ export default function InteractivePage() {
     )
   }
 
+  if (showAdGate) {
+    return (
+      <AdGateModal
+        onAdComplete={handleAdComplete}
+        onBack={handleAdBack}
+      />
+    )
+  }
+
   if (showConstructionWarning) {
     return (
       <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -225,7 +264,7 @@ export default function InteractivePage() {
             </div>
             <h2 className="text-3xl font-bold text-white">🚧 Page en construction</h2>
           </div>
-          
+
           <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-6 mb-6">
             <h3 className="text-xl font-semibold text-yellow-400 mb-4">Ouverte pour tests</h3>
             <p className="text-gray-300 leading-relaxed mb-4">
