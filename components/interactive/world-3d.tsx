@@ -705,51 +705,53 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   // Collision zones definition with labels for debug visualization
   // ID format: TYPE_NUMBER (ex: BLDG_1, TREE_1, LAMP_1, BUSH_1)
   // Pour déplacer un élément, modifie les valeurs x et z correspondantes
-  const collisionZonesData = [
-    // ========== BÂTIMENTS ==========
-    { id: "BLDG_CINEMA", x: 15, z: 0, width: 9, depth: 9, label: "Cinéma", color: "#ef4444" },
-    { id: "BLDG_ARCADE", x: 0, z: 15, width: 10, depth: 10, label: "Arcade", color: "#8b5cf6" },
-    { id: "BLDG_STADIUM", x: 25, z: -15, width: 12, depth: 10, label: "Stade", color: "#22c55e" },
+  // lowQuality: false = visible en toutes qualités, true = masqué en qualité basse
+  const allCollisionZones = [
+    // ========== BÂTIMENTS (toujours visibles) ==========
+    { id: "BLDG_CINEMA", x: 15, z: 0, width: 9, depth: 9, label: "Cinéma", color: "#ef4444", lowQuality: false },
+    { id: "BLDG_ARCADE", x: 0, z: 15, width: 10, depth: 10, label: "Arcade", color: "#8b5cf6", lowQuality: false },
+    { id: "BLDG_STADIUM", x: 25, z: -15, width: 12, depth: 10, label: "Stade", color: "#22c55e", lowQuality: false },
     // Bâtiments décoratifs (collision active mais pas d'interaction)
-    { id: "BLDG_2", x: -15, z: 5, width: 5, depth: 4, label: "Bâtiment Bleu", color: "#0ea5e9" },
-    { id: "BLDG_3", x: -15, z: -8, width: 4, depth: 4, label: "Bâtiment Orange", color: "#f59e0b" },
-    // Bâtiments désactivés (pas encore fonctionnels) - décommenter pour réactiver
-    // { id: "BLDG_1", x: -15, z: -15, width: 5, depth: 5, label: "Bibliothèque", color: "#7c3aed" },
-    // { id: "BLDG_4", x: -20, z: 15, width: 9, depth: 9, label: "Musée", color: "#dc2626" },
-    // { id: "BLDG_5", x: 20, z: 10, width: 7, depth: 7, label: "Restaurant", color: "#16a34a" },
-    // { id: "BLDG_6", x: 0, z: 25, width: 12, depth: 12, label: "Centre Commercial", color: "#0891b2" },
+    { id: "BLDG_2", x: -15, z: 5, width: 5, depth: 4, label: "Bâtiment Bleu", color: "#0ea5e9", lowQuality: false },
+    { id: "BLDG_3", x: -15, z: -8, width: 4, depth: 4, label: "Bâtiment Orange", color: "#f59e0b", lowQuality: false },
 
     // ========== ARBRES ==========
-    { id: "TREE_1", x: -15, z: -15, width: 2, depth: 2, label: "Arbre 1", color: "#166534" },
-    { id: "TREE_2", x: -8, z: -18, width: 2, depth: 2, label: "Arbre 2", color: "#166534" },
-    { id: "TREE_3", x: 8, z: -18, width: 2, depth: 2, label: "Arbre 3", color: "#166534" },
-    { id: "TREE_4", x: 15, z: -15, width: 2, depth: 2, label: "Arbre 4", color: "#166534" },
-    { id: "TREE_5", x: -18, z: 10, width: 2, depth: 2, label: "Arbre 5", color: "#166534" },
-    { id: "TREE_6", x: 18, z: 10, width: 2, depth: 2, label: "Arbre 6", color: "#166534" },
-    { id: "TREE_7", x: -10, z: 15, width: 2, depth: 2, label: "Arbre 7", color: "#166534" },
-    { id: "TREE_8", x: 10, z: 15, width: 2, depth: 2, label: "Arbre 8", color: "#166534" },
+    // En mode low: seulement TREE_1 et TREE_4 sont visibles
+    { id: "TREE_1", x: -15, z: -15, width: 2, depth: 2, label: "Arbre 1", color: "#166534", lowQuality: false },
+    { id: "TREE_2", x: -8, z: -18, width: 2, depth: 2, label: "Arbre 2", color: "#166534", lowQuality: true },
+    { id: "TREE_3", x: 8, z: -18, width: 2, depth: 2, label: "Arbre 3", color: "#166534", lowQuality: true },
+    { id: "TREE_4", x: 15, z: -15, width: 2, depth: 2, label: "Arbre 4", color: "#166534", lowQuality: false },
+    { id: "TREE_5", x: -18, z: 10, width: 2, depth: 2, label: "Arbre 5", color: "#166534", lowQuality: true },
+    { id: "TREE_6", x: 18, z: 10, width: 2, depth: 2, label: "Arbre 6", color: "#166534", lowQuality: true },
+    { id: "TREE_7", x: -10, z: 15, width: 2, depth: 2, label: "Arbre 7", color: "#166534", lowQuality: true },
+    { id: "TREE_8", x: 10, z: 15, width: 2, depth: 2, label: "Arbre 8", color: "#166534", lowQuality: true },
 
     // ========== LAMPADAIRES ==========
-    // Les lampadaires sont rendus à x=-20 avec z venant de [[-10,-10],[10,-10],[-10,10],[10,10]] -> z[1] = -10, -10, 10, 10
-    { id: "LAMP_1", x: -20, z: -10, width: 1, depth: 1, label: "Lampadaire 1", color: "#fbbf24" },
-    { id: "LAMP_2", x: -20, z: 10, width: 1, depth: 1, label: "Lampadaire 2", color: "#fbbf24" },
+    // En mode low: seulement le lampadaire central (z=-10) est visible, mais x=0 pas x=-20
+    // Note: en mode low, le seul lampadaire est à position [0, -10] donc x=-20, z=-10
+    { id: "LAMP_1", x: -20, z: -10, width: 1, depth: 1, label: "Lampadaire 1", color: "#fbbf24", lowQuality: false },
+    { id: "LAMP_2", x: -20, z: 10, width: 1, depth: 1, label: "Lampadaire 2", color: "#fbbf24", lowQuality: true },
 
-    // ========== BANCS ==========
-    { id: "BENCH_1", x: -18, z: -12, width: 2, depth: 1, label: "Banc 1", color: "#8b4513" },
-    // BENCH_2 supprimé - trop proche de la fontaine
-    { id: "BENCH_3", x: -18, z: 12, width: 2, depth: 1, label: "Banc 3", color: "#8b4513" },
+    // ========== BANCS (masqués en mode low) ==========
+    { id: "BENCH_1", x: -18, z: -12, width: 2, depth: 1, label: "Banc 1", color: "#8b4513", lowQuality: true },
+    { id: "BENCH_3", x: -18, z: 12, width: 2, depth: 1, label: "Banc 3", color: "#8b4513", lowQuality: true },
 
-    // ========== FONTAINE ==========
-    { id: "FOUNTAIN_1", x: -15, z: 0, width: 6, depth: 6, label: "Fontaine", color: "#0ea5e9" },
+    // ========== FONTAINE (masquée en mode low) ==========
+    { id: "FOUNTAIN_1", x: -15, z: 0, width: 6, depth: 6, label: "Fontaine", color: "#0ea5e9", lowQuality: true },
 
-    // ========== BUISSONS ==========
-    { id: "BUSH_1", x: 5, z: -10, width: 2, depth: 2, label: "Buisson 1", color: "#4ade80" },
-    { id: "BUSH_2", x: -5, z: -10, width: 2, depth: 2, label: "Buisson 2", color: "#4ade80" },
-    { id: "BUSH_3", x: 10, z: 5, width: 2, depth: 2, label: "Buisson 3", color: "#4ade80" },
-    { id: "BUSH_4", x: -10, z: 5, width: 2, depth: 2, label: "Buisson 4", color: "#4ade80" },
-    { id: "BUSH_5", x: 12, z: -5, width: 2, depth: 2, label: "Buisson 5", color: "#4ade80" },
-    { id: "BUSH_6", x: -12, z: -5, width: 2, depth: 2, label: "Buisson 6", color: "#4ade80" },
+    // ========== BUISSONS (tous masqués en mode low) ==========
+    { id: "BUSH_1", x: 5, z: -10, width: 2, depth: 2, label: "Buisson 1", color: "#4ade80", lowQuality: true },
+    { id: "BUSH_2", x: -5, z: -10, width: 2, depth: 2, label: "Buisson 2", color: "#4ade80", lowQuality: true },
+    { id: "BUSH_3", x: 10, z: 5, width: 2, depth: 2, label: "Buisson 3", color: "#4ade80", lowQuality: true },
+    { id: "BUSH_4", x: -10, z: 5, width: 2, depth: 2, label: "Buisson 4", color: "#4ade80", lowQuality: true },
+    { id: "BUSH_5", x: 12, z: -5, width: 2, depth: 2, label: "Buisson 5", color: "#4ade80", lowQuality: true },
+    { id: "BUSH_6", x: -12, z: -5, width: 2, depth: 2, label: "Buisson 6", color: "#4ade80", lowQuality: true },
   ]
+
+  // Filtrer les zones de collision selon la qualité graphique
+  const collisionZonesData = graphicsQuality === "low"
+    ? allCollisionZones.filter(zone => !zone.lowQuality)
+    : allCollisionZones
 
   const checkCollision = (newX: number, newZ: number): boolean => {
     // Dans les salles spéciales (stade, arcade), pas de collision - libre mouvement
@@ -1142,7 +1144,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }, 50)
 
     return () => clearInterval(interval)
-  }, [userId, isSeatsLocked, mySeat, stadiumSeat, povMode, fpsRotation.yaw, currentRoom]) // currentRoom for room-specific boundaries
+  }, [userId, isSeatsLocked, mySeat, stadiumSeat, povMode, fpsRotation.yaw, currentRoom, graphicsQuality]) // currentRoom for room-specific boundaries, graphicsQuality for collision zones
 
   useEffect(() => {
     const loadMessages = async () => {
@@ -1560,7 +1562,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         return newPos
       })
     },
-    [userId, supabase, currentRoom, povMode, fpsRotation.yaw, stadiumSeat, mySeat],
+    [userId, supabase, currentRoom, povMode, fpsRotation.yaw, stadiumSeat, mySeat, graphicsQuality],
   )
 
   // Handler pour le joystick de caméra (rotation de la vue)
