@@ -323,6 +323,324 @@ function FirstPersonCamera({
   return null
 }
 
+// DiscoWalls - Murs de la discothèque avec transparence dynamique basée sur la position de la caméra
+function DiscoWalls() {
+  const { camera } = useThree()
+  const backWallRef = useRef<THREE.Mesh>(null)
+  const leftWallRef = useRef<THREE.Mesh>(null)
+  const rightWallRef = useRef<THREE.Mesh>(null)
+  const ceilingRef = useRef<THREE.Mesh>(null)
+
+  useFrame(() => {
+    // Les limites de la pièce disco
+    const roomBounds = {
+      minX: -20,
+      maxX: 20,
+      minZ: -17.5,
+      maxZ: 17.5,
+      maxY: 10
+    }
+
+    // Vérifier si la caméra est à l'intérieur de la pièce
+    const cameraInside =
+      camera.position.x > roomBounds.minX &&
+      camera.position.x < roomBounds.maxX &&
+      camera.position.z > roomBounds.minZ &&
+      camera.position.z < roomBounds.maxZ &&
+      camera.position.y < roomBounds.maxY + 5
+
+    // Opacité cible: 1 si dedans, 0.15 si dehors
+    const targetOpacity = cameraInside ? 1 : 0.15
+
+    // Appliquer la transparence aux murs
+    const updateMaterial = (ref: React.RefObject<THREE.Mesh>) => {
+      if (ref.current && ref.current.material) {
+        const mat = ref.current.material as THREE.MeshStandardMaterial
+        mat.transparent = true
+        mat.opacity = targetOpacity
+        mat.needsUpdate = true
+      }
+    }
+
+    updateMaterial(backWallRef)
+    updateMaterial(leftWallRef)
+    updateMaterial(rightWallRef)
+    updateMaterial(ceilingRef)
+  })
+
+  return (
+    <>
+      {/* Back wall */}
+      <mesh ref={backWallRef} position={[0, 5, -17.5]}>
+        <boxGeometry args={[40, 10, 0.5]} />
+        <meshStandardMaterial color="#0d0d1a" transparent opacity={1} />
+      </mesh>
+      {/* Left wall */}
+      <mesh ref={leftWallRef} position={[-20, 5, 0]}>
+        <boxGeometry args={[0.5, 10, 35]} />
+        <meshStandardMaterial color="#0d0d1a" transparent opacity={1} />
+      </mesh>
+      {/* Right wall */}
+      <mesh ref={rightWallRef} position={[20, 5, 0]}>
+        <boxGeometry args={[0.5, 10, 35]} />
+        <meshStandardMaterial color="#0d0d1a" transparent opacity={1} />
+      </mesh>
+      {/* Ceiling */}
+      <mesh ref={ceilingRef} position={[0, 10, 0]}>
+        <boxGeometry args={[40, 0.5, 35]} />
+        <meshStandardMaterial color="#0a0a12" transparent opacity={1} />
+      </mesh>
+    </>
+  )
+}
+
+// Global audio context and analyser for disco
+let discoAudioContext: AudioContext | null = null
+let discoAnalyser: AnalyserNode | null = null
+let discoAudioElement: HTMLAudioElement | null = null
+let discoFrequencyData: Uint8Array | null = null
+let discoSourceConnected = false
+
+// DiscoVisualizer - Real-time audio reactive equalizer with YouTube audio
+function DiscoVisualizer({ position, width, height, muted }: { position: [number, number, number], width: number, height: number, muted?: boolean }) {
+  const groupRef = useRef<THREE.Group>(null)
+  const barsRef = useRef<THREE.Mesh[]>([])
+  const currentHeights = useRef<number[]>([])
+  const audioInitialized = useRef(false)
+  const [trackInfo, setTrackInfo] = useState<string>('')
+
+  // Number of columns for the equalizer
+  const cols = 32
+  const barWidth = width / cols - 0.08
+  const maxBarHeight = height * 0.95
+
+  // Initialize audio context and analyser with YouTube stream
+  useEffect(() => {
+    if (audioInitialized.current) return
+
+    const initAudio = async () => {
+      try {
+        // Create audio context
+        discoAudioContext = new (window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+
+        // Create analyser with more frequency bins for better visualization
+        discoAnalyser = discoAudioContext.createAnalyser()
+        discoAnalyser.fftSize = 256 // 128 frequency bins
+        discoAnalyser.smoothingTimeConstant = 0.3
+        discoAnalyser.minDecibels = -90
+        discoAnalyser.maxDecibels = -10
+
+        // Create audio element with streaming radio (NoCopyrightSounds style music)
+        // Using public radio streams that allow CORS
+        discoAudioElement = new Audio()
+        discoAudioElement.crossOrigin = 'anonymous'
+
+        // List of EDM/Electronic radio streams to try
+        const radioStreams = [
+          'https://stream.nightride.fm/nightride.m4a', // Synthwave/Electronic
+          'https://stream.nightride.fm/chillsynth.m4a', // Chillsynth
+          'https://ice1.somafm.com/groovesalad-128-mp3', // SomaFM Groove Salad
+          'https://ice1.somafm.com/spacestation-128-mp3', // SomaFM Space Station
+        ]
+
+        let streamIndex = 0
+
+        const tryNextStream = () => {
+          if (streamIndex < radioStreams.length && discoAudioElement) {
+            discoAudioElement.src = radioStreams[streamIndex]
+            streamIndex++
+            discoAudioElement.play().catch(() => {
+              console.log('Stream failed, trying next...')
+              tryNextStream()
+            })
+          }
+        }
+
+        // Handle errors - try next stream
+        discoAudioElement.onerror = () => {
+          console.log('Disco audio error, trying next stream...')
+          tryNextStream()
+        }
+
+        // Connect audio to analyser (only once)
+        if (!discoSourceConnected) {
+          const source = discoAudioContext.createMediaElementSource(discoAudioElement)
+          source.connect(discoAnalyser)
+          discoAnalyser.connect(discoAudioContext.destination)
+          discoSourceConnected = true
+        }
+
+        // Initialize frequency data array
+        discoFrequencyData = new Uint8Array(discoAnalyser.frequencyBinCount)
+
+        // Start playing
+        discoAudioElement.volume = muted ? 0 : 0.7
+
+        // Try to play first stream
+        discoAudioElement.src = radioStreams[streamIndex]
+        streamIndex++
+
+        // Try to play (may need user interaction)
+        try {
+          await discoAudioElement.play()
+          setTrackInfo('Playing Electronic Music')
+        } catch (playError) {
+          console.log('Autoplay blocked, waiting for user interaction')
+          // Add click listener to start audio
+          const startAudio = () => {
+            if (discoAudioElement && discoAudioContext) {
+              discoAudioContext.resume()
+              discoAudioElement.play().catch(() => tryNextStream())
+              document.removeEventListener('click', startAudio)
+            }
+          }
+          document.addEventListener('click', startAudio)
+        }
+
+        audioInitialized.current = true
+      } catch (err) {
+        console.error('Failed to initialize disco audio:', err)
+      }
+    }
+
+    // Initialize after a short delay
+    const timeout = setTimeout(initAudio, 500)
+
+    return () => {
+      clearTimeout(timeout)
+    }
+  }, [])
+
+  // Update volume when muted changes
+  useEffect(() => {
+    if (discoAudioElement) {
+      discoAudioElement.volume = muted ? 0 : 0.7
+    }
+  }, [muted])
+
+  // Initialize heights
+  useEffect(() => {
+    currentHeights.current = Array(cols).fill(0.1)
+  }, [cols])
+
+  // Animate the bars based on real audio frequency data
+  useFrame((state) => {
+    const time = state.clock.elapsedTime
+
+    // Get frequency data if available
+    let frequencies: number[] = []
+    if (discoAnalyser && discoFrequencyData) {
+      discoAnalyser.getByteFrequencyData(discoFrequencyData)
+      // Map frequency bins to our bar count with logarithmic scaling for better bass response
+      const binCount = discoFrequencyData.length
+      for (let i = 0; i < cols; i++) {
+        // Use logarithmic scale for frequency bins (more bass representation)
+        const logIndex = Math.pow(i / cols, 1.5) * binCount
+        const binIndex = Math.min(Math.floor(logIndex), binCount - 1)
+        // Average a few bins for smoother visualization
+        let sum = 0
+        const range = Math.max(1, Math.floor(binCount / cols / 2))
+        for (let j = Math.max(0, binIndex - range); j <= Math.min(binCount - 1, binIndex + range); j++) {
+          sum += discoFrequencyData[j]
+        }
+        frequencies[i] = (sum / (range * 2 + 1)) / 255
+      }
+    } else {
+      // Fallback animation if audio not available - more energetic
+      for (let i = 0; i < cols; i++) {
+        const wave1 = Math.sin(time * 6 + i * 0.2) * 0.5 + 0.5
+        const wave2 = Math.sin(time * 10 + i * 0.4) * 0.3 + 0.5
+        const wave3 = Math.sin(time * 3 + i * 0.1) * 0.4 + 0.5
+        const beat = Math.sin(time * 8) > 0.8 ? 0.3 : 0
+        frequencies[i] = Math.min(1, (wave1 + wave2 + wave3) / 3 + beat)
+      }
+    }
+
+    barsRef.current.forEach((bar, i) => {
+      if (bar) {
+        const targetHeight = Math.max(0.05, frequencies[i] || 0.05)
+
+        // Smooth interpolation - fast attack, slower decay
+        const attackSpeed = 0.6
+        const decaySpeed = 0.12
+        const diff = targetHeight - currentHeights.current[i]
+        const speed = diff > 0 ? attackSpeed : decaySpeed
+        currentHeights.current[i] += diff * speed
+
+        const normalizedHeight = Math.max(0.05, currentHeights.current[i])
+        const actualHeight = normalizedHeight * maxBarHeight
+
+        bar.scale.y = normalizedHeight
+        bar.position.y = (actualHeight - maxBarHeight) / 2
+
+        // Dynamic color based on height - vibrant neon colors
+        const mat = bar.material as THREE.MeshBasicMaterial
+        const hue = (0.85 - normalizedHeight * 0.5 + i * 0.02) % 1
+        const saturation = 1
+        const lightness = 0.35 + normalizedHeight * 0.4
+        mat.color.setHSL(hue, saturation, lightness)
+      }
+    })
+  })
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (discoAudioElement) {
+        discoAudioElement.pause()
+        discoAudioElement.src = ''
+      }
+      if (discoAudioContext && discoAudioContext.state !== 'closed') {
+        discoAudioContext.close()
+      }
+      discoAudioElement = null
+      discoAudioContext = null
+      discoAnalyser = null
+      discoFrequencyData = null
+      discoSourceConnected = false
+      audioInitialized.current = false
+    }
+  }, [])
+
+  return (
+    <group ref={groupRef} position={position}>
+      {/* Background dark panel */}
+      <mesh position={[0, 0, -0.02]}>
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial color="#030308" />
+      </mesh>
+
+      {/* Animated equalizer bars */}
+      {Array(cols).fill(0).map((_, i) => {
+        const x = (i - cols / 2 + 0.5) * (width / cols)
+        return (
+          <mesh
+            key={`disco-bar-${i}`}
+            ref={(el) => { if (el) barsRef.current[i] = el }}
+            position={[x, 0, 0]}
+          >
+            <boxGeometry args={[barWidth, maxBarHeight, 0.15]} />
+            <meshBasicMaterial color="#ff00ff" />
+          </mesh>
+        )
+      })}
+
+      {/* Grid overlay - vertical lines for multi-screen effect */}
+      {[-6.8, -3.4, 0, 3.4, 6.8].map((x) => (
+        <mesh key={`disco-vbar-${x}`} position={[x, 0, 0.2]}>
+          <boxGeometry args={[0.15, height + 0.2, 0.05]} />
+          <meshBasicMaterial color="#000000" />
+        </mesh>
+      ))}
+      {/* Grid overlay - horizontal line */}
+      <mesh position={[0, 0, 0.2]}>
+        <boxGeometry args={[width + 0.2, 0.15, 0.05]} />
+        <meshBasicMaterial color="#000000" />
+      </mesh>
+    </group>
+  )
+}
+
 function RealisticTree({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
@@ -604,6 +922,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [externalCountdown, setExternalCountdown] = useState(5) // Compte à rebours 5 secondes
   const [stadium, setStadium] = useState<any>(null)
   const [showStadium, setShowStadium] = useState(false)
+  const [showDisco, setShowDisco] = useState(false)
+  const [isDiscoMuted, setIsDiscoMuted] = useState(false) // Son activé par défaut dans la disco
   const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
   const [isCinemaMuted, setIsCinemaMuted] = useState(true) // Muted par défaut pour éviter le son automatique
   const [stadiumSeat, setStadiumSeat] = useState<{ row: number; side: string } | null>(null) // Siège dans le stade
@@ -769,9 +1089,45 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     ? allCollisionZones.filter(zone => !zone.lowQuality)
     : allCollisionZones
 
+  // Zones de collision pour la discothèque
+  const discoCollisionZones = [
+    // DJ booth (table centrale au fond)
+    { x: 0, z: -12, width: 7, depth: 3 },
+    // Bar area (côté droit)
+    { x: 16, z: 5, width: 4, depth: 9 },
+    // Enceintes gauche
+    { x: -18, z: -10, width: 3, depth: 3 },
+    // Enceintes droite
+    { x: 18, z: -10, width: 3, depth: 3 },
+    // Mur du fond (derrière les écrans)
+    { x: 0, z: -17, width: 40, depth: 1 },
+    // Mur gauche
+    { x: -20, z: 0, width: 1, depth: 35 },
+    // Mur droit
+    { x: 20, z: 0, width: 1, depth: 35 },
+  ]
+
   const checkCollision = (newX: number, newZ: number): boolean => {
     // Dans les salles spéciales (stade, arcade), pas de collision - libre mouvement
     if (currentRoom === "stadium" || currentRoom === "arcade") {
+      return false
+    }
+
+    // Collisions dans la discothèque
+    if (currentRoom === "disco") {
+      for (const zone of discoCollisionZones) {
+        const halfWidth = zone.width / 2
+        const halfDepth = zone.depth / 2
+
+        if (
+          newX >= zone.x - halfWidth &&
+          newX <= zone.x + halfWidth &&
+          newZ >= zone.z - halfDepth &&
+          newZ <= zone.z + halfDepth
+        ) {
+          return true
+        }
+      }
       return false
     }
 
@@ -1113,6 +1469,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           } else if (currentRoom === "arcade") {
             maxX = 23
             maxZ = 18
+          } else if (currentRoom === "disco") {
+            // Limites de la discothèque
+            minX = -19
+            maxX = 19
+            minZ = -16
+            maxZ = 16
           } else if (currentRoom?.startsWith("cinema_")) {
             // Limites du cinéma - zone rectangulaire
             minX = -8
@@ -1582,6 +1944,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         } else if (currentRoom === "arcade") {
           maxX = 23
           maxZ = 18
+        } else if (currentRoom === "disco") {
+          // Limites de la discothèque
+          minX = -19
+          maxX = 19
+          minZ = -16
+          maxZ = 16
         } else if (currentRoom?.startsWith("cinema_")) {
           // Limites du cinéma - zone rectangulaire
           minX = -8
@@ -1921,6 +2289,59 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       .then(() => {})
   }
 
+  function handleEnterDisco() {
+    setShowDisco(false)
+    setCurrentCinemaRoom(null)
+
+    // Save current map position before entering disco
+    setSavedMapPosition({ x: myPosition.x, y: myPosition.y, z: myPosition.z })
+
+    setCurrentRoom("disco") // Set local state immediately
+
+    // Teleport player to disco room (spawn position)
+    const discoPos = { x: 0, y: -0.35, z: 12 }
+    const discoRotation = Math.PI // Tourner vers les écrans (180°, regarde vers -z)
+    setMyPosition(discoPos)
+    setMyRotation(discoRotation)
+
+    // Positionner la caméra derrière le joueur
+    if (orbitControlsRef.current) {
+      const controls = orbitControlsRef.current
+      controls.target.set(discoPos.x, discoPos.y + 1, discoPos.z)
+      controls.object.position.set(discoPos.x, discoPos.y + 8, discoPos.z + 15)
+      controls.update()
+    }
+
+    // Update position in database
+    supabase
+      .from("interactive_profiles")
+      .update({
+        position_x: discoPos.x,
+        position_y: discoPos.y,
+        position_z: discoPos.z,
+        rotation: discoRotation,
+        current_room: "disco",
+      })
+      .eq("user_id", userId)
+      .then(() => {})
+  }
+
+  const handleLeaveDisco = () => {
+    setMyPosition(savedMapPosition) // Restore saved position
+    setCurrentRoom(null) // Clear local state
+
+    supabase
+      .from("interactive_profiles")
+      .update({
+        position_x: savedMapPosition.x,
+        position_y: savedMapPosition.y,
+        position_z: savedMapPosition.z,
+        current_room: null,
+      })
+      .eq("user_id", userId)
+      .then(() => {})
+  }
+
   // S'asseoir sur un gradin du stade
   const handleSitInStadium = () => {
     if (stadiumSeat) return // Déjà assis
@@ -2045,6 +2466,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       case "stadium":
         handleEnterStadium()
         break
+      case "disco":
+        handleEnterDisco()
+        break
     }
   }
 
@@ -2073,6 +2497,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     const distanceToArcade = Math.sqrt(Math.pow(myPosition.x - 0, 2) + Math.pow(myPosition.z - 15, 2))
     const distanceToCinema = Math.sqrt(Math.pow(myPosition.x - 15, 2) + Math.pow(myPosition.z - 0, 2))
     const distanceToStadium = Math.sqrt(Math.pow(myPosition.x - 25, 2) + Math.pow(myPosition.z - (-15), 2))
+    const distanceToDisco = Math.sqrt(Math.pow(myPosition.x - (-15), 2) + Math.pow(myPosition.z - (-20), 2))
 
     const proximityThreshold = 8
 
@@ -2082,6 +2507,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       setNearbyBuilding({ name: "Cinéma", type: "cinema", emoji: "🎬" })
     } else if (distanceToStadium < proximityThreshold) {
       setNearbyBuilding({ name: "Stade", type: "stadium", emoji: "⚽" })
+    } else if (distanceToDisco < proximityThreshold) {
+      setNearbyBuilding({ name: "Discothèque", type: "disco", emoji: "🪩" })
     } else {
       setNearbyBuilding(null)
     }
@@ -2188,7 +2615,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       setMyProfile(data)
 
       if (data) {
-        const isInSpecialRoom = data.current_room === "stadium" || data.current_room === "arcade" || (data.current_room && data.current_room.startsWith('cinema_'))
+        const isInSpecialRoom = data.current_room === "stadium" || data.current_room === "arcade" || data.current_room === "disco" || (data.current_room && data.current_room.startsWith('cinema_'))
 
         // Si l'utilisateur était dans une salle spéciale (cinéma, stade, arcade),
         // on le remet au spawn et on libère son siège car c'est un nouveau chargement de page
@@ -2241,7 +2668,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const handleQuitWorld = async () => {
     // If user is in a special room (cinema, stadium, arcade), reset to spawn
     // Otherwise, save current position to restore it next time
-    const isInSpecialRoom = currentRoom === "stadium" || currentRoom === "arcade" || (typeof currentRoom === 'object' && currentRoom !== null)
+    const isInSpecialRoom = currentRoom === "stadium" || currentRoom === "arcade" || currentRoom === "disco" || (typeof currentRoom === 'object' && currentRoom !== null)
 
     const positionToSave = isInSpecialRoom
       ? { x: 0, y: 0.5, z: 0 }
@@ -2331,7 +2758,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         <hemisphereLight intensity={0.3} groundColor="#6b7280" />
 
         {/* Update rendering logic to use currentRoom state instead of userProfile */}
-        {!currentCinemaRoom && currentRoom !== "stadium" && currentRoom !== "arcade" ? (
+        {!currentCinemaRoom && currentRoom !== "stadium" && currentRoom !== "arcade" && currentRoom !== "disco" ? (
           <>
             {/* Ground */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
@@ -2549,6 +2976,91 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <boxGeometry args={[1.5, 1, 1.5]} />
                 <meshStandardMaterial color="#dc2626" />
               </mesh>
+            </group>
+
+            {/* Discothèque Building */}
+            <group position={[-15, 0, -20]}>
+              {/* Main building */}
+              <mesh position={[0, 3, 0]} castShadow>
+                <boxGeometry args={[10, 6, 8]} />
+                <meshStandardMaterial color="#ec4899" roughness={0.5} metalness={0.3} />
+              </mesh>
+
+              {/* Roof */}
+              <mesh position={[0, 6.5, 0]} castShadow>
+                <boxGeometry args={[10.5, 0.5, 8.5]} />
+                <meshStandardMaterial color="#9d174d" roughness={0.4} metalness={0.4} />
+              </mesh>
+
+              {/* Neon sign */}
+              <mesh position={[0, 7, 0]}>
+                <boxGeometry args={[8, 0.6, 0.3]} />
+                <meshStandardMaterial
+                  color="#ff00ff"
+                  emissive="#ff00ff"
+                  emissiveIntensity={2}
+                  roughness={0.2}
+                  metalness={0.6}
+                />
+              </mesh>
+              <pointLight position={[0, 7, 0]} intensity={3} distance={12} color="#ff00ff" />
+
+              {/* Disco ball on top */}
+              <mesh position={[0, 7.5, 0]}>
+                <sphereGeometry args={[0.6, 16, 16]} />
+                <meshStandardMaterial
+                  color="#c0c0c0"
+                  emissive="#ffffff"
+                  emissiveIntensity={0.5}
+                  metalness={0.9}
+                  roughness={0.1}
+                />
+              </mesh>
+              <pointLight position={[0, 7.5, 0]} intensity={2} distance={8} color="#ffffff" />
+
+              {/* Decorative windows with neon glow */}
+              {[-3, -1, 1, 3].map((x) => (
+                <mesh key={`disco-window-${x}`} position={[x, 3, 4.1]}>
+                  <planeGeometry args={[1.2, 2]} />
+                  <meshStandardMaterial
+                    color="#00ffff"
+                    emissive="#00ffff"
+                    emissiveIntensity={0.8}
+                    metalness={0.7}
+                    roughness={0.2}
+                  />
+                </mesh>
+              ))}
+
+              {/* Door */}
+              <mesh position={[0, 1.2, 4.1]} castShadow>
+                <boxGeometry args={[2, 2.4, 0.1]} />
+                <meshStandardMaterial color="#1a1a1a" roughness={0.6} metalness={0.3} />
+              </mesh>
+
+              {/* Building name - always visible and clickable */}
+              <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
+                <Html position={[0, 8.5, 0]} center zIndexRange={[0, 0]}>
+                  <button
+                    onClick={handleEnterDisco}
+                    className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl shadow-2xl font-bold text-lg flex items-center gap-2 transition-all cursor-pointer hover:scale-105 pointer-events-auto whitespace-nowrap"
+                  >
+                    🪩 Discothèque
+                  </button>
+                </Html>
+              </Billboard>
+
+              {/* Bouton d'entrée visible quand on est près */}
+              {Math.sqrt(Math.pow(myPosition.x - (-15), 2) + Math.pow(myPosition.z - (-20), 2)) < 8 && (
+                <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
+                  <button
+                    onClick={handleEnterDisco}
+                    className="bg-pink-600/90 backdrop-blur-sm hover:bg-pink-700 text-white px-6 py-3 rounded-lg shadow-2xl text-base font-bold transition-all hover:scale-110 border-2 border-white/30 flex items-center gap-2"
+                  >
+                    Entrer <kbd className="bg-white/20 px-2 py-0.5 rounded text-sm">F</kbd>
+                  </button>
+                </Html>
+              )}
             </group>
 
             {/* Cinema Building */}
@@ -3140,6 +3652,199 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
 
+          </>
+        ) : currentRoom === "disco" ? (
+          <>
+            {/* Disco Interior */}
+            {/* Floor with reflective surface */}
+            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+              <planeGeometry args={[40, 35]} />
+              <meshStandardMaterial color="#1a0a1a" metalness={0.8} roughness={0.2} />
+            </mesh>
+
+            {/* Walls and Ceiling with dynamic transparency */}
+            <DiscoWalls />
+
+            {/* Disco ball in center */}
+            <group position={[0, 8, 0]}>
+              <mesh>
+                <sphereGeometry args={[1.2, 32, 32]} />
+                <meshStandardMaterial
+                  color="#e0e0e0"
+                  emissive="#ffffff"
+                  emissiveIntensity={0.3}
+                  metalness={1}
+                  roughness={0}
+                />
+              </mesh>
+              <pointLight intensity={5} distance={20} color="#ffffff" />
+            </group>
+
+            {/* Neon strip lights on ceiling */}
+            {[-12, -4, 4, 12].map((x) => (
+              <group key={`disco-neon-${x}`} position={[x, 9.5, 0]}>
+                <mesh>
+                  <boxGeometry args={[0.5, 0.2, 30]} />
+                  <meshStandardMaterial
+                    color={x < 0 ? "#ff00ff" : "#00ffff"}
+                    emissive={x < 0 ? "#ff00ff" : "#00ffff"}
+                    emissiveIntensity={2}
+                  />
+                </mesh>
+                <pointLight position={[0, 0, 0]} intensity={2} distance={12} color={x < 0 ? "#ff00ff" : "#00ffff"} />
+              </group>
+            ))}
+
+            {/* Modern LED Video Wall - YouTube video integrated in 3D scene */}
+            <group position={[0, 5.5, -17]}>
+              {/* Main LED screen frame - sleek black border */}
+              <mesh position={[0, 0, -0.2]}>
+                <boxGeometry args={[18, 7, 0.3]} />
+                <meshStandardMaterial color="#0a0a0a" metalness={0.9} roughness={0.1} />
+              </mesh>
+
+              {/* Animated LED visualizer screen - reacts to real audio */}
+              <DiscoVisualizer position={[0, 0, 0.05]} width={17} height={6.2} muted={isDiscoMuted} />
+
+              {/* Ambient screen glow */}
+              <pointLight position={[0, 0, 4]} intensity={2} distance={12} color="#ff00ff" />
+              <pointLight position={[-6, 0, 4]} intensity={1.5} distance={8} color="#00ffff" />
+              <pointLight position={[6, 0, 4]} intensity={1.5} distance={8} color="#ff0066" />
+            </group>
+
+            {/* Side LED panels - Left hexagonal pattern */}
+            <group position={[-16, 5, -14]}>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <group key={`hex-left-${i}`} position={[0, (i - 2) * 1.8, 0]} rotation={[0, 0.3, 0]}>
+                  <mesh>
+                    <cylinderGeometry args={[0.8, 0.8, 0.15, 6]} rotation={[Math.PI / 2, 0, 0]} />
+                    <meshBasicMaterial color={["#ff00ff", "#00ffff", "#ff0066", "#00ff88", "#ffaa00"][i]} />
+                  </mesh>
+                  <pointLight intensity={0.8} distance={4} color={["#ff00ff", "#00ffff", "#ff0066", "#00ff88", "#ffaa00"][i]} />
+                </group>
+              ))}
+            </group>
+
+            {/* Side LED panels - Right hexagonal pattern */}
+            <group position={[16, 5, -14]}>
+              {[0, 1, 2, 3, 4].map((i) => (
+                <group key={`hex-right-${i}`} position={[0, (i - 2) * 1.8, 0]} rotation={[0, -0.3, 0]}>
+                  <mesh>
+                    <cylinderGeometry args={[0.8, 0.8, 0.15, 6]} rotation={[Math.PI / 2, 0, 0]} />
+                    <meshBasicMaterial color={["#00ffff", "#ff00ff", "#00ff88", "#ff0066", "#ffaa00"][i]} />
+                  </mesh>
+                  <pointLight intensity={0.8} distance={4} color={["#00ffff", "#ff00ff", "#00ff88", "#ff0066", "#ffaa00"][i]} />
+                </group>
+              ))}
+            </group>
+
+            {/* Vertical LED bars on back wall */}
+            {[-14, -10, 10, 14].map((x, idx) => (
+              <group key={`led-bar-${x}`} position={[x, 5, -17.2]}>
+                <mesh>
+                  <boxGeometry args={[0.3, 8, 0.1]} />
+                  <meshBasicMaterial color={idx % 2 === 0 ? "#ff00ff" : "#00ffff"} />
+                </mesh>
+                <pointLight intensity={1.5} distance={6} color={idx % 2 === 0 ? "#ff00ff" : "#00ffff"} />
+              </group>
+            ))}
+
+            {/* Floor LED strips around dance floor */}
+            {[-10, 10].map((x) => (
+              <mesh key={`floor-strip-${x}`} position={[x, 0.05, 4]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[0.3, 16]} />
+                <meshBasicMaterial color={x < 0 ? "#ff00ff" : "#00ffff"} />
+              </mesh>
+            ))}
+
+            {/* DJ booth at center front */}
+            <group position={[0, 0, -12]}>
+              {/* DJ table */}
+              <mesh position={[0, 1, 0]}>
+                <boxGeometry args={[6, 1.2, 2]} />
+                <meshStandardMaterial color="#2a1a3a" metalness={0.6} roughness={0.4} />
+              </mesh>
+              {/* DJ equipment */}
+              <mesh position={[-1.5, 1.8, 0]}>
+                <boxGeometry args={[1.5, 0.3, 1.2]} />
+                <meshStandardMaterial color="#1a1a1a" />
+              </mesh>
+              <mesh position={[1.5, 1.8, 0]}>
+                <boxGeometry args={[1.5, 0.3, 1.2]} />
+                <meshStandardMaterial color="#1a1a1a" />
+              </mesh>
+              {/* Mixer in center */}
+              <mesh position={[0, 1.9, 0]}>
+                <boxGeometry args={[1, 0.4, 0.8]} />
+                <meshStandardMaterial color="#333333" emissive="#ff00ff" emissiveIntensity={0.3} />
+              </mesh>
+              {/* LED strip on DJ booth */}
+              <mesh position={[0, 0.5, 1.1]}>
+                <boxGeometry args={[6, 0.2, 0.1]} />
+                <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} />
+              </mesh>
+            </group>
+
+            {/* Dance floor with colored tiles */}
+            {[-8, -4, 0, 4, 8].map((x) => (
+              [-2, 2, 6, 10].map((z) => (
+                <mesh
+                  key={`dance-tile-${x}-${z}`}
+                  rotation={[-Math.PI / 2, 0, 0]}
+                  position={[x, 0.02, z]}
+                >
+                  <planeGeometry args={[3.5, 3.5]} />
+                  <meshStandardMaterial
+                    color={[(x + z) % 2 === 0 ? "#ff00ff" : "#00ffff"][0]}
+                    emissive={[(x + z) % 2 === 0 ? "#ff00ff" : "#00ffff"][0]}
+                    emissiveIntensity={0.3}
+                    metalness={0.9}
+                    roughness={0.1}
+                  />
+                </mesh>
+              ))
+            ))}
+
+            {/* Side speakers */}
+            {[-18, 18].map((x) => (
+              <group key={`speaker-${x}`} position={[x, 0, -10]}>
+                <mesh position={[0, 2, 0]}>
+                  <boxGeometry args={[2, 4, 2]} />
+                  <meshStandardMaterial color="#1a1a1a" />
+                </mesh>
+                <mesh position={[0, 2, 1.1]}>
+                  <cylinderGeometry args={[0.6, 0.6, 0.2, 16]} rotation={[Math.PI / 2, 0, 0]} />
+                  <meshStandardMaterial color="#2a2a2a" />
+                </mesh>
+                <mesh position={[0, 3, 1.1]}>
+                  <cylinderGeometry args={[0.3, 0.3, 0.2, 16]} rotation={[Math.PI / 2, 0, 0]} />
+                  <meshStandardMaterial color="#2a2a2a" />
+                </mesh>
+              </group>
+            ))}
+
+            {/* Bar area on the side */}
+            <group position={[16, 0, 5]}>
+              <mesh position={[0, 1.2, 0]}>
+                <boxGeometry args={[3, 1.2, 8]} />
+                <meshStandardMaterial color="#3d1a5c" metalness={0.5} roughness={0.5} />
+              </mesh>
+              {/* Bar top */}
+              <mesh position={[0, 1.9, 0]}>
+                <boxGeometry args={[3.2, 0.15, 8.2]} />
+                <meshStandardMaterial color="#1a0a2a" metalness={0.8} roughness={0.1} />
+              </mesh>
+              {/* Bar LED */}
+              <mesh position={[-1.6, 1, 0]}>
+                <boxGeometry args={[0.1, 0.5, 7.5]} />
+                <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={1.5} />
+              </mesh>
+            </group>
+
+            {/* Ambient colored lights */}
+            <pointLight position={[-15, 8, 10]} intensity={3} distance={25} color="#ff00ff" />
+            <pointLight position={[15, 8, 10]} intensity={3} distance={25} color="#00ffff" />
+            <pointLight position={[0, 8, -10]} intensity={3} distance={25} color="#ff6600" />
           </>
         ) : currentCinemaRoom ? (
           <>
@@ -3917,6 +4622,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               <span className="font-medium">{isCinemaMuted ? 'Unmute' : 'Mute'}</span>
             </button>
           )}
+          {/* Bouton Mute/Unmute - dans la disco */}
+          {currentRoom === "disco" && (
+            <button
+              onClick={() => setIsDiscoMuted(!isDiscoMuted)}
+              className={`${isDiscoMuted ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]`}
+            >
+              <span className="text-lg">{isDiscoMuted ? '🔇' : '🔊'}</span>
+              <span className="font-medium">{isDiscoMuted ? 'Unmute' : 'Mute'}</span>
+            </button>
+          )}
           {/* Bouton S'asseoir/Se lever - dans le stade */}
           {currentRoom === "stadium" && (
             stadiumSeat === null ? (
@@ -3939,7 +4654,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           )}
           {/* Bouton Sortir */}
           <button
-            onClick={currentCinemaRoom ? handleLeaveRoom : currentRoom === "arcade" ? handleLeaveArcade : handleLeaveStadium}
+            onClick={currentCinemaRoom ? handleLeaveRoom : currentRoom === "arcade" ? handleLeaveArcade : currentRoom === "disco" ? handleLeaveDisco : handleLeaveStadium}
             className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
           >
             <LogOut className="w-5 h-5" />
@@ -3962,6 +4677,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       {isMobileMode && <MobileJoystick onMove={handleJoystickMove} />}
       {isMobileMode && <CameraJoystick onRotate={handleCameraRotate} />}
+
 
       {showAFKWarning && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
