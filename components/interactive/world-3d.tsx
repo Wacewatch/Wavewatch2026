@@ -4210,6 +4210,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               maxPolarAngle={Math.PI / 2.5}
               minDistance={6}
               maxDistance={25}
+              enableRotate={!isMobileMode}
+              enablePan={false}
             />
           </>
         )}
@@ -4874,6 +4876,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       {isMobileMode && <MobileJoystick onMove={handleJoystickMove} />}
       {isMobileMode && <CameraJoystick onRotate={handleCameraRotate} />}
+      {isMobileMode && <CenterTouchZone onRotate={handleCameraRotate} />}
+      {isMobileMode && <JoystickBlockZones />}
 
 
       {showAFKWarning && (
@@ -5560,5 +5564,88 @@ function CameraJoystick({ onRotate }: { onRotate: (deltaYaw: number, deltaPitch:
         }}
       />
     </div>
+  )
+}
+
+// Zone centrale pour la rotation de la caméra (entre les deux joysticks)
+function CenterTouchZone({ onRotate }: { onRotate: (deltaYaw: number, deltaPitch: number) => void }) {
+  const lastTouchRef = useRef<{ x: number; y: number } | null>(null)
+  const touchIdRef = useRef<number | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation()
+    if (touchIdRef.current === null) {
+      const touch = e.changedTouches[0]
+      touchIdRef.current = touch.identifier
+      lastTouchRef.current = { x: touch.clientX, y: touch.clientY }
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.stopPropagation()
+    if (touchIdRef.current !== null && lastTouchRef.current) {
+      for (let i = 0; i < e.touches.length; i++) {
+        if (e.touches[i].identifier === touchIdRef.current) {
+          const touch = e.touches[i]
+          const deltaX = touch.clientX - lastTouchRef.current.x
+          const deltaY = touch.clientY - lastTouchRef.current.y
+
+          // Sensibilité pour la rotation
+          const sensitivity = 0.004
+          onRotate(deltaX * sensitivity, -deltaY * sensitivity)
+
+          lastTouchRef.current = { x: touch.clientX, y: touch.clientY }
+          break
+        }
+      }
+    }
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.stopPropagation()
+    if (touchIdRef.current !== null) {
+      for (let i = 0; i < e.changedTouches.length; i++) {
+        if (e.changedTouches[i].identifier === touchIdRef.current) {
+          touchIdRef.current = null
+          lastTouchRef.current = null
+          break
+        }
+      }
+    }
+  }
+
+  return (
+    <div
+      className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[calc(100%-20rem)] h-36 z-10 select-none touch-none"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={() => {
+        touchIdRef.current = null
+        lastTouchRef.current = null
+      }}
+    />
+  )
+}
+
+// Zones de blocage au-dessus des joysticks pour éviter les touches accidentelles
+function JoystickBlockZones() {
+  return (
+    <>
+      {/* Zone de blocage au-dessus du joystick gauche (mouvement) */}
+      <div
+        className="fixed bottom-60 left-8 w-36 h-24 z-15 select-none touch-none"
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+      />
+      {/* Zone de blocage au-dessus du joystick droit (caméra) */}
+      <div
+        className="fixed bottom-60 right-8 w-36 h-24 z-15 select-none touch-none"
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+      />
+    </>
   )
 }

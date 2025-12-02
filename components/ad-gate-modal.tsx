@@ -10,7 +10,7 @@ interface AdGateModalProps {
 }
 
 // Zone ID Monetag
-const MONETAG_ZONE_ID = "10261347"
+const MONETAG_ZONE_ID = "10266724"
 
 // Activer les pubs uniquement en production
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
