@@ -1067,18 +1067,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   // Map state
   const [showMap, setShowMap] = useState(false)
 
-  // Liste locale des machines d'arcade (plus de connexion BDD)
-  // Les URLs avec useProxy: true passent par /api/proxy/game pour contourner les timers/modales
-  const localArcadeMachines = [
-    { id: 1, name: "Game.Onl", url: "https://gam.onl", media: { type: 'video', src: "https://gam.onl/user/main/videos/arcade.mp4" }, openInNewTab: false },
-    { id: 2, name: "RetroGames.onl", url: "https://www.retrogames.onl/", media: { type: 'image', src: "/arcade/RetroGames.onl.png" }, openInNewTab: false, useProxy: true },
-    { id: 4, name: "RetroGames.me", url: "https://retrogames.me", media: { type: 'image', src: "/arcade/RetroGames.me.png" }, openInNewTab: false },
-    { id: 5, name: "Venge.io", url: "https://venge.io", media: { type: 'image', src: "/arcade/Venge.io.png" }, openInNewTab: false },
-    { id: 6, name: "WebRcade", url: "https://play.webrcade.com", media: { type: 'image', src: "/arcade/WebArcade.png" }, openInNewTab: false },
-    { id: 7, name: "PointerPointer", url: "https://pointerpointer.com", media: { type: 'image', src: "https://pointerpointer.com/like3.jpg" }, openInNewTab: false },
-  ]
-
-  const [arcadeMachines, setArcadeMachines] = useState<any[]>(localArcadeMachines)
+  // Arcade machines chargées depuis Supabase
+  const [arcadeMachines, setArcadeMachines] = useState<any[]>([])
   const [showArcade, setShowArcade] = useState(false)
   const [currentArcadeMachine, setCurrentArcadeMachine] = useState<any>(null)
   const [pendingExternalMachine, setPendingExternalMachine] = useState<any>(null) // Pour la modal pub avant ouverture externe
@@ -1440,7 +1430,37 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }, [userId])
 
-  // Arcade machines sont maintenant définies localement dans localArcadeMachines
+  // Charger les jeux d'arcade depuis Supabase
+  useEffect(() => {
+    const loadArcadeGames = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('arcade_games')
+          .select('*')
+          .eq('is_active', true)
+          .order('display_order')
+
+        if (error) throw error
+
+        if (data && data.length > 0) {
+          // Transformer les données pour le format attendu par le composant
+          const formattedGames = data.map(game => ({
+            id: game.id,
+            name: game.name,
+            url: game.url,
+            media: { type: game.media_type, src: game.image_url || '' },
+            openInNewTab: game.open_in_new_tab,
+            useProxy: game.use_proxy
+          }))
+          setArcadeMachines(formattedGames)
+        }
+      } catch (error) {
+        console.error('Error loading arcade games:', error)
+      }
+    }
+
+    loadArcadeGames()
+  }, [])
 
   useEffect(() => {
     const loadStadium = async () => {
@@ -3575,15 +3595,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </group>
             ))}
 
-            {/* Arcade Machines - aligned at the back wall */}
-            {arcadeMachines.slice(0, 7).map((machine, idx) => {
-              // All machines at back wall, spread evenly
-              const totalMachines = Math.min(arcadeMachines.length, 7)
-              const spacing = 5
+            {/* Arcade Machines - all at back wall with generous spacing */}
+            {arcadeMachines.map((machine, idx) => {
+              // Large spacing to fit all machines on back wall
+              const spacing = 6
+              const backWallZ = -18
+              const totalMachines = arcadeMachines.length
               const totalWidth = (totalMachines - 1) * spacing
               const x = -totalWidth / 2 + idx * spacing
-              const z = -15
-              const rotationY = 0  // All face forward
+              const z = backWallZ
+              const rotationY = 0 // All face forward
 
               return (
                 <group key={machine.id} position={[x, 0, z]} rotation={[0, rotationY, 0]}>
@@ -3629,8 +3650,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
                   {/* Machine name label - hide when a game or modal is open */}
                   {!currentArcadeMachine && !showArcade && !pendingExternalMachine && (
-                    <Html position={[0, 3.5, 0]} center occlude>
-                      <div className="bg-black/80 text-white px-3 py-1 rounded text-sm font-bold whitespace-nowrap">
+                    <Html position={[0, 3.8, 0]} center occlude distanceFactor={15}>
+                      <div className="bg-black/80 text-white px-3 py-1.5 rounded-lg text-base font-semibold whitespace-nowrap shadow-lg border border-white/20">
                         {machine.name}
                       </div>
                     </Html>
@@ -3638,10 +3659,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
                   {/* Interaction button - hide when a game or modal is open */}
                   {!currentArcadeMachine && !showArcade && !pendingExternalMachine && (
-                    <Html position={[0, 0.5, 1.5]} center occlude>
+                    <Html position={[0, 0.5, 1.5]} center occlude distanceFactor={15}>
                       <button
                         onClick={() => handleSelectArcadeMachine(machine)}
-                        className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1.5 rounded font-medium transition-all hover:scale-105 shadow-md"
+                        className="bg-purple-600 hover:bg-purple-700 text-white text-base px-5 py-2 rounded-lg font-semibold transition-all hover:scale-110 shadow-lg border-2 border-white/30"
                       >
                         Jouer
                       </button>

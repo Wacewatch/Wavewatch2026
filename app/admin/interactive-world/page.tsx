@@ -26,11 +26,12 @@ export default async function InteractiveWorldAdminPage() {
   }
 
   // Fetch initial data
-  const [worldSettings, cinemaRooms, customizationOptions, onlineUsers] = await Promise.all([
+  const [worldSettings, cinemaRooms, customizationOptions, onlineUsers, arcadeGames] = await Promise.all([
     supabase.from("interactive_world_settings").select("*"),
     supabase.from("interactive_cinema_rooms").select("*").order("room_number"),
     supabase.from("avatar_customization_options").select("*").order("category, label"),
-    supabase.from("interactive_profiles").select("*, user_profiles(username, is_vip, is_vip_plus, is_admin)").eq("is_online", true)
+    supabase.from("interactive_profiles").select("*, user_profiles(username, is_vip, is_vip_plus, is_admin)").eq("is_online", true),
+    supabase.from("arcade_games").select("*").order("display_order")
   ])
 
   return (
@@ -39,6 +40,7 @@ export default async function InteractiveWorldAdminPage() {
       initialRooms={cinemaRooms.data || []}
       initialOptions={customizationOptions.data || []}
       initialOnlineUsers={onlineUsers.data || []}
+      initialArcadeGames={arcadeGames.data || []}
     />
   )
 }

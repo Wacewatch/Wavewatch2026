@@ -7,13 +7,15 @@ import { WorldSettingsPanel } from "./world-settings-panel"
 import { CinemaRoomsPanel } from "./cinema-rooms-panel"
 import { CustomizationOptionsPanel } from "./customization-options-panel"
 import { OnlineUsersPanel } from "./online-users-panel"
-import { Globe, Film, Palette, Users } from 'lucide-react'
+import { ArcadeGamesPanel } from "./arcade-games-panel"
+import { Globe, Film, Palette, Users, Gamepad2 } from 'lucide-react'
 
 interface InteractiveWorldAdminProps {
   initialSettings: any[]
   initialRooms: any[]
   initialOptions: any[]
   initialOnlineUsers: any[]
+  initialArcadeGames?: any[]
 }
 
 export function InteractiveWorldAdmin({
@@ -21,6 +23,7 @@ export function InteractiveWorldAdmin({
   initialRooms,
   initialOptions,
   initialOnlineUsers,
+  initialArcadeGames = [],
 }: InteractiveWorldAdminProps) {
   return (
     <div className="container mx-auto p-6 space-y-6">
@@ -32,7 +35,7 @@ export function InteractiveWorldAdmin({
       </div>
 
       <Tabs defaultValue="settings" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="settings" className="flex items-center gap-2">
             <Globe className="w-4 h-4" />
             <span className="hidden sm:inline">Paramètres du Monde</span>
@@ -52,6 +55,11 @@ export function InteractiveWorldAdmin({
             <Users className="w-4 h-4" />
             <span className="hidden sm:inline">Utilisateurs En Ligne</span>
             <span className="sm:hidden">En Ligne</span>
+          </TabsTrigger>
+          <TabsTrigger value="arcade" className="flex items-center gap-2">
+            <Gamepad2 className="w-4 h-4" />
+            <span className="hidden sm:inline">Jeux Arcade</span>
+            <span className="sm:hidden">Arcade</span>
           </TabsTrigger>
         </TabsList>
 
@@ -107,6 +115,20 @@ export function InteractiveWorldAdmin({
             </CardHeader>
             <CardContent>
               <OnlineUsersPanel users={initialOnlineUsers} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="arcade">
+          <Card>
+            <CardHeader>
+              <CardTitle>Jeux Arcade</CardTitle>
+              <CardDescription>
+                Gérez les jeux disponibles dans la salle d'arcade du monde virtuel
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ArcadeGamesPanel games={initialArcadeGames} />
             </CardContent>
           </Card>
         </TabsContent>

@@ -45,3 +45,7 @@ yarn-error.log*
 # Misc
 *.log
 .cache/
+.mcp.json
+
+# ytdl-core debug files
+*-player-script.js
