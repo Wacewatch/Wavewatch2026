@@ -1,8 +1,9 @@
 "use client"
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
-import { OrbitControls, Sky, Html, PerspectiveCamera, Billboard, Text } from "@react-three/drei"
-import { useEffect, useRef, useState, useCallback } from "react"
+import * as THREE from "three"
+import { OrbitControls, Sky, Html, PerspectiveCamera, Billboard, Text, Stats } from "@react-three/drei"
+import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import {
   Minimize,
@@ -323,72 +324,29 @@ function FirstPersonCamera({
   return null
 }
 
-// DiscoWalls - Murs de la discothèque avec transparence dynamique basée sur la position de la caméra
+// DiscoWalls - Murs de la discothèque toujours transparents
 function DiscoWalls() {
-  const { camera } = useThree()
-  const backWallRef = useRef<THREE.Mesh>(null)
-  const leftWallRef = useRef<THREE.Mesh>(null)
-  const rightWallRef = useRef<THREE.Mesh>(null)
-  const ceilingRef = useRef<THREE.Mesh>(null)
-
-  useFrame(() => {
-    // Les limites de la pièce disco
-    const roomBounds = {
-      minX: -20,
-      maxX: 20,
-      minZ: -17.5,
-      maxZ: 17.5,
-      maxY: 10
-    }
-
-    // Vérifier si la caméra est à l'intérieur de la pièce
-    const cameraInside =
-      camera.position.x > roomBounds.minX &&
-      camera.position.x < roomBounds.maxX &&
-      camera.position.z > roomBounds.minZ &&
-      camera.position.z < roomBounds.maxZ &&
-      camera.position.y < roomBounds.maxY + 5
-
-    // Opacité cible: 1 si dedans, 0.15 si dehors
-    const targetOpacity = cameraInside ? 1 : 0.15
-
-    // Appliquer la transparence aux murs
-    const updateMaterial = (ref: React.RefObject<THREE.Mesh>) => {
-      if (ref.current && ref.current.material) {
-        const mat = ref.current.material as THREE.MeshStandardMaterial
-        mat.transparent = true
-        mat.opacity = targetOpacity
-        mat.needsUpdate = true
-      }
-    }
-
-    updateMaterial(backWallRef)
-    updateMaterial(leftWallRef)
-    updateMaterial(rightWallRef)
-    updateMaterial(ceilingRef)
-  })
-
   return (
     <>
       {/* Back wall */}
-      <mesh ref={backWallRef} position={[0, 5, -17.5]}>
+      <mesh position={[0, 5, -17.5]}>
         <boxGeometry args={[40, 10, 0.5]} />
-        <meshStandardMaterial color="#0d0d1a" transparent opacity={1} />
+        <meshStandardMaterial color="#0d0d1a" transparent opacity={0.15} />
       </mesh>
       {/* Left wall */}
-      <mesh ref={leftWallRef} position={[-20, 5, 0]}>
+      <mesh position={[-20, 5, 0]}>
         <boxGeometry args={[0.5, 10, 35]} />
-        <meshStandardMaterial color="#0d0d1a" transparent opacity={1} />
+        <meshStandardMaterial color="#0d0d1a" transparent opacity={0.15} />
       </mesh>
       {/* Right wall */}
-      <mesh ref={rightWallRef} position={[20, 5, 0]}>
+      <mesh position={[20, 5, 0]}>
         <boxGeometry args={[0.5, 10, 35]} />
-        <meshStandardMaterial color="#0d0d1a" transparent opacity={1} />
+        <meshStandardMaterial color="#0d0d1a" transparent opacity={0.15} />
       </mesh>
       {/* Ceiling */}
-      <mesh ref={ceilingRef} position={[0, 10, 0]}>
+      <mesh position={[0, 10, 0]}>
         <boxGeometry args={[40, 0.5, 35]} />
-        <meshStandardMaterial color="#0a0a12" transparent opacity={1} />
+        <meshStandardMaterial color="#0a0a12" transparent opacity={0.15} />
       </mesh>
     </>
   )
@@ -401,24 +359,26 @@ let discoAudioElement: HTMLAudioElement | null = null
 let discoFrequencyData: Uint8Array | null = null
 let discoSourceConnected = false
 
+// Global flag to track if audio has been initialized
+let discoAudioInitializedGlobal = false
+
 // DiscoVisualizer - Real-time audio reactive equalizer with YouTube audio
-function DiscoVisualizer({ position, width, height, muted }: { position: [number, number, number], width: number, height: number, muted?: boolean }) {
+function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = true }: { position: [number, number, number], width: number, height: number, muted?: boolean, shouldInitAudio?: boolean }) {
   const groupRef = useRef<THREE.Group>(null)
   const barsRef = useRef<THREE.Mesh[]>([])
   const currentHeights = useRef<number[]>([])
-  const audioInitialized = useRef(false)
   const [trackInfo, setTrackInfo] = useState<string>('')
 
-  // Number of columns for the equalizer
-  const cols = 32
-  const barWidth = width / cols - 0.08
+  // Number of columns for the equalizer - reduced for performance
+  const cols = 16
+  const barWidth = width / cols - 0.1
   const maxBarHeight = height * 0.95
 
-  // Initialize audio context and analyser with YouTube stream
+  // Initialize audio context and analyser with YouTube stream (only for main visualizer)
   useEffect(() => {
-    if (audioInitialized.current) return
+    if (!shouldInitAudio || discoAudioInitializedGlobal) return
 
-    const initAudio = async () => {
+    const initAudioFunc = async () => {
       try {
         // Create audio context
         discoAudioContext = new (window.AudioContext || (window as typeof window & { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
@@ -497,14 +457,14 @@ function DiscoVisualizer({ position, width, height, muted }: { position: [number
           document.addEventListener('click', startAudio)
         }
 
-        audioInitialized.current = true
+        discoAudioInitializedGlobal = true
       } catch (err) {
         console.error('Failed to initialize disco audio:', err)
       }
     }
 
     // Initialize after a short delay
-    const timeout = setTimeout(initAudio, 500)
+    const timeout = setTimeout(initAudioFunc, 500)
 
     return () => {
       clearTimeout(timeout)
@@ -531,16 +491,17 @@ function DiscoVisualizer({ position, width, height, muted }: { position: [number
     let frequencies: number[] = []
     if (discoAnalyser && discoFrequencyData) {
       discoAnalyser.getByteFrequencyData(discoFrequencyData)
-      // Map frequency bins to our bar count with logarithmic scaling for better bass response
+      // Only use the first 50% of frequency bins (where music actually has energy)
+      // and spread them across all bars - this ensures all bars are active
       const binCount = discoFrequencyData.length
+      const usableBins = Math.floor(binCount * 0.5) // Only use low-mid frequencies
       for (let i = 0; i < cols; i++) {
-        // Use logarithmic scale for frequency bins (more bass representation)
-        const logIndex = Math.pow(i / cols, 1.5) * binCount
-        const binIndex = Math.min(Math.floor(logIndex), binCount - 1)
+        // Linear mapping across usable frequency range
+        const binIndex = Math.floor((i / cols) * usableBins)
         // Average a few bins for smoother visualization
         let sum = 0
-        const range = Math.max(1, Math.floor(binCount / cols / 2))
-        for (let j = Math.max(0, binIndex - range); j <= Math.min(binCount - 1, binIndex + range); j++) {
+        const range = Math.max(1, Math.floor(usableBins / cols / 2))
+        for (let j = Math.max(0, binIndex - range); j <= Math.min(usableBins - 1, binIndex + range); j++) {
           sum += discoFrequencyData[j]
         }
         frequencies[i] = (sum / (range * 2 + 1)) / 255
@@ -583,8 +544,10 @@ function DiscoVisualizer({ position, width, height, muted }: { position: [number
     })
   })
 
-  // Cleanup on unmount
+  // Cleanup on unmount (only for main visualizer that initialized audio)
   useEffect(() => {
+    if (!shouldInitAudio) return
+
     return () => {
       if (discoAudioElement) {
         discoAudioElement.pause()
@@ -598,45 +561,239 @@ function DiscoVisualizer({ position, width, height, muted }: { position: [number
       discoAnalyser = null
       discoFrequencyData = null
       discoSourceConnected = false
-      audioInitialized.current = false
+      discoAudioInitializedGlobal = false
     }
-  }, [])
+  }, [shouldInitAudio])
 
   return (
     <group ref={groupRef} position={position}>
-      {/* Background dark panel */}
+      {/* Background panel */}
       <mesh position={[0, 0, -0.02]}>
         <planeGeometry args={[width, height]} />
-        <meshBasicMaterial color="#030308" />
+        <meshBasicMaterial color="#2d2d44" />
       </mesh>
 
-      {/* Animated equalizer bars */}
+      {/* Animated equalizer bars - flat planeGeometry for real screen look */}
       {Array(cols).fill(0).map((_, i) => {
         const x = (i - cols / 2 + 0.5) * (width / cols)
         return (
           <mesh
             key={`disco-bar-${i}`}
             ref={(el) => { if (el) barsRef.current[i] = el }}
-            position={[x, 0, 0]}
+            position={[x, 0, 0.001]}
           >
-            <boxGeometry args={[barWidth, maxBarHeight, 0.15]} />
+            <planeGeometry args={[barWidth, maxBarHeight]} />
             <meshBasicMaterial color="#ff00ff" />
           </mesh>
         )
       })}
 
-      {/* Grid overlay - vertical lines for multi-screen effect */}
-      {[-6.8, -3.4, 0, 3.4, 6.8].map((x) => (
-        <mesh key={`disco-vbar-${x}`} position={[x, 0, 0.2]}>
-          <boxGeometry args={[0.15, height + 0.2, 0.05]} />
-          <meshBasicMaterial color="#000000" />
-        </mesh>
-      ))}
-      {/* Grid overlay - horizontal line */}
-      <mesh position={[0, 0, 0.2]}>
-        <boxGeometry args={[width + 0.2, 0.15, 0.05]} />
-        <meshBasicMaterial color="#000000" />
+      {/* Grid overlay - 16x8 squares - flat lines (reduced for performance) */}
+      {/* Vertical lines - 15 lines for 16 columns */}
+      {Array.from({ length: 15 }, (_, i) => {
+        const x = -width / 2 + (width / 16) * (i + 1)
+        return (
+          <mesh key={`disco-vbar-${i}`} position={[x, 0, 0.002]}>
+            <planeGeometry args={[0.04, height]} />
+            <meshBasicMaterial color="#000000" />
+          </mesh>
+        )
+      })}
+      {/* Horizontal lines - 7 lines for 8 rows */}
+      {Array.from({ length: 7 }, (_, i) => {
+        const y = -height / 2 + (height / 8) * (i + 1)
+        return (
+          <mesh key={`disco-hbar-${i}`} position={[0, y, 0.002]}>
+            <planeGeometry args={[width, 0.04]} />
+            <meshBasicMaterial color="#000000" />
+          </mesh>
+        )
+      })}
+    </group>
+  )
+}
+
+// DJBoothStarburst - LED panel with animated micro-LEDs that pulse to music (optimized)
+function DJBoothStarburst({ position, width, height }: { position: [number, number, number], width: number, height: number }) {
+  const groupRef = useRef<THREE.Group>(null)
+  const ledsRef = useRef<THREE.Mesh[]>([])
+  const currentIntensity = useRef({ low: 0.5, mid: 0.5, high: 0.5 })
+  const frameSkip = useRef(0)
+
+  const halfW = width / 2
+  const halfH = height / 2
+  const cols = 30 // Reduced from 60
+  const rows = 6  // Reduced from 10
+
+  useFrame((state) => {
+    // Skip every other frame for performance
+    frameSkip.current++
+    if (frameSkip.current % 2 !== 0) return
+
+    const time = state.clock.elapsedTime
+
+    // Get frequency bands
+    let low = 0.5, mid = 0.5, high = 0.5
+    if (discoAnalyser && discoFrequencyData) {
+      discoAnalyser.getByteFrequencyData(discoFrequencyData)
+      const binCount = discoFrequencyData.length
+
+      // Low frequencies (bass)
+      let lowSum = 0
+      for (let i = 0; i < Math.floor(binCount * 0.15); i++) {
+        lowSum += discoFrequencyData[i]
+      }
+      low = lowSum / (Math.floor(binCount * 0.15) * 255)
+
+      // Mid frequencies
+      let midSum = 0
+      for (let i = Math.floor(binCount * 0.15); i < Math.floor(binCount * 0.5); i++) {
+        midSum += discoFrequencyData[i]
+      }
+      mid = midSum / (Math.floor(binCount * 0.35) * 255)
+
+      // High frequencies
+      let highSum = 0
+      for (let i = Math.floor(binCount * 0.5); i < Math.floor(binCount * 0.8); i++) {
+        highSum += discoFrequencyData[i]
+      }
+      high = highSum / (Math.floor(binCount * 0.3) * 255)
+    } else {
+      // Fallback animation
+      low = 0.5 + Math.sin(time * 2) * 0.4
+      mid = 0.5 + Math.sin(time * 3 + 1) * 0.35
+      high = 0.5 + Math.sin(time * 5 + 2) * 0.3
+    }
+
+    // Smooth the values
+    currentIntensity.current.low += (low - currentIntensity.current.low) * 0.4
+    currentIntensity.current.mid += (mid - currentIntensity.current.mid) * 0.35
+    currentIntensity.current.high += (high - currentIntensity.current.high) * 0.3
+
+    const smoothLow = currentIntensity.current.low
+    const smoothMid = currentIntensity.current.mid
+    const smoothHigh = currentIntensity.current.high
+
+    // Animate each LED
+    ledsRef.current.forEach((led, index) => {
+      if (led) {
+        const col = index % cols
+        const row = Math.floor(index / cols)
+        const x = (col - (cols - 1) / 2) * (width / cols)
+        const y = (row - (rows - 1) / 2) * (height / rows)
+
+        // Distance from center
+        const distFromCenter = Math.sqrt(x * x + y * y)
+        const maxDist = Math.sqrt(halfW * halfW + halfH * halfH)
+        const normalizedDist = distFromCenter / maxDist
+
+        // Radial wave from center
+        const wave = Math.sin(time * 8 - distFromCenter * 3 + smoothLow * 5) * 0.5 + 0.5
+
+        // Starburst angle effect
+        const angle = Math.atan2(y, x)
+        const rayEffect = Math.pow(Math.abs(Math.sin(angle * 12 + time * 2)), 2)
+
+        // Combine effects
+        const centerGlow = Math.max(0, 1 - normalizedDist * 1.5) * (0.5 + smoothLow * 0.8)
+        const pulseEffect = wave * smoothMid * (1 - normalizedDist * 0.5)
+        const starburstEffect = rayEffect * smoothHigh * (1 - normalizedDist * 0.3)
+
+        const brightness = Math.min(1, centerGlow + pulseEffect * 0.6 + starburstEffect * 0.4)
+
+        // Color based on position and audio
+        const mat = led.material as THREE.MeshBasicMaterial
+        const hue = 0.8 + normalizedDist * 0.1 + smoothMid * 0.05 // Purple to pink
+        const saturation = 0.8 + smoothLow * 0.2
+        const lightness = 0.2 + brightness * 0.5
+        mat.color.setHSL(hue, saturation, lightness)
+        mat.opacity = 0.3 + brightness * 0.7
+      }
+    })
+  })
+
+  return (
+    <group ref={groupRef} position={position}>
+      {/* Dark background panel */}
+      <mesh position={[0, 0, 0]}>
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial color="#050208" />
       </mesh>
+
+      {/* Animated micro LED grid */}
+      {Array.from({ length: rows }, (_, row) =>
+        Array.from({ length: cols }, (_, col) => {
+          const index = row * cols + col
+          const x = (col - (cols - 1) / 2) * (width / cols)
+          const y = (row - (rows - 1) / 2) * (height / rows)
+          return (
+            <mesh
+              key={`led-${row}-${col}`}
+              ref={(el) => { if (el) ledsRef.current[index] = el }}
+              position={[x, y, 0.001]}
+            >
+              <planeGeometry args={[width / (cols + 5), height / (rows + 2)]} />
+              <meshBasicMaterial color="#ff00ff" transparent opacity={0.3} />
+            </mesh>
+          )
+        })
+      ).flat()}
+    </group>
+  )
+}
+
+// SideEqualizer - Single bar equalizer for side LED panels
+function SideEqualizer({ position, color, maxHeight = 8 }: { position: [number, number, number], color: string, maxHeight?: number }) {
+  const barRef = useRef<THREE.Mesh>(null)
+  const currentHeight = useRef(0.1)
+
+  useFrame((state) => {
+    if (!barRef.current) return
+
+    const time = state.clock.elapsedTime
+
+    // Get frequency data from shared disco audio if available
+    let targetHeight = 0.1
+    if (discoAnalyser && discoFrequencyData) {
+      discoAnalyser.getByteFrequencyData(discoFrequencyData)
+      // Use average of bass frequencies for the side bars
+      let sum = 0
+      const bassRange = Math.floor(discoFrequencyData.length * 0.3)
+      for (let i = 0; i < bassRange; i++) {
+        sum += discoFrequencyData[i]
+      }
+      targetHeight = (sum / bassRange / 255) * 0.9 + 0.1
+    } else {
+      // Fallback animation
+      targetHeight = Math.sin(time * 4) * 0.3 + 0.5 + Math.sin(time * 7) * 0.2
+    }
+
+    // Smooth interpolation
+    const diff = targetHeight - currentHeight.current
+    const speed = diff > 0 ? 0.5 : 0.15
+    currentHeight.current += diff * speed
+
+    const normalizedHeight = Math.max(0.1, Math.min(1, currentHeight.current))
+    const actualHeight = normalizedHeight * maxHeight
+
+    barRef.current.scale.y = normalizedHeight
+    barRef.current.position.y = (actualHeight - maxHeight) / 2
+  })
+
+  return (
+    <group position={position}>
+      {/* Background dark panel */}
+      <mesh position={[0, 0, -0.05]}>
+        <boxGeometry args={[0.4, maxHeight, 0.1]} />
+        <meshBasicMaterial color="#1a1a2e" />
+      </mesh>
+      {/* Animated bar */}
+      <mesh ref={barRef} position={[0, 0, 0]}>
+        <boxGeometry args={[0.3, maxHeight, 0.15]} />
+        <meshBasicMaterial color={color} />
+      </mesh>
+      {/* Glow light */}
+      <pointLight intensity={1.5} distance={6} color={color} />
     </group>
   )
 }
@@ -2703,6 +2860,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           powerPreference: graphicsQuality === "high" ? "high-performance" : "default",
         }}
       >
+        {/* FPS Stats - only in development mode */}
+        {process.env.NODE_ENV === 'development' && <Stats />}
+
         {povMode && (
           <>
             <PerspectiveCamera makeDefault fov={75} />
@@ -3656,6 +3816,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         ) : currentRoom === "disco" ? (
           <>
             {/* Disco Interior */}
+            {/* Ambient light to see all objects */}
+            <ambientLight intensity={0.4} color="#ffffff" />
+
             {/* Floor with reflective surface */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
               <planeGeometry args={[40, 35]} />
@@ -3759,28 +3922,37 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
             {/* DJ booth at center front */}
             <group position={[0, 0, -12]}>
-              {/* DJ table */}
+              {/* DJ table - white/light color like reference */}
               <mesh position={[0, 1, 0]}>
-                <boxGeometry args={[6, 1.2, 2]} />
-                <meshStandardMaterial color="#2a1a3a" metalness={0.6} roughness={0.4} />
+                <boxGeometry args={[8, 1.2, 2]} />
+                <meshStandardMaterial color="#e8e8f0" metalness={0.3} roughness={0.5} />
               </mesh>
               {/* DJ equipment */}
-              <mesh position={[-1.5, 1.8, 0]}>
+              <mesh position={[-2, 1.8, 0]}>
                 <boxGeometry args={[1.5, 0.3, 1.2]} />
                 <meshStandardMaterial color="#1a1a1a" />
               </mesh>
-              <mesh position={[1.5, 1.8, 0]}>
+              <mesh position={[2, 1.8, 0]}>
                 <boxGeometry args={[1.5, 0.3, 1.2]} />
                 <meshStandardMaterial color="#1a1a1a" />
               </mesh>
               {/* Mixer in center */}
               <mesh position={[0, 1.9, 0]}>
-                <boxGeometry args={[1, 0.4, 0.8]} />
+                <boxGeometry args={[1.2, 0.4, 0.8]} />
                 <meshStandardMaterial color="#333333" emissive="#ff00ff" emissiveIntensity={0.3} />
               </mesh>
-              {/* LED strip on DJ booth */}
-              <mesh position={[0, 0.5, 1.1]}>
-                <boxGeometry args={[6, 0.2, 0.1]} />
+
+              {/* LED panel with starburst effect on DJ booth front */}
+              <DJBoothStarburst position={[0, 0.8, 1.15]} width={7.5} height={1.2} />
+
+              {/* Liseré fluo en bas du DJ booth */}
+              <mesh position={[0, 0.05, 0]}>
+                <boxGeometry args={[8.1, 0.1, 2.1]} />
+                <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} />
+              </mesh>
+              {/* Liseré fluo sur le dessus du DJ booth */}
+              <mesh position={[0, 1.65, 0]}>
+                <boxGeometry args={[8.1, 0.08, 2.1]} />
                 <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} />
               </mesh>
             </group>
@@ -3820,6 +3992,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   <cylinderGeometry args={[0.3, 0.3, 0.2, 16]} rotation={[Math.PI / 2, 0, 0]} />
                   <meshStandardMaterial color="#2a2a2a" />
                 </mesh>
+                {/* Liseré fluo autour de l'enceinte */}
+                <mesh position={[0, 0.05, 0]}>
+                  <boxGeometry args={[2.1, 0.1, 2.1]} />
+                  <meshStandardMaterial color={x < 0 ? "#ff00ff" : "#00ffff"} emissive={x < 0 ? "#ff00ff" : "#00ffff"} emissiveIntensity={2} />
+                </mesh>
+                <mesh position={[0, 4, 0]}>
+                  <boxGeometry args={[2.1, 0.1, 2.1]} />
+                  <meshStandardMaterial color={x < 0 ? "#ff00ff" : "#00ffff"} emissive={x < 0 ? "#ff00ff" : "#00ffff"} emissiveIntensity={2} />
+                </mesh>
               </group>
             ))}
 
@@ -3834,10 +4015,20 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <boxGeometry args={[3.2, 0.15, 8.2]} />
                 <meshStandardMaterial color="#1a0a2a" metalness={0.8} roughness={0.1} />
               </mesh>
-              {/* Bar LED */}
+              {/* Bar LED vertical */}
               <mesh position={[-1.6, 1, 0]}>
                 <boxGeometry args={[0.1, 0.5, 7.5]} />
-                <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={1.5} />
+                <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={2} />
+              </mesh>
+              {/* Liserés fluo en bas du bar */}
+              <mesh position={[0, 0.05, 0]}>
+                <boxGeometry args={[3.2, 0.1, 8.2]} />
+                <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={2} />
+              </mesh>
+              {/* Liseré fluo sur le dessus du bar */}
+              <mesh position={[0, 2.0, 0]}>
+                <boxGeometry args={[3.3, 0.08, 8.3]} />
+                <meshStandardMaterial color="#00ffff" emissive="#00ffff" emissiveIntensity={2} />
               </mesh>
             </group>
 
@@ -4590,7 +4781,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       )}
 
       {/* Boutons fixes en bas à droite - visible dans une salle */}
-      {(currentCinemaRoom || currentRoom === "stadium" || currentRoom === "arcade") && (
+      {(currentCinemaRoom || currentRoom === "stadium" || currentRoom === "arcade" || currentRoom === "disco") && (
         <div className="fixed bottom-6 right-48 z-30 flex items-center gap-3">
           {/* Bouton S'asseoir/Se lever - dans le cinéma */}
           {currentCinemaRoom && (
