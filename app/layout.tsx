@@ -64,6 +64,7 @@ export default function RootLayout({
             <img src="https://sstatic1.histats.com/0.gif?4986671&101" alt="web hit counter" border={0} />
           </a>
         </div>
+        <meta name="monetag" content="63ce26ee8b6788b0dbd97d1f684e6868">
       </body>
     </html>
   )
