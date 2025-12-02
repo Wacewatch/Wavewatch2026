@@ -34,7 +34,6 @@ import {
   Sparkles,
   ExternalLink,
 } from "lucide-react"
-import type * as THREE from "three"
 import { useRouter } from "next/navigation" // Assuming router is needed for navigation
 import { HLSVideoScreen } from "./hls-video-screen"
 import { VideoScreen } from "./video-screen"
@@ -363,14 +362,14 @@ let discoSourceConnected = false
 let discoAudioInitializedGlobal = false
 
 // DiscoVisualizer - Real-time audio reactive equalizer with YouTube audio
-function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = true }: { position: [number, number, number], width: number, height: number, muted?: boolean, shouldInitAudio?: boolean }) {
+function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = true, lowQuality = false }: { position: [number, number, number], width: number, height: number, muted?: boolean, shouldInitAudio?: boolean, lowQuality?: boolean }) {
   const groupRef = useRef<THREE.Group>(null)
   const barsRef = useRef<THREE.Mesh[]>([])
   const currentHeights = useRef<number[]>([])
   const [trackInfo, setTrackInfo] = useState<string>('')
 
   // Number of columns for the equalizer - reduced for performance
-  const cols = 16
+  const cols = lowQuality ? 8 : 16
   const barWidth = width / cols - 0.1
   const maxBarHeight = height * 0.95
 
@@ -471,11 +470,16 @@ function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = tru
     }
   }, [])
 
-  // Update volume when muted changes
+  // Update volume when muted changes - audio keeps playing so analyser still works
   useEffect(() => {
     if (discoAudioElement) {
       discoAudioElement.volume = muted ? 0 : 0.7
     }
+  }, [muted])
+
+  // Store muted state in global so other components can access it
+  useEffect(() => {
+    (window as typeof window & { discoMuted?: boolean }).discoMuted = muted
   }, [muted])
 
   // Initialize heights
@@ -487,9 +491,9 @@ function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = tru
   useFrame((state) => {
     const time = state.clock.elapsedTime
 
-    // Get frequency data if available
+    // Get frequency data if available and not muted
     let frequencies: number[] = []
-    if (discoAnalyser && discoFrequencyData) {
+    if (discoAnalyser && discoFrequencyData && !muted) {
       discoAnalyser.getByteFrequencyData(discoFrequencyData)
       // Only use the first 50% of frequency bins (where music actually has energy)
       // and spread them across all bars - this ensures all bars are active
@@ -507,7 +511,7 @@ function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = tru
         frequencies[i] = (sum / (range * 2 + 1)) / 255
       }
     } else {
-      // Fallback animation if audio not available - more energetic
+      // Fallback animation when muted or audio not available - more energetic
       for (let i = 0; i < cols; i++) {
         const wave1 = Math.sin(time * 6 + i * 0.2) * 0.5 + 0.5
         const wave2 = Math.sin(time * 10 + i * 0.4) * 0.3 + 0.5
@@ -588,10 +592,10 @@ function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = tru
         )
       })}
 
-      {/* Grid overlay - 16x8 squares - flat lines (reduced for performance) */}
-      {/* Vertical lines - 15 lines for 16 columns */}
-      {Array.from({ length: 15 }, (_, i) => {
-        const x = -width / 2 + (width / 16) * (i + 1)
+      {/* Grid overlay - flat lines (reduced based on quality) */}
+      {/* Vertical lines */}
+      {!lowQuality && Array.from({ length: cols - 1 }, (_, i) => {
+        const x = -width / 2 + (width / cols) * (i + 1)
         return (
           <mesh key={`disco-vbar-${i}`} position={[x, 0, 0.002]}>
             <planeGeometry args={[0.04, height]} />
@@ -599,9 +603,10 @@ function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = tru
           </mesh>
         )
       })}
-      {/* Horizontal lines - 7 lines for 8 rows */}
-      {Array.from({ length: 7 }, (_, i) => {
-        const y = -height / 2 + (height / 8) * (i + 1)
+      {/* Horizontal lines */}
+      {!lowQuality && Array.from({ length: lowQuality ? 3 : 7 }, (_, i) => {
+        const rows = lowQuality ? 4 : 8
+        const y = -height / 2 + (height / rows) * (i + 1)
         return (
           <mesh key={`disco-hbar-${i}`} position={[0, y, 0.002]}>
             <planeGeometry args={[width, 0.04]} />
@@ -614,7 +619,7 @@ function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = tru
 }
 
 // DJBoothStarburst - LED panel with animated micro-LEDs that pulse to music (optimized)
-function DJBoothStarburst({ position, width, height }: { position: [number, number, number], width: number, height: number }) {
+function DJBoothStarburst({ position, width, height, lowQuality = false, muted = false }: { position: [number, number, number], width: number, height: number, lowQuality?: boolean, muted?: boolean }) {
   const groupRef = useRef<THREE.Group>(null)
   const ledsRef = useRef<THREE.Mesh[]>([])
   const currentIntensity = useRef({ low: 0.5, mid: 0.5, high: 0.5 })
@@ -622,19 +627,20 @@ function DJBoothStarburst({ position, width, height }: { position: [number, numb
 
   const halfW = width / 2
   const halfH = height / 2
-  const cols = 30 // Reduced from 60
-  const rows = 6  // Reduced from 10
+  const cols = lowQuality ? 10 : 30
+  const rows = lowQuality ? 3 : 6
 
   useFrame((state) => {
-    // Skip every other frame for performance
+    // Skip frames for performance (more in low quality)
     frameSkip.current++
-    if (frameSkip.current % 2 !== 0) return
+    const skipRate = lowQuality ? 4 : 2
+    if (frameSkip.current % skipRate !== 0) return
 
     const time = state.clock.elapsedTime
 
-    // Get frequency bands
+    // Get frequency bands - use fallback animation when muted
     let low = 0.5, mid = 0.5, high = 0.5
-    if (discoAnalyser && discoFrequencyData) {
+    if (discoAnalyser && discoFrequencyData && !muted) {
       discoAnalyser.getByteFrequencyData(discoFrequencyData)
       const binCount = discoFrequencyData.length
 
@@ -659,7 +665,7 @@ function DJBoothStarburst({ position, width, height }: { position: [number, numb
       }
       high = highSum / (Math.floor(binCount * 0.3) * 255)
     } else {
-      // Fallback animation
+      // Fallback animation when muted or audio not available
       low = 0.5 + Math.sin(time * 2) * 0.4
       mid = 0.5 + Math.sin(time * 3 + 1) * 0.35
       high = 0.5 + Math.sin(time * 5 + 2) * 0.3
@@ -3867,7 +3873,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </mesh>
 
               {/* Animated LED visualizer screen - reacts to real audio */}
-              <DiscoVisualizer position={[0, 0, 0.05]} width={17} height={6.2} muted={isDiscoMuted} />
+              <DiscoVisualizer position={[0, 0, 0.05]} width={17} height={6.2} muted={isDiscoMuted} lowQuality={graphicsQuality === "low"} />
 
               {/* Ambient screen glow */}
               <pointLight position={[0, 0, 4]} intensity={2} distance={12} color="#ff00ff" />
@@ -3943,7 +3949,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               </mesh>
 
               {/* LED panel with starburst effect on DJ booth front */}
-              <DJBoothStarburst position={[0, 0.8, 1.15]} width={7.5} height={1.2} />
+              <DJBoothStarburst position={[0, 0.8, 1.15]} width={7.5} height={1.2} lowQuality={graphicsQuality === "low"} muted={isDiscoMuted} />
 
               {/* Liseré fluo en bas du DJ booth */}
               <mesh position={[0, 0.05, 0]}>
