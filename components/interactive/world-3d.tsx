@@ -33,6 +33,7 @@ import {
   Film,
   Sparkles,
   ExternalLink,
+  Music,
 } from "lucide-react"
 import { useRouter } from "next/navigation" // Assuming router is needed for navigation
 import { HLSVideoScreen } from "./hls-video-screen"
@@ -361,6 +362,17 @@ let discoSourceConnected = false
 // Global flag to track if audio has been initialized
 let discoAudioInitializedGlobal = false
 
+// Global disco stream URLs (loaded from database)
+let globalDiscoStreamUrls: string[] = [
+  'https://stream.nightride.fm/nightride.m4a',
+  'https://stream.nightride.fm/chillsynth.m4a',
+  'https://ice1.somafm.com/groovesalad-128-mp3',
+  'https://ice1.somafm.com/spacestation-128-mp3',
+]
+let globalDiscoVolume = 70
+let globalDiscoIsOpen = true
+let globalArcadeIsOpen = true
+
 // DiscoVisualizer - Real-time audio reactive equalizer with YouTube audio
 function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = true, lowQuality = false }: { position: [number, number, number], width: number, height: number, muted?: boolean, shouldInitAudio?: boolean, lowQuality?: boolean }) {
   const groupRef = useRef<THREE.Group>(null)
@@ -394,13 +406,13 @@ function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = tru
         discoAudioElement = new Audio()
         discoAudioElement.crossOrigin = 'anonymous'
 
-        // List of EDM/Electronic radio streams to try
-        const radioStreams = [
-          'https://stream.nightride.fm/nightride.m4a', // Synthwave/Electronic
-          'https://stream.nightride.fm/chillsynth.m4a', // Chillsynth
-          'https://ice1.somafm.com/groovesalad-128-mp3', // SomaFM Groove Salad
-          'https://ice1.somafm.com/spacestation-128-mp3', // SomaFM Space Station
-        ]
+        // Use global stream URLs (loaded from database)
+        const radioStreams = globalDiscoStreamUrls.length > 0
+          ? globalDiscoStreamUrls
+          : [
+              'https://stream.nightride.fm/nightride.m4a',
+              'https://stream.nightride.fm/chillsynth.m4a',
+            ]
 
         let streamIndex = 0
 
@@ -432,8 +444,8 @@ function DiscoVisualizer({ position, width, height, muted, shouldInitAudio = tru
         // Initialize frequency data array
         discoFrequencyData = new Uint8Array(discoAnalyser.frequencyBinCount)
 
-        // Start playing
-        discoAudioElement.volume = muted ? 0 : 0.7
+        // Start playing - use global volume from database
+        discoAudioElement.volume = muted ? 0 : (globalDiscoVolume / 100)
 
         // Try to play first stream
         discoAudioElement.src = radioStreams[streamIndex]
@@ -1029,9 +1041,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [myProfile, setMyProfile] = useState<any>(null)
   const [otherPlayers, setOtherPlayers] = useState<any[]>([])
   const [onlineCount, setOnlineCount] = useState(0)
-  const [myPosition, setMyPosition] = useState({ x: 0, y: -0.35, z: 0 })
-  const [myRotation, setMyRotation] = useState(0) // State for player rotation
-  const [savedMapPosition, setSavedMapPosition] = useState({ x: 0, y: 0.5, z: 0 }) // Save position before entering rooms
+  const [myPosition, setMyPosition] = useState({ x: 4.5, y: -0.35, z: -27 })
+  const [myRotation, setMyRotation] = useState(0) // State for player rotation (default: facing buildings)
+  const [savedMapPosition, setSavedMapPosition] = useState({ x: 4.5, y: -0.35, z: -27 }) // Save position before entering rooms
   const [myAvatarStyle, setMyAvatarStyle] = useState({
     bodyColor: "#3b82f6",
     headColor: "#fbbf24",
@@ -1076,6 +1088,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [stadium, setStadium] = useState<any>(null)
   const [showStadium, setShowStadium] = useState(false)
   const [showDisco, setShowDisco] = useState(false)
+  const [showDiscoClosedModal, setShowDiscoClosedModal] = useState(false)
+  const [showArcadeClosedModal, setShowArcadeClosedModal] = useState(false)
+  const [showStadiumClosedModal, setShowStadiumClosedModal] = useState(false)
+  const [showCinemaClosedModal, setShowCinemaClosedModal] = useState(false)
   const [isDiscoMuted, setIsDiscoMuted] = useState(false) // Son activé par défaut dans la disco
   const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
   const [isCinemaMuted, setIsCinemaMuted] = useState(true) // Muted par défaut pour éviter le son automatique
@@ -1314,7 +1330,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         .eq("setting_key", "world_config")
         .maybeSingle()
 
+      console.log("[WorldSettings] Loaded:", data, "Error:", error)
+
+      if (error) {
+        console.error("[WorldSettings] Error loading settings:", error)
+        return
+      }
+
       if (data && data.setting_value) {
+        console.log("[WorldSettings] Applying worldMode:", data.setting_value.worldMode)
         setWorldSettings(data.setting_value as any)
       }
     }
@@ -1416,10 +1440,20 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
     document.addEventListener("visibilitychange", handleVisibilityChange)
 
+    // Déconnecter l'utilisateur quand il quitte la page
+    const handleBeforeUnload = () => {
+      const payload = JSON.stringify({ user_id: userId })
+      navigator.sendBeacon?.('/api/interactive/disconnect', payload)
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handleBeforeUnload)
+
     return () => {
       clearInterval(interval)
       clearInterval(heartbeatInterval)
       document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handleBeforeUnload)
       supabase.removeChannel(channel)
       // Mettre offline au cleanup (quand le composant est vraiment démonté)
       supabase
@@ -1464,7 +1498,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   useEffect(() => {
     const loadStadium = async () => {
-      const { data } = await supabase.from("interactive_stadium").select("*").eq("is_open", true).single()
+      const { data } = await supabase.from("interactive_stadium").select("*").single()
 
       if (data) setStadium(data)
     }
@@ -1759,6 +1793,38 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     if (data) setCinemaRooms(data)
   }, [])
 
+  // Load disco settings from database
+  const loadDiscoSettings = useCallback(async () => {
+    const { data } = await supabase
+      .from("interactive_disco")
+      .select("*")
+      .single()
+
+    if (data) {
+      // Update global variables used by DiscoVisualizer
+      if (data.stream_urls && Array.isArray(data.stream_urls) && data.stream_urls.length > 0) {
+        globalDiscoStreamUrls = data.stream_urls
+      }
+      if (data.volume !== undefined) {
+        globalDiscoVolume = data.volume
+      }
+      // Update disco open status
+      globalDiscoIsOpen = data.is_open !== false
+    }
+  }, [])
+
+  // Load arcade settings from database
+  const loadArcadeSettings = useCallback(async () => {
+    const { data } = await supabase
+      .from("interactive_arcade_settings")
+      .select("*")
+      .single()
+
+    if (data) {
+      globalArcadeIsOpen = data.is_open !== false
+    }
+  }, [])
+
   useEffect(() => {
     loadCinemaRooms()
 
@@ -1779,6 +1845,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       supabase.removeChannel(channel)
     }
   }, [loadCinemaRooms])
+
+  // Load disco settings on mount
+  useEffect(() => {
+    loadDiscoSettings()
+  }, [loadDiscoSettings])
+
+  // Load arcade settings on mount
+  useEffect(() => {
+    loadArcadeSettings()
+  }, [loadArcadeSettings])
 
   const loadSeats = useCallback(async () => {
     if (!currentCinemaRoom) return
@@ -2219,7 +2295,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }, [povMode])
 
-  function handleEnterArcade() {
+  async function handleEnterArcade() {
+    // Check if arcade is open in real-time from database
+    const { data: arcadeData } = await supabase
+      .from("interactive_arcade_settings")
+      .select("is_open")
+      .single()
+
+    if (!arcadeData || arcadeData.is_open === false) {
+      setShowArcade(false)
+      setShowArcadeClosedModal(true)
+      return
+    }
+
     setShowArcade(false)
     setCurrentCinemaRoom(null)
 
@@ -2311,6 +2399,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }
 
   const handleEnterCinemaRoom = async (room: any) => {
+    // Check if cinema room is open in real-time from database
+    const { data: roomData } = await supabase
+      .from("interactive_cinema_rooms")
+      .select("is_open")
+      .eq("id", room.id)
+      .single()
+
+    if (!roomData || roomData.is_open === false) {
+      setShowCinema(false)
+      setShowCinemaClosedModal(true)
+      return
+    }
+
     // Clear old seat data immediately to prevent stale state
     setCinemaSeats([])
     setMySeat(null)
@@ -2428,8 +2529,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }
 
-  function handleEnterStadium() {
-    if (!stadium) return
+  async function handleEnterStadium() {
+    // Check if stadium is open in real-time from database
+    const { data: stadiumData } = await supabase
+      .from("interactive_stadium")
+      .select("is_open")
+      .single()
+
+    if (!stadiumData || stadiumData.is_open === false) {
+      setShowStadium(false)
+      setShowStadiumClosedModal(true)
+      return
+    }
+
     setShowStadium(false)
     setCurrentCinemaRoom(null)
 
@@ -2472,7 +2584,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       .then(() => {})
   }
 
-  function handleEnterDisco() {
+  async function handleEnterDisco() {
+    // Check if disco is open in real-time from database
+    const { data: discoData } = await supabase
+      .from("interactive_disco")
+      .select("is_open")
+      .single()
+
+    if (!discoData || discoData.is_open === false) {
+      setShowDisco(false)
+      setShowDiscoClosedModal(true)
+      return
+    }
+
     setShowDisco(false)
     setCurrentCinemaRoom(null)
 
@@ -2697,6 +2821,154 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }, [myPosition, currentRoom])
 
+  // Refs to track current values for Realtime callbacks (to avoid stale closures)
+  const currentRoomRef = useRef(currentRoom)
+  const currentCinemaRoomRef = useRef(currentCinemaRoom)
+  const savedMapPositionRef = useRef(savedMapPosition)
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    currentRoomRef.current = currentRoom
+  }, [currentRoom])
+
+  useEffect(() => {
+    currentCinemaRoomRef.current = currentCinemaRoom
+  }, [currentCinemaRoom])
+
+  useEffect(() => {
+    savedMapPositionRef.current = savedMapPosition
+  }, [savedMapPosition])
+
+  // Realtime listener to auto-eject users when rooms are closed by admin
+  useEffect(() => {
+    // Subscribe to disco status changes
+    const discoChannel = supabase
+      .channel('disco-status-ejection')
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'interactive_disco' },
+        (payload) => {
+          console.log('[Realtime] Disco update received:', payload.new.is_open, 'currentRoom:', currentRoomRef.current)
+          if (payload.new.is_open === false && currentRoomRef.current === 'disco') {
+            // Eject user from disco
+            const pos = savedMapPositionRef.current
+            setMyPosition(pos)
+            setCurrentRoom(null)
+            setShowDiscoClosedModal(true)
+            // Update database
+            supabase
+              .from("interactive_profiles")
+              .update({
+                position_x: pos.x,
+                position_y: pos.y,
+                position_z: pos.z,
+                current_room: null,
+              })
+              .eq("user_id", userId)
+              .then(() => {})
+          }
+        }
+      )
+      .subscribe()
+
+    // Subscribe to arcade status changes
+    const arcadeChannel = supabase
+      .channel('arcade-status-ejection')
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'interactive_arcade_settings' },
+        (payload) => {
+          console.log('[Realtime] Arcade update received:', payload.new.is_open, 'currentRoom:', currentRoomRef.current)
+          if (payload.new.is_open === false && currentRoomRef.current === 'arcade') {
+            // Eject user from arcade
+            const pos = savedMapPositionRef.current
+            setMyPosition(pos)
+            setCurrentRoom(null)
+            setShowArcadeClosedModal(true)
+            // Update database
+            supabase
+              .from("interactive_profiles")
+              .update({
+                position_x: pos.x,
+                position_y: pos.y,
+                position_z: pos.z,
+                current_room: null,
+              })
+              .eq("user_id", userId)
+              .then(() => {})
+          }
+        }
+      )
+      .subscribe()
+
+    // Subscribe to stadium status changes
+    const stadiumChannel = supabase
+      .channel('stadium-status-ejection')
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'interactive_stadium' },
+        (payload) => {
+          console.log('[Realtime] Stadium update received:', payload.new.is_open, 'currentRoom:', currentRoomRef.current)
+          if (payload.new.is_open === false && currentRoomRef.current === 'stadium') {
+            // Eject user from stadium
+            const pos = savedMapPositionRef.current
+            setStadiumSeat(null)
+            setMyPosition(pos)
+            setCurrentRoom(null)
+            setShowStadiumClosedModal(true)
+            // Update database
+            supabase
+              .from("interactive_profiles")
+              .update({
+                position_x: pos.x,
+                position_y: pos.y,
+                position_z: pos.z,
+                current_room: null,
+              })
+              .eq("user_id", userId)
+              .then(() => {})
+          }
+        }
+      )
+      .subscribe()
+
+    // Subscribe to cinema rooms status changes
+    const cinemaChannel = supabase
+      .channel('cinema-status-ejection')
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'interactive_cinema_rooms' },
+        (payload) => {
+          console.log('[Realtime] Cinema update received:', payload.new.is_open, 'currentCinemaRoom:', currentCinemaRoomRef.current)
+          // Check if the user is in the specific cinema room that was closed
+          if (payload.new.is_open === false && currentCinemaRoomRef.current && currentCinemaRoomRef.current.id === payload.new.id) {
+            // Eject user from cinema room
+            const pos = savedMapPositionRef.current
+            setMySeat(null)
+            setCurrentCinemaRoom(null)
+            setCurrentRoom(null)
+            setMyPosition(pos)
+            setShowCinemaClosedModal(true)
+            // Update database
+            supabase
+              .from("interactive_profiles")
+              .update({
+                position_x: pos.x,
+                position_y: pos.y,
+                position_z: pos.z,
+                current_room: null,
+              })
+              .eq("user_id", userId)
+              .then(() => {})
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(discoChannel)
+      supabase.removeChannel(arcadeChannel)
+      supabase.removeChannel(stadiumChannel)
+      supabase.removeChannel(cinemaChannel)
+    }
+  }, [userId]) // Only userId needed - refs handle the rest
+
   useEffect(() => {
     const checkCapacity = async () => {
       const { count } = await supabase
@@ -2803,9 +3075,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         // Si l'utilisateur était dans une salle spéciale (cinéma, stade, arcade),
         // on le remet au spawn et on libère son siège car c'est un nouveau chargement de page
         if (isInSpecialRoom) {
-          const spawnPosition = { x: 0, y: 0.5, z: 0 }
+          const spawnPosition = { x: 4.5, y: -0.35, z: -27 }
           setMyPosition(spawnPosition)
-          setMyRotation(0)
+          setMyRotation(0) // Face buildings
           setCurrentRoom(null)
           setSavedMapPosition(spawnPosition)
 
@@ -2838,7 +3110,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           // Comportement normal pour les joueurs sur la map
           const loadedPosition = { x: data.position_x, y: data.position_y, z: data.position_z }
           setMyPosition(loadedPosition)
-          setMyRotation(data.rotation || 0)
+          setMyRotation(data.rotation ?? 0) // Default: face buildings
           setCurrentRoom(data.current_room)
           setSavedMapPosition(loadedPosition)
         }
@@ -2854,7 +3126,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     const isInSpecialRoom = currentRoom === "stadium" || currentRoom === "arcade" || currentRoom === "disco" || (typeof currentRoom === 'object' && currentRoom !== null)
 
     const positionToSave = isInSpecialRoom
-      ? { x: 0, y: 0.5, z: 0 }
+      ? { x: 4.5, y: -0.35, z: -27 }
       : { x: myPosition.x, y: myPosition.y, z: myPosition.z }
 
     // Save position in database
@@ -2877,7 +3149,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     <div className="relative w-full h-screen">
       <Canvas
         // Pass povMode to camera
-        camera={povMode ? undefined : { position: [0, 8, 12], fov: 60 }}
+        camera={povMode ? undefined : { position: [0, 8, -12], fov: 60 }}
         style={{ width: "100vw", height: "100vh" }}
         shadows
         gl={{
@@ -3754,14 +4026,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   <boxGeometry args={[20, 12, 0.5]} />
                   <meshStandardMaterial color="#111111" />
                 </mesh>
-                <HLSVideoScreen
-                  src="https://amg02162-newenconnect-amg02162c2-rakuten-us-1981.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg02162-newenconnect-100pour100docs-rakutenus/playlist.m3u8"
-                  width={19}
-                  height={11}
-                  position={[0, 0, 0.3]}
-                  autoplay={true}
-                  muted={false}
-                />
+                {stadium?.embed_url && (
+                  <HLSVideoScreen
+                    src={stadium.embed_url}
+                    width={19}
+                    height={11}
+                    position={[0, 0, 0.3]}
+                    autoplay={true}
+                    muted={false}
+                  />
+                )}
               </group>
             )}
             {/* Écran Sud (visible depuis tribune Nord) */}
@@ -3771,14 +4045,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   <boxGeometry args={[20, 12, 0.5]} />
                   <meshStandardMaterial color="#111111" />
                 </mesh>
-                <HLSVideoScreen
-                  src="https://amg02162-newenconnect-amg02162c2-rakuten-us-1981.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg02162-newenconnect-100pour100docs-rakutenus/playlist.m3u8"
-                  width={19}
-                  height={11}
-                  position={[0, 0, 0.3]}
-                  autoplay={true}
-                  muted={false}
-                />
+                {stadium?.embed_url && (
+                  <HLSVideoScreen
+                    src={stadium.embed_url}
+                    width={19}
+                    height={11}
+                    position={[0, 0, 0.3]}
+                    autoplay={true}
+                    muted={false}
+                  />
+                )}
               </group>
             )}
             {/* Écran Ouest (visible depuis tribune Est) */}
@@ -3788,14 +4064,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   <boxGeometry args={[20, 12, 0.5]} />
                   <meshStandardMaterial color="#111111" />
                 </mesh>
-                <HLSVideoScreen
-                  src="https://amg02162-newenconnect-amg02162c2-rakuten-us-1981.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg02162-newenconnect-100pour100docs-rakutenus/playlist.m3u8"
-                  width={19}
-                  height={11}
-                  position={[0, 0, 0.3]}
-                  autoplay={true}
-                  muted={false}
-                />
+                {stadium?.embed_url && (
+                  <HLSVideoScreen
+                    src={stadium.embed_url}
+                    width={19}
+                    height={11}
+                    position={[0, 0, 0.3]}
+                    autoplay={true}
+                    muted={false}
+                  />
+                )}
               </group>
             )}
             {/* Écran Est (visible depuis tribune Ouest) */}
@@ -3805,14 +4083,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   <boxGeometry args={[20, 12, 0.5]} />
                   <meshStandardMaterial color="#111111" />
                 </mesh>
-                <HLSVideoScreen
-                  src="https://amg02162-newenconnect-amg02162c2-rakuten-us-1981.playouts.now.amagi.tv/ts-us-e2-n2/playlist/amg02162-newenconnect-100pour100docs-rakutenus/playlist.m3u8"
-                  width={19}
-                  height={11}
-                  position={[0, 0, 0.3]}
-                  autoplay={true}
-                  muted={false}
-                />
+                {stadium?.embed_url && (
+                  <HLSVideoScreen
+                    src={stadium.embed_url}
+                    width={19}
+                    height={11}
+                    position={[0, 0, 0.3]}
+                    autoplay={true}
+                    muted={false}
+                  />
+                )}
               </group>
             )}
 
@@ -4911,6 +5191,78 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
+      {showDiscoClosedModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gradient-to-br from-purple-900 to-gray-900 text-white p-8 rounded-2xl max-w-md text-center border-2 border-purple-500/50 shadow-2xl">
+            <div className="mb-4">
+              <Music className="w-16 h-16 mx-auto text-purple-400 opacity-50" />
+            </div>
+            <h2 className="text-2xl font-bold mb-4 text-purple-300">Discothèque Fermée</h2>
+            <p className="mb-6 text-gray-300">La discothèque est actuellement fermée. Revenez plus tard !</p>
+            <button
+              onClick={() => setShowDiscoClosedModal(false)}
+              className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-colors"
+            >
+              Compris
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showArcadeClosedModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gradient-to-br from-cyan-900 to-gray-900 text-white p-8 rounded-2xl max-w-md text-center border-2 border-cyan-500/50 shadow-2xl">
+            <div className="mb-4">
+              <Gamepad2 className="w-16 h-16 mx-auto text-cyan-400 opacity-50" />
+            </div>
+            <h2 className="text-2xl font-bold mb-4 text-cyan-300">Arcade Fermée</h2>
+            <p className="mb-6 text-gray-300">L'arcade est actuellement fermée. Revenez plus tard !</p>
+            <button
+              onClick={() => setShowArcadeClosedModal(false)}
+              className="px-6 py-3 bg-cyan-600 hover:bg-cyan-700 rounded-lg font-semibold transition-colors"
+            >
+              Compris
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showStadiumClosedModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gradient-to-br from-green-900 to-gray-900 text-white p-8 rounded-2xl max-w-md text-center border-2 border-green-500/50 shadow-2xl">
+            <div className="mb-4">
+              <Trophy className="w-16 h-16 mx-auto text-green-400 opacity-50" />
+            </div>
+            <h2 className="text-2xl font-bold mb-4 text-green-300">Stade Fermé</h2>
+            <p className="mb-6 text-gray-300">Le stade est actuellement fermé. Revenez plus tard !</p>
+            <button
+              onClick={() => setShowStadiumClosedModal(false)}
+              className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-colors"
+            >
+              Compris
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showCinemaClosedModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-gradient-to-br from-red-900 to-gray-900 text-white p-8 rounded-2xl max-w-md text-center border-2 border-red-500/50 shadow-2xl">
+            <div className="mb-4">
+              <Film className="w-16 h-16 mx-auto text-red-400 opacity-50" />
+            </div>
+            <h2 className="text-2xl font-bold mb-4 text-red-300">Cinéma Fermé</h2>
+            <p className="mb-6 text-gray-300">Cette salle de cinéma est actuellement fermée. Revenez plus tard !</p>
+            <button
+              onClick={() => setShowCinemaClosedModal(false)}
+              className="px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-colors"
+            >
+              Compris
+            </button>
+          </div>
+        </div>
+      )}
+
       {showSettings && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
           <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-xl shadow-2xl p-6 max-w-md w-full border-2 border-blue-500/30">
@@ -5291,7 +5643,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                           : "border-purple-400/30 hover:border-purple-400 hover:shadow-lg hover:shadow-purple-500/20"
                       }`}
                     >
-                      <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-start gap-4 mb-3">
+                        {/* Affiche du film */}
+                        {room.movie_poster ? (
+                          <img
+                            src={room.movie_poster}
+                            alt={room.movie_title || "Affiche"}
+                            className="w-20 h-28 object-cover rounded-lg border border-purple-400/30 flex-shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none'
+                            }}
+                          />
+                        ) : (
+                          <div className="w-20 h-28 bg-purple-900/50 rounded-lg border border-purple-400/30 flex items-center justify-center flex-shrink-0">
+                            <Film className="w-8 h-8 text-purple-400/50" />
+                          </div>
+                        )}
+
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <span className="text-lg font-bold text-white">Salle {room.room_number}</span>
@@ -5306,7 +5674,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                               </span>
                             )}
                           </div>
-                          <h3 className="text-white font-semibold text-sm mb-1">{room.movie_title}</h3>
+                          <h3 className="text-white font-semibold text-sm mb-1">{room.movie_title || "Aucun film"}</h3>
                           <div className="flex items-center gap-2 text-xs text-purple-300">
                             <Sparkles className="w-3 h-3" />
                             <span>{room.theme}</span>
@@ -5321,12 +5689,37 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                             {currentOccupancy}/{room.capacity}
                           </span>
                         </div>
-                        {room.schedule_start && (
+                        {(room.schedule_start || room.schedule_end) && (
                           <div className="text-purple-300 text-xs">
-                            {new Date(room.schedule_start).toLocaleTimeString("fr-FR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {room.schedule_start && (
+                              <>
+                                {new Date(room.schedule_start).toLocaleDateString("fr-FR", {
+                                  weekday: "short",
+                                  day: "numeric",
+                                  month: "short",
+                                })}{" "}
+                                à{" "}
+                                {new Date(room.schedule_start).toLocaleTimeString("fr-FR", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </>
+                            )}
+                            {room.schedule_start && room.schedule_end && " → "}
+                            {room.schedule_end && (
+                              <>
+                                {new Date(room.schedule_end).toLocaleDateString("fr-FR", {
+                                  weekday: "short",
+                                  day: "numeric",
+                                  month: "short",
+                                })}{" "}
+                                à{" "}
+                                {new Date(room.schedule_end).toLocaleTimeString("fr-FR", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </>
+                            )}
                           </div>
                         )}
                       </div>

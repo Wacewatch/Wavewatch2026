@@ -9,19 +9,25 @@ export const metadata = {
 
 export default async function InteractiveWorldAdminPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data: { user }, error: authError } = await supabase.auth.getUser()
+
+  console.log("[interactive-world] User:", user?.id, "Auth error:", authError?.message)
 
   if (!user) {
+    console.log("[interactive-world] No user, redirecting to home")
     redirect("/")
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("user_profiles")
     .select("is_admin")
-    .eq("user_id", user.id)
+    .eq("id", user.id)
     .single()
 
+  console.log("[interactive-world] Profile:", profile, "Profile error:", profileError?.message)
+
   if (!profile?.is_admin) {
+    console.log("[interactive-world] User is not admin, redirecting to home")
     redirect("/")
   }
 

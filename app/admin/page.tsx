@@ -1409,8 +1409,7 @@ export default function AdminPage() {
       const { data, error } = await supabase
         .from("interactive_stadium")
         .select("*")
-        .eq("id", 1) // Assuming a single stadium configuration with id 1
-        .maybeSingle() // Use maybeSingle for cases where the row might not exist
+        .single() // Get the single stadium configuration
 
       if (error) {
         // PGRST116 is "No Row Found" error, which is acceptable
@@ -3121,14 +3120,14 @@ export default function AdminPage() {
                 <SettingsIcon className="w-4 h-4" />
                 <span className="hidden sm:inline">Paramètres</span>
               </TabsTrigger>
-              {/* Added new Interactive World tab to the TabsList */}
-              <TabsTrigger
-                value="interactive-world"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+              {/* Link to Interactive World dedicated page */}
+              <a
+                href="/admin/interactive-world"
+                className="flex items-center justify-center gap-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-md whitespace-nowrap transition-all"
               >
                 <Globe className="w-4 h-4" />
                 <span className="hidden sm:inline">Monde Interactif</span>
-              </TabsTrigger>
+              </a>
             </TabsList>
           </div>
 

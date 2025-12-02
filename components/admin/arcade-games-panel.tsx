@@ -3,13 +3,8 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Plus, Pencil, Trash2, ExternalLink, GripVertical, Eye, EyeOff } from 'lucide-react'
 import { createClient } from "@/lib/supabase/client"
+import { Plus, Pencil, Trash2, Eye, EyeOff, Gamepad2 } from 'lucide-react'
 
 interface ArcadeGame {
   id: number
@@ -23,395 +18,368 @@ interface ArcadeGame {
   display_order: number
 }
 
+interface ArcadeGameForm {
+  name: string
+  url: string
+  image_url: string
+  media_type: string
+  open_in_new_tab: boolean
+  use_proxy: boolean
+}
+
 interface ArcadeGamesPanelProps {
   games: ArcadeGame[]
 }
 
 export function ArcadeGamesPanel({ games: initialGames }: ArcadeGamesPanelProps) {
-  const [games, setGames] = useState<ArcadeGame[]>(initialGames)
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingGame, setEditingGame] = useState<ArcadeGame | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-
-  const [formData, setFormData] = useState({
+  const [arcadeMachines, setArcadeMachines] = useState<ArcadeGame[]>(initialGames)
+  const [showAddArcadeGame, setShowAddArcadeGame] = useState(false)
+  const [editingArcadeGame, setEditingArcadeGame] = useState<ArcadeGame | null>(null)
+  const [arcadeGameForm, setArcadeGameForm] = useState<ArcadeGameForm>({
     name: '',
     url: '',
     image_url: '',
-    media_type: 'image' as 'image' | 'video',
+    media_type: 'image',
     open_in_new_tab: false,
     use_proxy: false,
   })
 
   const supabase = createClient()
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      url: '',
-      image_url: '',
-      media_type: 'image',
-      open_in_new_tab: false,
-      use_proxy: false,
-    })
-  }
+  const handleAddArcadeGame = async () => {
+    if (!arcadeGameForm.name || !arcadeGameForm.url) return
 
-  const handleAdd = async () => {
-    if (!formData.name || !formData.url) return
+    const maxOrder = arcadeMachines.length > 0
+      ? Math.max(...arcadeMachines.map(g => g.display_order))
+      : 0
 
-    setIsLoading(true)
-    try {
-      const maxOrder = Math.max(...games.map(g => g.display_order), 0)
-      const { data, error } = await supabase
-        .from('arcade_games')
-        .insert({
-          name: formData.name,
-          url: formData.url,
-          image_url: formData.image_url || null,
-          media_type: formData.media_type,
-          open_in_new_tab: formData.open_in_new_tab,
-          use_proxy: formData.use_proxy,
-          display_order: maxOrder + 1,
-          is_active: true,
-        })
-        .select()
-        .single()
+    const { data, error } = await supabase
+      .from('arcade_games')
+      .insert({
+        name: arcadeGameForm.name,
+        url: arcadeGameForm.url,
+        image_url: arcadeGameForm.image_url || null,
+        media_type: arcadeGameForm.media_type,
+        open_in_new_tab: arcadeGameForm.open_in_new_tab,
+        use_proxy: arcadeGameForm.use_proxy,
+        display_order: maxOrder + 1,
+        is_active: true,
+      })
+      .select()
+      .single()
 
-      if (error) throw error
-
-      setGames([...games, data])
-      setIsAddDialogOpen(false)
-      resetForm()
-    } catch (error) {
+    if (error) {
       console.error('Error adding game:', error)
-    } finally {
-      setIsLoading(false)
+      return
     }
+
+    setArcadeMachines([...arcadeMachines, data])
+    setShowAddArcadeGame(false)
+    setArcadeGameForm({ name: '', url: '', image_url: '', media_type: 'image', open_in_new_tab: false, use_proxy: false })
   }
 
-  const handleEdit = async () => {
-    if (!editingGame || !formData.name || !formData.url) return
+  const handleUpdateArcadeGame = async () => {
+    if (!editingArcadeGame || !arcadeGameForm.name || !arcadeGameForm.url) return
 
-    setIsLoading(true)
-    try {
-      const { data, error } = await supabase
-        .from('arcade_games')
-        .update({
-          name: formData.name,
-          url: formData.url,
-          image_url: formData.image_url || null,
-          media_type: formData.media_type,
-          open_in_new_tab: formData.open_in_new_tab,
-          use_proxy: formData.use_proxy,
-        })
-        .eq('id', editingGame.id)
-        .select()
-        .single()
+    const { data, error } = await supabase
+      .from('arcade_games')
+      .update({
+        name: arcadeGameForm.name,
+        url: arcadeGameForm.url,
+        image_url: arcadeGameForm.image_url || null,
+        media_type: arcadeGameForm.media_type,
+        open_in_new_tab: arcadeGameForm.open_in_new_tab,
+        use_proxy: arcadeGameForm.use_proxy,
+      })
+      .eq('id', editingArcadeGame.id)
+      .select()
+      .single()
 
-      if (error) throw error
-
-      setGames(games.map(g => g.id === editingGame.id ? data : g))
-      setIsEditDialogOpen(false)
-      setEditingGame(null)
-      resetForm()
-    } catch (error) {
+    if (error) {
       console.error('Error updating game:', error)
-    } finally {
-      setIsLoading(false)
+      return
     }
+
+    setArcadeMachines(arcadeMachines.map(g => g.id === editingArcadeGame.id ? data : g))
+    setEditingArcadeGame(null)
+    setArcadeGameForm({ name: '', url: '', image_url: '', media_type: 'image', open_in_new_tab: false, use_proxy: false })
   }
 
-  const handleDelete = async (id: number) => {
+  const handleToggleArcadeGame = async (game: ArcadeGame) => {
+    const { error } = await supabase
+      .from('arcade_games')
+      .update({ is_active: !game.is_active })
+      .eq('id', game.id)
+
+    if (error) {
+      console.error('Error toggling game:', error)
+      return
+    }
+
+    setArcadeMachines(arcadeMachines.map(g => g.id === game.id ? { ...g, is_active: !g.is_active } : g))
+  }
+
+  const handleDeleteArcadeGame = async (id: number) => {
     if (!confirm('Supprimer ce jeu ?')) return
 
-    setIsLoading(true)
-    try {
-      const { error } = await supabase
-        .from('arcade_games')
-        .delete()
-        .eq('id', id)
+    const { error } = await supabase
+      .from('arcade_games')
+      .delete()
+      .eq('id', id)
 
-      if (error) throw error
-
-      setGames(games.filter(g => g.id !== id))
-    } catch (error) {
+    if (error) {
       console.error('Error deleting game:', error)
-    } finally {
-      setIsLoading(false)
+      return
     }
-  }
 
-  const handleToggleActive = async (game: ArcadeGame) => {
-    try {
-      const { error } = await supabase
-        .from('arcade_games')
-        .update({ is_active: !game.is_active })
-        .eq('id', game.id)
-
-      if (error) throw error
-
-      setGames(games.map(g => g.id === game.id ? { ...g, is_active: !g.is_active } : g))
-    } catch (error) {
-      console.error('Error toggling game:', error)
-    }
-  }
-
-  const openEditDialog = (game: ArcadeGame) => {
-    setEditingGame(game)
-    setFormData({
-      name: game.name,
-      url: game.url,
-      image_url: game.image_url || '',
-      media_type: game.media_type,
-      open_in_new_tab: game.open_in_new_tab,
-      use_proxy: game.use_proxy,
-    })
-    setIsEditDialogOpen(true)
+    setArcadeMachines(arcadeMachines.filter(g => g.id !== id))
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-muted-foreground">
-          {games.length} jeu(x) configuré(s) - {games.filter(g => g.is_active).length} actif(s)
-        </p>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="w-4 h-4 mr-2" />
-              Ajouter un jeu
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Ajouter un jeu d'arcade</DialogTitle>
-              <DialogDescription>
-                Ajoutez un nouveau jeu à la salle d'arcade du monde virtuel
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nom du jeu *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Ex: Pac-Man"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="url">URL du jeu *</Label>
-                <Input
-                  id="url"
-                  value={formData.url}
-                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="image_url">URL de l'image/video</Label>
-                <Input
-                  id="image_url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  placeholder="/arcade/game.png ou https://..."
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Type de média</Label>
-                <Select
-                  value={formData.media_type}
-                  onValueChange={(value: 'image' | 'video') => setFormData({ ...formData, media_type: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="image">Image</SelectItem>
-                    <SelectItem value="video">Video</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="new_tab">Ouvrir dans un nouvel onglet</Label>
-                <Switch
-                  id="new_tab"
-                  checked={formData.open_in_new_tab}
-                  onCheckedChange={(checked) => setFormData({ ...formData, open_in_new_tab: checked })}
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="proxy">Utiliser le proxy</Label>
-                <Switch
-                  id="proxy"
-                  checked={formData.use_proxy}
-                  onCheckedChange={(checked) => setFormData({ ...formData, use_proxy: checked })}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                Annuler
-              </Button>
-              <Button onClick={handleAdd} disabled={isLoading || !formData.name || !formData.url}>
-                {isLoading ? 'Ajout...' : 'Ajouter'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <Gamepad2 className="w-5 h-5" />
+          Machines d'Arcade
+        </h3>
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-gray-400">
+            {arcadeMachines.length} jeux - {arcadeMachines.filter(g => g.is_active).length} actifs
+          </div>
+          <Button
+            size="sm"
+            onClick={() => {
+              setShowAddArcadeGame(true)
+              setArcadeGameForm({ name: '', url: '', image_url: '', media_type: 'image', open_in_new_tab: false, use_proxy: false })
+            }}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            Ajouter
+          </Button>
+        </div>
       </div>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12">#</TableHead>
-              <TableHead>Nom</TableHead>
-              <TableHead>URL</TableHead>
-              <TableHead className="w-20">Statut</TableHead>
-              <TableHead className="w-32">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {games.sort((a, b) => a.display_order - b.display_order).map((game) => (
-              <TableRow key={game.id} className={!game.is_active ? 'opacity-50' : ''}>
-                <TableCell className="font-mono text-xs">{game.display_order}</TableCell>
-                <TableCell className="font-medium">{game.name}</TableCell>
-                <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
-                  {game.url}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleToggleActive(game)}
-                    title={game.is_active ? 'Désactiver' : 'Activer'}
-                  >
-                    {game.is_active ? (
-                      <Eye className="w-4 h-4 text-green-500" />
-                    ) : (
-                      <EyeOff className="w-4 h-4 text-red-500" />
-                    )}
-                  </Button>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => window.open(game.url, '_blank')}
-                      title="Tester"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openEditDialog(game)}
-                      title="Modifier"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDelete(game.id)}
-                      title="Supprimer"
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-            {games.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  Aucun jeu configuré. Cliquez sur "Ajouter un jeu" pour commencer.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Modifier le jeu</DialogTitle>
-            <DialogDescription>
-              Modifiez les paramètres du jeu "{editingGame?.name}"
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit_name">Nom du jeu *</Label>
+      {/* Formulaire d'ajout */}
+      {showAddArcadeGame && (
+        <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 space-y-3">
+          <h4 className="font-medium text-white">Nouveau jeu d'arcade</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm text-gray-300">Nom *</label>
               <Input
-                id="edit_name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={arcadeGameForm.name}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, name: e.target.value })}
+                placeholder="Ex: Pac-Man"
+                className="bg-gray-700 border-gray-600"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_url">URL du jeu *</Label>
+            <div>
+              <label className="text-sm text-gray-300">URL du jeu *</label>
               <Input
-                id="edit_url"
-                value={formData.url}
-                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                value={arcadeGameForm.url}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, url: e.target.value })}
+                placeholder="https://..."
+                className="bg-gray-700 border-gray-600"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit_image_url">URL de l'image/video</Label>
+            <div>
+              <label className="text-sm text-gray-300">URL de l'image</label>
               <Input
-                id="edit_image_url"
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                value={arcadeGameForm.image_url}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, image_url: e.target.value })}
+                placeholder="/arcade/game.png"
+                className="bg-gray-700 border-gray-600"
               />
             </div>
-            <div className="space-y-2">
-              <Label>Type de média</Label>
-              <Select
-                value={formData.media_type}
-                onValueChange={(value: 'image' | 'video') => setFormData({ ...formData, media_type: value })}
+            <div>
+              <label className="text-sm text-gray-300">Type de média</label>
+              <select
+                value={arcadeGameForm.media_type}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, media_type: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="image">Image</SelectItem>
-                  <SelectItem value="video">Video</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="edit_new_tab">Ouvrir dans un nouvel onglet</Label>
-              <Switch
-                id="edit_new_tab"
-                checked={formData.open_in_new_tab}
-                onCheckedChange={(checked) => setFormData({ ...formData, open_in_new_tab: checked })}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="edit_proxy">Utiliser le proxy</Label>
-              <Switch
-                id="edit_proxy"
-                checked={formData.use_proxy}
-                onCheckedChange={(checked) => setFormData({ ...formData, use_proxy: checked })}
-              />
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+              </select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={arcadeGameForm.open_in_new_tab}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, open_in_new_tab: e.target.checked })}
+              />
+              Ouvrir dans un nouvel onglet
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={arcadeGameForm.use_proxy}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, use_proxy: e.target.checked })}
+              />
+              Utiliser le proxy
+            </label>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={() => setShowAddArcadeGame(false)}>
               Annuler
             </Button>
-            <Button onClick={handleEdit} disabled={isLoading || !formData.name || !formData.url}>
-              {isLoading ? 'Sauvegarde...' : 'Sauvegarder'}
+            <Button size="sm" onClick={handleAddArcadeGame} disabled={!arcadeGameForm.name || !arcadeGameForm.url}>
+              Ajouter
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
+
+      {/* Formulaire d'édition */}
+      {editingArcadeGame && (
+        <div className="bg-gray-800 border border-yellow-600 rounded-lg p-4 space-y-3">
+          <h4 className="font-medium text-yellow-400">Modifier: {editingArcadeGame.name}</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm text-gray-300">Nom *</label>
+              <Input
+                value={arcadeGameForm.name}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, name: e.target.value })}
+                className="bg-gray-700 border-gray-600"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-gray-300">URL du jeu *</label>
+              <Input
+                value={arcadeGameForm.url}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, url: e.target.value })}
+                className="bg-gray-700 border-gray-600"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-gray-300">URL de l'image</label>
+              <Input
+                value={arcadeGameForm.image_url}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, image_url: e.target.value })}
+                className="bg-gray-700 border-gray-600"
+              />
+            </div>
+            <div>
+              <label className="text-sm text-gray-300">Type de média</label>
+              <select
+                value={arcadeGameForm.media_type}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, media_type: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white"
+              >
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={arcadeGameForm.open_in_new_tab}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, open_in_new_tab: e.target.checked })}
+              />
+              Ouvrir dans un nouvel onglet
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={arcadeGameForm.use_proxy}
+                onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, use_proxy: e.target.checked })}
+              />
+              Utiliser le proxy
+            </label>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditingArcadeGame(null)
+                setArcadeGameForm({ name: '', url: '', image_url: '', media_type: 'image', open_in_new_tab: false, use_proxy: false })
+              }}
+            >
+              Annuler
+            </Button>
+            <Button size="sm" onClick={handleUpdateArcadeGame} disabled={!arcadeGameForm.name || !arcadeGameForm.url}>
+              Sauvegarder
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Liste des jeux */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
+        {arcadeMachines.map((machine) => (
+          <div
+            key={machine.id}
+            className={`bg-gray-700 p-3 rounded-lg border ${machine.is_active ? 'border-gray-600' : 'border-gray-700 opacity-60'}`}
+          >
+            <div className="flex justify-between items-start">
+              <div className="font-medium text-white">{machine.name}</div>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => handleToggleArcadeGame(machine)}
+                  title={machine.is_active ? 'Désactiver' : 'Activer'}
+                >
+                  {machine.is_active
+                    ? <Eye className="w-3 h-3 text-green-400" />
+                    : <EyeOff className="w-3 h-3 text-red-400" />
+                  }
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={() => {
+                    setEditingArcadeGame(machine)
+                    setArcadeGameForm({
+                      name: machine.name,
+                      url: machine.url,
+                      image_url: machine.image_url || '',
+                      media_type: machine.media_type || 'image',
+                      open_in_new_tab: machine.open_in_new_tab,
+                      use_proxy: machine.use_proxy
+                    })
+                  }}
+                >
+                  <Pencil className="w-3 h-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-red-400 hover:text-red-300"
+                  onClick={() => handleDeleteArcadeGame(machine.id)}
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+            <div className="text-xs text-gray-400 mt-1 truncate" title={machine.url}>
+              {machine.url}
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <span className={`text-xs px-2 py-0.5 rounded ${machine.is_active ? "bg-green-600/50 text-green-200" : "bg-gray-600 text-gray-400"}`}>
+                {machine.is_active ? "Actif" : "Inactif"}
+              </span>
+              {machine.open_in_new_tab && (
+                <span className="text-xs px-2 py-0.5 rounded bg-blue-600/50 text-blue-200">
+                  Nouvel onglet
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+        {arcadeMachines.length === 0 && (
+          <div className="col-span-3 text-center text-gray-400 py-8">
+            Aucun jeu configuré. Cliquez sur "Ajouter" pour commencer.
+          </div>
+        )}
+      </div>
     </div>
   )
 }
