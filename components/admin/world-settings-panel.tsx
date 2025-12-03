@@ -11,7 +11,6 @@ import { Save } from 'lucide-react'
 interface WorldSettings {
   maxCapacity: number
   worldMode: string
-  playerInteractionsEnabled: boolean
   showStatusBadges: boolean
   enableChat: boolean
   enableEmojis: boolean
@@ -29,7 +28,6 @@ export function WorldSettingsPanel({ settings }: { settings: any[] }) {
   const [worldSettings, setWorldSettings] = useState<WorldSettings>({
     maxCapacity: existingSettings.maxCapacity || 100,
     worldMode: existingSettings.worldMode || "day",
-    playerInteractionsEnabled: existingSettings.playerInteractionsEnabled ?? true,
     showStatusBadges: existingSettings.showStatusBadges ?? true,
     enableChat: existingSettings.enableChat ?? true,
     enableEmojis: existingSettings.enableEmojis ?? true,
@@ -98,17 +96,6 @@ export function WorldSettingsPanel({ settings }: { settings: any[] }) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <label className="flex items-center gap-2 text-sm text-gray-300">
-            <input
-              type="checkbox"
-              className="rounded"
-              checked={worldSettings.playerInteractionsEnabled}
-              onChange={(e) =>
-                setWorldSettings({ ...worldSettings, playerInteractionsEnabled: e.target.checked })
-              }
-            />
-            Activer les interactions entre joueurs
-          </label>
           <label className="flex items-center gap-2 text-sm text-gray-300">
             <input
               type="checkbox"

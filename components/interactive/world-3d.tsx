@@ -881,6 +881,52 @@ function RealisticLamppost({ position }: { position: [number, number, number] })
   )
 }
 
+// LocalPlayerAvatar - Gère l'avatar du joueur local avec animation de saut
+function LocalPlayerAvatar({
+  position,
+  rotation,
+  avatarStyle,
+  isMoving,
+  isJumping,
+  children,
+}: {
+  position: { x: number; y: number; z: number }
+  rotation: number
+  avatarStyle: any
+  isMoving: boolean
+  isJumping: boolean
+  children?: React.ReactNode
+}) {
+  const groupRef = useRef<THREE.Group>(null)
+  const jumpOffset = useRef(0)
+
+  useFrame((_, delta) => {
+    if (!groupRef.current) return
+
+    // Animation de saut
+    if (isJumping) {
+      jumpOffset.current += delta * 8
+      if (jumpOffset.current > Math.PI) {
+        jumpOffset.current = Math.PI // Bloquer à la fin
+      }
+    } else {
+      jumpOffset.current = 0
+    }
+    const jumpHeight = isJumping ? Math.sin(jumpOffset.current) * 0.8 : 0
+
+    groupRef.current.position.set(position.x, position.y + jumpHeight, position.z)
+  })
+
+  return (
+    <group ref={groupRef} position={[position.x, position.y, position.z]}>
+      <group rotation={[0, rotation, 0]}>
+        <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={isMoving} />
+      </group>
+      {children}
+    </group>
+  )
+}
+
 // InterpolatedPlayer - Gère l'interpolation fluide des positions des autres joueurs
 function InterpolatedPlayer({
   player,
@@ -917,6 +963,20 @@ function InterpolatedPlayer({
   // Détecter si le joueur bouge pour l'animation
   const [isMoving, setIsMoving] = useState(false)
 
+  // État pour l'animation de saut
+  const [isJumping, setIsJumping] = useState(false)
+  const jumpOffset = useRef(0)
+  const lastJumpTimestamp = useRef(0)
+
+  // Détecter quand le joueur saute (via broadcast)
+  useEffect(() => {
+    if (playerAction?.action === "jump" && playerAction.timestamp !== lastJumpTimestamp.current) {
+      lastJumpTimestamp.current = playerAction.timestamp
+      setIsJumping(true)
+      setTimeout(() => setIsJumping(false), 500)
+    }
+  }, [playerAction])
+
   // Mettre à jour la position cible quand les données DB changent
   useEffect(() => {
     const newX = player.position_x || 0
@@ -951,7 +1011,7 @@ function InterpolatedPlayer({
   }, [player.position_x, player.position_y, player.position_z, player.rotation])
 
   // Interpolation à chaque frame
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!groupRef.current) return
 
     // Facteur d'interpolation (0.08 = lent et fluide, 0.15 = plus rapide)
@@ -969,10 +1029,23 @@ function InterpolatedPlayer({
     while (rotationDiff < -Math.PI) rotationDiff += Math.PI * 2
     currentRotation.current += rotationDiff * lerpFactor
 
-    // Appliquer la position interpolée au groupe
+    // Animation de saut
+    if (isJumping) {
+      // Animation sinusoïdale pour le saut (monte puis redescend)
+      jumpOffset.current += delta * 8 // Vitesse de l'animation
+      // Bloquer à PI pour éviter de reboucler l'animation
+      if (jumpOffset.current > Math.PI) {
+        jumpOffset.current = Math.PI
+      }
+    } else {
+      jumpOffset.current = 0
+    }
+    const jumpHeight = isJumping ? Math.sin(jumpOffset.current) * 0.8 : 0
+
+    // Appliquer la position interpolée au groupe + offset de saut
     groupRef.current.position.set(
       currentPos.current.x,
-      currentPos.current.y,
+      currentPos.current.y + jumpHeight,
       currentPos.current.z
     )
 
@@ -1102,6 +1175,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [showStadiumClosedModal, setShowStadiumClosedModal] = useState(false)
   const [showCinemaClosedModal, setShowCinemaClosedModal] = useState(false)
   const [isDiscoMuted, setIsDiscoMuted] = useState(false) // Son activé par défaut dans la disco
+  const [isStadiumMuted, setIsStadiumMuted] = useState(false) // Son activé par défaut dans le stade
   const [showMovieFullscreen, setShowMovieFullscreen] = useState(false)
   const [isCinemaMuted, setIsCinemaMuted] = useState(true) // Muted par défaut pour éviter le son automatique
   const [stadiumSeat, setStadiumSeat] = useState<{ row: number; side: string } | null>(null) // Siège dans le stade
@@ -1353,6 +1427,30 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
 
     loadWorldSettings()
+
+    // Realtime listener pour les changements de paramètres admin
+    const settingsChannel = supabase
+      .channel("world-settings-changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "interactive_world_settings",
+          filter: "setting_key=eq.world_config"
+        },
+        (payload: any) => {
+          console.log("[WorldSettings] Realtime update received:", payload)
+          if (payload.new && payload.new.setting_value) {
+            setWorldSettings(payload.new.setting_value as any)
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(settingsChannel)
+    }
   }, [])
 
   useEffect(() => {
@@ -1615,10 +1713,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     loadCustomizationOptions()
   }, [])
 
-  // Gestion des touches du clavier pour le déplacement
+  // Ref pour la fonction handleJump (pour éviter les problèmes de closure dans useEffect)
+  const handleJumpRef = useRef<() => void>(() => {})
+
+  // Gestion des touches du clavier pour le déplacement et le saut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       keysPressed.current.add(e.key.toLowerCase())
+
+      // Gestion du saut avec la touche Espace
+      if (e.code === "Space" && !isJumping) {
+        e.preventDefault() // Empêcher le scroll de la page
+        handleJumpRef.current()
+      }
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
@@ -1632,7 +1739,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       window.removeEventListener("keydown", handleKeyDown)
       window.removeEventListener("keyup", handleKeyUp)
     }
-  }, [])
+  }, [isJumping])
 
   // Suivi de l'angle de la caméra pour les mouvements
   useEffect(() => {
@@ -2095,6 +2202,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       return
     }
 
+    if (!worldSettings.enableJumping) {
+      return
+    }
+
     setIsJumping(true)
 
     // Broadcast jump action to other players
@@ -2112,6 +2223,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     setTimeout(() => setIsJumping(false), 500)
   }
+
+  // Mettre à jour la ref pour que le useEffect puisse appeler handleJump
+  handleJumpRef.current = handleJump
 
   const sendMessage = async () => {
     if (!userProfile || !userProfile.id) {
@@ -4044,7 +4158,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                     height={11}
                     position={[0, 0, 0.3]}
                     autoplay={true}
-                    muted={false}
+                    muted={isStadiumMuted}
                   />
                 )}
               </group>
@@ -4063,7 +4177,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                     height={11}
                     position={[0, 0, 0.3]}
                     autoplay={true}
-                    muted={false}
+                    muted={isStadiumMuted}
                   />
                 )}
               </group>
@@ -4082,7 +4196,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                     height={11}
                     position={[0, 0, 0.3]}
                     autoplay={true}
-                    muted={false}
+                    muted={isStadiumMuted}
                   />
                 )}
               </group>
@@ -4101,7 +4215,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                     height={11}
                     position={[0, 0, 0.3]}
                     autoplay={true}
-                    muted={false}
+                    muted={isStadiumMuted}
                   />
                 )}
               </group>
@@ -4481,11 +4595,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           ))}
 
         {!povMode && userProfile && (
-          <group position={[myPosition.x, myPosition.y, myPosition.z]}>
-            <group rotation={[0, myRotation, 0]}>
-              <RealisticAvatar position={[0, 0, 0]} avatarStyle={myAvatarStyle} isMoving={isMoving} />
-            </group>
-
+          <LocalPlayerAvatar
+            position={myPosition}
+            rotation={myRotation}
+            avatarStyle={myAvatarStyle}
+            isMoving={isMoving}
+            isJumping={isJumping}
+          >
             <Html position={[0, 2.6, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
               <div className="flex flex-col items-center gap-1 pointer-events-none">
                 <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
@@ -4506,7 +4622,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
               </div>
             </Html>
-          </group>
+          </LocalPlayerAvatar>
         )}
 
         {!povMode && (
@@ -5058,12 +5174,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           /* Mode mobile: grille compacte en dessous des boutons */
           <div className="fixed top-[220px] right-4 z-20 bg-black/90 backdrop-blur-lg p-2 rounded-xl border-2 border-white/20 max-h-[50vh] overflow-y-auto w-[140px]">
             <div className="grid grid-cols-3 gap-1">
-              <button
-                onClick={() => handleQuickAction("jump")}
-                className="bg-gray-800 text-white p-2 rounded-lg shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
-              >
-                <ArrowUp className="w-5 h-5" />
-              </button>
+              {worldSettings.enableJumping && (
+                <button
+                  onClick={() => handleQuickAction("jump")}
+                  className="bg-gray-800 text-white p-2 rounded-lg shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
+                >
+                  <ArrowUp className="w-5 h-5" />
+                </button>
+              )}
               {["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"].map((emoji) => (
                 <button
                   key={emoji}
@@ -5079,12 +5197,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           /* Mode desktop: colonne verticale */
           <div className="fixed bottom-28 right-6 z-20 bg-black/90 backdrop-blur-lg p-4 rounded-2xl border-2 border-white/20 max-h-[70vh] overflow-y-auto">
             <div className="flex flex-col gap-3">
-              <button
-                onClick={() => handleQuickAction("jump")}
-                className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
-              >
-                <ArrowUp className="w-6 h-6" />
-              </button>
+              {worldSettings.enableJumping && (
+                <button
+                  onClick={() => handleQuickAction("jump")}
+                  className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
+                >
+                  <ArrowUp className="w-6 h-6" />
+                </button>
+              )}
               {["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"].map((emoji) => (
                 <button
                   key={emoji}
@@ -5177,10 +5297,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
       {!isMobileMode && (
         <div className="absolute bottom-4 left-4 bg-black/50 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-sm">
-          {povMode ? (
-            <>🎮 Cliquez pour contrôler la caméra | ESC pour libérer | ZQSD pour bouger | Shift = Sprint</>
+          {stadiumSeat !== null ? (
+            // Assis dans le stade - uniquement indication de saut
+            <>🏟️ Assis dans les gradins{worldSettings.enableJumping && " | Espace = Sauter"}</>
+          ) : povMode ? (
+            <>🎮 Cliquez pour contrôler la caméra | ESC pour libérer | ZQSD pour bouger | Shift = Sprint{worldSettings.enableJumping && " | Espace = Sauter"}</>
           ) : (
-            <>⌨️ Touches ZQSD ou Flèches pour se déplacer | Shift = Sprint</>
+            <>⌨️ Touches ZQSD ou Flèches pour se déplacer | Shift = Sprint{worldSettings.enableJumping && " | Espace = Sauter"}</>
           )}
         </div>
       )}
@@ -5611,29 +5734,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         </div>
       )}
 
-      {/* Écran vidéo du stade - s'affiche quand le joueur est assis dans les gradins */}
-      {currentRoom === "stadium" && stadiumSeat !== null && stadium?.embed_url && (
-        <div className="fixed inset-0 bg-black z-40 flex flex-col">
-          <div className="bg-green-900 px-4 py-3 flex items-center justify-between border-b-2 border-green-400">
-            <div className="flex items-center gap-3 text-white">
-              <Trophy className="w-5 h-5 text-yellow-400" />
-              <span className="font-bold text-lg">{stadium.match_title || "Match en direct"}</span>
-              <span className="text-sm text-green-300">• Tribune {stadiumSeat.side.toUpperCase()} - Rangée {stadiumSeat.row + 1}</span>
-            </div>
-            <button
-              onClick={handleStandUpFromStadium}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium"
-            >
-              <span className="text-lg">🚶</span>
-              Se lever
-            </button>
+      {/* Info du stade - s'affiche quand le joueur est assis dans les gradins (pas de plein écran, juste un petit bandeau) */}
+      {currentRoom === "stadium" && stadiumSeat !== null && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-30 bg-green-900/90 backdrop-blur-sm px-6 py-3 rounded-xl border-2 border-green-400/50 flex items-center gap-4">
+          <div className="flex items-center gap-3 text-white">
+            <Trophy className="w-5 h-5 text-yellow-400" />
+            <span className="font-bold">{stadium?.match_title || "Match en direct"}</span>
+            <span className="text-sm text-green-300">• Tribune {stadiumSeat.side.toUpperCase()} - Rangée {stadiumSeat.row + 1}</span>
           </div>
-          <iframe
-            src={stadium.embed_url}
-            className="flex-1 w-full h-full border-0"
-            allow="autoplay; fullscreen"
-            allowFullScreen
-          />
+          <button
+            onClick={() => setIsStadiumMuted(!isStadiumMuted)}
+            className={`${isStadiumMuted ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white px-3 py-2 rounded-lg transition-all flex items-center gap-2`}
+          >
+            <span>{isStadiumMuted ? '🔇' : '🔊'}</span>
+            <span className="text-sm font-medium">{isStadiumMuted ? 'Son off' : 'Son on'}</span>
+          </button>
         </div>
       )}
 
