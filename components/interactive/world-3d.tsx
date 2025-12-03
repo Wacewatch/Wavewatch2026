@@ -899,6 +899,14 @@ function LocalPlayerAvatar({
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const jumpOffset = useRef(0)
+  const lastPosition = useRef({ x: position.x, y: position.y, z: position.z })
+
+  // Initialiser la position au premier rendu
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.position.set(position.x, position.y, position.z)
+    }
+  }, [])
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
@@ -914,11 +922,13 @@ function LocalPlayerAvatar({
     }
     const jumpHeight = isJumping ? Math.sin(jumpOffset.current) * 0.8 : 0
 
+    // Mettre à jour la position de manière synchrone
     groupRef.current.position.set(position.x, position.y + jumpHeight, position.z)
+    lastPosition.current = { x: position.x, y: position.y + jumpHeight, z: position.z }
   })
 
   return (
-    <group ref={groupRef} position={[position.x, position.y, position.z]}>
+    <group ref={groupRef}>
       <group rotation={[0, rotation, 0]}>
         <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={isMoving} />
       </group>
@@ -1184,6 +1194,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [currentRoom, setCurrentRoom] = useState<string | null>(null)
   const [nearbyBuilding, setNearbyBuilding] = useState<{ name: string; type: string; emoji: string } | null>(null)
 
+  // États d'ouverture des lieux (pour affichage dans la carte)
+  const [isArcadeOpen, setIsArcadeOpen] = useState(true)
+  const [isStadiumOpen, setIsStadiumOpen] = useState(true)
+  const [isDiscoOpen, setIsDiscoOpen] = useState(true)
+
   const [worldSettings, setWorldSettings] = useState({
     maxCapacity: 100,
     worldMode: "day",
@@ -1206,6 +1221,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   // Synchronized actions state
   const [playerActions, setPlayerActions] = useState<Record<string, { action: string; timestamp: number; emoji?: string }>>({})
   const actionsChannelRef = useRef<any>(null)
+  const fpsStatsContainerRef = useRef<HTMLDivElement>(null)
   const [quickAction, setQuickAction] = useState<string | null>(null) // State for current quick action animation
   const keysPressed = useRef<Set<string>>(new Set()) // Ref for tracking pressed keys
   const cameraAngle = useRef<number>(0) // Ref for tracking camera azimuth angle
@@ -1609,7 +1625,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     const loadStadium = async () => {
       const { data } = await supabase.from("interactive_stadium").select("*").single()
 
-      if (data) setStadium(data)
+      if (data) {
+        setStadium(data)
+        setIsStadiumOpen(data.is_open !== false)
+      }
     }
 
     loadStadium()
@@ -1928,6 +1947,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       }
       // Update disco open status
       globalDiscoIsOpen = data.is_open !== false
+      setIsDiscoOpen(data.is_open !== false)
     }
   }, [])
 
@@ -1940,6 +1960,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
     if (data) {
       globalArcadeIsOpen = data.is_open !== false
+      setIsArcadeOpen(data.is_open !== false)
     }
   }, [])
 
@@ -2433,6 +2454,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       return
     }
 
+    // Reset seats if coming from cinema/stadium (fixes teleport while seated bug)
+    if (mySeat !== null && currentCinemaRoom) {
+      await supabase.from("interactive_cinema_seats").update({
+        user_id: null,
+        is_occupied: false,
+        occupied_at: null,
+      }).eq("room_id", currentCinemaRoom.id).eq("user_id", userId)
+      setMySeat(null)
+    }
+    if (stadiumSeat !== null) {
+      setStadiumSeat(null)
+    }
+
     setShowArcade(false)
     setCurrentCinemaRoom(null)
 
@@ -2540,6 +2574,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     // Clear old seat data immediately to prevent stale state
     setCinemaSeats([])
     setMySeat(null)
+
+    // Reset stadium seat if coming from stadium (fixes teleport while seated bug)
+    if (stadiumSeat !== null) {
+      setStadiumSeat(null)
+    }
 
     // Save current map position before entering cinema
     setSavedMapPosition({ x: myPosition.x, y: myPosition.y, z: myPosition.z })
@@ -2667,6 +2706,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       return
     }
 
+    // Reset cinema seat if coming from cinema (fixes teleport while seated bug)
+    if (mySeat !== null && currentCinemaRoom) {
+      await supabase.from("interactive_cinema_seats").update({
+        user_id: null,
+        is_occupied: false,
+        occupied_at: null,
+      }).eq("room_id", currentCinemaRoom.id).eq("user_id", userId)
+      setMySeat(null)
+    }
+
     setShowStadium(false)
     setCurrentCinemaRoom(null)
 
@@ -2720,6 +2769,19 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       setShowDisco(false)
       setShowDiscoClosedModal(true)
       return
+    }
+
+    // Reset seats if coming from cinema/stadium (fixes teleport while seated bug)
+    if (mySeat !== null && currentCinemaRoom) {
+      await supabase.from("interactive_cinema_seats").update({
+        user_id: null,
+        is_occupied: false,
+        occupied_at: null,
+      }).eq("room_id", currentCinemaRoom.id).eq("user_id", userId)
+      setMySeat(null)
+    }
+    if (stadiumSeat !== null) {
+      setStadiumSeat(null)
     }
 
     setShowDisco(false)
@@ -2971,9 +3033,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       .channel('disco-status-ejection')
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'interactive_disco' },
-        (payload) => {
-          console.log('[Realtime] Disco update received:', payload.new.is_open, 'currentRoom:', currentRoomRef.current)
-          if (payload.new.is_open === false && currentRoomRef.current === 'disco') {
+        (payload: any) => {
+          const isOpen = payload.new?.is_open !== false
+          console.log('[Realtime] Disco update received:', payload.new?.is_open, '-> isOpen:', isOpen, 'currentRoom:', currentRoomRef.current)
+          setIsDiscoOpen(isOpen)
+          if (payload.new?.is_open === false && currentRoomRef.current === 'disco') {
             // Eject user from disco
             const pos = savedMapPositionRef.current
             setMyPosition(pos)
@@ -3000,9 +3064,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       .channel('arcade-status-ejection')
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'interactive_arcade_settings' },
-        (payload) => {
-          console.log('[Realtime] Arcade update received:', payload.new.is_open, 'currentRoom:', currentRoomRef.current)
-          if (payload.new.is_open === false && currentRoomRef.current === 'arcade') {
+        (payload: any) => {
+          const isOpen = payload.new?.is_open !== false
+          console.log('[Realtime] Arcade update received:', payload.new?.is_open, '-> isOpen:', isOpen, 'currentRoom:', currentRoomRef.current)
+          setIsArcadeOpen(isOpen)
+          if (payload.new?.is_open === false && currentRoomRef.current === 'arcade') {
             // Eject user from arcade
             const pos = savedMapPositionRef.current
             setMyPosition(pos)
@@ -3029,9 +3095,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       .channel('stadium-status-ejection')
       .on('postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'interactive_stadium' },
-        (payload) => {
-          console.log('[Realtime] Stadium update received:', payload.new.is_open, 'currentRoom:', currentRoomRef.current)
-          if (payload.new.is_open === false && currentRoomRef.current === 'stadium') {
+        (payload: any) => {
+          const isOpen = payload.new?.is_open !== false
+          console.log('[Realtime] Stadium update received:', payload.new?.is_open, '-> isOpen:', isOpen, 'currentRoom:', currentRoomRef.current)
+          setIsStadiumOpen(isOpen)
+          if (payload.new?.is_open === false && currentRoomRef.current === 'stadium') {
             // Eject user from stadium
             const pos = savedMapPositionRef.current
             setStadiumSeat(null)
@@ -3272,6 +3340,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   return (
     <div className="relative w-full h-screen">
+      {/* FPS Stats container - centered left */}
+      {process.env.NODE_ENV === 'development' && (
+        <div ref={fpsStatsContainerRef} className="absolute left-4 top-1/2 -translate-y-1/2 z-50" />
+      )}
       <Canvas
         // Pass povMode to camera
         camera={povMode ? undefined : { position: [0, 8, -12], fov: 60 }}
@@ -3284,7 +3356,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         }}
       >
         {/* FPS Stats - only in development mode */}
-        {process.env.NODE_ENV === 'development' && <Stats />}
+        {process.env.NODE_ENV === 'development' && fpsStatsContainerRef.current && <Stats showPanel={0} parent={fpsStatsContainerRef} />}
 
         {povMode && (
           <>
@@ -4045,18 +4117,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                     <meshStandardMaterial color="#1a1a1a" />
                   </mesh>
 
-                  {/* Machine name label - hide when a game or modal is open */}
-                  {!currentArcadeMachine && !showArcade && !pendingExternalMachine && (
-                    <Html position={[0, 3.8, 0]} center occlude distanceFactor={15}>
+                  {/* Machine name label - hide when a game, modal or menu is open */}
+                  {!currentArcadeMachine && !showArcade && !pendingExternalMachine && !showMenu && (
+                    <Html position={[0, 3.8, 0]} center occlude distanceFactor={15} zIndexRange={[0, 50]}>
                       <div className="bg-black/80 text-white px-3 py-1.5 rounded-lg text-base font-semibold whitespace-nowrap shadow-lg border border-white/20">
                         {machine.name}
                       </div>
                     </Html>
                   )}
 
-                  {/* Interaction button - hide when a game or modal is open */}
-                  {!currentArcadeMachine && !showArcade && !pendingExternalMachine && (
-                    <Html position={[0, 0.5, 1.5]} center occlude distanceFactor={15}>
+                  {/* Interaction button - hide when a game, modal or menu is open */}
+                  {!currentArcadeMachine && !showArcade && !pendingExternalMachine && !showMenu && (
+                    <Html position={[0, 0.5, 1.5]} center occlude distanceFactor={15} zIndexRange={[0, 50]}>
                       <button
                         onClick={() => handleSelectArcadeMachine(machine)}
                         className="bg-purple-600 hover:bg-purple-700 text-white text-base px-5 py-2 rounded-lg font-semibold transition-all hover:scale-110 shadow-lg border-2 border-white/30"
@@ -4073,8 +4145,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             })}
 
             {/* Button to show all machines list */}
-            {!currentArcadeMachine && !showArcade && !pendingExternalMachine && (
-              <Html position={[0, 1, 15]} center occlude>
+            {!currentArcadeMachine && !showArcade && !pendingExternalMachine && !showMenu && (
+              <Html position={[0, 1, 15]} center occlude zIndexRange={[0, 50]}>
                 <button
                   onClick={() => setShowArcade(true)}
                   className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg font-bold shadow-xl flex items-center gap-2"
@@ -4649,9 +4721,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       <div className={`absolute z-[100] flex flex-col ${isMobileMode ? 'top-4 left-4 gap-2' : 'top-6 left-6 gap-4'}`}>
         <button
           onClick={() => setShowMenu(!showMenu)}
-          className={`bg-gradient-to-r from-blue-600 to-blue-500 backdrop-blur-lg text-white rounded-full hover:from-blue-700 hover:to-blue-600 transition-all shadow-2xl active:scale-95 ${isMobileMode ? 'p-2 border-2 border-white/40' : 'p-4 border-4 border-white/40'}`}
+          className="bg-blue-600 hover:bg-blue-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
+          title="Menu"
         >
-          <Menu className={isMobileMode ? 'w-5 h-5' : 'w-8 h-8'} />
+          <Menu className="w-5 h-5" />
         </button>
 
         {showMenu && (
@@ -4715,10 +4788,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
             <button
               onClick={handleQuitWorld}
-              className={`w-full bg-gray-600/90 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center gap-2 font-medium transition-colors border-t border-white/20 mt-2 pt-2 ${isMobileMode ? 'py-2 text-xs' : 'py-3 text-base'}`}
+              className={`w-full bg-gray-600/90 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center font-medium transition-colors border-t border-white/20 mt-2 pt-2 ${isMobileMode ? 'py-2' : 'py-3'}`}
+              title="Quitter"
             >
               <LogOut className={isMobileMode ? 'w-4 h-4' : 'w-5 h-5'} />
-              Quitter
             </button>
           </div>
         )}
@@ -4838,10 +4911,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             <h3 className="text-white font-bold">{currentCinemaRoom.movie_title}</h3>
             <button
               onClick={() => setShowMovieFullscreen(false)}
-              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 flex items-center gap-2"
+              className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 flex items-center justify-center"
+              title="Quitter"
             >
               <EyeOff className="w-4 h-4" />
-              Quitter
             </button>
           </div>
           <div className="flex-1">
@@ -5098,28 +5171,29 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           {/* Bouton Plein écran */}
           <button
             onClick={handleFullscreen}
-            className="w-12 h-12 bg-white/20 backdrop-blur-lg rounded-full shadow-xl flex items-center justify-center border-2 border-white/30"
+            className="bg-gray-600 hover:bg-gray-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
             title="Mode Immersif"
           >
-            <Maximize2 className="w-6 h-6 text-white" />
+            <Maximize2 className="w-5 h-5" />
           </button>
 
           {/* Bouton changement de vue POV */}
           <button
             onClick={togglePovMode}
-            className="w-12 h-12 bg-purple-600 hover:bg-purple-700 rounded-full shadow-xl flex items-center justify-center border-2 border-white/30"
+            className="bg-purple-600 hover:bg-purple-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
             title={povMode ? "Vue troisième personne" : "Vue première personne"}
           >
-            {povMode ? <Eye className="w-6 h-6 text-white" /> : <EyeOff className="w-6 h-6 text-white" />}
+            {povMode ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
           </button>
 
           {/* Bouton Messages */}
           {worldSettings.enableChat && (
             <button
               onClick={() => setShowChatInput(true)}
-              className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full shadow-xl flex items-center justify-center border-2 border-white/30"
+              className="bg-green-600 hover:bg-green-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
+              title="Messages"
             >
-              <MessageCircle className="w-6 h-6 text-white" />
+              <MessageCircle className="w-5 h-5" />
             </button>
           )}
 
@@ -5127,9 +5201,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           {worldSettings.enableEmojis && (
             <button
               onClick={() => setShowQuickActions(!showQuickActions)}
-              className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-xl flex items-center justify-center border-2 border-white/30"
+              className="bg-orange-500 hover:bg-orange-600 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
+              title="Emojis"
             >
-              <Smile className="w-6 h-6 text-white" />
+              <Smile className="w-5 h-5" />
             </button>
           )}
         </div>
@@ -5140,28 +5215,30 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           {worldSettings.enableChat && (
             <button
               onClick={() => setShowChatInput(true)}
-              className="fixed bottom-6 right-28 w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
+              className="fixed bottom-6 right-20 bg-green-600 hover:bg-green-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center z-20 transition-all hover:scale-105 border-2 border-white/20"
+              title="Messages"
             >
-              <MessageCircle className="w-8 h-8 text-white" />
+              <MessageCircle className="w-5 h-5" />
             </button>
           )}
 
           {/* Bouton changement de vue POV - au dessus du bouton emojis */}
           <button
             onClick={togglePovMode}
-            className="fixed bottom-28 right-6 w-16 h-16 bg-purple-600 hover:bg-purple-700 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
+            className="fixed bottom-20 right-6 bg-purple-600 hover:bg-purple-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center z-20 transition-all hover:scale-105 border-2 border-white/20"
             title={povMode ? "Vue troisième personne" : "Vue première personne"}
           >
-            {povMode ? <Eye className="w-8 h-8 text-white" /> : <EyeOff className="w-8 h-8 text-white" />}
+            {povMode ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
           </button>
 
           {/* Bouton Emojis */}
           {worldSettings.enableEmojis && (
             <button
               onClick={() => setShowQuickActions(!showQuickActions)}
-              className="fixed bottom-6 right-6 w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full shadow-2xl flex items-center justify-center z-20 border-4 border-white/30 hover:scale-110 transition-transform"
+              className="fixed bottom-6 right-6 bg-orange-500 hover:bg-orange-600 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center z-20 transition-all hover:scale-105 border-2 border-white/20"
+              title="Emojis"
             >
-              <Smile className="w-10 h-10 text-white" />
+              <Smile className="w-5 h-5" />
             </button>
           )}
 
@@ -5227,18 +5304,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             mySeat === null ? (
               <button
                 onClick={handleSitInAnySeat}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
+                className="bg-blue-600 hover:bg-blue-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
+                title="S'asseoir"
               >
                 <span className="text-lg">💺</span>
-                <span className="font-medium">S'asseoir</span>
               </button>
             ) : (
               <button
                 onClick={() => handleSitInSeat(mySeat)}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
+                className="bg-gray-600 hover:bg-gray-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
+                title="Se lever"
               >
                 <span className="text-lg">🚶</span>
-                <span className="font-medium">Se lever</span>
               </button>
             )
           )}
@@ -5246,20 +5323,20 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           {currentCinemaRoom && (
             <button
               onClick={() => setIsCinemaMuted(!isCinemaMuted)}
-              className={`${isCinemaMuted ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]`}
+              className={`${isCinemaMuted ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20`}
+              title={isCinemaMuted ? 'Activer le son' : 'Couper le son'}
             >
               <span className="text-lg">{isCinemaMuted ? '🔇' : '🔊'}</span>
-              <span className="font-medium">{isCinemaMuted ? 'Unmute' : 'Mute'}</span>
             </button>
           )}
           {/* Bouton Mute/Unmute - dans la disco */}
           {currentRoom === "disco" && (
             <button
               onClick={() => setIsDiscoMuted(!isDiscoMuted)}
-              className={`${isDiscoMuted ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]`}
+              className={`${isDiscoMuted ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20`}
+              title={isDiscoMuted ? 'Activer le son' : 'Couper le son'}
             >
               <span className="text-lg">{isDiscoMuted ? '🔇' : '🔊'}</span>
-              <span className="font-medium">{isDiscoMuted ? 'Unmute' : 'Mute'}</span>
             </button>
           )}
           {/* Bouton S'asseoir/Se lever - dans le stade */}
@@ -5267,28 +5344,28 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             stadiumSeat === null ? (
               <button
                 onClick={handleSitInStadium}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
+                className="bg-blue-600 hover:bg-blue-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
+                title="S'asseoir"
               >
                 <span className="text-lg">💺</span>
-                <span className="font-medium">S'asseoir</span>
               </button>
             ) : (
               <button
                 onClick={handleStandUpFromStadium}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
+                className="bg-gray-600 hover:bg-gray-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
+                title="Se lever"
               >
                 <span className="text-lg">🚶</span>
-                <span className="font-medium">Se lever</span>
               </button>
             )
           )}
           {/* Bouton Sortir */}
           <button
             onClick={currentCinemaRoom ? handleLeaveRoom : currentRoom === "arcade" ? handleLeaveArcade : currentRoom === "disco" ? handleLeaveDisco : handleLeaveStadium}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center justify-center gap-2 transition-all hover:scale-105 border-2 border-white/20 w-[140px]"
+            className="bg-red-600 hover:bg-red-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
+            title="Sortir"
           >
             <LogOut className="w-5 h-5" />
-            <span className="font-medium">Sortir</span>
           </button>
         </div>
       )}
@@ -5513,6 +5590,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             </div>
 
             <div className="grid grid-cols-1 gap-4">
+              {/* Cinéma - toujours cliquable pour voir les salles */}
               <button
                 onClick={() => {
                   setShowCinema(true)
@@ -5523,42 +5601,94 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                 <div className="bg-white/20 p-3 md:p-4 rounded-lg">
                   <Building2 className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
-                <div className="text-left">
+                <div className="text-left flex-1">
                   <div className="font-bold text-lg md:text-xl">🎬 Cinéma</div>
-                  <div className="text-xs md:text-sm opacity-90">Ouvert - Cliquez pour voir les salles</div>
+                  <div className="text-xs md:text-sm opacity-90">Cliquez pour voir les salles</div>
                 </div>
               </button>
 
+              {/* Arcade */}
               <button
                 onClick={() => {
-                  handleEnterArcade()
-                  setShowMap(false)
+                  if (isArcadeOpen) {
+                    handleEnterArcade()
+                    setShowMap(false)
+                  }
                 }}
-                className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white p-4 md:p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
+                disabled={!isArcadeOpen}
+                className={`${isArcadeOpen
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 hover:scale-105'
+                  : 'bg-gradient-to-r from-gray-600 to-gray-700 cursor-not-allowed opacity-60'
+                } text-white p-4 md:p-6 rounded-xl transition-all transform shadow-lg flex items-center gap-4`}
               >
                 <div className="bg-white/20 p-3 md:p-4 rounded-lg">
                   <Gamepad2 className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
-                <div className="text-left">
+                <div className="text-left flex-1">
                   <div className="font-bold text-lg md:text-xl">🕹️ Arcade</div>
-                  <div className="text-xs md:text-sm opacity-90">Ouvert - Jouez aux jeux rétro</div>
+                  <div className="text-xs md:text-sm opacity-90">
+                    {isArcadeOpen ? 'Ouvert - Jouez aux jeux rétro' : '🚫 Fermé'}
+                  </div>
                 </div>
+                {!isArcadeOpen && (
+                  <div className="bg-red-500/80 px-2 py-1 rounded text-xs font-bold">FERMÉ</div>
+                )}
               </button>
 
+              {/* Stade */}
               <button
                 onClick={() => {
-                  handleEnterStadium()
-                  setShowMap(false)
+                  if (isStadiumOpen) {
+                    handleEnterStadium()
+                    setShowMap(false)
+                  }
                 }}
-                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white p-4 md:p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
+                disabled={!isStadiumOpen}
+                className={`${isStadiumOpen
+                  ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 hover:scale-105'
+                  : 'bg-gradient-to-r from-gray-600 to-gray-700 cursor-not-allowed opacity-60'
+                } text-white p-4 md:p-6 rounded-xl transition-all transform shadow-lg flex items-center gap-4`}
               >
                 <div className="bg-white/20 p-3 md:p-4 rounded-lg">
                   <Trophy className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
-                <div className="text-left">
+                <div className="text-left flex-1">
                   <div className="font-bold text-lg md:text-xl">⚽ Stade</div>
-                  <div className="text-xs md:text-sm opacity-90">Ouvert - Regardez les matchs en live</div>
+                  <div className="text-xs md:text-sm opacity-90">
+                    {isStadiumOpen ? 'Ouvert - Regardez les matchs en live' : '🚫 Fermé'}
+                  </div>
                 </div>
+                {!isStadiumOpen && (
+                  <div className="bg-red-500/80 px-2 py-1 rounded text-xs font-bold">FERMÉ</div>
+                )}
+              </button>
+
+              {/* Discothèque */}
+              <button
+                onClick={() => {
+                  if (isDiscoOpen) {
+                    handleEnterDisco()
+                    setShowMap(false)
+                  }
+                }}
+                disabled={!isDiscoOpen}
+                className={`${isDiscoOpen
+                  ? 'bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 hover:scale-105'
+                  : 'bg-gradient-to-r from-gray-600 to-gray-700 cursor-not-allowed opacity-60'
+                } text-white p-4 md:p-6 rounded-xl transition-all transform shadow-lg flex items-center gap-4`}
+              >
+                <div className="bg-white/20 p-3 md:p-4 rounded-lg">
+                  <Music className="w-6 h-6 md:w-8 md:h-8" />
+                </div>
+                <div className="text-left flex-1">
+                  <div className="font-bold text-lg md:text-xl">🪩 Discothèque</div>
+                  <div className="text-xs md:text-sm opacity-90">
+                    {isDiscoOpen ? 'Ouvert - Dansez et écoutez de la musique' : '🚫 Fermé'}
+                  </div>
+                </div>
+                {!isDiscoOpen && (
+                  <div className="bg-red-500/80 px-2 py-1 rounded text-xs font-bold">FERMÉ</div>
+                )}
               </button>
             </div>
           </div>
@@ -5744,10 +5874,10 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           </div>
           <button
             onClick={() => setIsStadiumMuted(!isStadiumMuted)}
-            className={`${isStadiumMuted ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white px-3 py-2 rounded-lg transition-all flex items-center gap-2`}
+            className={`${isStadiumMuted ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'} text-white w-11 h-11 rounded-lg transition-all flex items-center justify-center`}
+            title={isStadiumMuted ? 'Activer le son' : 'Couper le son'}
           >
-            <span>{isStadiumMuted ? '🔇' : '🔊'}</span>
-            <span className="text-sm font-medium">{isStadiumMuted ? 'Son off' : 'Son on'}</span>
+            <span className="text-lg">{isStadiumMuted ? '🔇' : '🔊'}</span>
           </button>
         </div>
       )}
