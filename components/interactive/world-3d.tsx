@@ -58,6 +58,7 @@ function RealisticAvatar({
   position,
   avatarStyle,
   isMoving,
+  isJumping = false,
 }: {
   position: [number, number, number]
   avatarStyle: {
@@ -70,6 +71,7 @@ function RealisticAvatar({
     faceSmiley?: string
   }
   isMoving: boolean
+  isJumping?: boolean
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const leftLegRef = useRef<THREE.Mesh>(null)
@@ -166,20 +168,22 @@ function RealisticAvatar({
         <meshStandardMaterial color={style.bodyColor} />
       </mesh>
 
-      {/* Face Smiley - positioned on the front of the head */}
-      <Html
-        position={[0, 1.8, 0.35]}
-        center
-        distanceFactor={4}
-        occlude
-        zIndexRange={[0, 0]}
-        style={{
-          pointerEvents: "none",
-          userSelect: "none",
-        }}
-      >
-        <div className="text-5xl">{style.faceSmiley}</div>
-      </Html>
+      {/* Face Smiley - positioned on the front of the head, hidden during jump */}
+      {!isJumping && (
+        <Html
+          position={[0, 1.8, 0.35]}
+          center
+          distanceFactor={4}
+          occlude
+          zIndexRange={[0, 0]}
+          style={{
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+        >
+          <div className="text-5xl">{style.faceSmiley}</div>
+        </Html>
+      )}
 
       {/* Accessory */}
       {style.accessory === "hat" && (
@@ -899,14 +903,6 @@ function LocalPlayerAvatar({
 }) {
   const groupRef = useRef<THREE.Group>(null)
   const jumpOffset = useRef(0)
-  const lastPosition = useRef({ x: position.x, y: position.y, z: position.z })
-
-  // Initialiser la position au premier rendu
-  useEffect(() => {
-    if (groupRef.current) {
-      groupRef.current.position.set(position.x, position.y, position.z)
-    }
-  }, [])
 
   useFrame((_, delta) => {
     if (!groupRef.current) return
@@ -922,15 +918,13 @@ function LocalPlayerAvatar({
     }
     const jumpHeight = isJumping ? Math.sin(jumpOffset.current) * 0.8 : 0
 
-    // Mettre à jour la position de manière synchrone
     groupRef.current.position.set(position.x, position.y + jumpHeight, position.z)
-    lastPosition.current = { x: position.x, y: position.y + jumpHeight, z: position.z }
   })
 
   return (
-    <group ref={groupRef}>
+    <group ref={groupRef} position={[position.x, position.y, position.z]}>
       <group rotation={[0, rotation, 0]}>
-        <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={isMoving} />
+        <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={isMoving} isJumping={isJumping} />
       </group>
       {children}
     </group>
@@ -4674,26 +4668,29 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             isMoving={isMoving}
             isJumping={isJumping}
           >
-            <Html position={[0, 2.6, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
-              <div className="flex flex-col items-center gap-1 pointer-events-none">
-                <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
-                  <span className="text-white text-xs font-medium whitespace-nowrap">{myProfile?.username || userProfile.username || "Vous"}</span>
-                  {/* Le joueur voit toujours son propre badge (indépendamment du réglage admin) */}
-                  {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
-                  {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
-                  {userProfile.is_vip && !userProfile.is_vip_plus && !userProfile.is_admin && (
-                    <Star className="w-3 h-3 text-yellow-400" />
-                  )}
+            {/* Cacher le nameplate pendant le saut pour éviter le décalage */}
+            {!isJumping && (
+              <Html position={[0, 2.6, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
+                <div className="flex flex-col items-center gap-1 pointer-events-none">
+                  <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
+                    <span className="text-white text-xs font-medium whitespace-nowrap">{myProfile?.username || userProfile.username || "Vous"}</span>
+                    {/* Le joueur voit toujours son propre badge (indépendamment du réglage admin) */}
+                    {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
+                    {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
+                    {userProfile.is_vip && !userProfile.is_vip_plus && !userProfile.is_admin && (
+                      <Star className="w-3 h-3 text-yellow-400" />
+                    )}
+                  </div>
+                  {playerChatBubbles[userProfile.id] &&
+                    Date.now() - playerChatBubbles[userProfile.id].timestamp < 5000 && (
+                      <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
+                        {playerChatBubbles[userProfile.id].message}
+                      </div>
+                    )}
+                  {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
                 </div>
-                {playerChatBubbles[userProfile.id] &&
-                  Date.now() - playerChatBubbles[userProfile.id].timestamp < 5000 && (
-                    <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
-                      {playerChatBubbles[userProfile.id].message}
-                    </div>
-                  )}
-                {currentEmoji && <div className="text-4xl animate-bounce">{currentEmoji}</div>}
-              </div>
-            </Html>
+              </Html>
+            )}
           </LocalPlayerAvatar>
         )}
 
