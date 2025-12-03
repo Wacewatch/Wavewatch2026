@@ -846,6 +846,313 @@ function RealisticTree({ position }: { position: [number, number, number] }) {
   )
 }
 
+// === CHRISTMAS MODE COMPONENTS ===
+
+// SnowParticles - Falling snow effect using Points
+function SnowParticles({ count = 1000, lowQuality = false }: { count?: number; lowQuality?: boolean }) {
+  const pointsRef = useRef<THREE.Points>(null)
+  const particleCount = lowQuality ? Math.floor(count / 3) : count
+
+  // Create snowflake positions
+  const positions = useMemo(() => {
+    const pos = new Float32Array(particleCount * 3)
+    for (let i = 0; i < particleCount; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 80      // x: spread across world
+      pos[i * 3 + 1] = Math.random() * 30          // y: height 0-30
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 80  // z: spread across world
+    }
+    return pos
+  }, [particleCount])
+
+  // Animation - snowflakes falling
+  useFrame((_, delta) => {
+    if (!pointsRef.current) return
+    const posArray = pointsRef.current.geometry.attributes.position.array as Float32Array
+
+    for (let i = 0; i < particleCount; i++) {
+      // Fall speed with slight variation
+      posArray[i * 3 + 1] -= delta * (1.5 + Math.sin(i) * 0.5)
+
+      // Horizontal drift
+      posArray[i * 3] += Math.sin(Date.now() * 0.001 + i) * delta * 0.3
+      posArray[i * 3 + 2] += Math.cos(Date.now() * 0.001 + i * 0.5) * delta * 0.2
+
+      // Reset to top when reaching ground
+      if (posArray[i * 3 + 1] < 0) {
+        posArray[i * 3 + 1] = 25 + Math.random() * 5
+        posArray[i * 3] = (Math.random() - 0.5) * 80
+        posArray[i * 3 + 2] = (Math.random() - 0.5) * 80
+      }
+    }
+
+    pointsRef.current.geometry.attributes.position.needsUpdate = true
+  })
+
+  return (
+    <points ref={pointsRef}>
+      <bufferGeometry>
+        <bufferAttribute
+          attach="attributes-position"
+          args={[positions, 3]}
+        />
+      </bufferGeometry>
+      <pointsMaterial
+        size={0.15}
+        color="#ffffff"
+        transparent
+        opacity={0.8}
+        sizeAttenuation
+        depthWrite={false}
+      />
+    </points>
+  )
+}
+
+// SnowyTree - Tree with snow on top
+function SnowyTree({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      {/* Trunk */}
+      <mesh position={[0, 1.5, 0]} castShadow>
+        <cylinderGeometry args={[0.25, 0.35, 3, 12]} />
+        <meshStandardMaterial color="#5a3a1a" roughness={1} metalness={0} />
+      </mesh>
+
+      {/* Snowy foliage layers - darker green with white snow caps */}
+      <mesh position={[0, 3.5, 0]} castShadow>
+        <coneGeometry args={[1.5, 2, 8]} />
+        <meshStandardMaterial color="#1a3d0c" roughness={0.9} metalness={0} />
+      </mesh>
+      {/* Snow cap layer 1 */}
+      <mesh position={[0, 3.9, 0]} castShadow>
+        <coneGeometry args={[1.2, 0.5, 8]} />
+        <meshStandardMaterial color="#f0f8ff" roughness={0.8} metalness={0.1} />
+      </mesh>
+
+      <mesh position={[0, 4.5, 0]} castShadow>
+        <coneGeometry args={[1.2, 1.8, 8]} />
+        <meshStandardMaterial color="#254d12" roughness={0.9} metalness={0} />
+      </mesh>
+      {/* Snow cap layer 2 */}
+      <mesh position={[0, 4.85, 0]} castShadow>
+        <coneGeometry args={[0.95, 0.4, 8]} />
+        <meshStandardMaterial color="#f0f8ff" roughness={0.8} metalness={0.1} />
+      </mesh>
+
+      <mesh position={[0, 5.3, 0]} castShadow>
+        <coneGeometry args={[0.9, 1.5, 8]} />
+        <meshStandardMaterial color="#2d5a16" roughness={0.9} metalness={0} />
+      </mesh>
+      {/* Snow cap layer 3 (top) */}
+      <mesh position={[0, 5.65, 0]} castShadow>
+        <coneGeometry args={[0.7, 0.35, 8]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.7} metalness={0.1} />
+      </mesh>
+    </group>
+  )
+}
+
+// ChristmasTree - Decorated Christmas tree with ornaments and star
+function ChristmasTree({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  const groupRef = useRef<THREE.Group>(null)
+  const starRef = useRef<THREE.Mesh>(null)
+  const lightsRef = useRef<THREE.Group>(null)
+
+  // Animate star glow and lights
+  useFrame((state) => {
+    if (starRef.current) {
+      const material = starRef.current.material as THREE.MeshStandardMaterial
+      material.emissiveIntensity = 1.5 + Math.sin(state.clock.elapsedTime * 2) * 0.5
+    }
+  })
+
+  // Ornament colors
+  const ornamentColors = ["#ff0000", "#ffd700", "#0066cc", "#ff6600", "#cc00ff", "#00cc66"]
+
+  // Generate ornament positions around the tree
+  const ornaments = useMemo(() => {
+    const orns: { pos: [number, number, number]; color: string }[] = []
+    const layers = [
+      { y: 2.2, radius: 1.3, count: 8 },
+      { y: 3.2, radius: 1.0, count: 6 },
+      { y: 4.0, radius: 0.75, count: 5 },
+      { y: 4.7, radius: 0.5, count: 4 },
+    ]
+
+    layers.forEach((layer) => {
+      for (let i = 0; i < layer.count; i++) {
+        const angle = (i / layer.count) * Math.PI * 2
+        orns.push({
+          pos: [
+            Math.cos(angle) * layer.radius,
+            layer.y,
+            Math.sin(angle) * layer.radius,
+          ] as [number, number, number],
+          color: ornamentColors[Math.floor(Math.random() * ornamentColors.length)],
+        })
+      }
+    })
+    return orns
+  }, [])
+
+  // Generate light positions (string lights)
+  const lightPositions = useMemo(() => {
+    const lights: { pos: [number, number, number]; color: string }[] = []
+    const colors = ["#ff0000", "#00ff00", "#ffff00", "#0088ff", "#ff00ff", "#ffffff"]
+
+    for (let y = 1.5; y < 5; y += 0.6) {
+      const radius = 1.5 - (y - 1.5) * 0.25
+      const count = Math.floor(8 - (y - 1.5))
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2 + y * 0.5 // Spiral effect
+        lights.push({
+          pos: [
+            Math.cos(angle) * radius,
+            y,
+            Math.sin(angle) * radius,
+          ] as [number, number, number],
+          color: colors[Math.floor(Math.random() * colors.length)],
+        })
+      }
+    }
+    return lights
+  }, [])
+
+  return (
+    <group ref={groupRef} position={position} scale={scale}>
+      {/* Tree trunk */}
+      <mesh position={[0, 0.75, 0]} castShadow>
+        <cylinderGeometry args={[0.35, 0.45, 1.5, 12]} />
+        <meshStandardMaterial color="#4a2810" roughness={1} metalness={0} />
+      </mesh>
+
+      {/* Tree pot/base */}
+      <mesh position={[0, 0.2, 0]} castShadow>
+        <cylinderGeometry args={[0.6, 0.5, 0.4, 16]} />
+        <meshStandardMaterial color="#8B4513" roughness={0.8} metalness={0.2} />
+      </mesh>
+
+      {/* Tree layers (dark green like a real Christmas tree) */}
+      <mesh position={[0, 2, 0]} castShadow>
+        <coneGeometry args={[1.8, 2.5, 12]} />
+        <meshStandardMaterial color="#0d3b0d" roughness={0.9} metalness={0} />
+      </mesh>
+      <mesh position={[0, 3.2, 0]} castShadow>
+        <coneGeometry args={[1.4, 2, 12]} />
+        <meshStandardMaterial color="#0f4a0f" roughness={0.9} metalness={0} />
+      </mesh>
+      <mesh position={[0, 4.2, 0]} castShadow>
+        <coneGeometry args={[1.0, 1.8, 12]} />
+        <meshStandardMaterial color="#116611" roughness={0.9} metalness={0} />
+      </mesh>
+      <mesh position={[0, 5.0, 0]} castShadow>
+        <coneGeometry args={[0.6, 1.4, 12]} />
+        <meshStandardMaterial color="#1a7a1a" roughness={0.9} metalness={0} />
+      </mesh>
+
+      {/* Star on top */}
+      <mesh ref={starRef} position={[0, 5.8, 0]} rotation={[0, Math.PI / 4, 0]} castShadow>
+        <octahedronGeometry args={[0.35, 0]} />
+        <meshStandardMaterial
+          color="#ffd700"
+          emissive="#ffaa00"
+          emissiveIntensity={2}
+          metalness={0.8}
+          roughness={0.2}
+        />
+      </mesh>
+      <pointLight position={[0, 5.8, 0]} intensity={3} distance={8} color="#ffd700" />
+
+      {/* Ornament balls */}
+      {ornaments.map((orn, idx) => (
+        <mesh key={`ornament-${idx}-${orn.pos[0].toFixed(2)}-${orn.pos[1].toFixed(2)}`} position={orn.pos} castShadow>
+          <sphereGeometry args={[0.12, 12, 12]} />
+          <meshStandardMaterial
+            color={orn.color}
+            metalness={0.9}
+            roughness={0.1}
+            emissive={orn.color}
+            emissiveIntensity={0.3}
+          />
+        </mesh>
+      ))}
+
+      {/* String lights - emissive only, NO pointLights to save GPU uniforms */}
+      <group ref={lightsRef}>
+        {lightPositions.map((light, idx) => (
+          <mesh key={`xmas-light-${idx}-${light.pos[0].toFixed(2)}-${light.pos[1].toFixed(2)}`} position={light.pos}>
+            <sphereGeometry args={[0.06, 8, 8]} />
+            <meshStandardMaterial
+              color={light.color}
+              emissive={light.color}
+              emissiveIntensity={3}
+              metalness={0}
+              roughness={0.3}
+            />
+          </mesh>
+        ))}
+      </group>
+
+      {/* Snow on tree (subtle) */}
+      <mesh position={[0, 5.2, 0]}>
+        <coneGeometry args={[0.4, 0.3, 8]} />
+        <meshStandardMaterial color="#ffffff" roughness={0.7} metalness={0.1} transparent opacity={0.9} />
+      </mesh>
+    </group>
+  )
+}
+
+// ChristmasLights - String lights for buildings
+function ChristmasLights({
+  start,
+  end,
+  count = 10,
+  color = "#ff0000"
+}: {
+  start: [number, number, number];
+  end: [number, number, number];
+  count?: number;
+  color?: string;
+}) {
+  const colors = ["#ff0000", "#00ff00", "#ffff00", "#0088ff", "#ff00ff", "#ffffff"]
+
+  const lights = useMemo(() => {
+    const result: { pos: [number, number, number]; color: string }[] = []
+    for (let i = 0; i <= count; i++) {
+      const t = i / count
+      result.push({
+        pos: [
+          start[0] + (end[0] - start[0]) * t,
+          start[1] + (end[1] - start[1]) * t - Math.sin(t * Math.PI) * 0.3, // Slight droop
+          start[2] + (end[2] - start[2]) * t,
+        ] as [number, number, number],
+        color: colors[i % colors.length],
+      })
+    }
+    return result
+  }, [start, end, count])
+
+  return (
+    <group>
+      {/* Emissive spheres only - NO pointLights to avoid exceeding GPU uniform limit */}
+      {lights.map((light, idx) => (
+        <mesh key={`string-light-${idx}-${light.pos[0].toFixed(2)}-${light.pos[2].toFixed(2)}`} position={light.pos}>
+          <sphereGeometry args={[0.1, 8, 8]} />
+          <meshStandardMaterial
+            color={light.color}
+            emissive={light.color}
+            emissiveIntensity={4}
+            metalness={0}
+            roughness={0.2}
+          />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+// === END CHRISTMAS MODE COMPONENTS ===
+
 function RealisticLamppost({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
@@ -3404,15 +3711,38 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           </>
         )}
 
-        <hemisphereLight intensity={0.3} groundColor="#6b7280" />
+        {worldSettings.worldMode === "christmas" && (
+          <>
+            {/* Winter sky - cold blue tint, low sun position */}
+            <Sky sunPosition={[100, 8, 100]} inclination={0.4} azimuth={0.25} />
+            {/* Cool ambient light for winter atmosphere */}
+            <ambientLight intensity={0.35} color="#e8f4ff" />
+            {/* Main sun - softer and cooler */}
+            <directionalLight
+              position={[10, 15, 10]}
+              intensity={0.9}
+              color="#fff5e6"
+              castShadow
+              shadow-mapSize={graphicsQuality === "high" ? [2048, 2048] : [1024, 1024]}
+            />
+            {/* Subtle fog for winter atmosphere */}
+            <fog attach="fog" args={["#d0e8ff", 30, 80]} />
+          </>
+        )}
+
+        <hemisphereLight intensity={worldSettings.worldMode === "christmas" ? 0.4 : 0.3} groundColor={worldSettings.worldMode === "christmas" ? "#a0c4e8" : "#6b7280"} />
 
         {/* Update rendering logic to use currentRoom state instead of userProfile */}
         {!currentCinemaRoom && currentRoom !== "stadium" && currentRoom !== "arcade" && currentRoom !== "disco" ? (
           <>
-            {/* Ground */}
+            {/* Ground - white snow in christmas mode, green grass otherwise */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
               <planeGeometry args={[60, 60]} />
-              <meshStandardMaterial color="#4ade80" roughness={0.95} metalness={0} />
+              <meshStandardMaterial
+                color={worldSettings.worldMode === "christmas" ? "#f0f8ff" : "#4ade80"}
+                roughness={worldSettings.worldMode === "christmas" ? 0.85 : 0.95}
+                metalness={worldSettings.worldMode === "christmas" ? 0.1 : 0}
+              />
             </mesh>
 
             {/* Collision Debug Visualization */}
@@ -3924,6 +4254,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             */}
             {/* Fin bâtiments désactivés */}
 
+            {/* Trees - use SnowyTree in christmas mode */}
             {(graphicsQuality === "low"
               ? [
                   [-15, -15],
@@ -3939,9 +4270,21 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   [-10, 15],
                   [10, 15],
                 ]
-            ).map(([x, z], i) => (
-              <RealisticTree key={`tree-${i}`} position={[x, 0, z]} />
-            ))}
+            ).map(([x, z], i) =>
+              worldSettings.worldMode === "christmas" ? (
+                <SnowyTree key={`tree-${i}-${x}-${z}`} position={[x, 0, z]} />
+              ) : (
+                <RealisticTree key={`tree-${i}-${x}-${z}`} position={[x, 0, z]} />
+              )
+            )}
+
+            {/* Christmas decorations - only in christmas mode */}
+            {worldSettings.worldMode === "christmas" && (
+              <>
+                {/* Main Christmas tree in the center-south area */}
+                <ChristmasTree position={[0, 0, -8]} scale={1.5} />
+              </>
+            )}
 
             {(graphicsQuality === "low"
               ? [[0, -10]]

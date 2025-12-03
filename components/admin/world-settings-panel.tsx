@@ -91,6 +91,7 @@ export function WorldSettingsPanel({ settings }: { settings: any[] }) {
               <option value="day">Jour</option>
               <option value="night">Nuit</option>
               <option value="sunset">Coucher de soleil</option>
+              <option value="christmas">Noel</option>
             </select>
           </div>
         </div>
