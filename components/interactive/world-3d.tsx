@@ -1616,15 +1616,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     { id: "BLDG_CINEMA", x: 15, z: 0, width: 9, depth: 9, label: "Cinéma", color: "#ef4444", lowQuality: false },
     { id: "BLDG_ARCADE", x: 0, z: 15, width: 10, depth: 10, label: "Arcade", color: "#8b5cf6", lowQuality: false },
     { id: "BLDG_STADIUM", x: 25, z: -15, width: 12, depth: 10, label: "Stade", color: "#22c55e", lowQuality: false },
+    { id: "BLDG_DISCO", x: -15, z: -20, width: 10, depth: 8, label: "Discothèque", color: "#ec4899", lowQuality: false },
     // Bâtiments décoratifs (collision active mais pas d'interaction)
     { id: "BLDG_2", x: -15, z: 5, width: 5, depth: 4, label: "Bâtiment Bleu", color: "#0ea5e9", lowQuality: false },
     { id: "BLDG_3", x: -15, z: -8, width: 4, depth: 4, label: "Bâtiment Orange", color: "#f59e0b", lowQuality: false },
 
     // ========== ARBRES ==========
     // En mode low: seulement TREE_1 et TREE_4 sont visibles
-    { id: "TREE_1", x: -15, z: -15, width: 2, depth: 2, label: "Arbre 1", color: "#166534", lowQuality: false },
+    { id: "TREE_1", x: -24.1, z: -13.4, width: 2, depth: 2, label: "Arbre 1", color: "#166534", lowQuality: false },
     { id: "TREE_2", x: -8, z: -18, width: 2, depth: 2, label: "Arbre 2", color: "#166534", lowQuality: true },
-    { id: "TREE_3", x: 8, z: -18, width: 2, depth: 2, label: "Arbre 3", color: "#166534", lowQuality: true },
     { id: "TREE_4", x: 15, z: -15, width: 2, depth: 2, label: "Arbre 4", color: "#166534", lowQuality: false },
     { id: "TREE_5", x: -18, z: 10, width: 2, depth: 2, label: "Arbre 5", color: "#166534", lowQuality: true },
     { id: "TREE_6", x: 18, z: 10, width: 2, depth: 2, label: "Arbre 6", color: "#166534", lowQuality: true },
@@ -4257,13 +4257,12 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             {/* Trees - use SnowyTree in christmas mode */}
             {(graphicsQuality === "low"
               ? [
-                  [-15, -15],
+                  [-24.1, -13.4],
                   [15, -15],
                 ]
               : [
-                  [-15, -15],
+                  [-24.1, -13.4],
                   [-8, -18],
-                  [8, -18],
                   [15, -15],
                   [-18, 10],
                   [18, 10],
