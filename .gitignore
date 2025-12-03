@@ -49,3 +49,6 @@ yarn-error.log*
 
 # ytdl-core debug files
 *-player-script.js
+
+# TypeScript build info
+tsconfig.tsbuildinfo

@@ -1000,38 +1000,40 @@ function InterpolatedPlayer({
         <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={isMoving} />
       </group>
 
-      {worldSettings.showStatusBadges && (
-        <Html
-          position={[0, 2.6, 0]}
-          center
-          distanceFactor={10}
-          zIndexRange={[0, 0]}
-        >
-          <div className="flex flex-col items-center gap-1 pointer-events-none">
-            <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
-              <span className="text-white text-xs font-medium whitespace-nowrap">
-                {player.username || playerProfile?.username || "Joueur"}
-              </span>
-              {playerProfile?.is_admin && <Shield className="w-3 h-3 text-red-500" />}
-              {playerProfile?.is_vip_plus && !playerProfile?.is_admin && (
-                <Crown className="w-3 h-3 text-purple-400" />
-              )}
-              {playerProfile?.is_vip && !playerProfile?.is_vip_plus && !playerProfile?.is_admin && (
-                <Star className="w-3 h-3 text-yellow-400" />
-              )}
-            </div>
-            {playerChatBubbles[player.user_id] &&
-              Date.now() - playerChatBubbles[player.user_id].timestamp < 5000 && (
-                <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
-                  {playerChatBubbles[player.user_id].message}
-                </div>
-              )}
-            {playerAction && playerAction.action === "emoji" && (
-              <div className="text-4xl animate-bounce">{playerAction.emoji}</div>
+      <Html
+        position={[0, 2.6, 0]}
+        center
+        distanceFactor={10}
+        zIndexRange={[0, 0]}
+      >
+        <div className="flex flex-col items-center gap-1 pointer-events-none">
+          <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
+            <span className="text-white text-xs font-medium whitespace-nowrap">
+              {player.username || playerProfile?.username || "Joueur"}
+            </span>
+            {worldSettings.showStatusBadges && (
+              <>
+                {playerProfile?.is_admin && <Shield className="w-3 h-3 text-red-500" />}
+                {playerProfile?.is_vip_plus && !playerProfile?.is_admin && (
+                  <Crown className="w-3 h-3 text-purple-400" />
+                )}
+                {playerProfile?.is_vip && !playerProfile?.is_vip_plus && !playerProfile?.is_admin && (
+                  <Star className="w-3 h-3 text-yellow-400" />
+                )}
+              </>
             )}
           </div>
-        </Html>
-      )}
+          {playerChatBubbles[player.user_id] &&
+            Date.now() - playerChatBubbles[player.user_id].timestamp < 5000 && (
+              <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
+                {playerChatBubbles[player.user_id].message}
+              </div>
+            )}
+          {playerAction && playerAction.action === "emoji" && (
+            <div className="text-4xl animate-bounce">{playerAction.emoji}</div>
+          )}
+        </div>
+      </Html>
     </group>
   )
 }
@@ -1062,6 +1064,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [showChat, setShowChat] = useState(false)
   const [showChatInput, setShowChatInput] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
+  const [showBadgesPreference, setShowBadgesPreference] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('interactive_show_badges')
+      return saved !== null ? saved === 'true' : true
+    }
+    return true
+  })
   const [showAvatarCustomizer, setShowAvatarCustomizer] = useState(false)
   const [showCinema, setShowCinema] = useState(false) // State for cinema modal
   const [showUserCard, setShowUserCard] = useState(false)
@@ -1372,16 +1381,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
           const { data: userProfiles, error: userProfilesError } = await supabase
             .from("user_profiles")
-            .select("user_id, username, is_admin, is_vip, is_vip_plus")
-            .in("user_id", userIds)
+            .select("id, username, is_admin, is_vip, is_vip_plus")
+            .in("id", userIds)
 
           if (userProfilesError) {
             console.error("[v0] Error loading user profiles:", userProfilesError)
           }
 
+          console.log("[v0] User profiles loaded for badges:", userProfiles)
+
           const mergedData = profiles.map((profile) => ({
             ...profile,
-            user_profiles: userProfiles?.find((up) => up?.user_id === profile.user_id) || {
+            user_profiles: userProfiles?.find((up) => up?.id === profile.user_id) || {
               username: profile.username,
               is_admin: false,
               is_vip: false,
@@ -4464,7 +4475,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               player={player}
               avatarStyle={player.avatar_style || { bodyColor: "#ef4444", headColor: "#fbbf24", faceSmiley: "😊" }}
               playerAction={playerActions[player.user_id]}
-              worldSettings={worldSettings}
+              worldSettings={{ ...worldSettings, showStatusBadges: worldSettings.showStatusBadges && showBadgesPreference }}
               playerChatBubbles={playerChatBubbles}
             />
           ))}
@@ -4477,16 +4488,15 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
             <Html position={[0, 2.6, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
               <div className="flex flex-col items-center gap-1 pointer-events-none">
-                {worldSettings.showStatusBadges && (
-                  <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
-                    <span className="text-white text-xs font-medium whitespace-nowrap">{myProfile?.username || userProfile.username || "Vous"}</span>
-                    {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
-                    {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
-                    {userProfile.is_vip && !userProfile.is_vip_plus && !userProfile.is_admin && (
-                      <Star className="w-3 h-3 text-yellow-400" />
-                    )}
-                  </div>
-                )}
+                <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
+                  <span className="text-white text-xs font-medium whitespace-nowrap">{myProfile?.username || userProfile.username || "Vous"}</span>
+                  {/* Le joueur voit toujours son propre badge (indépendamment du réglage admin) */}
+                  {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
+                  {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
+                  {userProfile.is_vip && !userProfile.is_vip_plus && !userProfile.is_admin && (
+                    <Star className="w-3 h-3 text-yellow-400" />
+                  )}
+                </div>
                 {playerChatBubbles[userProfile.id] &&
                   Date.now() - playerChatBubbles[userProfile.id].timestamp < 5000 && (
                     <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
@@ -5315,6 +5325,24 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
                   <div
                     className={`w-5 h-5 bg-white rounded-full transition-transform ${
                       povMode ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <label className="text-white font-medium">Afficher les badges des statuts</label>
+                <button
+                  onClick={() => {
+                    const newValue = !showBadgesPreference
+                    setShowBadgesPreference(newValue)
+                    localStorage.setItem('interactive_show_badges', String(newValue))
+                  }}
+                  className={`w-12 h-6 rounded-full transition-colors ${showBadgesPreference ? "bg-blue-500" : "bg-gray-600"}`}
+                >
+                  <div
+                    className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                      showBadgesPreference ? "translate-x-6" : "translate-x-1"
                     }`}
                   />
                 </button>
