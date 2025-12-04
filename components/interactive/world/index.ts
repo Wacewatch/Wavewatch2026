@@ -25,7 +25,7 @@ export { RealisticTree, SnowyTree, ChristmasTree, ChristmasLights, RealisticLamp
 export { MobileJoystick, CameraJoystick, CenterTouchZone, JoystickBlockZones } from './controls'
 
 // UI components
-export { ChatInput, SettingsModal, MapModal, AvatarCustomizer, CinemaModal, ClosedModal, ArcadeModal, ArcadeGameView, ExternalGameModal, StadiumModal, StadiumInfoBar, QuickActionsPanel, RoomActionButtons, ActionButtons, MenuDropdown, ChatModal, MovieFullscreenModal } from './ui'
+export { ChatInput, SettingsModal, MapModal, AvatarCustomizer, CinemaModal, ClosedModal, ArcadeModal, ArcadeGameView, ExternalGameModal, StadiumModal, StadiumInfoBar, QuickActionsPanel, RoomActionButtons, ActionButtons, MenuDropdown, ChatModal, MovieFullscreenModal, WorldLoadingScreen } from './ui'
 
 // Building components
 export { DiscoBuilding, CinemaBuilding, ArcadeBuilding, StadiumBuilding, DecorativeBuildings, InfoPanel } from './buildings'
@@ -34,7 +34,8 @@ export { DiscoBuilding, CinemaBuilding, ArcadeBuilding, StadiumBuilding, Decorat
 export { StadiumInterior, DiscoInterior, ArcadeInterior, CinemaInterior } from './scenes'
 
 // Hooks
-export { useRoomNavigation, useStadiumSeating, useCinemaSeats, usePlayerMovement, useWorldChat, useWorldSettings, useDataLoaders } from './hooks'
+export { useRoomNavigation, useStadiumSeating, useCinemaSeats, usePlayerMovement, useWorldChat, useWorldSettings, useDataLoaders, useWorldPreloader, LOADING_STEPS } from './hooks'
+export type { LoadingStep } from './hooks'
 
 // Debug components
 export { CollisionDebugVisualization } from './debug'

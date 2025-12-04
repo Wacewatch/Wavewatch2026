@@ -56,6 +56,7 @@ import {
   MenuDropdown,
   ChatModal,
   MovieFullscreenModal,
+  WorldLoadingScreen,
   // Building Components
   DiscoBuilding,
   CinemaBuilding,
@@ -75,6 +76,7 @@ import {
   usePlayerMovement,
   useDataLoaders,
   useWorldChat,
+  useWorldPreloader,
   // useWorldSettings, // Available for future integration
   // Debug components
   CollisionDebugVisualization,
@@ -186,12 +188,27 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const isMoving = movement.x !== 0 || movement.z !== 0
 
-  // Arrêter la danse quand le joueur bouge
+  // World preloader hook - shows loading screen while assets are loading
+  const {
+    isLoading: isWorldLoading,
+    progress: loadingProgress,
+    currentStep: loadingStep,
+    completedSteps: loadingCompletedSteps,
+    forceComplete: skipLoading,
+  } = useWorldPreloader({ enabled: true, minLoadingTime: 2500 })
+
+  // Arrêter la danse quand le joueur bouge et mettre à jour la BDD
   useEffect(() => {
     if (isMoving && isDancing) {
       setIsDancing(false)
+      // Update database to stop dancing
+      supabase
+        .from("interactive_profiles")
+        .update({ is_dancing: false })
+        .eq("user_id", userId)
+        .then(() => {})
     }
-  }, [isMoving, isDancing])
+  }, [isMoving, isDancing, userId])
 
   // Data loaders hook - provides otherPlayers, arcadeMachines, stadium, cinemaRooms, and open states
   const {
@@ -614,6 +631,23 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   // Mettre à jour la ref pour que le useEffect puisse appeler handleJump
   handleJumpRef.current = handleJump
 
+  // Fonction pour gérer la danse et la synchroniser via la BDD
+  const handleDance = useCallback(async () => {
+    if (!userProfile) {
+      return
+    }
+
+    const newDancingState = !isDancing
+    setIsDancing(newDancingState)
+    setShowQuickActions(false)
+
+    // Update dance state in database (synced via realtime subscription)
+    await supabase
+      .from("interactive_profiles")
+      .update({ is_dancing: newDancingState })
+      .eq("user_id", userId)
+  }, [isDancing, userProfile, userId])
+
   // sendMessage is now provided by useWorldChat hook
   // handleJoystickMove and handleCameraRotate are now provided by usePlayerMovement hook
 
@@ -902,6 +936,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   return (
     <div className="relative w-full h-screen">
+      {/* Loading Screen - shown while world is loading */}
+      {isWorldLoading && (
+        <WorldLoadingScreen
+          progress={loadingProgress}
+          currentStep={loadingStep}
+          completedSteps={loadingCompletedSteps}
+          onSkip={skipLoading}
+        />
+      )}
+
       {/* FPS Stats container - centered left */}
       {process.env.NODE_ENV === 'development' && (
         <div ref={fpsStatsContainerRef} className="absolute left-4 top-1/2 -translate-y-1/2 z-50" />
@@ -1237,7 +1281,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           enableJumping={worldSettings.enableJumping}
           onJump={() => handleQuickAction("jump")}
           onEmoji={handleEmoji}
-          onDance={() => setIsDancing(!isDancing)}
+          onDance={handleDance}
           isDancing={isDancing}
         />
       )}

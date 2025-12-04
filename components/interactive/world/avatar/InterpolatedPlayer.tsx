@@ -51,6 +51,9 @@ export function InterpolatedPlayer({
   const jumpOffset = useRef(0)
   const lastJumpTimestamp = useRef(0)
 
+  // Lire l'état de danse directement depuis les données du joueur (BDD via realtime)
+  const isDancing = player.is_dancing === true
+
   // Détecter quand le joueur saute (via broadcast)
   useEffect(() => {
     if (playerAction?.action === "jump" && playerAction.timestamp !== lastJumpTimestamp.current) {
@@ -153,7 +156,7 @@ export function InterpolatedPlayer({
   return (
     <group ref={groupRef}>
       <group ref={avatarGroupRef}>
-        <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={isMoving} />
+        <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={isMoving} isDancing={isDancing} />
       </group>
 
       <Html

@@ -167,7 +167,7 @@ export function useDataLoaders({ userId }: UseDataLoadersProps): UseDataLoadersR
       supabase.removeChannel(channel)
       supabase
         .from("interactive_profiles")
-        .update({ is_online: false, last_seen: new Date().toISOString() })
+        .update({ is_online: false, is_dancing: false, last_seen: new Date().toISOString() })
         .eq("user_id", userId)
         .then()
     }
