@@ -63,8 +63,8 @@ export const ALL_COLLISION_ZONES: CollisionZone[] = [
   { id: "BENCH_1", x: -18, z: -12, width: 2, depth: 1, label: "Banc 1", color: "#8b4513", lowQuality: true },
   { id: "BENCH_3", x: -18, z: 12, width: 2, depth: 1, label: "Banc 3", color: "#8b4513", lowQuality: true },
 
-  // ========== FONTAINE CENTRALE (nouvelle place) ==========
-  { id: "FOUNTAIN_CENTRAL", x: 0, z: -5, width: 7, depth: 7, label: "Fontaine Centrale", color: "#60a5fa", lowQuality: false },
+  // ========== FONTAINE CENTRALE (collision désactivée pour permettre le passage) ==========
+  // { id: "FOUNTAIN_CENTRAL", x: 0, z: -5, width: 7, depth: 7, label: "Fontaine Centrale", color: "#60a5fa", lowQuality: false },
 
   // ========== ANCIENNE FONTAINE (masquée - remplacée par place centrale) ==========
   // { id: "FOUNTAIN_1", x: -15, z: 0, width: 6, depth: 6, label: "Fontaine", color: "#0ea5e9", lowQuality: true },

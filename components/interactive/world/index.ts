@@ -19,7 +19,7 @@ export { CameraFollower, FirstPersonCamera } from './camera'
 export { DiscoWalls, DiscoVisualizer, DJBoothStarburst, SideEqualizer } from './disco'
 
 // Environment components
-export { RealisticTree, SnowyTree, ChristmasTree, ChristmasLights, RealisticLamppost, SnowParticles, WorldEnvironment, WorldGround, WorldDecorations, CentralPlaza, PathNetwork, AmbientLamppost, AmbientLamppostCollection } from './environment'
+export { RealisticTree, SnowyTree, ChristmasTree, ChristmasLights, RealisticLamppost, SnowParticles, WorldEnvironment, WorldGround, WorldDecorations, CentralPlaza, PathNetwork, AmbientLamppost, AmbientLamppostCollection, CitySkyline } from './environment'
 
 // Controls components
 export { MobileJoystick, CameraJoystick, CenterTouchZone, JoystickBlockZones } from './controls'

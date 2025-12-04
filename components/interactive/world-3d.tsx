@@ -33,6 +33,7 @@ import {
   CentralPlaza,
   PathNetwork,
   AmbientLamppostCollection,
+  CitySkyline,
   MobileJoystick,
   CameraJoystick,
   CenterTouchZone,
@@ -932,6 +933,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         {/* Update rendering logic to use currentRoom state instead of userProfile */}
         {!currentCinemaRoom && currentRoom !== "stadium" && currentRoom !== "arcade" && currentRoom !== "disco" ? (
           <>
+            {/* City Skyline - immersive background buildings around the map */}
+            <CitySkyline worldMode={worldSettings.worldMode} graphicsQuality={graphicsQuality as GraphicsQuality} />
+
             {/* Ground - extracted component */}
             <WorldGround worldMode={worldSettings.worldMode} />
 
@@ -1332,8 +1336,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             setShowMap(false)
           }}
           onTeleportToPlaza={() => {
-            // Teleport to central plaza (0, -5)
-            setMyPosition({ x: 0, y: -0.35, z: -8 })
+            // Teleport near the info panel / map sign (6.3, -17.1)
+            setMyPosition({ x: 6, y: -0.35, z: -15 })
             setMyRotation(0)
           }}
           onClose={() => setShowMap(false)}

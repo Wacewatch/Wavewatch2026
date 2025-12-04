@@ -43,6 +43,11 @@ export function PathNetwork({ worldMode, graphicsQuality }: PathNetworkProps) {
 
     // From central plaza to Stadium (25, -15) - straight diagonal
     { start: [0, -5], end: [22, -12], width: 2 },
+
+    // ========== CHEMIN DÉCORATIF VERS LES MONTAGNES (derrière le spawn) ==========
+    // Prolonge la même ligne (spawn→plaza) mais de l'autre côté, vers les montagnes
+    // Direction originale: [4.5, -27] → [0, -5], donc on continue: [4.5, -27] → [~15, -75]
+    { start: [4.5, -27], end: [15, -75], width: 2.5 },
   ]
 
   // Calculate path mesh for a segment
