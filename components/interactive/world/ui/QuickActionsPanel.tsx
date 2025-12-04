@@ -1,17 +1,19 @@
 "use client"
 
-import { ArrowUp } from "lucide-react"
+import { ArrowUp, Music } from "lucide-react"
 
 interface QuickActionsPanelProps {
   isMobileMode: boolean
   enableJumping: boolean
   onJump: () => void
   onEmoji: (emoji: string) => void
+  onDance?: () => void
+  isDancing?: boolean
 }
 
 const EMOJIS = ["😂", "👍", "❤️", "😭", "🔥", "🎉", "😎", "🤔", "😱", "💪", "🙏", "✨"]
 
-export function QuickActionsPanel({ isMobileMode, enableJumping, onJump, onEmoji }: QuickActionsPanelProps) {
+export function QuickActionsPanel({ isMobileMode, enableJumping, onJump, onEmoji, onDance, isDancing }: QuickActionsPanelProps) {
   if (isMobileMode) {
     return (
       <div className="fixed top-[220px] right-4 z-20 bg-black/90 backdrop-blur-lg p-2 rounded-xl border-2 border-white/20 max-h-[50vh] overflow-y-auto w-[140px]">
@@ -22,6 +24,18 @@ export function QuickActionsPanel({ isMobileMode, enableJumping, onJump, onEmoji
               className="bg-gray-800 text-white p-2 rounded-lg shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
             >
               <ArrowUp className="w-5 h-5" />
+            </button>
+          )}
+          {onDance && (
+            <button
+              onClick={onDance}
+              className={`p-2 rounded-lg shadow-lg transition-colors flex items-center justify-center ${
+                isDancing
+                  ? "bg-purple-600 text-white"
+                  : "bg-gray-800 text-white hover:bg-gray-700"
+              }`}
+            >
+              <Music className="w-5 h-5" />
             </button>
           )}
           {EMOJIS.map((emoji) => (
@@ -47,6 +61,19 @@ export function QuickActionsPanel({ isMobileMode, enableJumping, onJump, onEmoji
             className="bg-gray-800 text-white p-4 rounded-full shadow-lg hover:bg-gray-700 transition-colors flex items-center justify-center"
           >
             <ArrowUp className="w-6 h-6" />
+          </button>
+        )}
+        {onDance && (
+          <button
+            onClick={onDance}
+            className={`p-4 rounded-full shadow-lg transition-colors flex items-center justify-center ${
+              isDancing
+                ? "bg-purple-600 text-white"
+                : "bg-gray-800 text-white hover:bg-gray-700"
+            }`}
+            title="Danser"
+          >
+            <Music className="w-6 h-6" />
           </button>
         )}
         {EMOJIS.map((emoji) => (

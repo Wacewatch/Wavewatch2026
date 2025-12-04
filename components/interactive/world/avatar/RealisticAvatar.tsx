@@ -11,6 +11,7 @@ interface RealisticAvatarProps {
   avatarStyle: AvatarStyle
   isMoving: boolean
   isJumping?: boolean
+  isDancing?: boolean
 }
 
 // RealisticAvatar is only used inside Canvas
@@ -19,6 +20,7 @@ export function RealisticAvatar({
   avatarStyle,
   isMoving,
   isJumping = false,
+  isDancing = false,
 }: RealisticAvatarProps) {
   const groupRef = useRef<THREE.Group>(null)
   const leftLegRef = useRef<THREE.Mesh>(null)
@@ -38,7 +40,44 @@ export function RealisticAvatar({
   }
 
   useFrame((state, delta) => {
-    if (isMoving) {
+    if (isDancing) {
+      // Animation de danse groove - mouvements fluides et naturels
+      timeRef.current += delta * 4 // Vitesse plus lente pour un groove naturel
+
+      const t = timeRef.current
+
+      // Balancement latéral du corps (comme si on dansait d'un pied sur l'autre)
+      if (groupRef.current) {
+        // Léger mouvement de haut en bas sur le beat (subtil)
+        groupRef.current.position.y = position[1] + Math.sin(t * 2) * 0.03
+        // Balancement latéral
+        groupRef.current.position.x = position[0] + Math.sin(t) * 0.05
+        // Légère rotation du corps (twist)
+        groupRef.current.rotation.y = Math.sin(t) * 0.1
+      }
+
+      // Jambes - transfert de poids d'une jambe à l'autre (pas de grands mouvements)
+      if (leftLegRef.current) {
+        // Jambe gauche plie légèrement quand on penche à gauche
+        leftLegRef.current.rotation.x = Math.sin(t) * 0.15
+      }
+      if (rightLegRef.current) {
+        // Jambe droite plie en opposition
+        rightLegRef.current.rotation.x = Math.sin(t + Math.PI) * 0.15
+      }
+
+      // Bras - mouvements fluides et décontractés
+      if (leftArmRef.current) {
+        // Bras gauche balance naturellement
+        leftArmRef.current.rotation.x = Math.sin(t * 0.8) * 0.3
+        leftArmRef.current.rotation.z = Math.sin(t) * 0.2 + 0.15 // Légèrement écarté
+      }
+      if (rightArmRef.current) {
+        // Bras droit en décalage pour un mouvement naturel
+        rightArmRef.current.rotation.x = Math.sin(t * 0.8 + 1) * 0.3
+        rightArmRef.current.rotation.z = Math.sin(t + Math.PI) * 0.2 - 0.15
+      }
+    } else if (isMoving) {
       timeRef.current += delta * 4 // Vitesse d'animation réduite (était 8)
 
       // Animate legs walking - amplitude réduite
@@ -48,12 +87,28 @@ export function RealisticAvatar({
       // Animate arms swinging (opposé aux jambes) - amplitude réduite
       if (leftArmRef.current) leftArmRef.current.rotation.x = Math.sin(timeRef.current + Math.PI) * 0.25
       if (rightArmRef.current) rightArmRef.current.rotation.x = Math.sin(timeRef.current) * 0.25
+
+      // Reset arm Z rotation (au cas où on vient de danser)
+      if (leftArmRef.current) leftArmRef.current.rotation.z = 0
+      if (rightArmRef.current) rightArmRef.current.rotation.z = 0
     } else {
       // Reset position when not moving
       if (leftLegRef.current) leftLegRef.current.rotation.x = 0
       if (rightLegRef.current) rightLegRef.current.rotation.x = 0
-      if (leftArmRef.current) leftArmRef.current.rotation.x = 0
-      if (rightArmRef.current) rightArmRef.current.rotation.x = 0
+      if (leftArmRef.current) {
+        leftArmRef.current.rotation.x = 0
+        leftArmRef.current.rotation.z = 0
+      }
+      if (rightArmRef.current) {
+        rightArmRef.current.rotation.x = 0
+        rightArmRef.current.rotation.z = 0
+      }
+      // Reset position (Y, X et rotation Y pour la danse)
+      if (groupRef.current) {
+        groupRef.current.position.x = position[0]
+        groupRef.current.position.y = position[1]
+        groupRef.current.rotation.y = 0
+      }
     }
   })
 

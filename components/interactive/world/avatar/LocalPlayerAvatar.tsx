@@ -12,6 +12,7 @@ interface LocalPlayerAvatarProps {
   avatarStyle: AvatarStyle
   isMoving: boolean
   isJumping: boolean
+  isDancing?: boolean
   children?: React.ReactNode
 }
 
@@ -22,6 +23,7 @@ export function LocalPlayerAvatar({
   avatarStyle,
   isMoving,
   isJumping,
+  isDancing = false,
   children,
 }: LocalPlayerAvatarProps) {
   const groupRef = useRef<THREE.Group>(null)
@@ -47,7 +49,7 @@ export function LocalPlayerAvatar({
   return (
     <group ref={groupRef} position={[position.x, position.y, position.z]}>
       <group rotation={[0, rotation, 0]}>
-        <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={isMoving} isJumping={isJumping} />
+        <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={isMoving} isJumping={isJumping} isDancing={isDancing} />
       </group>
       {children}
     </group>

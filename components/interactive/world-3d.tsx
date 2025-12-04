@@ -107,6 +107,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [showQuickActions, setShowQuickActions] = useState(false)
   const [currentEmoji, setCurrentEmoji] = useState<string | null>(null)
   const [isJumping, setIsJumping] = useState(false)
+  const [isDancing, setIsDancing] = useState(false)
 
   const [movement, setMovement] = useState({ x: 0, z: 0 })
   const [showChat, setShowChat] = useState(false)
@@ -184,6 +185,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const handleJumpRef = useRef<() => void>(() => {}) // Ref for jump function (updated after handleJump is defined)
 
   const isMoving = movement.x !== 0 || movement.z !== 0
+
+  // Arrêter la danse quand le joueur bouge
+  useEffect(() => {
+    if (isMoving && isDancing) {
+      setIsDancing(false)
+    }
+  }, [isMoving, isDancing])
 
   // Data loaders hook - provides otherPlayers, arcadeMachines, stadium, cinemaRooms, and open states
   const {
@@ -1050,6 +1058,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
             avatarStyle={myAvatarStyle}
             isMoving={isMoving}
             isJumping={isJumping}
+            isDancing={isDancing}
           >
             {/* Cacher le nameplate pendant le saut pour éviter le décalage */}
             {!isJumping && (
@@ -1228,6 +1237,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           enableJumping={worldSettings.enableJumping}
           onJump={() => handleQuickAction("jump")}
           onEmoji={handleEmoji}
+          onDance={() => setIsDancing(!isDancing)}
+          isDancing={isDancing}
         />
       )}
 
