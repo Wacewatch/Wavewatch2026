@@ -1,0 +1,5 @@
+export { DiscoBuilding } from './DiscoBuilding'
+export { CinemaBuilding } from './CinemaBuilding'
+export { ArcadeBuilding } from './ArcadeBuilding'
+export { StadiumBuilding } from './StadiumBuilding'
+export { DecorativeBuildings } from './DecorativeBuildings'
