@@ -1,9 +1,7 @@
 "use client"
 
-import { useRef, useMemo } from "react"
+import { useMemo } from "react"
 import { Html, Text } from "@react-three/drei"
-import { useFrame } from "@react-three/fiber"
-import * as THREE from "three"
 import { DEFAULT_SPAWN_POSITION } from "../constants"
 
 interface CinemaBuildingProps {
@@ -26,37 +24,7 @@ export function CinemaBuilding({ position, playerPosition, onEnter }: CinemaBuil
   )
   const isNearby = distanceToBuilding < 8
 
-  // Refs for animated elements
-  const projector1Ref = useRef<THREE.SpotLight>(null)
-  const projector2Ref = useRef<THREE.SpotLight>(null)
-  const poster1Ref = useRef<THREE.Mesh>(null)
-  const poster2Ref = useRef<THREE.Mesh>(null)
-
-  useFrame((state) => {
-    const time = state.clock.elapsedTime
-
-    // Sweeping projector lights
-    if (projector1Ref.current) {
-      projector1Ref.current.target.position.x = Math.sin(time * 0.5) * 10
-      projector1Ref.current.target.position.z = Math.cos(time * 0.5) * 10
-      projector1Ref.current.target.updateMatrixWorld()
-    }
-    if (projector2Ref.current) {
-      projector2Ref.current.target.position.x = Math.sin(time * 0.5 + Math.PI) * 10
-      projector2Ref.current.target.position.z = Math.cos(time * 0.5 + Math.PI) * 10
-      projector2Ref.current.target.updateMatrixWorld()
-    }
-
-    // Poster glow pulse
-    if (poster1Ref.current) {
-      const mat = poster1Ref.current.material as THREE.MeshStandardMaterial
-      mat.emissiveIntensity = 0.3 + Math.sin(time * 2) * 0.15
-    }
-    if (poster2Ref.current) {
-      const mat = poster2Ref.current.material as THREE.MeshStandardMaterial
-      mat.emissiveIntensity = 0.3 + Math.sin(time * 2 + 1) * 0.15
-    }
-  })
+  // Animated effects removed for performance
 
   return (
     <group position={position}>
@@ -167,25 +135,18 @@ export function CinemaBuilding({ position, playerPosition, onEnter }: CinemaBuil
       </mesh>
 
       {/* ============= MOVIE POSTERS ============= */}
-      {/* Poster frames on front wall */}
+      {/* Poster frames on front wall - flat colors without glow */}
       <group position={[2.5, 3, 4.15]}>
         {/* Poster frame */}
         <mesh>
           <boxGeometry args={[1.6, 2.4, 0.1]} />
           <meshStandardMaterial color="#2a2a2a" roughness={0.6} metalness={0.3} />
         </mesh>
-        {/* Poster content (glowing) */}
-        <mesh ref={poster1Ref} position={[0, 0, 0.06]}>
+        {/* Poster content - flat color */}
+        <mesh position={[0, 0, 0.06]}>
           <planeGeometry args={[1.4, 2.2]} />
-          <meshStandardMaterial
-            color="#ff6b6b"
-            emissive="#ff6b6b"
-            emissiveIntensity={0.3}
-            roughness={0.5}
-          />
+          <meshStandardMaterial color="#ff6b6b" roughness={0.8} />
         </mesh>
-        {/* Poster light */}
-        <pointLight position={[0, 0, 0.5]} intensity={0.5} distance={3} color="#ffffff" />
       </group>
 
       <group position={[-2.5, 3, 4.15]}>
@@ -194,56 +155,14 @@ export function CinemaBuilding({ position, playerPosition, onEnter }: CinemaBuil
           <boxGeometry args={[1.6, 2.4, 0.1]} />
           <meshStandardMaterial color="#2a2a2a" roughness={0.6} metalness={0.3} />
         </mesh>
-        {/* Poster content (glowing) */}
-        <mesh ref={poster2Ref} position={[0, 0, 0.06]}>
+        {/* Poster content - flat color */}
+        <mesh position={[0, 0, 0.06]}>
           <planeGeometry args={[1.4, 2.2]} />
-          <meshStandardMaterial
-            color="#4ecdc4"
-            emissive="#4ecdc4"
-            emissiveIntensity={0.3}
-            roughness={0.5}
-          />
+          <meshStandardMaterial color="#4ecdc4" roughness={0.8} />
         </mesh>
-        {/* Poster light */}
-        <pointLight position={[0, 0, 0.5]} intensity={0.5} distance={3} color="#ffffff" />
       </group>
 
-      {/* ============= PROJECTOR SPOTLIGHTS ============= */}
-      {/* Left projector */}
-      <group position={[-3.5, 5.8, 0]}>
-        <mesh rotation={[0, 0, Math.PI / 4]}>
-          <cylinderGeometry args={[0.15, 0.25, 0.5, 12]} />
-          <meshStandardMaterial color="#333333" metalness={0.8} roughness={0.2} />
-        </mesh>
-        <spotLight
-          ref={projector1Ref}
-          position={[0, 0, 0]}
-          angle={0.3}
-          penumbra={0.5}
-          intensity={3}
-          distance={25}
-          color="#ffffee"
-          castShadow
-        />
-      </group>
-
-      {/* Right projector */}
-      <group position={[3.5, 5.8, 0]}>
-        <mesh rotation={[0, 0, -Math.PI / 4]}>
-          <cylinderGeometry args={[0.15, 0.25, 0.5, 12]} />
-          <meshStandardMaterial color="#333333" metalness={0.8} roughness={0.2} />
-        </mesh>
-        <spotLight
-          ref={projector2Ref}
-          position={[0, 0, 0]}
-          angle={0.3}
-          penumbra={0.5}
-          intensity={3}
-          distance={25}
-          color="#ffffee"
-          castShadow
-        />
-      </group>
+      {/* Projector spotlights removed for performance */}
 
       {/* ============= ENTRANCE ============= */}
       {/* Door */}
@@ -272,32 +191,15 @@ export function CinemaBuilding({ position, playerPosition, onEnter }: CinemaBuil
       {[-2, 0, 2].map((x) => (
         <mesh key={`window-${x}`} position={[x, 3, 4.1]}>
           <planeGeometry args={[1.5, 1.8]} />
-          <meshStandardMaterial
-            color="#60a5fa"
-            emissive="#60a5fa"
-            emissiveIntensity={0.5}
-            metalness={0.8}
-            roughness={0.1}
-          />
+          <meshStandardMaterial color="#60a5fa" roughness={0.3} />
         </mesh>
       ))}
 
-      {/* Main neon sign */}
-      <mesh position={[0, 6, 0]}>
-        <boxGeometry args={[7, 0.8, 0.3]} />
-        <meshStandardMaterial
-          color="#fbbf24"
-          emissive="#fbbf24"
-          emissiveIntensity={1.5}
-          roughness={0.3}
-          metalness={0.5}
-        />
-      </mesh>
-      <pointLight position={[0, 6, 0]} intensity={2} distance={10} color="#fbbf24" />
+      {/* Main neon sign removed for performance */}
 
       {/* Entry button visible when nearby */}
       {isNearby && (
-        <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
+        <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
           <button
             onClick={onEnter}
             className="bg-blue-600/90 backdrop-blur-sm hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-2xl text-sm font-bold transition-all hover:scale-110 border-2 border-white/30 flex items-center gap-2"

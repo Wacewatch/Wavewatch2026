@@ -33,6 +33,7 @@ export const DEFAULT_WORLD_SETTINGS: WorldSettings = {
 // ID format: TYPE_NUMBER (ex: BLDG_1, TREE_1, LAMP_1, BUSH_1)
 // Pour déplacer un élément, modifie les valeurs x et z correspondantes
 // lowQuality: false = visible en toutes qualités, true = masqué en qualité basse
+// NOTE: Collisions retirées pour buissons, bancs, arbres et sapin pour alléger le rendu
 export const ALL_COLLISION_ZONES: CollisionZone[] = [
   // ========== BÂTIMENTS (toujours visibles) ==========
   { id: "BLDG_CINEMA", x: 15, z: 0, width: 9, depth: 9, label: "Cinéma", color: "#ef4444", lowQuality: false },
@@ -43,39 +44,20 @@ export const ALL_COLLISION_ZONES: CollisionZone[] = [
   { id: "BLDG_2", x: -15, z: 5, width: 5, depth: 4, label: "Bâtiment Bleu", color: "#0ea5e9", lowQuality: false },
   { id: "BLDG_3", x: -15, z: -8, width: 4, depth: 4, label: "Bâtiment Orange", color: "#f59e0b", lowQuality: false },
 
-  // ========== ARBRES ==========
-  // En mode low: seulement TREE_1 et TREE_4 sont visibles
-  { id: "TREE_1", x: -24.1, z: -13.4, width: 2, depth: 2, label: "Arbre 1", color: "#166534", lowQuality: false },
-  { id: "TREE_2", x: -6.1, z: -25.2, width: 2, depth: 2, label: "Arbre 2", color: "#166534", lowQuality: true },
-  { id: "TREE_4", x: 15, z: -15, width: 2, depth: 2, label: "Arbre 4", color: "#166534", lowQuality: false },
-  { id: "TREE_5", x: -18, z: 10, width: 2, depth: 2, label: "Arbre 5", color: "#166534", lowQuality: true },
-  { id: "TREE_6", x: 18, z: 10, width: 2, depth: 2, label: "Arbre 6", color: "#166534", lowQuality: true },
-  { id: "TREE_7", x: -10, z: 15, width: 2, depth: 2, label: "Arbre 7", color: "#166534", lowQuality: true },
-  { id: "TREE_8", x: 10, z: 15, width: 2, depth: 2, label: "Arbre 8", color: "#166534", lowQuality: true },
+  // ========== ARBRES (collision retirée pour performance) ==========
+  // Les arbres restent visibles mais sans collision
 
-  // ========== LAMPADAIRES ==========
-  // En mode low: seulement le lampadaire central (z=-10) est visible, mais x=0 pas x=-20
-  // Note: en mode low, le seul lampadaire est à position [0, -10] donc x=-20, z=-10
-  { id: "LAMP_1", x: -20, z: -10, width: 1, depth: 1, label: "Lampadaire 1", color: "#fbbf24", lowQuality: false },
-  { id: "LAMP_2", x: -20, z: 10, width: 1, depth: 1, label: "Lampadaire 2", color: "#fbbf24", lowQuality: true },
+  // ========== LAMPADAIRES (collision retirée pour performance) ==========
+  // Les lampadaires restent visibles mais sans collision
 
-  // ========== BANCS (masqués en mode low) ==========
-  { id: "BENCH_1", x: -18, z: -12, width: 2, depth: 1, label: "Banc 1", color: "#8b4513", lowQuality: true },
-  { id: "BENCH_3", x: -18, z: 12, width: 2, depth: 1, label: "Banc 3", color: "#8b4513", lowQuality: true },
+  // ========== BANCS (collision retirée pour performance) ==========
+  // Les bancs restent visibles mais sans collision
 
-  // ========== FONTAINE CENTRALE (collision désactivée pour permettre le passage) ==========
-  // { id: "FOUNTAIN_CENTRAL", x: 0, z: -5, width: 7, depth: 7, label: "Fontaine Centrale", color: "#60a5fa", lowQuality: false },
+  // ========== BUISSONS (collision retirée pour performance) ==========
+  // Les buissons restent visibles mais sans collision
 
-  // ========== ANCIENNE FONTAINE (masquée - remplacée par place centrale) ==========
-  // { id: "FOUNTAIN_1", x: -15, z: 0, width: 6, depth: 6, label: "Fontaine", color: "#0ea5e9", lowQuality: true },
-
-  // ========== BUISSONS (tous masqués en mode low) ==========
-  { id: "BUSH_1", x: 5, z: -10, width: 2, depth: 2, label: "Buisson 1", color: "#4ade80", lowQuality: true },
-  { id: "BUSH_2", x: -5, z: -10, width: 2, depth: 2, label: "Buisson 2", color: "#4ade80", lowQuality: true },
-  { id: "BUSH_3", x: 10, z: 5, width: 2, depth: 2, label: "Buisson 3", color: "#4ade80", lowQuality: true },
-  { id: "BUSH_4", x: -10, z: 5, width: 2, depth: 2, label: "Buisson 4", color: "#4ade80", lowQuality: true },
-  { id: "BUSH_5", x: 12, z: -5, width: 2, depth: 2, label: "Buisson 5", color: "#4ade80", lowQuality: true },
-  { id: "BUSH_6", x: -12, z: -5, width: 2, depth: 2, label: "Buisson 6", color: "#4ade80", lowQuality: true },
+  // ========== SAPIN DE NOËL (collision retirée pour performance) ==========
+  // Le sapin reste visible mais sans collision
 ]
 
 // ========== DISCO COLLISION ZONES ==========

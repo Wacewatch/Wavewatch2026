@@ -101,7 +101,7 @@ export function ArcadeBuilding({ position, playerPosition, onEnter }: ArcadeBuil
       <pointLight position={[0, 6.2, -5.5]} intensity={2} distance={8} color="#ffff00" />
 
       {/* ============= GAME THEMED WINDOWS ============= */}
-      {/* Windows with pixel art style */}
+      {/* Windows with flat colors - no glow */}
       {[-3, 0, 3].map((x, idx) => (
         <group key={`arcade-window-${x}`}>
           {/* Window frame */}
@@ -109,23 +109,14 @@ export function ArcadeBuilding({ position, playerPosition, onEnter }: ArcadeBuil
             <boxGeometry args={[1.8, 2.2, 0.1]} />
             <meshStandardMaterial color="#1e1e2e" roughness={0.5} metalness={0.3} />
           </mesh>
-          {/* Window glow - different colors */}
+          {/* Window - flat colors */}
           <mesh position={[x, 3.5, -5.1]}>
             <planeGeometry args={[1.5, 2]} />
             <meshStandardMaterial
               color={["#00ff00", "#ff0066", "#00ccff"][idx]}
-              emissive={["#00ff00", "#ff0066", "#00ccff"][idx]}
-              emissiveIntensity={0.8}
-              metalness={0.7}
-              roughness={0.2}
+              roughness={0.5}
             />
           </mesh>
-          <pointLight
-            position={[x, 3.5, -6]}
-            intensity={0.8}
-            distance={4}
-            color={["#00ff00", "#ff0066", "#00ccff"][idx]}
-          />
         </group>
       ))}
 
@@ -167,54 +158,13 @@ export function ArcadeBuilding({ position, playerPosition, onEnter }: ArcadeBuil
         />
       </mesh>
 
-      {/* ============= DECORATIVE JOYSTICK PILLARS ============= */}
-      {/* Left joystick pillar */}
-      <group position={[-4, 0, -6.5]}>
-        <mesh position={[0, 0.8, 0]}>
-          <cylinderGeometry args={[0.3, 0.4, 1.6, 12]} />
-          <meshStandardMaterial color="#333344" roughness={0.6} metalness={0.3} />
-        </mesh>
-        <mesh position={[0, 1.7, 0]}>
-          <sphereGeometry args={[0.25, 12, 12]} />
-          <meshStandardMaterial
-            color="#ff0000"
-            emissive="#ff0000"
-            emissiveIntensity={0.8}
-          />
-        </mesh>
-      </group>
-      {/* Right joystick pillar */}
-      <group position={[4, 0, -6.5]}>
-        <mesh position={[0, 0.8, 0]}>
-          <cylinderGeometry args={[0.3, 0.4, 1.6, 12]} />
-          <meshStandardMaterial color="#333344" roughness={0.6} metalness={0.3} />
-        </mesh>
-        <mesh position={[0, 1.7, 0]}>
-          <sphereGeometry args={[0.25, 12, 12]} />
-          <meshStandardMaterial
-            color="#0000ff"
-            emissive="#0000ff"
-            emissiveIntensity={0.8}
-          />
-        </mesh>
-      </group>
+      {/* Decorative joystick pillars removed for performance */}
 
-      {/* Main roof light */}
-      <mesh position={[0, 7, 0]}>
-        <boxGeometry args={[8, 0.6, 0.3]} />
-        <meshStandardMaterial
-          color="#f59e0b"
-          emissive="#f59e0b"
-          emissiveIntensity={1.5}
-          roughness={0.3}
-          metalness={0.5}
-        />
-      </mesh>
-      <pointLight position={[0, 7, 0]} intensity={2} distance={10} color="#f59e0b" />
+      {/* Main roof light removed for performance */}
 
       {/* Entry button visible when nearby */}
       {isNearby && (
-        <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
+        <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
           <button
             onClick={onEnter}
             className="bg-purple-600/90 backdrop-blur-sm hover:bg-purple-700 text-white px-4 py-2 rounded-lg shadow-2xl text-sm font-bold transition-all hover:scale-110 border-2 border-white/30 flex items-center gap-2"

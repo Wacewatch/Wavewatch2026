@@ -1,9 +1,7 @@
 "use client"
 
-import { useRef, useMemo } from "react"
+import { useMemo } from "react"
 import { Html, Text } from "@react-three/drei"
-import { useFrame } from "@react-three/fiber"
-import * as THREE from "three"
 import { DEFAULT_SPAWN_POSITION } from "../constants"
 
 interface DiscoBuildingProps {
@@ -26,52 +24,7 @@ export function DiscoBuilding({ position, playerPosition, onEnter }: DiscoBuildi
   )
   const isNearby = distanceToBuilding < 8
 
-  // Refs for animated elements
-  const discoBallRef = useRef<THREE.Mesh>(null)
-  const spotLight1Ref = useRef<THREE.SpotLight>(null)
-  const spotLight2Ref = useRef<THREE.SpotLight>(null)
-  const spotLight3Ref = useRef<THREE.SpotLight>(null)
-  const floorLightRef = useRef<THREE.Group>(null)
-
-  useFrame((state) => {
-    const time = state.clock.elapsedTime
-
-    // Rotating disco ball
-    if (discoBallRef.current) {
-      discoBallRef.current.rotation.y = time * 0.5
-      discoBallRef.current.rotation.x = Math.sin(time * 0.3) * 0.1
-    }
-
-    // Moving spotlights (lights spilling outside)
-    if (spotLight1Ref.current) {
-      spotLight1Ref.current.target.position.x = Math.sin(time * 2) * 8
-      spotLight1Ref.current.target.position.z = Math.cos(time * 2) * 8
-      spotLight1Ref.current.target.updateMatrixWorld()
-    }
-    if (spotLight2Ref.current) {
-      spotLight2Ref.current.target.position.x = Math.sin(time * 2 + Math.PI * 0.66) * 8
-      spotLight2Ref.current.target.position.z = Math.cos(time * 2 + Math.PI * 0.66) * 8
-      spotLight2Ref.current.target.updateMatrixWorld()
-    }
-    if (spotLight3Ref.current) {
-      spotLight3Ref.current.target.position.x = Math.sin(time * 2 + Math.PI * 1.33) * 8
-      spotLight3Ref.current.target.position.z = Math.cos(time * 2 + Math.PI * 1.33) * 8
-      spotLight3Ref.current.target.updateMatrixWorld()
-    }
-
-    // Floor lights color cycling
-    if (floorLightRef.current) {
-      floorLightRef.current.children.forEach((child, idx) => {
-        if (child instanceof THREE.Mesh) {
-          const mat = child.material as THREE.MeshStandardMaterial
-          const hue = ((time * 0.3 + idx * 0.15) % 1)
-          mat.color.setHSL(hue, 1, 0.5)
-          mat.emissive.setHSL(hue, 1, 0.4)
-          mat.emissiveIntensity = 1 + Math.sin(time * 6 + idx) * 0.3
-        }
-      })
-    }
-  })
+  // Animated effects removed for performance
 
   return (
     <group position={position}>
@@ -109,67 +62,7 @@ export function DiscoBuilding({ position, playerPosition, onEnter }: DiscoBuildi
         </group>
       </group>
 
-      {/* ============= DISCO BALL (ROTATING) ============= */}
-      <mesh ref={discoBallRef} position={[0, 7.8, 0]}>
-        <sphereGeometry args={[0.8, 24, 24]} />
-        <meshStandardMaterial
-          color="#e0e0e0"
-          emissive="#ffffff"
-          emissiveIntensity={0.8}
-          metalness={1}
-          roughness={0}
-        />
-      </mesh>
-      <pointLight position={[0, 7.8, 0]} intensity={3} distance={15} color="#ffffff" />
-
-      {/* ============= SPOTLIGHTS SPILLING OUTSIDE ============= */}
-      <spotLight
-        ref={spotLight1Ref}
-        position={[0, 7, 0]}
-        angle={0.5}
-        penumbra={0.8}
-        intensity={4}
-        distance={20}
-        color="#ff00ff"
-      />
-      <spotLight
-        ref={spotLight2Ref}
-        position={[0, 7, 0]}
-        angle={0.5}
-        penumbra={0.8}
-        intensity={4}
-        distance={20}
-        color="#00ffff"
-      />
-      <spotLight
-        ref={spotLight3Ref}
-        position={[0, 7, 0]}
-        angle={0.5}
-        penumbra={0.8}
-        intensity={4}
-        distance={20}
-        color="#ffff00"
-      />
-
-      {/* ============= FLOOR LIGHTS (SPILLING OUTSIDE) ============= */}
-      <group ref={floorLightRef}>
-        {Array.from({ length: 8 }).map((_, idx) => {
-          const angle = (idx / 8) * Math.PI * 2
-          const radius = 6
-          const x = Math.cos(angle) * radius
-          const z = Math.sin(angle) * radius
-          return (
-            <mesh key={`floor-light-${idx}`} position={[x, 0.05, z]}>
-              <cylinderGeometry args={[0.3, 0.3, 0.1, 12]} />
-              <meshStandardMaterial
-                color="#ff00ff"
-                emissive="#ff00ff"
-                emissiveIntensity={1}
-              />
-            </mesh>
-          )
-        })}
-      </group>
+      {/* Disco ball, spotlights and floor lights removed for performance */}
 
       {/* ============= VELVET ROPE QUEUE ============= */}
       {/* Queue posts */}
@@ -214,22 +107,7 @@ export function DiscoBuilding({ position, playerPosition, onEnter }: DiscoBuildi
         </mesh>
       ))}
 
-      {/* Side windows with light spill */}
-      {[-3, 0, 3].map((z) => (
-        <group key={`side-window-${z}`}>
-          <mesh position={[5.1, 3, z]}>
-            <planeGeometry args={[1.5, 2]} />
-            <meshStandardMaterial
-              color="#ff00ff"
-              emissive="#ff00ff"
-              emissiveIntensity={0.6}
-              metalness={0.7}
-              roughness={0.2}
-            />
-          </mesh>
-          <pointLight position={[6, 3, z]} intensity={1} distance={5} color="#ff00ff" />
-        </group>
-      ))}
+      {/* Side windows removed for performance */}
 
       {/* ============= ENTRANCE ============= */}
       {/* Door with neon frame */}
@@ -287,22 +165,11 @@ export function DiscoBuilding({ position, playerPosition, onEnter }: DiscoBuildi
         />
       </mesh>
 
-      {/* Original neon sign */}
-      <mesh position={[0, 7, 0]}>
-        <boxGeometry args={[8, 0.6, 0.3]} />
-        <meshStandardMaterial
-          color="#ff00ff"
-          emissive="#ff00ff"
-          emissiveIntensity={2}
-          roughness={0.2}
-          metalness={0.6}
-        />
-      </mesh>
-      <pointLight position={[0, 7, 0]} intensity={3} distance={12} color="#ff00ff" />
+      {/* Original neon sign removed for performance */}
 
       {/* Entry button visible when nearby */}
       {isNearby && (
-        <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
+        <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
           <button
             onClick={onEnter}
             className="bg-pink-600/90 backdrop-blur-sm hover:bg-pink-700 text-white px-4 py-2 rounded-lg shadow-2xl text-sm font-bold transition-all hover:scale-110 border-2 border-white/30 flex items-center gap-2"

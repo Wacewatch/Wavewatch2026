@@ -1,9 +1,7 @@
 "use client"
 
-import { useRef, useMemo } from "react"
+import { useMemo } from "react"
 import { Html, Text } from "@react-three/drei"
-import { useFrame } from "@react-three/fiber"
-import * as THREE from "three"
 import { DEFAULT_SPAWN_POSITION } from "../constants"
 
 interface StadiumBuildingProps {
@@ -26,26 +24,7 @@ export function StadiumBuilding({ position, playerPosition, onEnter }: StadiumBu
   )
   const isNearby = distanceToBuilding < 8
 
-  // Refs for animated elements
-  const screenRef = useRef<THREE.Mesh>(null)
-  const scoreLightRef = useRef<THREE.PointLight>(null)
-
-  useFrame((state) => {
-    const time = state.clock.elapsedTime
-
-    // Giant screen color cycling (simulating match highlights)
-    if (screenRef.current) {
-      const mat = screenRef.current.material as THREE.MeshStandardMaterial
-      const hue = (time * 0.1) % 1
-      mat.emissive.setHSL(hue, 0.8, 0.3)
-      mat.emissiveIntensity = 0.8 + Math.sin(time * 4) * 0.2
-    }
-
-    // Pulsing score light
-    if (scoreLightRef.current) {
-      scoreLightRef.current.intensity = 2 + Math.sin(time * 5) * 0.5
-    }
-  })
+  // Animated effects removed for performance
 
   return (
     <group position={position}>
@@ -62,37 +41,26 @@ export function StadiumBuilding({ position, playerPosition, onEnter }: StadiumBu
       </mesh>
 
       {/* ============= GIANT OUTDOOR SCREENS ============= */}
-      {/* Main screen on front */}
+      {/* Main screen on front - static neutral screen */}
       <group position={[0, 5.5, 5.3]}>
         {/* Screen frame */}
         <mesh>
           <boxGeometry args={[6, 3, 0.3]} />
           <meshStandardMaterial color="#1a1a1a" roughness={0.8} metalness={0.3} />
         </mesh>
-        {/* Screen display */}
-        <mesh ref={screenRef} position={[0, 0, 0.2]}>
+        {/* Screen display - neutral dark color */}
+        <mesh position={[0, 0, 0.2]}>
           <planeGeometry args={[5.6, 2.7]} />
           <meshStandardMaterial
-            color="#00ff00"
-            emissive="#00ff00"
-            emissiveIntensity={0.8}
-            roughness={0.3}
+            color="#1e293b"
+            emissive="#1e293b"
+            emissiveIntensity={0.3}
+            roughness={0.5}
           />
         </mesh>
-        {/* "LIVE" text */}
-        <Text
-          position={[-2, 1.1, 0.25]}
-          fontSize={0.25}
-          color="#ff0000"
-          anchorX="left"
-          anchorY="middle"
-        >
-          ● LIVE
-        </Text>
-        <pointLight ref={scoreLightRef} position={[0, 0, 1]} intensity={2} distance={8} color="#ffffff" />
       </group>
 
-      {/* Side screen */}
+      {/* Side screen - neutral */}
       <group position={[6.3, 5, 0]} rotation={[0, -Math.PI / 2, 0]}>
         <mesh>
           <boxGeometry args={[4, 2.5, 0.2]} />
@@ -101,10 +69,10 @@ export function StadiumBuilding({ position, playerPosition, onEnter }: StadiumBu
         <mesh position={[0, 0, 0.15]}>
           <planeGeometry args={[3.7, 2.2]} />
           <meshStandardMaterial
-            color="#22ff22"
-            emissive="#22ff22"
-            emissiveIntensity={0.6}
-            roughness={0.3}
+            color="#1e293b"
+            emissive="#1e293b"
+            emissiveIntensity={0.3}
+            roughness={0.5}
           />
         </mesh>
       </group>
@@ -176,22 +144,11 @@ export function StadiumBuilding({ position, playerPosition, onEnter }: StadiumBu
         <meshStandardMaterial color="#4a4a4a" roughness={0.9} metalness={0} />
       </mesh>
 
-      {/* Main roof sign light */}
-      <mesh position={[0, 8, 0]}>
-        <boxGeometry args={[10, 0.6, 0.3]} />
-        <meshStandardMaterial
-          color="#fbbf24"
-          emissive="#fbbf24"
-          emissiveIntensity={1.5}
-          roughness={0.3}
-          metalness={0.5}
-        />
-      </mesh>
-      <pointLight position={[0, 8, 0]} intensity={2} distance={12} color="#fbbf24" />
+      {/* Main roof sign light removed for performance */}
 
       {/* Entry button visible when nearby */}
       {isNearby && (
-        <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
+        <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
           <button
             onClick={onEnter}
             className="bg-green-600/90 backdrop-blur-sm hover:bg-green-700 text-white px-4 py-2 rounded-lg shadow-2xl text-sm font-bold transition-all hover:scale-110 border-2 border-white/30 flex items-center gap-2"

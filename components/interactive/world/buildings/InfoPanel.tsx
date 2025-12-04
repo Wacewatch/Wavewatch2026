@@ -102,7 +102,7 @@ export function InfoPanel({ position, isNearby, showButton = true, onInteract }:
 
       {/* Bouton d'interaction visible quand proche et que la map n'est pas ouverte */}
       {isNearby && showButton && (
-        <Html position={[0, 3.2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
+        <Html position={[0, 3.2, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
           <button
             onClick={onInteract}
             className="bg-blue-600/90 backdrop-blur-sm hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-2xl text-sm font-bold transition-all hover:scale-110 border-2 border-white/30 flex items-center gap-2"

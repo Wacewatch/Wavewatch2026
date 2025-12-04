@@ -94,15 +94,7 @@ export function AmbientLamppost({
         color={color}
       />
 
-      {/* Ground light reflection (subtle) */}
-      <mesh position={[0.7, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[2, 16]} />
-        <meshStandardMaterial
-          color={color}
-          transparent
-          opacity={isNight ? 0.15 : 0.05}
-        />
-      </mesh>
+      {/* Ground light reflection removed for performance */}
     </group>
   )
 }
