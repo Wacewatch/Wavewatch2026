@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 
 const supabase = createClient()
@@ -41,6 +41,35 @@ interface UseCinemaSeatsProps {
   setCinemaSeats: (seats: CinemaSeat[]) => void
 }
 
+// Helper to calculate seat positions
+function calculateSeatPositions(seats: any[]): CinemaSeat[] {
+  if (!seats || seats.length === 0) return []
+
+  const seatsByRow: Record<number, any[]> = {}
+  seats.forEach(seat => {
+    if (!seatsByRow[seat.row_number]) seatsByRow[seat.row_number] = []
+    seatsByRow[seat.row_number].push(seat)
+  })
+
+  const maxSeatsInAnyRow = Math.max(...Object.values(seatsByRow).map(row => row.length))
+  const seatSpacing = 1.2
+  const rowSpacing = 1.8
+
+  return seats.map((seat) => {
+    const seatsInThisRow = seatsByRow[seat.row_number].length
+    const seatIndexInRow = seatsByRow[seat.row_number].findIndex(s => s.id === seat.id)
+    const rowOffset = (maxSeatsInAnyRow - seatsInThisRow) / 2
+
+    return {
+      ...seat,
+      position_x: (seatIndexInRow + rowOffset - maxSeatsInAnyRow / 2 + 0.5) * seatSpacing,
+      position_y: 0.4,
+      position_z: (seat.row_number - 1) * rowSpacing + 2,
+      is_occupied: !!seat.user_id,
+    }
+  })
+}
+
 export function useCinemaSeats({
   userId,
   currentCinemaRoom,
@@ -50,6 +79,19 @@ export function useCinemaSeats({
   setMySeat,
   setCinemaSeats,
 }: UseCinemaSeatsProps) {
+  // Refs to avoid stale closures in callbacks
+  const mySeatRef = useRef(mySeat)
+  const currentCinemaRoomRef = useRef(currentCinemaRoom)
+
+  // Keep refs in sync
+  useEffect(() => {
+    mySeatRef.current = mySeat
+  }, [mySeat])
+
+  useEffect(() => {
+    currentCinemaRoomRef.current = currentCinemaRoom
+  }, [currentCinemaRoom])
+
   // Load seats for current cinema room
   const loadSeats = useCallback(async () => {
     if (!currentCinemaRoom) return
@@ -70,32 +112,7 @@ export function useCinemaSeats({
       return
     }
 
-    // Group seats by row to find how many seats per row
-    const seatsByRow: Record<number, any[]> = {}
-    data.forEach(seat => {
-      if (!seatsByRow[seat.row_number]) seatsByRow[seat.row_number] = []
-      seatsByRow[seat.row_number].push(seat)
-    })
-
-    const maxSeatsInAnyRow = Math.max(...Object.values(seatsByRow).map(row => row.length))
-    const seatSpacing = 1.2
-    const rowSpacing = 1.8
-
-    // Add display positions to database seats
-    const seatsWithPositions = data.map((seat) => {
-      const seatsInThisRow = seatsByRow[seat.row_number].length
-      const seatIndexInRow = seatsByRow[seat.row_number].findIndex(s => s.id === seat.id)
-      const rowOffset = (maxSeatsInAnyRow - seatsInThisRow) / 2
-
-      return {
-        ...seat,
-        position_x: (seatIndexInRow + rowOffset - maxSeatsInAnyRow / 2 + 0.5) * seatSpacing,
-        position_y: 0.4,
-        position_z: (seat.row_number - 1) * rowSpacing + 2,
-        is_occupied: !!seat.user_id,
-      }
-    })
-    setCinemaSeats(seatsWithPositions)
+    setCinemaSeats(calculateSeatPositions(data))
   }, [currentCinemaRoom, setCinemaSeats])
 
   // Subscribe to seat changes
@@ -161,57 +178,123 @@ export function useCinemaSeats({
     cleanupAbandonedSeats()
   }, [currentCinemaRoom])
 
-  // Sit in any available seat
+  // Sit in any available seat - fetches fresh data from DB to avoid race conditions
   const handleSitInAnySeat = useCallback(async () => {
-    if (!currentCinemaRoom) return
+    const room = currentCinemaRoomRef.current
+    if (!room) return
 
-    // Find first available seat
-    const availableSeat = cinemaSeats.find((s) => !s.is_occupied)
+    // Fetch fresh seat data directly from DB to avoid stale state
+    const { data: freshSeats, error: fetchError } = await supabase
+      .from("interactive_cinema_seats")
+      .select("*")
+      .eq("room_id", room.id)
+      .is("user_id", null) // Only get unoccupied seats
+      .order("row_number", { ascending: true })
+      .order("seat_number", { ascending: true })
+      .limit(1)
 
-    if (!availableSeat) {
+    if (fetchError || !freshSeats || freshSeats.length === 0) {
+      console.error("No available seats or error:", fetchError)
       return
     }
 
-    const { error } = await supabase.from("interactive_cinema_seats").update({
-      user_id: userId,
-      is_occupied: true,
-      occupied_at: new Date().toISOString(),
-    }).eq("room_id", currentCinemaRoom.id).eq("row_number", availableSeat.row_number).eq("seat_number", availableSeat.seat_number)
+    const availableSeat = freshSeats[0]
 
-    if (!error) {
+    // Try to claim the seat atomically - only update if still unoccupied
+    const { data: updatedSeat, error } = await supabase
+      .from("interactive_cinema_seats")
+      .update({
+        user_id: userId,
+        is_occupied: true,
+        occupied_at: new Date().toISOString(),
+      })
+      .eq("room_id", room.id)
+      .eq("row_number", availableSeat.row_number)
+      .eq("seat_number", availableSeat.seat_number)
+      .is("user_id", null) // Only update if still unoccupied (atomic check)
+      .select()
+      .single()
+
+    if (error || !updatedSeat) {
+      // Seat was taken by someone else, try again
+      console.log("Seat was taken, retrying...")
+      // Reload seats and let user try again
+      loadSeats()
+      return
+    }
+
+    // Calculate position for the seat
+    const allSeats = await supabase
+      .from("interactive_cinema_seats")
+      .select("*")
+      .eq("room_id", room.id)
+      .order("row_number", { ascending: true })
+      .order("seat_number", { ascending: true })
+
+    const seatsWithPositions = calculateSeatPositions(allSeats.data || [])
+    const seatWithPosition = seatsWithPositions.find(
+      s => s.row_number === availableSeat.row_number && s.seat_number === availableSeat.seat_number
+    )
+
+    if (seatWithPosition) {
       setMySeat(availableSeat.row_number * 100 + availableSeat.seat_number)
-      setMyPosition({ x: availableSeat.position_x, y: availableSeat.position_y, z: availableSeat.position_z })
+      setMyPosition({
+        x: seatWithPosition.position_x,
+        y: seatWithPosition.position_y,
+        z: seatWithPosition.position_z
+      })
 
       await supabase
         .from("interactive_profiles")
         .update({
-          position_x: availableSeat.position_x,
-          position_y: availableSeat.position_y,
-          position_z: availableSeat.position_z,
+          position_x: seatWithPosition.position_x,
+          position_y: seatWithPosition.position_y,
+          position_z: seatWithPosition.position_z,
         })
         .eq("user_id", userId)
-    } else {
-      console.error("Error sitting:", error)
     }
-  }, [userId, currentCinemaRoom, cinemaSeats, setMyPosition, setMySeat])
+
+    // Refresh seat list for everyone
+    loadSeats()
+  }, [userId, setMyPosition, setMySeat, loadSeats])
 
   // Stand up from current seat
-  const handleSitInSeat = useCallback(async (seatId: number) => {
-    if (mySeat !== null && currentCinemaRoom) {
-      await supabase.from("interactive_cinema_seats").update({
-        user_id: null,
-        is_occupied: false,
-        occupied_at: null,
-      }).eq("room_id", currentCinemaRoom.id).eq("user_id", userId)
+  const handleStandUp = useCallback(() => {
+    // Use refs to get current values (avoids stale closure)
+    const currentMySeat = mySeatRef.current
+    const currentRoom = currentCinemaRoomRef.current
 
-      setMySeat(null)
-      setMyPosition({ x: 0, y: 0.5, z: 0 })
-    }
-  }, [userId, mySeat, currentCinemaRoom, setMyPosition, setMySeat])
+    if (currentMySeat === null || !currentRoom) return
+
+    // Use correct Y position for walking (-0.35)
+    const standPos = { x: 0, y: -0.35, z: 8 }
+
+    // IMPORTANT: Reset seat state FIRST to allow movement again
+    setMySeat(null)
+    setMyPosition(standPos)
+
+    // Update database asynchronously (don't block the state change)
+    supabase.from("interactive_cinema_seats").update({
+      user_id: null,
+      is_occupied: false,
+      occupied_at: null,
+    }).eq("room_id", currentRoom.id).eq("user_id", userId)
+      .then(() => {})
+
+    supabase
+      .from("interactive_profiles")
+      .update({
+        position_x: standPos.x,
+        position_y: standPos.y,
+        position_z: standPos.z,
+      })
+      .eq("user_id", userId)
+      .then(() => {})
+  }, [userId, setMyPosition, setMySeat])
 
   return {
     loadSeats,
     handleSitInAnySeat,
-    handleSitInSeat,
+    handleSitInSeat: handleStandUp, // Keep old name for compatibility
   }
 }

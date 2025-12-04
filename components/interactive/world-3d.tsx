@@ -1293,7 +1293,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         mySeat={mySeat}
         isCinemaMuted={isCinemaMuted}
         onSitCinema={handleSitInAnySeat}
-        onStandCinema={() => mySeat && handleSitInSeat(mySeat)}
+        onStandCinema={handleSitInSeat}
         onToggleCinemaMute={() => setIsCinemaMuted(!isCinemaMuted)}
         isDiscoMuted={isDiscoMuted}
         onToggleDiscoMute={() => setIsDiscoMuted(!isDiscoMuted)}

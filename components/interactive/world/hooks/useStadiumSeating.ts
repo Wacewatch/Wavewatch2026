@@ -123,10 +123,21 @@ export function useStadiumSeating({
   const handleStandUpFromStadium = useCallback(() => {
     if (!stadiumSeat) return
 
-    // Return to field
-    const standPos = { x: 0, y: 0.5, z: 0 }
+    // Return to field center with correct Y position for walking
+    const standPos = { x: 0, y: -0.35, z: 0 }
+
+    // IMPORTANT: Reset seat state FIRST to allow movement again
     setStadiumSeat(null)
     setMyPosition(standPos)
+    setMyRotation(0) // Face default direction
+
+    // Reset camera to follow player
+    if (orbitControlsRef.current) {
+      const controls = orbitControlsRef.current
+      controls.target.set(standPos.x, standPos.y + 1, standPos.z)
+      controls.object.position.set(standPos.x, standPos.y + 8, standPos.z + 12)
+      controls.update()
+    }
 
     supabase
       .from("interactive_profiles")
@@ -134,10 +145,11 @@ export function useStadiumSeating({
         position_x: standPos.x,
         position_y: standPos.y,
         position_z: standPos.z,
+        rotation: 0,
       })
       .eq("user_id", userId)
       .then(() => {})
-  }, [userId, stadiumSeat, setMyPosition, setStadiumSeat])
+  }, [userId, stadiumSeat, orbitControlsRef, setMyPosition, setMyRotation, setStadiumSeat])
 
   return {
     handleSitInStadium,
