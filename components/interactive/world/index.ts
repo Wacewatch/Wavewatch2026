@@ -28,7 +28,7 @@ export { MobileJoystick, CameraJoystick, CenterTouchZone, JoystickBlockZones } f
 export { ChatInput, SettingsModal, MapModal, AvatarCustomizer, CinemaModal, ClosedModal, ArcadeModal, ArcadeGameView, ExternalGameModal, StadiumModal, StadiumInfoBar, QuickActionsPanel, RoomActionButtons, ActionButtons, MenuDropdown, ChatModal, MovieFullscreenModal } from './ui'
 
 // Building components
-export { DiscoBuilding, CinemaBuilding, ArcadeBuilding, StadiumBuilding, DecorativeBuildings } from './buildings'
+export { DiscoBuilding, CinemaBuilding, ArcadeBuilding, StadiumBuilding, DecorativeBuildings, InfoPanel } from './buildings'
 
 // Scene components
 export { StadiumInterior, DiscoInterior, ArcadeInterior, CinemaInterior } from './scenes'

@@ -1,6 +1,10 @@
 "use client"
 
-import { Billboard, Html } from "@react-three/drei"
+import { useRef, useMemo } from "react"
+import { Html, Text } from "@react-three/drei"
+import { useFrame } from "@react-three/fiber"
+import * as THREE from "three"
+import { DEFAULT_SPAWN_POSITION } from "../constants"
 
 interface CinemaBuildingProps {
   position: [number, number, number]
@@ -10,48 +14,261 @@ interface CinemaBuildingProps {
 
 export function CinemaBuilding({ position, playerPosition, onEnter }: CinemaBuildingProps) {
   const [buildingX, , buildingZ] = position
+
+  // Calculate rotation to face spawn point
+  const signRotation = useMemo(() => {
+    const dx = DEFAULT_SPAWN_POSITION.x - buildingX
+    const dz = DEFAULT_SPAWN_POSITION.z - buildingZ
+    return Math.atan2(dx, dz)
+  }, [buildingX, buildingZ])
   const distanceToBuilding = Math.sqrt(
     Math.pow(playerPosition.x - buildingX, 2) + Math.pow(playerPosition.z - buildingZ, 2)
   )
   const isNearby = distanceToBuilding < 8
 
+  // Refs for animated elements
+  const projector1Ref = useRef<THREE.SpotLight>(null)
+  const projector2Ref = useRef<THREE.SpotLight>(null)
+  const poster1Ref = useRef<THREE.Mesh>(null)
+  const poster2Ref = useRef<THREE.Mesh>(null)
+
+  useFrame((state) => {
+    const time = state.clock.elapsedTime
+
+    // Sweeping projector lights
+    if (projector1Ref.current) {
+      projector1Ref.current.target.position.x = Math.sin(time * 0.5) * 10
+      projector1Ref.current.target.position.z = Math.cos(time * 0.5) * 10
+      projector1Ref.current.target.updateMatrixWorld()
+    }
+    if (projector2Ref.current) {
+      projector2Ref.current.target.position.x = Math.sin(time * 0.5 + Math.PI) * 10
+      projector2Ref.current.target.position.z = Math.cos(time * 0.5 + Math.PI) * 10
+      projector2Ref.current.target.updateMatrixWorld()
+    }
+
+    // Poster glow pulse
+    if (poster1Ref.current) {
+      const mat = poster1Ref.current.material as THREE.MeshStandardMaterial
+      mat.emissiveIntensity = 0.3 + Math.sin(time * 2) * 0.15
+    }
+    if (poster2Ref.current) {
+      const mat = poster2Ref.current.material as THREE.MeshStandardMaterial
+      mat.emissiveIntensity = 0.3 + Math.sin(time * 2 + 1) * 0.15
+    }
+  })
+
   return (
     <group position={position}>
+      {/* Main building */}
       <mesh position={[0, 2.5, 0]} castShadow>
         <boxGeometry args={[8, 5, 8]} />
         <meshStandardMaterial color="#1e3a8a" roughness={0.7} metalness={0.1} />
       </mesh>
 
+      {/* Building crown */}
       <mesh position={[0, 5.5, 0]} castShadow>
         <boxGeometry args={[8.5, 0.5, 8.5]} />
         <meshStandardMaterial color="#1e293b" roughness={0.6} metalness={0.2} />
       </mesh>
 
-      <mesh position={[0, 6, 0]}>
-        <boxGeometry args={[7, 0.8, 0.3]} />
-        <meshStandardMaterial
-          color="#fbbf24"
-          emissive="#fbbf24"
-          emissiveIntensity={1.5}
-          roughness={0.3}
-          metalness={0.5}
-        />
-      </mesh>
-      <pointLight position={[0, 6, 0]} intensity={2} distance={10} color="#fbbf24" />
+      {/* ============= CINEMA SIGN (FACING SPAWN) ============= */}
+      <group position={[0, 6.5, 0]} rotation={[0, signRotation, 0]}>
+        <group position={[0, 0, 4.5]}>
+          {/* Main marquee board */}
+          <mesh>
+            <boxGeometry args={[5, 1.5, 0.3]} />
+            <meshStandardMaterial color="#1a1a1a" roughness={0.8} metalness={0.2} />
+          </mesh>
 
-      {/* Building name - always visible and clickable */}
-      <Billboard follow={true} lockX={false} lockY={false} lockZ={false}>
-        <Html position={[0, 7, 0]} center zIndexRange={[0, 0]}>
-          <button
-            onClick={onEnter}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl shadow-2xl font-bold text-lg flex items-center gap-2 transition-all cursor-pointer hover:scale-105 pointer-events-auto whitespace-nowrap"
+          {/* CINEMA text */}
+          <Text
+            position={[0, 0, 0.2]}
+            fontSize={0.7}
+            color="#ffd700"
+            anchorX="center"
+            anchorY="middle"
           >
-            cinema
-          </button>
-        </Html>
-      </Billboard>
+            CINEMA
+          </Text>
 
-      {/* Windows */}
+          {/* Static lights around marquee */}
+          {Array.from({ length: 14 }).map((_, i) => {
+            const isTop = i < 5
+            const isBottom = i >= 5 && i < 10
+            const isLeft = i >= 10 && i < 12
+            const isRight = i >= 12
+
+            let x = 0, y = 0
+            if (isTop) {
+              x = (i - 2) * 0.5
+              y = 0.6
+            } else if (isBottom) {
+              x = ((i - 5) - 2) * 0.5
+              y = -0.6
+            } else if (isLeft) {
+              x = -2.2
+              y = ((i - 10) - 0.5) * 0.5
+            } else if (isRight) {
+              x = 2.2
+              y = ((i - 12) - 0.5) * 0.5
+            }
+
+            return (
+              <mesh key={`marquee-light-${i}`} position={[x, y, 0.18]}>
+                <sphereGeometry args={[0.06, 8, 8]} />
+                <meshStandardMaterial
+                  color="#ffff00"
+                  emissive="#ffff00"
+                  emissiveIntensity={1}
+                />
+              </mesh>
+            )
+          })}
+        </group>
+      </group>
+
+      {/* ============= RED CARPET ENTRANCE ============= */}
+      {/* Long red carpet */}
+      <mesh position={[-6, 0.02, -2]} rotation={[0, 0, 0]}>
+        <boxGeometry args={[5, 0.04, 2.5]} />
+        <meshStandardMaterial color="#8b0000" roughness={0.9} metalness={0} />
+      </mesh>
+      {/* Carpet leading to door */}
+      <mesh position={[-4.5, 0.02, -2]} rotation={[0, 0, 0]}>
+        <boxGeometry args={[0.8, 0.04, 2.5]} />
+        <meshStandardMaterial color="#8b0000" roughness={0.9} metalness={0} />
+      </mesh>
+
+      {/* Velvet rope posts */}
+      {[[-7, -0.8], [-7, -3.2], [-5, -0.8], [-5, -3.2]].map(([x, z], idx) => (
+        <group key={`rope-post-${idx}`} position={[x, 0, z]}>
+          {/* Gold post */}
+          <mesh position={[0, 0.5, 0]}>
+            <cylinderGeometry args={[0.06, 0.08, 1, 12]} />
+            <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
+          </mesh>
+          {/* Top sphere */}
+          <mesh position={[0, 1.05, 0]}>
+            <sphereGeometry args={[0.1, 12, 12]} />
+            <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Velvet ropes (simplified as cylinders) */}
+      <mesh position={[-6, 0.7, -0.8]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.03, 0.03, 2, 8]} />
+        <meshStandardMaterial color="#800020" roughness={0.8} metalness={0.1} />
+      </mesh>
+      <mesh position={[-6, 0.7, -3.2]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.03, 0.03, 2, 8]} />
+        <meshStandardMaterial color="#800020" roughness={0.8} metalness={0.1} />
+      </mesh>
+
+      {/* ============= MOVIE POSTERS ============= */}
+      {/* Poster frames on front wall */}
+      <group position={[2.5, 3, 4.15]}>
+        {/* Poster frame */}
+        <mesh>
+          <boxGeometry args={[1.6, 2.4, 0.1]} />
+          <meshStandardMaterial color="#2a2a2a" roughness={0.6} metalness={0.3} />
+        </mesh>
+        {/* Poster content (glowing) */}
+        <mesh ref={poster1Ref} position={[0, 0, 0.06]}>
+          <planeGeometry args={[1.4, 2.2]} />
+          <meshStandardMaterial
+            color="#ff6b6b"
+            emissive="#ff6b6b"
+            emissiveIntensity={0.3}
+            roughness={0.5}
+          />
+        </mesh>
+        {/* Poster light */}
+        <pointLight position={[0, 0, 0.5]} intensity={0.5} distance={3} color="#ffffff" />
+      </group>
+
+      <group position={[-2.5, 3, 4.15]}>
+        {/* Poster frame */}
+        <mesh>
+          <boxGeometry args={[1.6, 2.4, 0.1]} />
+          <meshStandardMaterial color="#2a2a2a" roughness={0.6} metalness={0.3} />
+        </mesh>
+        {/* Poster content (glowing) */}
+        <mesh ref={poster2Ref} position={[0, 0, 0.06]}>
+          <planeGeometry args={[1.4, 2.2]} />
+          <meshStandardMaterial
+            color="#4ecdc4"
+            emissive="#4ecdc4"
+            emissiveIntensity={0.3}
+            roughness={0.5}
+          />
+        </mesh>
+        {/* Poster light */}
+        <pointLight position={[0, 0, 0.5]} intensity={0.5} distance={3} color="#ffffff" />
+      </group>
+
+      {/* ============= PROJECTOR SPOTLIGHTS ============= */}
+      {/* Left projector */}
+      <group position={[-3.5, 5.8, 0]}>
+        <mesh rotation={[0, 0, Math.PI / 4]}>
+          <cylinderGeometry args={[0.15, 0.25, 0.5, 12]} />
+          <meshStandardMaterial color="#333333" metalness={0.8} roughness={0.2} />
+        </mesh>
+        <spotLight
+          ref={projector1Ref}
+          position={[0, 0, 0]}
+          angle={0.3}
+          penumbra={0.5}
+          intensity={3}
+          distance={25}
+          color="#ffffee"
+          castShadow
+        />
+      </group>
+
+      {/* Right projector */}
+      <group position={[3.5, 5.8, 0]}>
+        <mesh rotation={[0, 0, -Math.PI / 4]}>
+          <cylinderGeometry args={[0.15, 0.25, 0.5, 12]} />
+          <meshStandardMaterial color="#333333" metalness={0.8} roughness={0.2} />
+        </mesh>
+        <spotLight
+          ref={projector2Ref}
+          position={[0, 0, 0]}
+          angle={0.3}
+          penumbra={0.5}
+          intensity={3}
+          distance={25}
+          color="#ffffee"
+          castShadow
+        />
+      </group>
+
+      {/* ============= ENTRANCE ============= */}
+      {/* Door */}
+      <mesh position={[-4.1, 1.5, -2]} castShadow rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[2, 3, 0.1]} />
+        <meshStandardMaterial color="#4a1010" roughness={0.7} metalness={0.1} />
+      </mesh>
+      {/* Door frame - golden */}
+      <mesh position={[-4.15, 1.5, -2]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[2.3, 3.3, 0.05]} />
+        <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.2} />
+      </mesh>
+      {/* Door handle */}
+      <mesh position={[-4.2, 1.2, -1.5]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
+        <meshStandardMaterial color="#ffd700" metalness={0.9} roughness={0.1} />
+      </mesh>
+
+      {/* Entrance steps */}
+      <mesh position={[-5, 0.1, -2]}>
+        <boxGeometry args={[1.5, 0.2, 2.5]} />
+        <meshStandardMaterial color="#4a4a4a" roughness={0.9} metalness={0} />
+      </mesh>
+
+      {/* ============= DECORATIVE WINDOWS ============= */}
       {[-2, 0, 2].map((x) => (
         <mesh key={`window-${x}`} position={[x, 3, 4.1]}>
           <planeGeometry args={[1.5, 1.8]} />
@@ -65,36 +282,27 @@ export function CinemaBuilding({ position, playerPosition, onEnter }: CinemaBuil
         </mesh>
       ))}
 
-      {/* Door - west side facing the path from plaza */}
-      <mesh position={[-4.1, 1.5, -2]} castShadow rotation={[0, Math.PI / 2, 0]}>
-        <boxGeometry args={[2, 3, 0.1]} />
-        <meshStandardMaterial color="#7c2d12" roughness={0.8} metalness={0.1} />
+      {/* Main neon sign */}
+      <mesh position={[0, 6, 0]}>
+        <boxGeometry args={[7, 0.8, 0.3]} />
+        <meshStandardMaterial
+          color="#fbbf24"
+          emissive="#fbbf24"
+          emissiveIntensity={1.5}
+          roughness={0.3}
+          metalness={0.5}
+        />
       </mesh>
-      {/* Door frame */}
-      <mesh position={[-4.15, 1.5, -2]} rotation={[0, Math.PI / 2, 0]}>
-        <boxGeometry args={[2.3, 3.3, 0.05]} />
-        <meshStandardMaterial color="#1e293b" roughness={0.5} metalness={0.4} />
-      </mesh>
-      {/* Door handle */}
-      <mesh position={[-4.2, 1.2, -1.5]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
-        <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
-      </mesh>
-
-      {/* Entrance steps */}
-      <mesh position={[-5, 0.1, -2]}>
-        <boxGeometry args={[1.5, 0.2, 2.5]} />
-        <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
-      </mesh>
+      <pointLight position={[0, 6, 0]} intensity={2} distance={10} color="#fbbf24" />
 
       {/* Entry button visible when nearby */}
       {isNearby && (
         <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>
           <button
             onClick={onEnter}
-            className="bg-blue-600/90 backdrop-blur-sm hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-2xl text-base font-bold transition-all hover:scale-110 border-2 border-white/30 flex items-center gap-2"
+            className="bg-blue-600/90 backdrop-blur-sm hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-2xl text-sm font-bold transition-all hover:scale-110 border-2 border-white/30 flex items-center gap-2"
           >
-            Entrer <kbd className="bg-white/20 px-2 py-0.5 rounded text-sm">F</kbd>
+            Entrer <kbd className="bg-white/20 px-1.5 py-0.5 rounded text-xs">F</kbd>
           </button>
         </Html>
       )}

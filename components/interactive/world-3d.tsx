@@ -19,6 +19,7 @@ import { useRouter } from "next/navigation"
 import {
   // Constants (used by collision debug visualization)
   getCollisionZonesForQuality,
+  getGraphicsConfig,
   // Types
   type GraphicsQuality,
   // Components
@@ -60,6 +61,7 @@ import {
   ArcadeBuilding,
   StadiumBuilding,
   DecorativeBuildings,
+  InfoPanel,
   // Scene Components
   StadiumInterior,
   DiscoInterior,
@@ -147,6 +149,7 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
   const [currentRoom, setCurrentRoom] = useState<string | null>(null)
   const [nearbyBuilding, setNearbyBuilding] = useState<{ name: string; type: string; emoji: string } | null>(null)
+  const [nearbyInfoPanel, setNearbyInfoPanel] = useState(false) // Panneau info près du spawn
 
   // États d'ouverture des lieux - fournis par useDataLoaders
   // isArcadeOpen, isStadiumOpen, isDiscoOpen, setIsArcadeOpen, setIsStadiumOpen, setIsDiscoOpen
@@ -662,11 +665,18 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     }
   }
 
-  // Gestion des touches F ou Enter pour entrer dans les bâtiments
+  // Gestion des touches F ou Enter pour entrer dans les bâtiments ou ouvrir la map
   useEffect(() => {
     const handleInteractKey = (e: KeyboardEvent) => {
-      if ((e.key === "f" || e.key === "F" || e.key === "Enter") && nearbyBuilding && currentRoom === null) {
-        handleEnterBuilding()
+      if ((e.key === "f" || e.key === "F" || e.key === "Enter") && currentRoom === null && !showChatInput) {
+        // Si près d'un bâtiment interactif, entrer dedans
+        if (nearbyBuilding) {
+          handleEnterBuilding()
+        }
+        // Si près du panneau info (près du spawn), ouvrir la map
+        else if (nearbyInfoPanel && !showMap) {
+          setShowMap(true)
+        }
       }
     }
 
@@ -675,12 +685,13 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     return () => {
       window.removeEventListener("keydown", handleInteractKey)
     }
-  }, [nearbyBuilding, currentRoom])
+  }, [nearbyBuilding, nearbyInfoPanel, currentRoom, showMap, showChatInput])
 
-  // Détecter la proximité des bâtiments
+  // Détecter la proximité des bâtiments et du panneau info
   useEffect(() => {
     if (currentRoom !== null) {
       setNearbyBuilding(null)
+      setNearbyInfoPanel(false)
       return
     }
 
@@ -688,19 +699,28 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     const distanceToCinema = Math.sqrt(Math.pow(myPosition.x - 15, 2) + Math.pow(myPosition.z - 0, 2))
     const distanceToStadium = Math.sqrt(Math.pow(myPosition.x - 25, 2) + Math.pow(myPosition.z - (-15), 2))
     const distanceToDisco = Math.sqrt(Math.pow(myPosition.x - (-15), 2) + Math.pow(myPosition.z - (-20), 2))
+    // Panneau info près de la plaza (position: 6.3, -17.1)
+    const distanceToInfoPanel = Math.sqrt(Math.pow(myPosition.x - 6.3, 2) + Math.pow(myPosition.z - (-17.1), 2))
 
     const proximityThreshold = 8
+    const infoPanelThreshold = 5
 
     if (distanceToArcade < proximityThreshold) {
       setNearbyBuilding({ name: "Arcade", type: "arcade", emoji: "🕹️" })
+      setNearbyInfoPanel(false)
     } else if (distanceToCinema < proximityThreshold) {
       setNearbyBuilding({ name: "Cinéma", type: "cinema", emoji: "🎬" })
+      setNearbyInfoPanel(false)
     } else if (distanceToStadium < proximityThreshold) {
       setNearbyBuilding({ name: "Stade", type: "stadium", emoji: "⚽" })
+      setNearbyInfoPanel(false)
     } else if (distanceToDisco < proximityThreshold) {
       setNearbyBuilding({ name: "Discothèque", type: "disco", emoji: "🪩" })
+      setNearbyInfoPanel(false)
     } else {
       setNearbyBuilding(null)
+      // Vérifier si près du panneau info
+      setNearbyInfoPanel(distanceToInfoPanel < infoPanelThreshold)
     }
   }, [myPosition, currentRoom])
 
@@ -881,11 +901,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
         // Pass povMode to camera
         camera={povMode ? undefined : { position: [0, 8, -12], fov: 60 }}
         style={{ width: "100vw", height: "100vh" }}
-        shadows
+        shadows={getGraphicsConfig(graphicsQuality as GraphicsQuality).shadows}
         gl={{
-          antialias: graphicsQuality !== "low",
+          antialias: getGraphicsConfig(graphicsQuality as GraphicsQuality).antialias,
           alpha: false,
-          powerPreference: graphicsQuality === "high" ? "high-performance" : "default",
+          powerPreference: getGraphicsConfig(graphicsQuality as GraphicsQuality).powerPreference,
         }}
       >
         {/* FPS Stats - only in development mode */}
@@ -934,6 +954,14 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
 
             {/* Decorative buildings (non-interactive) */}
             <DecorativeBuildings />
+
+            {/* Panneau info près de la plaza pour ouvrir la map */}
+            <InfoPanel
+              position={[6.3, 0, -17.1]}
+              isNearby={nearbyInfoPanel}
+              showButton={!showMap}
+              onInteract={() => setShowMap(true)}
+            />
 
             {/* Discothèque Building */}
             <DiscoBuilding

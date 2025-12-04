@@ -1,6 +1,6 @@
 "use client"
 
-import { Settings, X } from "lucide-react"
+import { Settings, X, Zap, Gauge, Sparkles } from "lucide-react"
 
 interface SettingsModalProps {
   controlMode: "auto" | "pc" | "mobile"
@@ -15,6 +15,36 @@ interface SettingsModalProps {
   setShowCollisionDebug: (value: boolean) => void
   onClose: () => void
 }
+
+const qualityOptions = [
+  {
+    value: "low",
+    label: "Basse",
+    icon: Zap,
+    color: "text-green-400",
+    bgColor: "bg-green-500/20",
+    borderColor: "border-green-500/50",
+    description: "Performances max, sans ombres ni brouillard",
+  },
+  {
+    value: "medium",
+    label: "Moyenne",
+    icon: Gauge,
+    color: "text-yellow-400",
+    bgColor: "bg-yellow-500/20",
+    borderColor: "border-yellow-500/50",
+    description: "Equilibre, sans ombres mais avec effets",
+  },
+  {
+    value: "high",
+    label: "Haute",
+    icon: Sparkles,
+    color: "text-purple-400",
+    bgColor: "bg-purple-500/20",
+    borderColor: "border-purple-500/50",
+    description: "Qualite max avec ombres et tous les effets",
+  },
+]
 
 export function SettingsModal({
   controlMode,
@@ -60,16 +90,37 @@ export function SettingsModal({
           </div>
 
           <div>
-            <label className="text-white font-medium block mb-2">Qualité Graphique</label>
-            <select
-              value={graphicsQuality}
-              onChange={(e) => setGraphicsQuality(e.target.value)}
-              className="w-full bg-gray-700 text-white px-4 py-2 rounded-lg border border-gray-600 focus:border-blue-500 outline-none"
-            >
-              <option value="low">Basse</option>
-              <option value="medium">Moyenne</option>
-              <option value="high">Haute</option>
-            </select>
+            <label className="text-white font-medium block mb-3">Qualite Graphique</label>
+            <div className="space-y-2">
+              {qualityOptions.map((option) => {
+                const Icon = option.icon
+                const isSelected = graphicsQuality === option.value
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => setGraphicsQuality(option.value)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg border-2 transition-all ${
+                      isSelected
+                        ? `${option.bgColor} ${option.borderColor}`
+                        : "bg-gray-700/50 border-gray-600 hover:border-gray-500"
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg ${isSelected ? option.bgColor : "bg-gray-600"}`}>
+                      <Icon className={`w-5 h-5 ${isSelected ? option.color : "text-gray-400"}`} />
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className={`font-medium ${isSelected ? option.color : "text-white"}`}>
+                        {option.label}
+                      </div>
+                      <div className="text-xs text-gray-400">{option.description}</div>
+                    </div>
+                    {isSelected && (
+                      <div className={`w-3 h-3 rounded-full ${option.color.replace("text-", "bg-")}`} />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           <div className="flex items-center justify-between">

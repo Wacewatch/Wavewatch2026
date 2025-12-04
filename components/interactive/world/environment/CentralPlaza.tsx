@@ -247,30 +247,6 @@ export function CentralPlaza({ worldMode, graphicsQuality }: CentralPlazaProps) 
           )
         })}
 
-      {/* ========== INFORMATION KIOSK / BILLBOARD ========== */}
-      {!isLowQuality && (
-        <group position={[6.3, 0, -12.1]} rotation={[0, Math.PI, 0]}>
-          {/* Kiosk base */}
-          <mesh position={[0, 1.2, 0]} castShadow>
-            <boxGeometry args={[0.15, 2.4, 0.15]} />
-            <meshStandardMaterial color="#27272a" roughness={0.3} metalness={0.8} />
-          </mesh>
-          {/* Sign board */}
-          <mesh position={[0, 2.2, 0.1]} castShadow>
-            <boxGeometry args={[1.8, 1.2, 0.1]} />
-            <meshStandardMaterial color="#1f2937" roughness={0.5} />
-          </mesh>
-          {/* Screen (glowing) */}
-          <mesh position={[0, 2.2, 0.16]}>
-            <planeGeometry args={[1.6, 1]} />
-            <meshStandardMaterial
-              color="#3b82f6"
-              emissive="#3b82f6"
-              emissiveIntensity={isNight ? 0.8 : 0.4}
-            />
-          </mesh>
-        </group>
-      )}
 
       {/* ========== SMALL DECORATIVE PLANTERS ========== */}
       {!isLowQuality &&

@@ -186,6 +186,55 @@ export const MAX_CHAT_MESSAGE_WIDTH = 200
 // ========== GRAPHICS QUALITY SETTINGS ==========
 export type GraphicsQuality = "low" | "medium" | "high"
 
+// Configuration détaillée pour chaque niveau de qualité
+export interface GraphicsQualityConfig {
+  shadows: boolean
+  shadowMapSize: number
+  antialias: boolean
+  maxPointLights: number
+  enableFog: boolean
+  enableParticles: boolean
+  enableAnimatedLights: boolean
+  powerPreference: "default" | "high-performance" | "low-power"
+}
+
+export const GRAPHICS_QUALITY_CONFIGS: Record<GraphicsQuality, GraphicsQualityConfig> = {
+  low: {
+    shadows: false,
+    shadowMapSize: 512,
+    antialias: false,
+    maxPointLights: 4,
+    enableFog: false,
+    enableParticles: false,
+    enableAnimatedLights: false,
+    powerPreference: "low-power",
+  },
+  medium: {
+    shadows: false,
+    shadowMapSize: 1024,
+    antialias: true,
+    maxPointLights: 8,
+    enableFog: true,
+    enableParticles: false,
+    enableAnimatedLights: true,
+    powerPreference: "default",
+  },
+  high: {
+    shadows: true,
+    shadowMapSize: 2048,
+    antialias: true,
+    maxPointLights: 16,
+    enableFog: true,
+    enableParticles: true,
+    enableAnimatedLights: true,
+    powerPreference: "high-performance",
+  },
+}
+
+export const getGraphicsConfig = (quality: GraphicsQuality): GraphicsQualityConfig => {
+  return GRAPHICS_QUALITY_CONFIGS[quality]
+}
+
 export const getCollisionZonesForQuality = (quality: GraphicsQuality): CollisionZone[] => {
   if (quality === "low") {
     return ALL_COLLISION_ZONES.filter(zone => !zone.lowQuality)
