@@ -65,19 +65,25 @@ export function CinemaBuilding({ position, playerPosition, onEnter }: CinemaBuil
         </mesh>
       ))}
 
-      {/* Door */}
-      <mesh position={[-3, 1.2, 4.1]} castShadow>
-        <boxGeometry args={[1.5, 2.4, 0.1]} />
+      {/* Door - west side facing the path from plaza */}
+      <mesh position={[-4.1, 1.5, -2]} castShadow rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[2, 3, 0.1]} />
         <meshStandardMaterial color="#7c2d12" roughness={0.8} metalness={0.1} />
       </mesh>
-      <mesh position={[-3, 1.2, 0]}>
+      {/* Door frame */}
+      <mesh position={[-4.15, 1.5, -2]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[2.3, 3.3, 0.05]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.5} metalness={0.4} />
+      </mesh>
+      {/* Door handle */}
+      <mesh position={[-4.2, 1.2, -1.5]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
         <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
       </mesh>
 
       {/* Entrance steps */}
-      <mesh position={[-3, 0.1, 5.5]}>
-        <boxGeometry args={[2, 0.2, 2]} />
+      <mesh position={[-5, 0.1, -2]}>
+        <boxGeometry args={[1.5, 0.2, 2.5]} />
         <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
       </mesh>
 

@@ -37,8 +37,8 @@ export function RealisticLamppost({ position }: RealisticLamppostProps) {
         />
       </mesh>
 
-      {/* Light */}
-      <pointLight position={[0, 4.6, 0.3]} intensity={3} distance={15} color="#fbbf24" castShadow />
+      {/* Light - no castShadow to avoid WebGL texture limit */}
+      <pointLight position={[0, 4.6, 0.3]} intensity={3} distance={15} color="#fbbf24" />
     </group>
   )
 }

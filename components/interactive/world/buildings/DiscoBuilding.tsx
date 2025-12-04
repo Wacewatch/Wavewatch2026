@@ -69,10 +69,25 @@ export function DiscoBuilding({ position, playerPosition, onEnter }: DiscoBuildi
         </mesh>
       ))}
 
-      {/* Door */}
-      <mesh position={[0, 1.2, 4.1]} castShadow>
-        <boxGeometry args={[2, 2.4, 0.1]} />
-        <meshStandardMaterial color="#1a1a1a" roughness={0.6} metalness={0.3} />
+      {/* Door - northeast side facing the path from plaza */}
+      <mesh position={[5.1, 1.5, 2]} castShadow rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[2, 3, 0.1]} />
+        <meshStandardMaterial color="#7c2d12" roughness={0.8} metalness={0.1} />
+      </mesh>
+      {/* Door frame */}
+      <mesh position={[5.15, 1.5, 2]} rotation={[0, Math.PI / 2, 0]}>
+        <boxGeometry args={[2.3, 3.3, 0.05]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.5} metalness={0.4} />
+      </mesh>
+      {/* Door handle */}
+      <mesh position={[5.2, 1.2, 2.5]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
+      </mesh>
+      {/* Entrance steps */}
+      <mesh position={[6, 0.1, 2]}>
+        <boxGeometry args={[1.5, 0.2, 2.5]} />
+        <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
       </mesh>
 
       {/* Building name - always visible and clickable */}

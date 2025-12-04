@@ -46,7 +46,7 @@ export const ALL_COLLISION_ZONES: CollisionZone[] = [
   // ========== ARBRES ==========
   // En mode low: seulement TREE_1 et TREE_4 sont visibles
   { id: "TREE_1", x: -24.1, z: -13.4, width: 2, depth: 2, label: "Arbre 1", color: "#166534", lowQuality: false },
-  { id: "TREE_2", x: -8, z: -18, width: 2, depth: 2, label: "Arbre 2", color: "#166534", lowQuality: true },
+  { id: "TREE_2", x: -6.1, z: -25.2, width: 2, depth: 2, label: "Arbre 2", color: "#166534", lowQuality: true },
   { id: "TREE_4", x: 15, z: -15, width: 2, depth: 2, label: "Arbre 4", color: "#166534", lowQuality: false },
   { id: "TREE_5", x: -18, z: 10, width: 2, depth: 2, label: "Arbre 5", color: "#166534", lowQuality: true },
   { id: "TREE_6", x: 18, z: 10, width: 2, depth: 2, label: "Arbre 6", color: "#166534", lowQuality: true },
@@ -63,8 +63,11 @@ export const ALL_COLLISION_ZONES: CollisionZone[] = [
   { id: "BENCH_1", x: -18, z: -12, width: 2, depth: 1, label: "Banc 1", color: "#8b4513", lowQuality: true },
   { id: "BENCH_3", x: -18, z: 12, width: 2, depth: 1, label: "Banc 3", color: "#8b4513", lowQuality: true },
 
-  // ========== FONTAINE (masquée en mode low) ==========
-  { id: "FOUNTAIN_1", x: -15, z: 0, width: 6, depth: 6, label: "Fontaine", color: "#0ea5e9", lowQuality: true },
+  // ========== FONTAINE CENTRALE (nouvelle place) ==========
+  { id: "FOUNTAIN_CENTRAL", x: 0, z: -5, width: 7, depth: 7, label: "Fontaine Centrale", color: "#60a5fa", lowQuality: false },
+
+  // ========== ANCIENNE FONTAINE (masquée - remplacée par place centrale) ==========
+  // { id: "FOUNTAIN_1", x: -15, z: 0, width: 6, depth: 6, label: "Fontaine", color: "#0ea5e9", lowQuality: true },
 
   // ========== BUISSONS (tous masqués en mode low) ==========
   { id: "BUSH_1", x: 5, z: -10, width: 2, depth: 2, label: "Buisson 1", color: "#4ade80", lowQuality: true },
@@ -101,7 +104,7 @@ export const TREE_POSITIONS_LOW_QUALITY: [number, number][] = [
 
 export const TREE_POSITIONS_FULL: [number, number][] = [
   [-24.1, -13.4],
-  [-8, -18],
+  [-6.1, -25.2],
   [15, -15],
   [-18, 10],
   [18, 10],

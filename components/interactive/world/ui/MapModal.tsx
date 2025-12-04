@@ -1,6 +1,6 @@
 "use client"
 
-import { Map, X, Building2, Gamepad2, Trophy, Music } from "lucide-react"
+import { Map, X, Building2, Gamepad2, Trophy, Music, Sparkles } from "lucide-react"
 
 interface MapModalProps {
   isArcadeOpen: boolean
@@ -10,6 +10,7 @@ interface MapModalProps {
   onEnterArcade: () => void
   onEnterStadium: () => void
   onEnterDisco: () => void
+  onTeleportToPlaza?: () => void
   onClose: () => void
 }
 
@@ -21,6 +22,7 @@ export function MapModal({
   onEnterArcade,
   onEnterStadium,
   onEnterDisco,
+  onTeleportToPlaza,
   onClose,
 }: MapModalProps) {
   return (
@@ -37,6 +39,25 @@ export function MapModal({
         </div>
 
         <div className="grid grid-cols-1 gap-4">
+          {/* Place Centrale - toujours accessible */}
+          {onTeleportToPlaza && (
+            <button
+              onClick={() => {
+                onTeleportToPlaza()
+                onClose()
+              }}
+              className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white p-4 md:p-6 rounded-xl transition-all transform hover:scale-105 shadow-lg flex items-center gap-4"
+            >
+              <div className="bg-white/20 p-3 md:p-4 rounded-lg">
+                <Sparkles className="w-6 h-6 md:w-8 md:h-8" />
+              </div>
+              <div className="text-left flex-1">
+                <div className="font-bold text-lg md:text-xl">⛲ Place Centrale</div>
+                <div className="text-xs md:text-sm opacity-90">Fontaine animée et point de rencontre</div>
+              </div>
+            </button>
+          )}
+
           {/* Cinéma - toujours cliquable pour voir les salles */}
           <button
             onClick={onOpenCinema}

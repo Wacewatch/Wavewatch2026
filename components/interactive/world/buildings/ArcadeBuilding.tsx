@@ -51,6 +51,27 @@ export function ArcadeBuilding({ position, playerPosition, onEnter }: ArcadeBuil
         </Html>
       </Billboard>
 
+      {/* Door - south side facing the path from plaza */}
+      <mesh position={[0, 1.5, -5.1]} castShadow>
+        <boxGeometry args={[2, 3, 0.1]} />
+        <meshStandardMaterial color="#7c2d12" roughness={0.8} metalness={0.1} />
+      </mesh>
+      {/* Door frame */}
+      <mesh position={[0, 1.5, -5.15]}>
+        <boxGeometry args={[2.3, 3.3, 0.05]} />
+        <meshStandardMaterial color="#1e293b" roughness={0.5} metalness={0.4} />
+      </mesh>
+      {/* Door handle */}
+      <mesh position={[0.5, 1.2, -5.2]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.05, 0.05, 0.2, 8]} />
+        <meshStandardMaterial color="#fbbf24" metalness={0.9} roughness={0.1} />
+      </mesh>
+      {/* Entrance steps */}
+      <mesh position={[0, 0.1, -6]}>
+        <boxGeometry args={[2.5, 0.2, 1.5]} />
+        <meshStandardMaterial color="#6b7280" roughness={0.9} metalness={0} />
+      </mesh>
+
       {/* Entry button visible when nearby */}
       {isNearby && (
         <Html position={[0, 2, 0]} center distanceFactor={10} zIndexRange={[100, 0]}>

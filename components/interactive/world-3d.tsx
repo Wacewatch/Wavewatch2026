@@ -29,6 +29,9 @@ import {
   WorldEnvironment,
   WorldGround,
   WorldDecorations,
+  CentralPlaza,
+  PathNetwork,
+  AmbientLamppostCollection,
   MobileJoystick,
   CameraJoystick,
   CenterTouchZone,
@@ -946,7 +949,16 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
               onEnter={() => setShowCinema(true)}
             />
 
-            {/* Decorations (trees, lampposts, benches, fountain, bushes) - extracted component */}
+            {/* Path Network - paved paths connecting buildings */}
+            <PathNetwork worldMode={worldSettings.worldMode} graphicsQuality={graphicsQuality as GraphicsQuality} />
+
+            {/* Central Plaza - animated fountain, benches, decorative lights */}
+            <CentralPlaza worldMode={worldSettings.worldMode} graphicsQuality={graphicsQuality as GraphicsQuality} />
+
+            {/* Ambient colored lampposts around the world */}
+            <AmbientLamppostCollection worldMode={worldSettings.worldMode} graphicsQuality={graphicsQuality as GraphicsQuality} />
+
+            {/* Decorations (trees, lampposts, benches, bushes) - extracted component */}
             <WorldDecorations worldMode={worldSettings.worldMode} graphicsQuality={graphicsQuality as GraphicsQuality} />
           </>
         ) : currentRoom === "arcade" ? (
@@ -1290,6 +1302,11 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
           onEnterDisco={() => {
             handleEnterDisco()
             setShowMap(false)
+          }}
+          onTeleportToPlaza={() => {
+            // Teleport to central plaza (0, -5)
+            setMyPosition({ x: 0, y: -0.35, z: -8 })
+            setMyRotation(0)
           }}
           onClose={() => setShowMap(false)}
         />

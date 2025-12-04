@@ -1,6 +1,6 @@
 "use client"
 
-import { RealisticTree, SnowyTree, ChristmasTree, RealisticLamppost } from "../environment"
+import { RealisticTree, SnowyTree, RealisticLamppost } from "../environment"
 import type { GraphicsQuality } from "../types"
 
 interface WorldDecorationsProps {
@@ -16,7 +16,7 @@ const LOW_QUALITY_TREES = [
 
 const NORMAL_QUALITY_TREES = [
   [-24.1, -13.4],
-  [-8, -18],
+  [-6.1, -25.2],
   [15, -15],
   [-18, 10],
   [18, 10],
@@ -68,13 +68,7 @@ export function WorldDecorations({ worldMode, graphicsQuality }: WorldDecoration
         )
       )}
 
-      {/* Christmas decorations - only in christmas mode */}
-      {isChristmas && (
-        <>
-          {/* Main Christmas tree in the center-south area */}
-          <ChristmasTree position={[0, 0, -8]} scale={1.5} />
-        </>
-      )}
+      {/* Christmas tree now displayed in CentralPlaza component */}
 
       {/* Lampposts */}
       {lampPositions.map(([x, z], i) => (
@@ -103,33 +97,7 @@ export function WorldDecorations({ worldMode, graphicsQuality }: WorldDecoration
           </group>
         ))}
 
-      {/* Fountain - only in medium/high quality */}
-      {!isLowQuality && (
-        <group position={[-15, 0, 0]}>
-          {/* Base */}
-          <mesh position={[0, 0.3, 0]} castShadow>
-            <cylinderGeometry args={[2, 2.5, 0.6, 16]} />
-            <meshStandardMaterial color="#6b7280" roughness={0.3} metalness={0.8} />
-          </mesh>
-          {/* Column */}
-          <mesh position={[0, 1, 0]}>
-            <cylinderGeometry args={[0.3, 0.3, 1.4, 8]} />
-            <meshStandardMaterial color="#94a3b8" roughness={0.2} metalness={0.9} />
-          </mesh>
-          {/* Top sphere */}
-          <mesh position={[0, 1.8, 0]}>
-            <sphereGeometry args={[0.4, 16, 16]} />
-            <meshStandardMaterial
-              color="#60a5fa"
-              emissive="#60a5fa"
-              emissiveIntensity={0.3}
-              transparent
-              opacity={0.7}
-            />
-          </mesh>
-          <pointLight position={[0, 2, 0]} intensity={1} distance={8} color="#60a5fa" />
-        </group>
-      )}
+      {/* Old Fountain removed - replaced by CentralPlaza component */}
 
       {/* Bushes - only in medium/high quality */}
       {!isLowQuality &&
