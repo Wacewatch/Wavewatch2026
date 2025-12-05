@@ -3,17 +3,19 @@ import { SoftwareDetails } from "@/components/software-details"
 import { notFound } from "next/navigation"
 
 interface SoftwarePageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function SoftwarePage({ params }: SoftwarePageProps) {
+  const { id } = await params
+
   try {
     const { data: software, error } = await supabase
       .from("software")
       .select("*")
-      .eq("id", Number.parseInt(params.id))
+      .eq("id", Number.parseInt(id))
       .eq("is_active", true)
       .single()
 

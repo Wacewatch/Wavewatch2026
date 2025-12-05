@@ -3,17 +3,19 @@ import { GameDetails } from "@/components/game-details"
 import { notFound } from "next/navigation"
 
 interface GamePageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function GamePage({ params }: GamePageProps) {
+  const { id } = await params
+
   try {
     const { data: game, error } = await supabase
       .from("games")
       .select("*")
-      .eq("id", Number.parseInt(params.id))
+      .eq("id", Number.parseInt(id))
       .eq("is_active", true)
       .single()
 

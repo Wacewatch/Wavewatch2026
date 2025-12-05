@@ -3,16 +3,18 @@ import { SeasonDetails } from "@/components/season-details"
 import { notFound } from "next/navigation"
 
 interface AnimeSeasonPageProps {
-  params: {
+  params: Promise<{
     id: string
     season: string
-  }
+  }>
 }
 
 export default async function AnimeSeasonPage({ params }: AnimeSeasonPageProps) {
+  const { id, season } = await params
+
   try {
-    const showId = Number.parseInt(params.id)
-    const seasonNumber = Number.parseInt(params.season)
+    const showId = Number.parseInt(id)
+    const seasonNumber = Number.parseInt(season)
 
     if (isNaN(showId) || isNaN(seasonNumber)) {
       notFound()

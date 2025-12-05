@@ -3,18 +3,20 @@ import { EpisodeDetails } from "@/components/episode-details"
 import { notFound } from "next/navigation"
 
 interface EpisodePageProps {
-  params: {
+  params: Promise<{
     id: string
     season: string
     episode: string
-  }
+  }>
 }
 
 export default async function EpisodePage({ params }: EpisodePageProps) {
+  const { id, season, episode } = await params
+
   try {
-    const showId = Number.parseInt(params.id)
-    const seasonNumber = Number.parseInt(params.season)
-    const episodeNumber = Number.parseInt(params.episode)
+    const showId = Number.parseInt(id)
+    const seasonNumber = Number.parseInt(season)
+    const episodeNumber = Number.parseInt(episode)
 
     if (isNaN(showId) || isNaN(seasonNumber) || isNaN(episodeNumber)) {
       notFound()
@@ -28,15 +30,15 @@ export default async function EpisodePage({ params }: EpisodePageProps) {
     }
 
     // Trouver l'épisode spécifique
-    const episode = seasonData.episodes.find((ep: any) => ep.episode_number === episodeNumber)
+    const episodeData = seasonData.episodes.find((ep: any) => ep.episode_number === episodeNumber)
 
-    if (!episode) {
+    if (!episodeData) {
       notFound()
     }
 
     return (
       <EpisodeDetails
-        episode={episode}
+        episode={episodeData}
         showId={showId}
         seasonNumber={seasonNumber}
         showData={showData}

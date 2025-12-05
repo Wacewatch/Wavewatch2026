@@ -87,9 +87,9 @@ async function fetchActorDetails(actorId: string) {
   }
 }
 
-export default async function ActorDetailPage({ params }: { params: { id: string } }) {
-  const actorId = params.id
-  const data = await fetchActorDetails(actorId)
+export default async function ActorDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const data = await fetchActorDetails(id)
 
   if (!data) {
     return (

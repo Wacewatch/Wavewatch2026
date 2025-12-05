@@ -3,16 +3,18 @@ import { DirectorDetails } from "@/components/director-details"
 import { notFound } from "next/navigation"
 
 interface DirectorPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function DirectorPage({ params }: DirectorPageProps) {
+  const { id } = await params
+
   try {
     const [director, credits] = await Promise.all([
-      getDirectorDetails(Number.parseInt(params.id)),
-      getDirectorCredits(Number.parseInt(params.id)),
+      getDirectorDetails(Number.parseInt(id)),
+      getDirectorCredits(Number.parseInt(id)),
     ])
 
     if (!director) {

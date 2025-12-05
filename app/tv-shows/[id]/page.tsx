@@ -3,16 +3,18 @@ import { TVShowDetails } from "@/components/tv-show-details"
 import { notFound } from "next/navigation"
 
 interface TVShowPageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function TVShowPage({ params }: TVShowPageProps) {
+  const { id } = await params
+
   try {
     const [show, credits] = await Promise.all([
-      getTVShowDetails(Number.parseInt(params.id)),
-      getTVShowCredits(Number.parseInt(params.id)),
+      getTVShowDetails(Number.parseInt(id)),
+      getTVShowCredits(Number.parseInt(id)),
     ])
 
     if (!show) {

@@ -3,16 +3,18 @@ import { MovieDetails } from "@/components/movie-details"
 import { notFound } from "next/navigation"
 
 interface MoviePageProps {
-  params: {
+  params: Promise<{
     id: string
-  }
+  }>
 }
 
 export default async function MoviePage({ params }: MoviePageProps) {
+  const { id } = await params
+
   try {
     const [movie, credits] = await Promise.all([
-      getMovieDetails(Number.parseInt(params.id)),
-      getMovieCredits(Number.parseInt(params.id)),
+      getMovieDetails(Number.parseInt(id)),
+      getMovieCredits(Number.parseInt(id)),
     ])
 
     if (!movie) {
