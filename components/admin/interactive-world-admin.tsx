@@ -10,7 +10,8 @@ import { OnlineUsersPanel } from "./online-users-panel"
 import { ArcadeGamesPanel } from "./arcade-games-panel"
 import { StadiumSettingsPanel } from "./stadium-settings-panel"
 import { DiscoSettingsPanel } from "./disco-settings-panel"
-import { Globe, Film, Palette, Users, Gamepad2, Trophy, Music } from 'lucide-react'
+import { VisitStatisticsPanel } from "./visit-statistics-panel"
+import { Globe, Film, Palette, Users, Gamepad2, Trophy, Music, BarChart3 } from 'lucide-react'
 
 interface InteractiveWorldAdminProps {
   initialSettings: any[]
@@ -74,6 +75,11 @@ export function InteractiveWorldAdmin({
                 <Music className="w-4 h-4" />
                 <span className="hidden sm:inline">Discothèque</span>
                 <span className="sm:hidden">Disco</span>
+              </TabsTrigger>
+              <TabsTrigger value="stats" className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap">
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Statistiques</span>
+                <span className="sm:hidden">Stats</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -172,6 +178,20 @@ export function InteractiveWorldAdmin({
               </CardHeader>
               <CardContent>
                 <DiscoSettingsPanel />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="stats">
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white">Statistiques de Visites</CardTitle>
+                <CardDescription className="text-gray-400">
+                  Suivez le nombre de connexions au monde interactif par utilisateur
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <VisitStatisticsPanel />
               </CardContent>
             </Card>
           </TabsContent>

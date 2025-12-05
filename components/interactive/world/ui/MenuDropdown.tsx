@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   Settings,
   User,
@@ -8,6 +9,7 @@ import {
   MessageSquare,
   Map,
   LogOut,
+  Loader2,
 } from "lucide-react"
 
 interface MenuDropdownProps {
@@ -19,7 +21,7 @@ interface MenuDropdownProps {
   onOpenAvatar: () => void
   onOpenChat: () => void
   onOpenMap: () => void
-  onQuit: () => void
+  onQuit: () => void | Promise<void>
 }
 
 export function MenuDropdown({
@@ -33,6 +35,18 @@ export function MenuDropdown({
   onOpenMap,
   onQuit,
 }: MenuDropdownProps) {
+  const [isQuitting, setIsQuitting] = useState(false)
+
+  const handleQuit = async () => {
+    if (isQuitting) return // Prevent double-click
+    setIsQuitting(true)
+    try {
+      await onQuit()
+    } catch (err) {
+      console.error("Error during quit:", err)
+      setIsQuitting(false)
+    }
+  }
   return (
     <div className={`absolute top-0 mt-0 bg-black/95 backdrop-blur-xl rounded-xl shadow-2xl border-2 border-white/30 ${isMobileMode ? 'left-12 p-2 w-48 space-y-1' : 'left-20 p-4 w-80 space-y-3'}`}>
       <div className={`text-white border-b border-white/20 ${isMobileMode ? 'mb-2 pb-2' : 'mb-3 pb-3'}`}>
@@ -81,11 +95,16 @@ export function MenuDropdown({
       </button>
 
       <button
-        onClick={onQuit}
-        className={`w-full bg-gray-600/90 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center font-medium transition-colors border-t border-white/20 mt-2 pt-2 ${isMobileMode ? 'py-2' : 'py-3'}`}
+        onClick={handleQuit}
+        disabled={isQuitting}
+        className={`w-full bg-gray-600/90 text-white rounded-lg hover:bg-gray-700 flex items-center justify-center font-medium transition-colors border-t border-white/20 mt-2 pt-2 disabled:opacity-50 disabled:cursor-wait ${isMobileMode ? 'py-2' : 'py-3'}`}
         title="Quitter"
       >
-        <LogOut className={isMobileMode ? 'w-4 h-4' : 'w-5 h-5'} />
+        {isQuitting ? (
+          <Loader2 className={`animate-spin ${isMobileMode ? 'w-4 h-4' : 'w-5 h-5'}`} />
+        ) : (
+          <LogOut className={isMobileMode ? 'w-4 h-4' : 'w-5 h-5'} />
+        )}
       </button>
     </div>
   )

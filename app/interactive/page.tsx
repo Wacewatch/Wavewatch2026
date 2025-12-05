@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from 'next/navigation'
+import React, { useEffect, useState, useCallback } from "react"
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from "@/components/auth-provider"
 import { createClient } from "@/lib/supabase/client"
 import InteractiveWorld from "@/components/interactive/world-3d"
@@ -32,8 +32,158 @@ export default function InteractivePage() {
   })
 
   const router = useRouter()
+  const pathname = usePathname()
   const { user, loading } = useAuth()
   const supabase = createClient()
+
+  // Session tracking - using refs to avoid stale closure issues
+  const sessionStartTimeRef = React.useRef<Date | null>(null)
+  const currentVisitIdRef = React.useRef<string | null>(null)
+  const isTrackingRef = React.useRef<boolean>(false) // Prevent double tracking
+  const hasEndedSessionRef = React.useRef<boolean>(false) // Prevent double session ending
+  const [currentVisitId, setCurrentVisitId] = useState<string | null>(null)
+
+  // Track visit when user enters the world
+  const trackVisit = async () => {
+    if (!user) return
+
+    // Prevent double tracking
+    if (isTrackingRef.current || currentVisitIdRef.current) {
+      console.log("[Session] Already tracking, skipping duplicate")
+      return
+    }
+
+    isTrackingRef.current = true
+
+    try {
+      const { data, error } = await supabase
+        .from("interactive_world_visits")
+        .insert({ user_id: user.id })
+        .select("id")
+        .single()
+
+      if (error) {
+        console.error("[Session] Error inserting visit:", error)
+        isTrackingRef.current = false
+        return
+      }
+
+      if (data) {
+        currentVisitIdRef.current = data.id
+        sessionStartTimeRef.current = new Date()
+        hasEndedSessionRef.current = false // Reset for new session
+        setCurrentVisitId(data.id)
+        console.log("[Session] Started tracking visit:", data.id)
+      }
+    } catch (err) {
+      console.error("Error tracking visit:", err)
+      isTrackingRef.current = false
+    }
+  }
+
+  // End session and record duration - uses refs for reliable access
+  const endSession = useCallback(async () => {
+    console.log("[Session] endSession called")
+
+    // Prevent double session ending
+    if (hasEndedSessionRef.current) {
+      console.log("[Session] Session already ended, skipping")
+      return
+    }
+
+    console.log("[Session] currentVisitIdRef:", currentVisitIdRef.current)
+    console.log("[Session] sessionStartTimeRef:", sessionStartTimeRef.current)
+
+    const visitId = currentVisitIdRef.current
+    const startTime = sessionStartTimeRef.current
+
+    if (!visitId || !startTime) {
+      console.log("[Session] No active session to end - visitId:", visitId, "startTime:", startTime)
+      return
+    }
+
+    // Mark as ended immediately to prevent double-ending
+    hasEndedSessionRef.current = true
+
+    const sessionEnd = new Date()
+    const durationSeconds = Math.floor((sessionEnd.getTime() - startTime.getTime()) / 1000)
+
+    console.log("[Session] Ending session:", visitId, "Duration:", durationSeconds, "seconds")
+
+    // Clear refs immediately
+    currentVisitIdRef.current = null
+    sessionStartTimeRef.current = null
+    isTrackingRef.current = false
+
+    try {
+      const { error, data } = await supabase
+        .from("interactive_world_visits")
+        .update({
+          session_end: sessionEnd.toISOString(),
+          session_duration_seconds: durationSeconds
+        })
+        .eq("id", visitId)
+        .select()
+
+      if (error) {
+        console.error("[Session] Error updating session:", error)
+      } else {
+        console.log("[Session] Session ended successfully:", visitId, "Duration:", durationSeconds, "seconds", "Response:", data)
+      }
+    } catch (err) {
+      console.error("[Session] Exception ending session:", err)
+    }
+  }, [supabase])
+
+  // End session using fetch with keepalive for page unload (more reliable)
+  const endSessionBeacon = () => {
+    // Skip if already ended
+    if (hasEndedSessionRef.current) return
+
+    const visitId = currentVisitIdRef.current
+    const startTime = sessionStartTimeRef.current
+
+    if (!visitId || !startTime) return
+
+    // Mark as ended
+    hasEndedSessionRef.current = true
+
+    const durationSeconds = Math.floor((new Date().getTime() - startTime.getTime()) / 1000)
+
+    // Clear refs immediately
+    currentVisitIdRef.current = null
+    sessionStartTimeRef.current = null
+
+    // Use our API route with keepalive - this allows the request to complete even after page unload
+    // The API route handles authentication via cookies which are sent automatically
+    fetch('/api/interactive/end-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        visitId,
+        durationSeconds
+      }),
+      keepalive: true
+    }).catch(() => {
+      // Silently fail - we can't do anything about it during page unload
+    })
+
+    console.log("[Session] Sent keepalive request for session:", visitId, "Duration:", durationSeconds, "s")
+  }
+
+  // Exit world handler - properly ends the session
+  const exitWorld = async () => {
+    await endSession()
+    setCurrentVisitId(null)
+    setShowWorld(false)
+  }
+
+  const enterWorld = () => {
+    trackVisit()
+    setShowWorld(true)
+  }
 
   // Check if user has already accepted the construction warning
   useEffect(() => {
@@ -113,7 +263,7 @@ export default function InteractivePage() {
         if (alreadyAccepted) {
           // Vérifier si la pub a déjà été vue récemment
           if (hasRecentAdView()) {
-            setShowWorld(true)
+            enterWorld()
           } else {
             setShowAdGate(true)
           }
@@ -177,7 +327,7 @@ export default function InteractivePage() {
       if (alreadyAccepted) {
         // Vérifier si la pub a déjà été vue récemment
         if (hasRecentAdView()) {
-          setShowWorld(true)
+          enterWorld()
         } else {
           setShowAdGate(true)
         }
@@ -198,7 +348,7 @@ export default function InteractivePage() {
 
     // Vérifier si l'utilisateur a déjà vu une pub récemment (24h)
     if (hasRecentAdView()) {
-      setShowWorld(true)
+      enterWorld()
     } else {
       setShowAdGate(true)
     }
@@ -206,7 +356,7 @@ export default function InteractivePage() {
 
   const handleAdComplete = () => {
     setShowAdGate(false)
-    setShowWorld(true)
+    enterWorld()
   }
 
   const handleAdBack = () => {
@@ -215,27 +365,34 @@ export default function InteractivePage() {
   }
 
   useEffect(() => {
-    const preventUnload = (e: BeforeUnloadEvent) => {
-      if (showWorld) {
-        e.preventDefault()
-        e.returnValue = ''
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (currentVisitIdRef.current && !hasEndedSessionRef.current) {
+        // Use sendBeacon for reliable delivery during page unload
+        endSessionBeacon()
       }
     }
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && showWorld) {
-        console.log('[v0] Tab became visible, maintaining state')
+    const handlePageHide = (e: PageTransitionEvent) => {
+      // pagehide is more reliable than beforeunload on mobile
+      if (currentVisitIdRef.current && !hasEndedSessionRef.current) {
+        endSessionBeacon()
       }
     }
 
-    window.addEventListener('beforeunload', preventUnload)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pagehide', handlePageHide)
 
     return () => {
-      window.removeEventListener('beforeunload', preventUnload)
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handlePageHide)
+
+      // Cleanup: End session when component unmounts (e.g., SPA navigation)
+      if (currentVisitIdRef.current && !hasEndedSessionRef.current) {
+        console.log("[Session] Component unmounting, ending session via beacon")
+        endSessionBeacon()
+      }
     }
-  }, [showWorld])
+  }, [])
 
   if (loading || checkingProfile) {
     return (
@@ -603,7 +760,7 @@ export default function InteractivePage() {
   if (showWorld) {
     return (
       <div className="fixed inset-0 z-50 bg-black">
-        <InteractiveWorld userId={user!.id} userProfile={userProfile} />
+        <InteractiveWorld userId={user!.id} userProfile={userProfile} visitId={currentVisitId} onExit={endSession} />
       </div>
     )
   }

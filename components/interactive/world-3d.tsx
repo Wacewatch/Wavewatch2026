@@ -88,8 +88,10 @@ const supabase = createClient()
 interface InteractiveWorldProps {
   userId: string
   userProfile: any
+  visitId?: string | null
+  onExit?: () => void | Promise<void>
 }
-export default function InteractiveWorld({ userId, userProfile }: InteractiveWorldProps) {
+export default function InteractiveWorld({ userId, userProfile, visitId, onExit }: InteractiveWorldProps) {
   const router = useRouter() // Initialize router
   const [myProfile, setMyProfile] = useState<any>(null)
   const [onlineCount, setOnlineCount] = useState(0)
@@ -150,6 +152,57 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   const [isCinemaMuted, setIsCinemaMuted] = useState(true) // Muted par défaut pour éviter le son automatique
   const [stadiumSeat, setStadiumSeat] = useState<{ row: number; side: string } | null>(null) // Siège dans le stade
   const [showMenu, setShowMenu] = useState(false) // Added this state
+
+  // Room visit tracking
+  const currentRoomVisitIdRef = useRef<string | null>(null)
+  const currentRoomStartTimeRef = useRef<Date | null>(null)
+
+  // Track room entry
+  const handleRoomEnter = useCallback(async (roomName: string) => {
+    if (!visitId) return
+
+    try {
+      const { data, error } = await supabase
+        .from("interactive_room_visits")
+        .insert({
+          visit_id: visitId,
+          user_id: userId,
+          room_name: roomName,
+        })
+        .select("id")
+        .single()
+
+      if (data) {
+        currentRoomVisitIdRef.current = data.id
+        currentRoomStartTimeRef.current = new Date()
+      }
+    } catch (err) {
+      console.error("Error tracking room entry:", err)
+    }
+  }, [visitId, userId])
+
+  // Track room exit
+  const handleRoomLeave = useCallback(async (roomName: string) => {
+    if (!currentRoomVisitIdRef.current || !currentRoomStartTimeRef.current) return
+
+    const exitTime = new Date()
+    const durationSeconds = Math.floor((exitTime.getTime() - currentRoomStartTimeRef.current.getTime()) / 1000)
+
+    try {
+      await supabase
+        .from("interactive_room_visits")
+        .update({
+          exited_at: exitTime.toISOString(),
+          duration_seconds: durationSeconds,
+        })
+        .eq("id", currentRoomVisitIdRef.current)
+
+      currentRoomVisitIdRef.current = null
+      currentRoomStartTimeRef.current = null
+    } catch (err) {
+      console.error("Error tracking room exit:", err)
+    }
+  }, [])
 
   const [currentRoom, setCurrentRoom] = useState<string | null>(null)
   const [nearbyBuilding, setNearbyBuilding] = useState<{ name: string; type: string; emoji: string } | null>(null)
@@ -288,6 +341,9 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
     isStadiumOpen,
     isArcadeOpen,
     isDiscoOpen,
+    // Room tracking callbacks
+    onEnterRoom: handleRoomEnter,
+    onLeaveRoom: handleRoomLeave,
     setMyPosition,
     setMyRotation,
     setMySeat,
@@ -910,6 +966,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
   }, [userId])
 
   const handleQuitWorld = async () => {
+    console.log("[World] handleQuitWorld called, onExit:", !!onExit)
+
     // If user is in a special room (cinema, stadium, arcade), reset to spawn
     // Otherwise, save current position to restore it next time
     const isInSpecialRoom = currentRoom === "stadium" || currentRoom === "arcade" || currentRoom === "disco" || (typeof currentRoom === 'object' && currentRoom !== null)
@@ -918,7 +976,8 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       ? { x: 4.5, y: -0.35, z: -27 }
       : { x: myPosition.x, y: myPosition.y, z: myPosition.z }
 
-    // Save position in database
+    // Save position in database FIRST (this doesn't affect session tracking)
+    console.log("[World] Saving position...")
     await supabase
       .from("interactive_profiles")
       .update({
@@ -930,7 +989,24 @@ export default function InteractiveWorld({ userId, userProfile }: InteractiveWor
       })
       .eq("user_id", userId)
 
-    // Redirect to home
+    // Call onExit to end session tracking - this MUST complete before navigation
+    if (onExit) {
+      console.log("[World] Calling onExit to end session...")
+      try {
+        await onExit()
+        console.log("[World] onExit completed successfully")
+      } catch (err) {
+        console.error("[World] Error in onExit:", err)
+      }
+    } else {
+      console.warn("[World] onExit is not defined!")
+    }
+
+    // Longer delay to ensure all updates are committed before navigation
+    console.log("[World] Waiting before navigation...")
+    await new Promise(resolve => setTimeout(resolve, 300))
+
+    console.log("[World] Navigating to home...")
     router.push("/")
   }
 

@@ -34,6 +34,9 @@ interface UseRoomNavigationProps {
   isStadiumOpen: boolean
   isArcadeOpen: boolean
   isDiscoOpen: boolean
+  // Room tracking callbacks (optional)
+  onEnterRoom?: (roomName: string) => void
+  onLeaveRoom?: (roomName: string) => void
   setMyPosition: (pos: Position) => void
   setMyRotation: (rotation: number) => void
   setMySeat: (seat: number | null) => void
@@ -69,6 +72,8 @@ export function useRoomNavigation({
   isStadiumOpen,
   isArcadeOpen,
   isDiscoOpen,
+  onEnterRoom,
+  onLeaveRoom,
   setMyPosition,
   setMyRotation,
   setMySeat,
@@ -138,6 +143,7 @@ export function useRoomNavigation({
     setSavedMapPosition({ x: myPosition.x, y: myPosition.y, z: myPosition.z })
 
     setCurrentRoom("arcade")
+    onEnterRoom?.("arcade")
 
     // Teleport player to arcade room (spawn position)
     const arcadePos = { x: -2.6145599903373125, y: -0.35, z: 10.641204270993434 }
@@ -169,6 +175,7 @@ export function useRoomNavigation({
 
   // Leave Arcade
   const handleLeaveArcade = useCallback(() => {
+    onLeaveRoom?.("arcade")
     const defaultRotation = 0 // Face buildings (like initial spawn)
     setMyPosition(savedMapPosition)
     setMyRotation(defaultRotation)
@@ -229,6 +236,7 @@ export function useRoomNavigation({
     // This prevents the player from being briefly visible at the spawn position in the world
     setCurrentRoom(`cinema_${room.id}`)
     setCurrentCinemaRoom(room)
+    onEnterRoom?.(`cinema_${room.room_number}`)
 
     // Spawn position in cinema (only visible inside cinema room now)
     const cinemaSpawnPos = { x: 0, y: -0.35, z: 8 }
@@ -267,6 +275,9 @@ export function useRoomNavigation({
 
   // Leave Cinema Room
   const handleLeaveRoom = useCallback(async () => {
+    if (currentCinemaRoom) {
+      onLeaveRoom?.(`cinema_${currentCinemaRoom.room_number}`)
+    }
     if (mySeat !== null && currentCinemaRoom) {
       await supabase.from("interactive_cinema_seats").update({
         user_id: null,
@@ -334,6 +345,7 @@ export function useRoomNavigation({
     setSavedMapPosition({ x: myPosition.x, y: myPosition.y, z: myPosition.z })
 
     setCurrentRoom("stadium")
+    onEnterRoom?.("stadium")
 
     // Teleport player to stadium viewing position
     const stadiumPos = { x: 0, y: 0.5, z: 0 }
@@ -354,6 +366,7 @@ export function useRoomNavigation({
 
   // Leave Stadium
   const handleLeaveStadium = useCallback(() => {
+    onLeaveRoom?.("stadium")
     const defaultRotation = 0 // Face buildings (like initial spawn)
     setStadiumSeat(null)
     setMyPosition(savedMapPosition)
@@ -410,6 +423,7 @@ export function useRoomNavigation({
     setSavedMapPosition({ x: myPosition.x, y: myPosition.y, z: myPosition.z })
 
     setCurrentRoom("disco")
+    onEnterRoom?.("disco")
 
     // Teleport player to disco room (spawn position)
     const discoPos = { x: 0, y: -0.35, z: 12 }
@@ -441,6 +455,7 @@ export function useRoomNavigation({
 
   // Leave Disco
   const handleLeaveDisco = useCallback(() => {
+    onLeaveRoom?.("disco")
     const defaultRotation = 0 // Face buildings (like initial spawn)
     setMyPosition(savedMapPosition)
     setMyRotation(defaultRotation)
