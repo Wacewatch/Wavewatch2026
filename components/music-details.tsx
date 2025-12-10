@@ -96,8 +96,8 @@ export function MusicDetails({ music }: MusicDetailsProps) {
     })
   }
 
-  const streamingUrl = music.video_url || `https://embed.wavewatch.xyz/embed/music?id=${music.id}`
-  const downloadUrl = `https://embed.wavewatch.xyz/download/music?id=${music.id}`
+  const streamingUrl = music.streaming_url || `https://wwembed.wavewatch.xyz/api/v1/streaming/ww-music-${music.id}`
+  const downloadUrl = music.download_url || `https://wwembed.wavewatch.xyz/api/v1/download/ww-music-${music.id}`
 
   return (
     <div className="min-h-screen bg-black">
@@ -271,15 +271,10 @@ export function MusicDetails({ music }: MusicDetailsProps) {
         isOpen={showStreamingModal}
         onClose={() => setShowStreamingModal(false)}
         src={streamingUrl}
-        title={`Streaming - ${music.title}`}
-      />
-
-      <IframeModal
-        isOpen={showDownloadModal}
-        onClose={() => setShowDownloadModal(false)}
-        src={downloadUrl}
         title={`Téléchargement - ${music.title}`}
       />
+
+
 
       <Dialog open={showTrackListingModal} onOpenChange={setShowTrackListingModal}>
         <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl">
