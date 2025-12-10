@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/components/auth-provider"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
-import Script from "next/script" // Import du composant Script
+import Script from "next/script"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -50,7 +50,7 @@ export default function RootLayout({
           </AuthProvider>
         </ThemeProvider>
 
-        {/* Script Ahrefs Analytics */}
+        {/* === AHREFS Analytics === */}
         <Script
           src="https://analytics.ahrefs.com/analytics.js"
           data-key="H7U+kFL0zyofiO02zN/tSg"
@@ -58,12 +58,29 @@ export default function RootLayout({
           async
         />
 
-        {/* Compteur Histats caché */}
-        <div style={{ display: "none" }}>
+        {/* === HISTATS === */}
+        <Script id="histats-init" strategy="afterInteractive">
+          {`
+            var _Hasync = _Hasync || [];
+            _Hasync.push(['Histats.start', '1,4986671,4,0,0,0,00010000']);
+            _Hasync.push(['Histats.fasi', '1']);
+            _Hasync.push(['Histats.track_hits', '']);
+            (function() {
+              var hs = document.createElement('script');
+              hs.type = 'text/javascript';
+              hs.async = true;
+              hs.src = ('//s10.histats.com/js15_as.js');
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(hs);
+            })();
+          `}
+        </Script>
+
+        <noscript>
           <a href="/" target="_blank" rel="noreferrer">
-            <img src="https://sstatic1.histats.com/0.gif?4986671&101" alt="web hit counter" border={0} />
+            <img src="//sstatic1.histats.com/0.gif?4986671&101" alt="website statistics" />
           </a>
-        </div>
+        </noscript>
+        {/* === END HISTATS === */}
       </body>
     </html>
   )
