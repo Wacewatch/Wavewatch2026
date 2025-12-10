@@ -56,6 +56,16 @@ export function MusicDetails({ music }: MusicDetailsProps) {
     setShowStreamingModal(true)
   }
 
+  const handleDownload = () => {
+    if (user) {
+      WatchTracker.markAsWatched("music", music.id, music.title, music.duration || 60, {
+        genre: music.genre,
+        artist: music.artist,
+      })
+    }
+    setShowDownloadModal(true)
+  }
+
   const handleLike = () => {
     if (typeof window === "undefined") return
     const newRating = WatchTracker.toggleLike("music", music.id, music.title, {})
@@ -97,7 +107,7 @@ export function MusicDetails({ music }: MusicDetailsProps) {
   }
 
   const streamingUrl = music.streaming_url || `https://wwembed.wavewatch.xyz/api/v1/streaming/ww-music-${music.id}`
-  const downloadUrl = music.download_url || `https://wwembed.wavewatch.xyz/api/v1/download/ww-music-${music.id}`
+  const downloadUrl = music.download_url || streamingUrl // Utilise la même URL que streaming
 
   return (
     <div className="min-h-screen bg-black">
@@ -236,7 +246,7 @@ export function MusicDetails({ music }: MusicDetailsProps) {
                 size="lg"
                 variant="outline"
                 className="border-blue-600 text-blue-400 hover:bg-blue-900/20 w-full sm:w-auto bg-transparent"
-                onClick={() => setShowDownloadModal(true)}
+                onClick={handleDownload}
               >
                 <Download className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                 Télécharger
@@ -271,10 +281,15 @@ export function MusicDetails({ music }: MusicDetailsProps) {
         isOpen={showStreamingModal}
         onClose={() => setShowStreamingModal(false)}
         src={streamingUrl}
-        title={`Téléchargement - ${music.title}`}
+        title={`Écouter - ${music.title}`}
       />
 
-
+      <IframeModal
+        isOpen={showDownloadModal}
+        onClose={() => setShowDownloadModal(false)}
+        src={downloadUrl}
+        title={`Télécharger - ${music.title}`}
+      />
 
       <Dialog open={showTrackListingModal} onOpenChange={setShowTrackListingModal}>
         <DialogContent className="bg-gray-900 border-gray-700 text-white max-w-2xl">
