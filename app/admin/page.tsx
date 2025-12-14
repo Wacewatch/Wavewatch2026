@@ -214,7 +214,7 @@ export default function AdminPage() {
     video_url: "",
     streaming_url: "",
     duration: 0,
-    release_year: new Date().getFullYear(),
+    release_year: new Date().getFullYear().toString(),
     genre: "",
     type: "Single",
     quality: "HD",
@@ -4707,21 +4707,192 @@ export default function AdminPage() {
                           <SelectTrigger>
                             <SelectValue placeholder="Sélectionner un genre" />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Pop">Pop</SelectItem>
-                            <SelectItem value="Rock">Rock</SelectItem>
-                            <SelectItem value="Hip-Hop">Hip-Hop</SelectItem>
-                            <SelectItem value="Électronique">Électronique</SelectItem>
-                            <SelectItem value="Jazz">Jazz</SelectItem>
-                            <SelectItem value="Classique">Classique</SelectItem>
-                            <SelectItem value="Rap">Rap</SelectItem>
-                            <SelectItem value="R&B">R&B</SelectItem>
-                            <SelectItem value="Metal">Metal</SelectItem>
-                            <SelectItem value="Folk">Folk</SelectItem>
-                            <SelectItem value="Blues">Blues</SelectItem>
-                            <SelectItem value="Reggae">Reggae</SelectItem>
-                            <SelectItem value="Country">Country</SelectItem>
-                          </SelectContent>
+<SelectContent className="max-h-[300px] overflow-y-auto">
+  <SelectItem value="Accordéon">Accordéon</SelectItem>
+  <SelectItem value="Acid Jazz">Acid Jazz</SelectItem>
+  <SelectItem value="Alternative">Alternative</SelectItem>
+  <SelectItem value="Ambient">Ambient</SelectItem>
+  <SelectItem value="Americana">Americana</SelectItem>
+  <SelectItem value="Anti-Folk">Anti-Folk</SelectItem>
+  <SelectItem value="Art Punk">Art Punk</SelectItem>
+  <SelectItem value="Art Rock">Art Rock</SelectItem>
+  <SelectItem value="Avant-garde">Avant-garde</SelectItem>
+  <SelectItem value="Ballade">Ballade</SelectItem>
+  <SelectItem value="Black Metal">Black Metal</SelectItem>
+  <SelectItem value="Black Metal Symphonique">Black Metal Symphonique</SelectItem>
+  <SelectItem value="Blue-eyed soul">Blue-eyed soul</SelectItem>
+  <SelectItem value="Blues">Blues</SelectItem>
+  <SelectItem value="Blues Rock">Blues Rock</SelectItem>
+  <SelectItem value="Bossa Nova">Bossa Nova</SelectItem>
+  <SelectItem value="Britpop">Britpop</SelectItem>
+  <SelectItem value="Chanson Française">Chanson Française</SelectItem>
+  <SelectItem value="Chanson Italienne">Chanson Italienne</SelectItem>
+  <SelectItem value="Chill">Chill</SelectItem>
+  <SelectItem value="Chill-out">Chill-out</SelectItem>
+  <SelectItem value="Chillwave">Chillwave</SelectItem>
+  <SelectItem value="Classique">Classique</SelectItem>
+  <SelectItem value="Country">Country</SelectItem>
+  <SelectItem value="Country Alternative">Country Alternative</SelectItem>
+  <SelectItem value="Country pop">Country pop</SelectItem>
+  <SelectItem value="Country Rock">Country Rock</SelectItem>
+  <SelectItem value="Crossover">Crossover</SelectItem>
+  <SelectItem value="Dance">Dance</SelectItem>
+  <SelectItem value="Dance-Pop">Dance-Pop</SelectItem>
+  <SelectItem value="Dancehall">Dancehall</SelectItem>
+  <SelectItem value="Dark Metal">Dark Metal</SelectItem>
+  <SelectItem value="Death Metal">Death Metal</SelectItem>
+  <SelectItem value="Death Metal Mélodique">Death Metal Mélodique</SelectItem>
+  <SelectItem value="Deep House">Deep House</SelectItem>
+  <SelectItem value="Dirty Rap">Dirty Rap</SelectItem>
+  <SelectItem value="Dirty South">Dirty South</SelectItem>
+  <SelectItem value="Doom Metal">Doom Metal</SelectItem>
+  <SelectItem value="Downtempo">Downtempo</SelectItem>
+  <SelectItem value="Drame">Drame</SelectItem>
+  <SelectItem value="Dream pop">Dream pop</SelectItem>
+  <SelectItem value="Dub">Dub</SelectItem>
+  <SelectItem value="Electro">Electro</SelectItem>
+  <SelectItem value="Electro Chill">Electro Chill</SelectItem>
+  <SelectItem value="Electro House">Electro House</SelectItem>
+  <SelectItem value="Electronic">Electronic</SelectItem>
+  <SelectItem value="Electronica">Electronica</SelectItem>
+  <SelectItem value="Electropop">Electropop</SelectItem>
+  <SelectItem value="Eurodance">Eurodance</SelectItem>
+  <SelectItem value="Europop">Europop</SelectItem>
+  <SelectItem value="Flamenco">Flamenco</SelectItem>
+  <SelectItem value="Folk">Folk</SelectItem>
+  <SelectItem value="Folk Rock">Folk Rock</SelectItem>
+  <SelectItem value="Folklore">Folklore</SelectItem>
+  <SelectItem value="French touch">French touch</SelectItem>
+  <SelectItem value="Funk">Funk</SelectItem>
+  <SelectItem value="Funk Rock">Funk Rock</SelectItem>
+  <SelectItem value="Funky">Funky</SelectItem>
+  <SelectItem value="G-funk">G-funk</SelectItem>
+  <SelectItem value="Gangsta Rap">Gangsta Rap</SelectItem>
+  <SelectItem value="Glam Metal">Glam Metal</SelectItem>
+  <SelectItem value="Glam Rock">Glam Rock</SelectItem>
+  <SelectItem value="Gospel">Gospel</SelectItem>
+  <SelectItem value="Gothic Metal">Gothic Metal</SelectItem>
+  <SelectItem value="Grime">Grime</SelectItem>
+  <SelectItem value="Guitare">Guitare</SelectItem>
+  <SelectItem value="Hard Rock">Hard Rock</SelectItem>
+  <SelectItem value="Hardcore">Hardcore</SelectItem>
+  <SelectItem value="Heavy Metal">Heavy Metal</SelectItem>
+  <SelectItem value="Hindi">Hindi</SelectItem>
+  <SelectItem value="Hip-Hop">Hip-Hop</SelectItem>
+  <SelectItem value="Hip-Hop Alternatif">Hip-Hop Alternatif</SelectItem>
+  <SelectItem value="Hip-Hop Politique">Hip-Hop Politique</SelectItem>
+  <SelectItem value="Horrorcore">Horrorcore</SelectItem>
+  <SelectItem value="House">House</SelectItem>
+  <SelectItem value="House Progressive">House Progressive</SelectItem>
+  <SelectItem value="Midwest rap">Midwest rap</SelectItem>
+  <SelectItem value="Indie">Indie</SelectItem>
+  <SelectItem value="Indie Pop">Indie Pop</SelectItem>
+  <SelectItem value="Indie Rock">Indie Rock</SelectItem>
+  <SelectItem value="Instrumental">Instrumental</SelectItem>
+  <SelectItem value="Italo Dance">Italo Dance</SelectItem>
+  <SelectItem value="Italo house">Italo house</SelectItem>
+  <SelectItem value="Jazz">Jazz</SelectItem>
+  <SelectItem value="Jazz fusion">Jazz fusion</SelectItem>
+  <SelectItem value="Jazz rap">Jazz rap</SelectItem>
+  <SelectItem value="Krautrock">Krautrock</SelectItem>
+  <SelectItem value="Lo-Fi">Lo-Fi</SelectItem>
+  <SelectItem value="Lounge">Lounge</SelectItem>
+  <SelectItem value="Metal">Metal</SelectItem>
+  <SelectItem value="Metal Alternatif">Metal Alternatif</SelectItem>
+  <SelectItem value="Metal Celtique">Metal Celtique</SelectItem>
+  <SelectItem value="Metal Chrétien">Metal Chrétien</SelectItem>
+  <SelectItem value="Metal Gothique">Metal Gothique</SelectItem>
+  <SelectItem value="Metal Industriel">Metal Industriel</SelectItem>
+  <SelectItem value="Multi instrumentaliste">Multi instrumentaliste</SelectItem>
+  <SelectItem value="Musique Celtique">Musique Celtique</SelectItem>
+  <SelectItem value="Musique Expérimentale">Musique Expérimentale</SelectItem>
+  <SelectItem value="Musique Humoristique">Musique Humoristique</SelectItem>
+  <SelectItem value="Musique Industrielle">Musique Industrielle</SelectItem>
+  <SelectItem value="Musique Irlandaise">Musique Irlandaise</SelectItem>
+  <SelectItem value="Musique Minimaliste">Musique Minimaliste</SelectItem>
+  <SelectItem value="Musique Percussive">Musique Percussive</SelectItem>
+  <SelectItem value="Neo Soul">Neo Soul</SelectItem>
+  <SelectItem value="New Age">New Age</SelectItem>
+  <SelectItem value="New Beat">New Beat</SelectItem>
+  <SelectItem value="New Wave">New Wave</SelectItem>
+  <SelectItem value="Nu Metal">Nu Metal</SelectItem>
+  <SelectItem value="Opera">Opera</SelectItem>
+  <SelectItem value="Opera-Rock">Opera-Rock</SelectItem>
+  <SelectItem value="OST">OST</SelectItem>
+  <SelectItem value="P-Funk">P-Funk</SelectItem>
+  <SelectItem value="Piano">Piano</SelectItem>
+  <SelectItem value="Pop">Pop</SelectItem>
+  <SelectItem value="Pop Folk">Pop Folk</SelectItem>
+  <SelectItem value="Pop latino">Pop latino</SelectItem>
+  <SelectItem value="Pop Rock">Pop Rock</SelectItem>
+  <SelectItem value="Pop-rap">Pop-rap</SelectItem>
+  <SelectItem value="Post-grunge">Post-grunge</SelectItem>
+  <SelectItem value="Post-hardcore">Post-hardcore</SelectItem>
+  <SelectItem value="Post-punk">Post-punk</SelectItem>
+  <SelectItem value="Post-rock">Post-rock</SelectItem>
+  <SelectItem value="Power Metal">Power Metal</SelectItem>
+  <SelectItem value="Power Pop">Power Pop</SelectItem>
+  <SelectItem value="Punk Hardcore">Punk Hardcore</SelectItem>
+  <SelectItem value="Punk Rock">Punk Rock</SelectItem>
+  <SelectItem value="R&B">R&B</SelectItem>
+  <SelectItem value="Ragga">Ragga</SelectItem>
+  <SelectItem value="Rap">Rap</SelectItem>
+  <SelectItem value="Rap East Coast">Rap East Coast</SelectItem>
+  <SelectItem value="Rap Français">Rap Français</SelectItem>
+  <SelectItem value="Rap Hardcore">Rap Hardcore</SelectItem>
+  <SelectItem value="Rap Metal">Rap Metal</SelectItem>
+  <SelectItem value="Rap Politique">Rap Politique</SelectItem>
+  <SelectItem value="Rap rock">Rap rock</SelectItem>
+  <SelectItem value="Rap West Coast">Rap West Coast</SelectItem>
+  <SelectItem value="Reggae">Reggae</SelectItem>
+  <SelectItem value="Rhythm and Blues">Rhythm and Blues</SelectItem>
+  <SelectItem value="RnB">RnB</SelectItem>
+  <SelectItem value="RnB contemporain">RnB contemporain</SelectItem>
+  <SelectItem value="Rock">Rock</SelectItem>
+  <SelectItem value="Rock Alternatif">Rock Alternatif</SelectItem>
+  <SelectItem value="Rock Celtique">Rock Celtique</SelectItem>
+  <SelectItem value="Rock Chrétien">Rock Chrétien</SelectItem>
+  <SelectItem value="Rock Experimental">Rock Experimental</SelectItem>
+  <SelectItem value="Rock Français">Rock Français</SelectItem>
+  <SelectItem value="Rock Indépendant">Rock Indépendant</SelectItem>
+  <SelectItem value="Rock Italien">Rock Italien</SelectItem>
+  <SelectItem value="Rock Progressif">Rock Progressif</SelectItem>
+  <SelectItem value="Rocksteady">Rocksteady</SelectItem>
+  <SelectItem value="Salsa">Salsa</SelectItem>
+  <SelectItem value="Samba">Samba</SelectItem>
+  <SelectItem value="Saxophone">Saxophone</SelectItem>
+  <SelectItem value="Saxophone électrique">Saxophone électrique</SelectItem>
+  <SelectItem value="Ska">Ska</SelectItem>
+  <SelectItem value="Slam">Slam</SelectItem>
+  <SelectItem value="Slow">Slow</SelectItem>
+  <SelectItem value="Soap">Soap</SelectItem>
+  <SelectItem value="Soft Rock">Soft Rock</SelectItem>
+  <SelectItem value="Soul">Soul</SelectItem>
+  <SelectItem value="Soul Jazz">Soul Jazz</SelectItem>
+  <SelectItem value="Space Music">Space Music</SelectItem>
+  <SelectItem value="Space Rock">Space Rock</SelectItem>
+  <SelectItem value="Symphonic Metal">Symphonic Metal</SelectItem>
+  <SelectItem value="Symphonie">Symphonie</SelectItem>
+  <SelectItem value="Synth-pop">Synth-pop</SelectItem>
+  <SelectItem value="Synth-wave">Synth-wave</SelectItem>
+  <SelectItem value="Synthétiseur">Synthétiseur</SelectItem>
+  <SelectItem value="Talk">Talk</SelectItem>
+  <SelectItem value="Tango">Tango</SelectItem>
+  <SelectItem value="Techno">Techno</SelectItem>
+  <SelectItem value="Techno House">Techno House</SelectItem>
+  <SelectItem value="Teen pop">Teen pop</SelectItem>
+  <SelectItem value="Thrash Metal">Thrash Metal</SelectItem>
+  <SelectItem value="Trance">Trance</SelectItem>
+  <SelectItem value="Trap">Trap</SelectItem>
+  <SelectItem value="Trip hop">Trip hop</SelectItem>
+  <SelectItem value="Urban">Urban</SelectItem>
+  <SelectItem value="Urban pop">Urban pop</SelectItem>
+  <SelectItem value="Variété française">Variété française</SelectItem>
+  <SelectItem value="Viking Metal">Viking Metal</SelectItem>
+  <SelectItem value="Violoncelle électrique">Violoncelle électrique</SelectItem>
+  <SelectItem value="West Coast hip-hop">West Coast hip-hop</SelectItem>
+  <SelectItem value="Zouk">Zouk</SelectItem>
+</SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
@@ -4744,17 +4915,16 @@ export default function AdminPage() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Année de sortie</Label>
-                        <Input
-                          type="number"
-                          value={musicForm.release_year}
-                          onChange={(e) =>
-                            setMusicForm({ ...musicForm, release_year: Number.parseInt(e.target.value, 10) })
-                          }
-                          placeholder="2023"
-                        />
-                      </div>
+<div className="space-y-2">
+  <Label>Année de sortie</Label>
+  <Input
+    type="text"
+    value={musicForm.release_year}
+    onChange={(e) => setMusicForm({ ...musicForm, release_year: e.target.value })}
+    placeholder="2023 ou 2005-2021"
+  />
+  <p className="text-xs text-muted-foreground">Format: année simple (2023) ou plage (2005-2021)</p>
+</div>
                       <div className="space-y-2">
                         <Label>Qualité</Label>
                         <Select
@@ -4764,12 +4934,11 @@ export default function AdminPage() {
                           <SelectTrigger>
                             <SelectValue placeholder="Sélectionner une qualité" />
                           </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="SD">SD</SelectItem>
-                            <SelectItem value="HD">HD</SelectItem>
-                            <SelectItem value="Full HD">Full HD</SelectItem>
-                            <SelectItem value="4K">4K</SelectItem>
-                          </SelectContent>
+<SelectContent>
+  <SelectItem value="FLAC">FLAC</SelectItem>
+  <SelectItem value="MP3">MP3</SelectItem>
+  <SelectItem value="WAV">WAV</SelectItem>
+</SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2 col-span-2">
@@ -4781,7 +4950,7 @@ export default function AdminPage() {
                         />
                       </div>
                       <div className="space-y-2 col-span-2">
-                        <Label>URL de la vidéo/audio</Label>
+                        <Label>URL Telechargement</Label>
                         <Input
                           value={musicForm.video_url}
                           onChange={(e) => setMusicForm({ ...musicForm, video_url: e.target.value })}
@@ -6693,4 +6862,4 @@ export default function AdminPage() {
       </div>
     </div>
   )
-}
+      }
