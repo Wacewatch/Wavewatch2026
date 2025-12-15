@@ -110,7 +110,7 @@ export function Navigation() {
           <Link href="/" className="flex items-center flex-shrink-0 group">
             <div className="relative h-12 w-auto sm:h-14 md:h-16 lg:h-20 transition-transform group-hover:scale-105">
 <img
-  src="https://i.ibb.co/q3SHLQn6/logo-ww-2026.png" 
+  src="https://i.ibb.co/4npzHrRS/wwlogo2026.png" 
   alt="WaveWatch" 
   className="h-full w-auto object-contain" 
 />
@@ -501,7 +501,7 @@ export function Navigation() {
               <Link href="/" className="flex items-center group">
                 <div className="relative h-10 w-auto sm:h-12 transition-transform group-hover:scale-105">
 <img
-  src="https://i.ibb.co/q3SHLQn6/logo-ww-2026.png" 
+  src="https://i.ibb.co/4npzHrRS/wwlogo2026.png" 
   alt="WaveWatch" 
   className="h-full w-auto object-contain" 
 />
@@ -788,7 +788,7 @@ export function Navigation() {
                     >
                       Live Sports
                       <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
-                        NEW
+                        🔥​HOT
                       </Badge>
                     </Link>
                   </Button>
@@ -835,7 +835,7 @@ export function Navigation() {
                     >
                       WaveWatch World
                       <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
-                        NEW
+                        🔥​NEW
                       </Badge>
                     </Link>
                   </Button>
