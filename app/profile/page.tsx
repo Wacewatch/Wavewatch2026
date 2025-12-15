@@ -71,6 +71,11 @@ export default function ProfilePage() {
   })
   const [isChangingPassword, setIsChangingPassword] = useState(false)
 
+  const [localAdultContent, setLocalAdultContent] = useState<boolean | null>(null)
+  const [localAutoMarkWatched, setLocalAutoMarkWatched] = useState<boolean | null>(null)
+  const [localHideSpoilers, setLocalHideSpoilers] = useState<boolean | null>(null)
+  const [localHideWatched, setLocalHideWatched] = useState<boolean | null>(null)
+
   useEffect(() => {
     setMounted(true)
     if (user?.id) {
@@ -78,6 +83,15 @@ export default function ProfilePage() {
       loadMessagePreferences()
     }
   }, [user?.id])
+
+  useEffect(() => {
+    if (!preferencesLoading) {
+      setLocalAdultContent(preferences.showAdultContent)
+      setLocalAutoMarkWatched(preferences.autoMarkWatched)
+      setLocalHideSpoilers(preferences.hideSpoilers)
+      setLocalHideWatched(!preferences.showWatchedContent)
+    }
+  }, [preferences, preferencesLoading])
 
   const loadProfile = async () => {
     if (!user?.id) return
@@ -338,6 +352,7 @@ export default function ProfilePage() {
   }
 
   const handleAdultContentToggle = async (enabled: boolean) => {
+    setLocalAdultContent(enabled) // Update local state immediately
     setPreferencesLoading(true)
     try {
       const success = await updatePreferences({
@@ -353,6 +368,7 @@ export default function ProfilePage() {
             : "Le contenu réservé aux adultes sera filtré des résultats",
         })
       } else {
+        setLocalAdultContent(!enabled) // Revert on failure
         toast({
           title: "Erreur",
           description: "Impossible de sauvegarder les préférences. Veuillez réessayer.",
@@ -360,10 +376,10 @@ export default function ProfilePage() {
         })
       }
     } catch (error) {
-      console.error("[v0] Error toggling adult content:", error)
+      setLocalAdultContent(!enabled) // Revert on error
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la sauvegarde",
+        description: "Une erreur est survenue lors de la sauvegarde.",
         variant: "destructive",
       })
     } finally {
@@ -372,6 +388,8 @@ export default function ProfilePage() {
   }
 
   const handleHideWatchedToggle = async (enabled: boolean) => {
+    setLocalHideWatched(enabled)
+    setPreferencesLoading(true)
     try {
       const success = await updatePreferences({
         showWatchedContent: !enabled,
@@ -379,29 +397,32 @@ export default function ProfilePage() {
 
       if (success) {
         toast({
-          title: enabled ? "Masquage du contenu vu activé" : "Masquage du contenu vu désactivé",
-          description: enabled
-            ? "Les films et séries déjà vus seront masqués des listes de contenu"
-            : "Tous les contenus seront affichés, même ceux déjà vus",
+          title: enabled ? "Contenu vu masqué" : "Contenu vu affiché",
+          description: enabled ? "Le contenu déjà visionné sera masqué" : "Le contenu déjà visionné sera affiché",
         })
       } else {
+        setLocalHideWatched(!enabled)
         toast({
           title: "Erreur",
-          description: "Impossible de sauvegarder les préférences. Veuillez réessayer.",
+          description: "Impossible de sauvegarder les préférences.",
           variant: "destructive",
         })
       }
     } catch (error) {
-      console.error("[v0] Error toggling hide watched:", error)
+      setLocalHideWatched(!enabled)
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la sauvegarde",
+        description: "Une erreur est survenue.",
         variant: "destructive",
       })
+    } finally {
+      setPreferencesLoading(false)
     }
   }
 
   const handleAutoMarkWatchedToggle = async (enabled: boolean) => {
+    setLocalAutoMarkWatched(enabled)
+    setPreferencesLoading(true)
     try {
       const success = await updatePreferences({
         autoMarkWatched: enabled,
@@ -411,27 +432,32 @@ export default function ProfilePage() {
         toast({
           title: enabled ? "Marquage automatique activé" : "Marquage automatique désactivé",
           description: enabled
-            ? "Le contenu sera automatiquement marqué comme vu quand vous cliquez sur 'Regarder'"
-            : "Vous devrez marquer manuellement le contenu comme vu",
+            ? "Le contenu sera automatiquement marqué comme vu lors de la lecture"
+            : "Le contenu ne sera plus automatiquement marqué comme vu",
         })
       } else {
+        setLocalAutoMarkWatched(!enabled)
         toast({
           title: "Erreur",
-          description: "Impossible de sauvegarder les préférences. Veuillez réessayer.",
+          description: "Impossible de sauvegarder les préférences.",
           variant: "destructive",
         })
       }
     } catch (error) {
-      console.error("[v0] Error toggling auto mark watched:", error)
+      setLocalAutoMarkWatched(!enabled)
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la sauvegarde",
+        description: "Une erreur est survenue.",
         variant: "destructive",
       })
+    } finally {
+      setPreferencesLoading(false)
     }
   }
 
   const handleHideSpoilersToggle = async (enabled: boolean) => {
+    setLocalHideSpoilers(enabled)
+    setPreferencesLoading(true)
     try {
       const success = await updatePreferences({
         hideSpoilers: enabled,
@@ -441,23 +467,26 @@ export default function ProfilePage() {
         toast({
           title: enabled ? "Mode anti-spoiler activé" : "Mode anti-spoiler désactivé",
           description: enabled
-            ? "Les synopsis et descriptions seront masqués pour éviter les spoilers"
-            : "Les synopsis et descriptions seront affichés normalement",
+            ? "Les synopsis et images sensibles seront masqués"
+            : "Les synopsis et images seront affichés normalement",
         })
       } else {
+        setLocalHideSpoilers(!enabled)
         toast({
           title: "Erreur",
-          description: "Impossible de sauvegarder les préférences. Veuillez réessayer.",
+          description: "Impossible de sauvegarder les préférences.",
           variant: "destructive",
         })
       }
     } catch (error) {
-      console.error("[v0] Error toggling hide spoilers:", error)
+      setLocalHideSpoilers(!enabled)
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de la sauvegarde",
+        description: "Une erreur est survenue.",
         variant: "destructive",
       })
+    } finally {
+      setPreferencesLoading(false)
     }
   }
 
@@ -869,6 +898,7 @@ export default function ProfilePage() {
                 <CardDescription className="text-gray-400">Gérez l'affichage du contenu</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Content Preferences - Use local state for checkboxes */}
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <Label htmlFor="adult-content" className="text-sm font-medium text-gray-300">
@@ -882,9 +912,9 @@ export default function ProfilePage() {
                     <input
                       id="adult-content"
                       type="checkbox"
-                      checked={preferences.showAdultContent}
+                      checked={localAdultContent ?? false}
                       onChange={(e) => handleAdultContentToggle(e.target.checked)}
-                      disabled={preferencesLoading}
+                      disabled={preferencesLoading || localAdultContent === null}
                       className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
                     />
                   </div>
@@ -895,15 +925,17 @@ export default function ProfilePage() {
                     <Label htmlFor="hide-watched" className="text-sm font-medium text-gray-300">
                       Masquer le contenu vu
                     </Label>
-                    <p className="text-xs text-gray-400">Cacher les films et séries déjà vus des listes de contenu</p>
+                    <p className="text-xs text-gray-400">
+                      Masquer le contenu que vous avez déjà visionné dans les recommandations
+                    </p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <input
                       id="hide-watched"
                       type="checkbox"
-                      checked={!preferences.showWatchedContent}
+                      checked={localHideWatched ?? false}
                       onChange={(e) => handleHideWatchedToggle(e.target.checked)}
-                      disabled={preferencesLoading}
+                      disabled={preferencesLoading || localHideWatched === null}
                       className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
                     />
                   </div>
@@ -912,19 +944,19 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <Label htmlFor="auto-mark-watched" className="text-sm font-medium text-gray-300">
-                      Marquage automatique
+                      Marquer automatiquement comme vu
                     </Label>
                     <p className="text-xs text-gray-400">
-                      Marquer automatiquement le contenu comme vu quand vous cliquez sur "Regarder"
+                      Marquer automatiquement le contenu comme visionné lors de la lecture
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <input
                       id="auto-mark-watched"
                       type="checkbox"
-                      checked={preferences.autoMarkWatched}
+                      checked={localAutoMarkWatched ?? false}
                       onChange={(e) => handleAutoMarkWatchedToggle(e.target.checked)}
-                      disabled={preferencesLoading}
+                      disabled={preferencesLoading || localAutoMarkWatched === null}
                       className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
                     />
                   </div>
@@ -936,16 +968,16 @@ export default function ProfilePage() {
                       Mode anti-spoiler
                     </Label>
                     <p className="text-xs text-gray-400">
-                      Masquer les synopsis et descriptions pour éviter les spoilers
+                      Masquer les synopsis et les images sensibles pour éviter les spoilers
                     </p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <input
                       id="hide-spoilers"
                       type="checkbox"
-                      checked={preferences.hideSpoilers}
+                      checked={localHideSpoilers ?? false}
                       onChange={(e) => handleHideSpoilersToggle(e.target.checked)}
-                      disabled={preferencesLoading}
+                      disabled={preferencesLoading || localHideSpoilers === null}
                       className="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-2"
                     />
                   </div>

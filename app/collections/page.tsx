@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { Search, Film, TrendingUp, Filter, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Film, TrendingUp, Filter, ChevronLeft, ChevronRight, Loader2 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -33,76 +33,135 @@ export default function CollectionsPage() {
   const [collections, setCollections] = useState<Collection[]>([])
   const [filteredCollections, setFilteredCollections] = useState<Collection[]>([])
   const [loading, setLoading] = useState(false)
+  const [searchLoading, setSearchLoading] = useState(false)
   const [sortBy, setSortBy] = useState<"name" | "parts" | "recent">("name")
   const [currentPage, setCurrentPage] = useState(1)
-
-  const popularCollectionIds = [
-    10, // Star Wars Collection
-    119, // The Lord of the Rings Collection
-    295, // Pirates of the Caribbean Collection
-    328, // Jurassic Park Collection
-    404, // Alien Collection
-    495, // Batman Collection
-    528, // The Terminator Collection
-    556, // Spider-Man Collection
-    645, // James Bond Collection
-    748, // X-Men Collection
-    1241, // Harry Potter Collection
-    1570, // Die Hard Collection
-    1575, // Rocky Collection
-    1709, // The Mummy Collection
-    2150, // Lethal Weapon Collection
-    2344, // The Matrix Collection
-    2806, // American Pie Collection
-    8091, // Alien vs. Predator Collection
-    8354, // Jason Bourne Collection
-    8650, // Kung Fu Panda Collection
-    8917, // The Hunger Games Collection
-    8945, // Mad Max Collection
-    9485, // The Fast and the Furious Collection
-    86311, // The Avengers Collection
-    87359, // Mission: Impossible Collection
-    121938, // The Hobbit Collection
-    131292, // The Twilight Saga
-    131295, // Divergent Collection
-    263, // The Dark Knight Collection
-    529892, // Marvel Cinematic Universe
-    535313, // Godzilla Collection
-    623, // Toy Story Collection
-    2980, // Ghostbusters Collection
-    230, // The Godfather Collection
-  ]
+  const [totalResults, setTotalResults] = useState(0)
+  const [tmdbPage, setTmdbPage] = useState(1)
+  const [hasMore, setHasMore] = useState(true)
 
   useEffect(() => {
-    loadPopularCollections()
+    loadInitialCollections()
   }, [])
 
   useEffect(() => {
     filterAndSortCollections()
-  }, [collections, searchQuery, sortBy])
+  }, [collections, sortBy])
 
-  const loadPopularCollections = async () => {
+  const loadInitialCollections = async () => {
     setLoading(true)
     try {
-      const loadedCollections: Collection[] = []
+      // Search for popular collection keywords to get a variety of collections
+      const searchTerms = ["collection", "saga", "series", "trilogy", "universe"]
+      const allCollections: Collection[] = []
+      const seenIds = new Set<number>()
 
-      for (const id of popularCollectionIds) {
+      for (const term of searchTerms) {
         try {
-          const response = await fetch(`/api/tmdb/collection/${id}`)
+          const response = await fetch(
+            `https://api.themoviedb.org/3/search/collection?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&language=fr-FR&query=${term}&page=1`,
+          )
           if (response.ok) {
             const data = await response.json()
-            loadedCollections.push(data)
+            for (const collection of data.results || []) {
+              if (!seenIds.has(collection.id)) {
+                seenIds.add(collection.id)
+                // Fetch full collection details to get parts count
+                try {
+                  const detailResponse = await fetch(
+                    `https://api.themoviedb.org/3/collection/${collection.id}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&language=fr-FR`,
+                  )
+                  if (detailResponse.ok) {
+                    const detailData = await detailResponse.json()
+                    allCollections.push(detailData)
+                  }
+                } catch (e) {
+                  // Skip if details fail
+                }
+              }
+            }
           }
-        } catch (error) {
-          // Silently skip collections that fail to load
+        } catch (e) {
+          console.error(`Error searching for ${term}:`, e)
         }
       }
 
-      setCollections(loadedCollections)
+      // Also add some known popular collections
+      const popularIds = [
+        10, 119, 295, 328, 404, 495, 528, 556, 645, 748, 1241, 1570, 1575, 1709, 2150, 2344, 2806, 8091, 8354, 8650,
+        8917, 8945, 9485, 86311, 87359, 121938, 131292, 131295, 263, 529892, 535313, 623, 2980, 230, 448150, 173710,
+        131296, 313086, 422837, 435259, 468552, 531241, 645458, 726871, 9743, 1565, 115575, 1570, 115776, 87096, 91361,
+        403374, 519, 1570,
+      ]
+
+      for (const id of popularIds) {
+        if (!seenIds.has(id)) {
+          seenIds.add(id)
+          try {
+            const response = await fetch(
+              `https://api.themoviedb.org/3/collection/${id}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&language=fr-FR`,
+            )
+            if (response.ok) {
+              const data = await response.json()
+              allCollections.push(data)
+            }
+          } catch (e) {
+            // Skip failed collections
+          }
+        }
+      }
+
+      setCollections(allCollections)
+      setTotalResults(allCollections.length)
     } catch (error) {
       console.error("Error loading collections:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const searchCollections = async (query: string) => {
+    if (!query.trim()) {
+      filterAndSortCollections()
+      return
+    }
+
+    setSearchLoading(true)
+    try {
+      const response = await fetch(
+        `https://api.themoviedb.org/3/search/collection?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&language=fr-FR&query=${encodeURIComponent(query)}&page=1`,
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        const detailedCollections: Collection[] = []
+
+        // Fetch details for each collection to get parts
+        for (const collection of data.results || []) {
+          try {
+            const detailResponse = await fetch(
+              `https://api.themoviedb.org/3/collection/${collection.id}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&language=fr-FR`,
+            )
+            if (detailResponse.ok) {
+              const detailData = await detailResponse.json()
+              detailedCollections.push(detailData)
+            }
+          } catch (e) {
+            // Use basic data if detail fetch fails
+            detailedCollections.push({
+              ...collection,
+              parts: [],
+            })
+          }
+        }
+
+        setFilteredCollections(detailedCollections)
+        setTotalResults(data.total_results || detailedCollections.length)
+      }
+    } catch (error) {
+      console.error("Error searching collections:", error)
+    } finally {
+      setSearchLoading(false)
     }
   }
 
@@ -113,7 +172,7 @@ export default function CollectionsPage() {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (collection) =>
-          collection.name.toLowerCase().includes(query) || collection.overview.toLowerCase().includes(query),
+          collection.name.toLowerCase().includes(query) || collection.overview?.toLowerCase().includes(query),
       )
     }
 
@@ -136,9 +195,13 @@ export default function CollectionsPage() {
     setCurrentPage(1)
   }
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault()
-    filterAndSortCollections()
+    if (searchQuery.trim()) {
+      await searchCollections(searchQuery)
+    } else {
+      filterAndSortCollections()
+    }
   }
 
   const totalPages = Math.ceil(filteredCollections.length / ITEMS_PER_PAGE)
@@ -158,7 +221,10 @@ export default function CollectionsPage() {
           <Film className="w-10 h-10 text-blue-400" />
           <h1 className="text-4xl font-bold text-white">Collections & Sagas</h1>
         </div>
-        <p className="text-gray-400 text-lg">Découvrez les plus grandes sagas et collections de films</p>
+        <p className="text-gray-400 text-lg">
+          Découvrez toutes les sagas et collections de films disponibles sur TMDB
+          {totalResults > 0 && <span className="text-blue-400 ml-2">({totalResults} collections)</span>}
+        </p>
       </div>
 
       {/* Search and Filters */}
@@ -169,7 +235,7 @@ export default function CollectionsPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Rechercher une collection..."
+                placeholder="Rechercher une collection sur TMDB..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 bg-gray-900 border-gray-700 text-white"
@@ -195,8 +261,8 @@ export default function CollectionsPage() {
                 </SelectContent>
               </Select>
 
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
-                <Search className="w-4 h-4" />
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700" disabled={searchLoading}>
+                {searchLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
               </Button>
             </div>
           </form>
@@ -208,7 +274,7 @@ export default function CollectionsPage() {
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-400">Chargement des collections...</p>
+            <p className="text-gray-400">Chargement des collections depuis TMDB...</p>
           </div>
         </div>
       ) : filteredCollections.length === 0 ? (
@@ -324,11 +390,12 @@ export default function CollectionsPage() {
           <div className="flex items-start gap-3">
             <TrendingUp className="w-6 h-6 text-blue-400 mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-white mb-2">Collections populaires</h3>
+              <h3 className="font-semibold text-white mb-2">Toutes les collections TMDB</h3>
               <p className="text-gray-300 text-sm leading-relaxed">
-                Explorez les plus grandes sagas cinématographiques de tous les temps. Chaque collection regroupe tous
-                les films d'une même franchise, vous permettant de suivre l'évolution des histoires et des personnages à
-                travers les années.
+                Explorez toutes les sagas cinématographiques disponibles sur The Movie Database (TMDB). Utilisez la
+                recherche pour trouver n'importe quelle collection de films. Chaque collection regroupe tous les films
+                d'une même franchise, vous permettant de suivre l'évolution des histoires et des personnages à travers
+                les années.
               </p>
             </div>
           </div>
