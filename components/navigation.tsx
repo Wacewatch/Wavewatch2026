@@ -6,7 +6,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown, Palette } from 'lucide-react'
+import { Search, Menu, X, User, LogOut, Crown, Shield, ChevronDown, Palette } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import { useMobile } from "@/hooks/use-mobile"
 import { useMessaging } from "@/hooks/use-messaging"
 import { Badge } from "@/components/ui/badge"
@@ -108,9 +108,9 @@ export function Navigation() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 group">
-            <div className="relative w-32 h-10 sm:w-40 sm:h-12 md:w-48 md:h-14 transition-transform group-hover:scale-105">
+            <div className="relative w-60 h-16 sm:w-78 sm:h-20 md:w-96 md:h-24 transition-transform group-hover:scale-105">
               <Image
-                src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo_1-CEQks3F61mJGM9U4L9zAAXO24dWeve.png"
+                src="/images/logo-20ww-202026.png"
                 alt="WaveWatch - Plateforme de Streaming Premium"
                 fill
                 className="object-contain drop-shadow-lg logo-glow"
@@ -159,9 +159,15 @@ export function Navigation() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
                 <DropdownMenuItem asChild>
-                  <Link href="/ebooks" style={{ color: "hsl(var(--nav-text))" }} className="flex items-center justify-between">
+                  <Link
+                    href="/ebooks"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                    className="flex items-center justify-between"
+                  >
                     Ebooks
-                    <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">NEW</Badge>
+                    <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
+                      NEW
+                    </Badge>
                   </Link>
                 </DropdownMenuItem>
                 {user?.isAdmin ? (
@@ -220,6 +226,20 @@ export function Navigation() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
+                  <Link
+                    href="https://sports-stream.sbs/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                    className="flex items-center justify-between"
+                  >
+                    Live Sports
+                    <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
+                      NEW
+                    </Badge>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link href="/radio" style={{ color: "hsl(var(--nav-text))" }}>
                     Radio FM
                   </Link>
@@ -236,9 +256,15 @@ export function Navigation() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
                 <DropdownMenuItem asChild>
-                  <Link href="/interactive" style={{ color: "hsl(var(--nav-text))" }} className="flex items-center justify-between">
+                  <Link
+                    href="/interactive"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                    className="flex items-center justify-between"
+                  >
                     WaveWatch World
-                    <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">NEW</Badge>
+                    <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
+                      NEW
+                    </Badge>
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -477,13 +503,8 @@ export function Navigation() {
           <div className="container mx-auto px-4 py-6">
             <div className="flex justify-between items-center mb-6">
               <Link href="/" className="flex items-center space-x-3" onClick={() => setIsMenuOpen(false)}>
-                <div className="relative w-32 h-10">
-                  <Image
-                    src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo_1-CEQks3F61mJGM9U4L9zAAXO24dWeve.png"
-                    alt="WaveWatch - Plateforme de Streaming Premium"
-                    fill
-                    className="object-contain logo-glow"
-                  />
+                <div className="relative w-48 h-14">
+                  <Image src="/images/logo-20ww-202026.png" alt="WaveWatch" fill className="object-contain" priority />
                 </div>
               </Link>
               <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(false)}>
@@ -662,9 +683,15 @@ export function Navigation() {
                     className="w-full justify-start"
                     style={{ color: "hsl(var(--nav-text))" }}
                   >
-                    <Link href="/ebooks" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-between">
+                    <Link
+                      href="/ebooks"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center justify-between"
+                    >
                       Ebooks
-                      <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">NEW</Badge>
+                      <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
+                        NEW
+                      </Badge>
                     </Link>
                   </Button>
                   {user?.isAdmin ? (
@@ -746,6 +773,20 @@ export function Navigation() {
                       Chaînes TV
                     </Link>
                   </Button>
+                  <DropdownMenuItem asChild>
+                    <Link
+                      href="https://sports-stream.sbs/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: "hsl(var(--nav-text))" }}
+                      className="flex items-center justify-between"
+                    >
+                      Live Sports
+                      <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
+                        NEW
+                      </Badge>
+                    </Link>
+                  </DropdownMenuItem>
                   <Button
                     asChild
                     variant="ghost"
@@ -782,9 +823,15 @@ export function Navigation() {
                     className="w-full justify-start"
                     style={{ color: "hsl(var(--nav-text))" }}
                   >
-                    <Link href="/interactive" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-between">
+                    <Link
+                      href="/interactive"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center justify-between"
+                    >
                       WaveWatch World
-                      <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">NEW</Badge>
+                      <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
+                        NEW
+                      </Badge>
                     </Link>
                   </Button>
                 </div>

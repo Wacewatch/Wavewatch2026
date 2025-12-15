@@ -83,20 +83,34 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
   const downloadUrl = `https://wwembed.wavewatch.xyz/api/v1/download/ww-tv-${showId}-s${seasonNumber}-e${episodeNumber}`
 
   const handleWatch = () => {
-    if (user && !isWatched && preferences.autoMarkWatched) {
+    if (user && preferences.autoMarkWatched) {
       const episodeId = `${showId}-${seasonNumber}-${episodeNumber}`
+
+      console.log("[v0] Marking episode as watched:", {
+        showId,
+        seasonNumber,
+        episodeNumber,
+        episodeName,
+        runtime: runtime || 45,
+      })
+
       WatchTracker.markAsWatched("episode", episodeId, episodeName, runtime || 45, {
         showName: showData?.name,
         season: seasonNumber,
         episode: episodeNumber,
         posterPath: stillPath,
+        showId: showId,
       })
 
       setIsWatched(true)
+
       toast({
         title: "Épisode marqué comme vu",
         description: `${episodeName} a été ajouté à votre historique.`,
       })
+
+      // Force update of statistics
+      window.dispatchEvent(new Event("watchlist-updated"))
     }
     setShowStreamingModal(true)
   }

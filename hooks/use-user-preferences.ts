@@ -148,19 +148,16 @@ export function useUserPreferences() {
     try {
       console.log("[v0] Updating preferences for user:", user.id)
 
-      const { error } = await supabase.from("user_profiles").upsert(
-        {
-          id: user.id,
+      const { error } = await supabase
+        .from("user_profiles")
+        .update({
           hide_adult_content: updatedPreferences.hideAdultContent,
           auto_mark_watched: updatedPreferences.autoMarkWatched,
           theme_preference: updatedPreferences.themePreference,
           hide_spoilers: updatedPreferences.hideSpoilers,
           updated_at: new Date().toISOString(),
-        },
-        {
-          onConflict: "id",
-        },
-      )
+        })
+        .eq("id", user.id)
 
       if (error) {
         console.error("[v0] Error updating preferences:", error.message)

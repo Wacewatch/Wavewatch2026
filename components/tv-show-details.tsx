@@ -141,36 +141,74 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
   }
 
   const handleWatch = async () => {
-    // Marquer seulement le premier épisode de la première saison comme vu si l'utilisateur a activé cette préférence
-    if (user && !isWatched && preferences.autoMarkWatched) {
+    if (user && preferences.autoMarkWatched) {
       setIsMarkingWatched(true)
       try {
-        // Trouver la première saison valide
-        const firstSeason = show.seasons.find((season: any) => season.season_number === 1)
+        console.log("[v0] Starting to mark all episodes as watched from watch button")
+        console.log("[v0] Available seasons:", show.seasons)
 
-        if (firstSeason) {
-          // Marquer seulement le premier épisode
-          WatchTracker.markEpisodeAsWatched(
-            show.id,
-            show.name,
-            1, // season number
-            1, // episode number
-            "Episode 1",
-            45, // runtime
-            {
-              genre: show.genres[0]?.name,
-              rating: Math.round(show.vote_average),
-              posterPath: show.poster_path,
-            },
-          )
+        const validSeasons = show.seasons.filter((season: any) => season.season_number > 0)
+        console.log("[v0] Valid seasons:", validSeasons)
 
-          toast({
-            title: "Premier épisode marqué comme vu",
-            description: `${show.name} S01E01 a été ajouté à votre historique.`,
-          })
-        }
+        // Fetch episode details for each season
+        const seasonsWithEpisodes = await Promise.all(
+          validSeasons.map(async (season: any) => {
+            try {
+              const response = await fetch(
+                `https://api.themoviedb.org/3/tv/${show.id}/season/${season.season_number}?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`,
+              )
+              if (response.ok) {
+                const seasonData = await response.json()
+                console.log(`[v0] Season ${season.season_number}: ${seasonData.episodes?.length || 0} episodes fetched`)
+                return {
+                  ...season,
+                  episodes: seasonData.episodes || [],
+                }
+              }
+            } catch (error) {
+              console.error(`[v0] Error fetching season ${season.season_number}:`, error)
+            }
+
+            // Fallback: create episodes based on episode_count
+            const episodeCount = season.episode_count || 10
+            const episodes = Array.from({ length: episodeCount }, (_, index) => ({
+              id: season.id * 1000 + index + 1,
+              episode_number: index + 1,
+              name: `Episode ${index + 1}`,
+              runtime: 45,
+              still_path: null,
+            }))
+            console.log(`[v0] Season ${season.season_number}: ${episodes.length} episodes created (fallback)`)
+            return {
+              ...season,
+              episodes,
+            }
+          }),
+        )
+
+        const totalEpisodes = seasonsWithEpisodes.reduce((sum, season) => sum + season.episodes.length, 0)
+        const totalDuration = totalEpisodes * 45
+
+        console.log(`[v0] Total episodes calculated: ${totalEpisodes}, Total duration: ${totalDuration} minutes`)
+
+        WatchTracker.markAsWatched("tv", show.id, show.name, totalDuration, {
+          genre: show.genres[0]?.name,
+          rating: Math.round(show.vote_average),
+          posterPath: show.poster_path,
+          seasons: seasonsWithEpisodes,
+        })
+
+        setIsWatched(true)
+
+        toast({
+          title: "Série et épisodes marqués comme vus",
+          description: `${show.name} et ses ${totalEpisodes} épisodes ont été ajoutés à votre historique.`,
+        })
+
+        // Force update of statistics
+        window.dispatchEvent(new Event("watchlist-updated"))
       } catch (error) {
-        console.error("Error marking as watched:", error)
+        console.error("[v0] Error marking as watched:", error)
         toast({
           title: "Erreur",
           description: "Une erreur est survenue lors du marquage.",
