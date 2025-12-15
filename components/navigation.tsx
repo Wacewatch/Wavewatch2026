@@ -109,14 +109,11 @@ export function Navigation() {
           {/* Logo - Optimisé pour toutes les tailles */}
           <Link href="/" className="flex items-center flex-shrink-0 group">
             <div className="relative h-12 w-auto sm:h-14 md:h-16 lg:h-20 transition-transform group-hover:scale-105">
-              <Image
-                src="/images/logo-20ww-202026.png"
-                alt="WaveWatch - Plateforme de Streaming Premium"
-                width={400}
-                height={80}
-                className="h-full w-auto object-contain drop-shadow-lg logo-glow"
-                priority
-              />
+<img
+  src="https://i.ibb.co/q3SHLQn6/logo-ww-2026.png" 
+  alt="WaveWatch" 
+  className="h-full w-auto object-contain" 
+/>
             </div>
           </Link>
 
@@ -503,14 +500,11 @@ export function Navigation() {
             <div className="flex justify-between items-center mb-6">
               <Link href="/" className="flex items-center group">
                 <div className="relative h-10 w-auto sm:h-12 transition-transform group-hover:scale-105">
-                  <Image 
-                    src="/images/logo-20ww-202026.png" 
-                    alt="WaveWatch" 
-                    width={250} 
-                    height={50}
-                    className="h-full w-auto object-contain" 
-                    priority 
-                  />
+<img
+  src="https://i.ibb.co/q3SHLQn6/logo-ww-2026.png" 
+  alt="WaveWatch" 
+  className="h-full w-auto object-contain" 
+/>
                 </div>
               </Link>
               <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(false)}>
