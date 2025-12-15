@@ -233,7 +233,7 @@ export function Navigation() {
                   >
                     Live Sports
                     <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
-                      NEW
+                      🔥​HOT
                     </Badge>
                   </Link>
                 </DropdownMenuItem>
@@ -261,7 +261,7 @@ export function Navigation() {
                   >
                     WaveWatch World
                     <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
-                      NEW
+                      ⭐NEW
                     </Badge>
                   </Link>
                 </DropdownMenuItem>
@@ -835,7 +835,7 @@ export function Navigation() {
                     >
                       WaveWatch World
                       <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
-                        🔥​NEW
+                        ⭐​​NEW
                       </Badge>
                     </Link>
                   </Button>
