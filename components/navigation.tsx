@@ -108,7 +108,7 @@ export function Navigation() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 group">
-            <div className="relative w-[280px] h-16 sm:w-[350px] sm:h-20 md:w-[420px] md:h-24 lg:w-[500px] lg:h-28 transition-transform group-hover:scale-105">
+            <div className="relative w-[320px] h-20 sm:w-[400px] sm:h-24 md:w-[480px] md:h-28 lg:w-[560px] lg:h-32 transition-transform group-hover:scale-105">
               <Image
                 src="/images/logo-20ww-202026.png"
                 alt="WaveWatch - Plateforme de Streaming Premium"

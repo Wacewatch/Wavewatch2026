@@ -85,13 +85,22 @@ export default function ProfilePage() {
   }, [user?.id])
 
   useEffect(() => {
-    if (!preferencesLoading) {
-      setLocalAdultContent(preferences.showAdultContent)
-      setLocalAutoMarkWatched(preferences.autoMarkWatched)
-      setLocalHideSpoilers(preferences.hideSpoilers)
-      setLocalHideWatched(!preferences.showWatchedContent)
+    if (!preferencesLoading && preferences) {
+      // Only set if local state hasn't been initialized yet
+      if (localAdultContent === null) {
+        setLocalAdultContent(preferences.showAdultContent)
+      }
+      if (localAutoMarkWatched === null) {
+        setLocalAutoMarkWatched(preferences.autoMarkWatched)
+      }
+      if (localHideSpoilers === null) {
+        setLocalHideSpoilers(preferences.hideSpoilers)
+      }
+      if (localHideWatched === null) {
+        setLocalHideWatched(preferences.hideWatchedContent)
+      }
     }
-  }, [preferences, preferencesLoading])
+  }, [preferencesLoading])
 
   const loadProfile = async () => {
     if (!user?.id) return
@@ -109,7 +118,7 @@ export default function ProfilePage() {
           birthDate: data.birth_date,
           location: data.location,
           bio: data.bio,
-          profileImage: data.profile_image,
+          profile_image: data.profile_image,
           joinDate: data.join_date || new Date().toISOString().split("T")[0],
           allow_messages: data.allow_messages ?? true,
         })
@@ -352,23 +361,20 @@ export default function ProfilePage() {
   }
 
   const handleAdultContentToggle = async (enabled: boolean) => {
-    setLocalAdultContent(enabled) // Update local state immediately
+    setLocalAdultContent(enabled)
     setPreferencesLoading(true)
     try {
-      const success = await updatePreferences({
-        showAdultContent: enabled,
-        hideAdultContent: !enabled,
-      })
+      const success = await updatePreferences({ showAdultContent: enabled })
 
       if (success) {
         toast({
           title: enabled ? "Contenu adulte activé" : "Contenu adulte désactivé",
           description: enabled
-            ? "Le contenu réservé aux adultes sera maintenant affiché dans les résultats"
+            ? "Le contenu réservé aux adultes sera maintenant affiché"
             : "Le contenu réservé aux adultes sera filtré des résultats",
         })
       } else {
-        setLocalAdultContent(!enabled) // Revert on failure
+        setLocalAdultContent(!enabled)
         toast({
           title: "Erreur",
           description: "Impossible de sauvegarder les préférences. Veuillez réessayer.",
@@ -376,7 +382,7 @@ export default function ProfilePage() {
         })
       }
     } catch (error) {
-      setLocalAdultContent(!enabled) // Revert on error
+      setLocalAdultContent(!enabled)
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la sauvegarde.",
@@ -391,9 +397,7 @@ export default function ProfilePage() {
     setLocalHideWatched(enabled)
     setPreferencesLoading(true)
     try {
-      const success = await updatePreferences({
-        showWatchedContent: !enabled,
-      })
+      const success = await updatePreferences({ hideWatchedContent: enabled })
 
       if (success) {
         toast({
@@ -424,9 +428,7 @@ export default function ProfilePage() {
     setLocalAutoMarkWatched(enabled)
     setPreferencesLoading(true)
     try {
-      const success = await updatePreferences({
-        autoMarkWatched: enabled,
-      })
+      const success = await updatePreferences({ autoMarkWatched: enabled })
 
       if (success) {
         toast({
@@ -459,9 +461,7 @@ export default function ProfilePage() {
     setLocalHideSpoilers(enabled)
     setPreferencesLoading(true)
     try {
-      const success = await updatePreferences({
-        hideSpoilers: enabled,
-      })
+      const success = await updatePreferences({ hideSpoilers: enabled })
 
       if (success) {
         toast({
