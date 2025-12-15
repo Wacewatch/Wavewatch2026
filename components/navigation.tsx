@@ -105,16 +105,15 @@ export function Navigation() {
       style={{ backgroundColor: "hsl(var(--nav-bg))", borderColor: "hsl(var(--nav-border))" }}
     >
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 md:h-20 lg:h-24">
-          {/* Logo - Optimisé pour toutes les tailles */}
-          <Link href="/" className="flex items-center flex-shrink-0 group">
-            <div className="relative h-12 w-auto sm:h-14 md:h-16 lg:h-20 transition-transform group-hover:scale-105">
+        <div className="flex items-center justify-between h-20">
+          {/* Logo */}
+          <Link href="/" className="flex items-center space-x-3 group">
+            <div className="relative w-[320px] h-20 sm:w-[400px] sm:h-24 md:w-[480px] md:h-28 lg:w-[560px] lg:h-32 transition-transform group-hover:scale-105">
               <Image
                 src="/images/logo-20ww-202026.png"
                 alt="WaveWatch - Plateforme de Streaming Premium"
-                width={400}
-                height={80}
-                className="h-full w-auto object-contain drop-shadow-lg logo-glow"
+                fill
+                className="object-contain drop-shadow-lg logo-glow"
                 priority
               />
             </div>
@@ -273,7 +272,7 @@ export function Navigation() {
           </div>
 
           {/* Search Bar */}
-          <form onSubmit={handleSearch} className="hidden md:flex items-center flex-1 max-w-md mx-4 lg:mx-8">
+          <form onSubmit={handleSearch} className="hidden md:flex items-center flex-1 max-w-md mx-8">
             <div className="relative w-full">
               <Search
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5"
@@ -284,7 +283,7 @@ export function Navigation() {
                 placeholder="Rechercher..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 rounded-full h-10 md:h-12 transition-colors"
+                className="pl-12 rounded-full h-12 transition-colors"
                 style={{
                   backgroundColor: "hsl(var(--nav-hover))",
                   borderColor: "hsl(var(--nav-border))",
@@ -295,15 +294,15 @@ export function Navigation() {
           </form>
 
           {/* User Menu */}
-          <div className="flex items-center space-x-2 md:space-x-4">
+          <div className="flex items-center space-x-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="h-10 w-10 md:h-12 md:w-12 rounded-full border-2 transition-colors"
+                  className="h-12 w-12 rounded-full border-2 transition-colors"
                   style={{ borderColor: "hsl(var(--nav-border))" }}
                 >
-                  <Palette className="w-4 h-4 md:w-5 md:h-5" style={{ color: "hsl(var(--nav-text))" }} />
+                  <Palette className="w-5 h-5" style={{ color: "hsl(var(--nav-text))" }} />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent
@@ -329,6 +328,7 @@ export function Navigation() {
                   ))}
                 </div>
 
+                {/* Limited Themes section */}
                 <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
 
                 <DropdownMenuLabel style={{ color: "hsl(var(--nav-text))" }}>Thèmes Limités</DropdownMenuLabel>
@@ -349,6 +349,7 @@ export function Navigation() {
                   ))}
                 </div>
 
+                {/* Premium themes only available to authenticated users */}
                 {user && (
                   <>
                     <DropdownMenuSeparator style={{ backgroundColor: "hsl(var(--nav-border))" }} />
@@ -392,20 +393,20 @@ export function Navigation() {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="relative h-10 w-10 md:h-12 md:w-12 rounded-full border-2 transition-colors"
+                    className="relative h-12 w-12 rounded-full border-2 transition-colors"
                     style={{ borderColor: "hsl(var(--nav-border))" }}
                   >
-                    <User className="w-4 h-4 md:w-5 md:h-5" style={{ color: "hsl(var(--nav-text))" }} />
+                    <User className="w-5 h-5" style={{ color: "hsl(var(--nav-text))" }} />
                     {user.isVip && (
-                      <Crown className="w-3 h-3 md:w-4 md:h-4 absolute -top-1 -right-1 text-yellow-400 drop-shadow-glow" />
+                      <Crown className="w-4 h-4 absolute -top-1 -right-1 text-yellow-400 drop-shadow-glow" />
                     )}
                     {user.isVipPlus && (
-                      <Crown className="w-3 h-3 md:w-4 md:h-4 absolute -top-1 -right-1 text-purple-400 drop-shadow-glow" />
+                      <Crown className="w-4 h-4 absolute -top-1 -right-1 text-purple-400 drop-shadow-glow" />
                     )}
-                    {user.isAdmin && <Shield className="w-2 h-2 md:w-3 md:h-3 absolute top-0 left-0 text-red-400" />}
+                    {user.isAdmin && <Shield className="w-3 h-3 absolute top-0 left-0 text-red-400" />}
                     {unreadCount > 0 && (
                       <Badge
-                        className="absolute -bottom-1 -right-1 h-4 w-4 md:h-5 md:w-5 flex items-center justify-center p-0 text-xs bg-red-500 text-white border-2"
+                        className="absolute -bottom-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 text-white border-2"
                         style={{ borderColor: "hsl(var(--nav-bg))" }}
                       >
                         {unreadCount > 9 ? "9+" : unreadCount}
@@ -471,7 +472,7 @@ export function Navigation() {
                 </Button>
                 <Button
                   asChild
-                  className="px-4 md:px-6"
+                  className="px-6"
                   style={{ backgroundColor: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }}
                 >
                   <Link href="/register">Inscription</Link>
@@ -483,11 +484,11 @@ export function Navigation() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 md:h-12 md:w-12 lg:hidden"
+              className="h-12 w-12 lg:hidden"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               style={{ color: "hsl(var(--nav-text))" }}
             >
-              {isMenuOpen ? <X className="w-5 h-5 md:w-6 md:h-6" /> : <Menu className="w-5 h-5 md:w-6 md:h-6" />}
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </Button>
           </div>
         </div>
@@ -501,16 +502,9 @@ export function Navigation() {
         >
           <div className="container mx-auto px-4 py-6">
             <div className="flex justify-between items-center mb-6">
-              <Link href="/" className="flex items-center group">
-                <div className="relative h-10 w-auto sm:h-12 transition-transform group-hover:scale-105">
-                  <Image 
-                    src="/images/logo-20ww-202026.png" 
-                    alt="WaveWatch" 
-                    width={250} 
-                    height={50}
-                    className="h-full w-auto object-contain" 
-                    priority 
-                  />
+              <Link href="/" className="flex items-center space-x-2 group lg:hidden">
+                <div className="relative w-[200px] h-12 sm:w-[250px] sm:h-14 transition-transform group-hover:scale-105">
+                  <Image src="/images/logo-20ww-202026.png" alt="WaveWatch" fill className="object-contain" priority />
                 </div>
               </Link>
               <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(false)}>
@@ -600,6 +594,11 @@ export function Navigation() {
                       </p>
                     </div>
                   </div>
+                  <Button asChild variant="ghost" className="justify-start" style={{ color: "hsl(var(--nav-text))" }}>
+                    <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                      Tableau de bord
+                    </Link>
+                  </Button>
                   <Button asChild variant="ghost" className="justify-start" style={{ color: "hsl(var(--nav-text))" }}>
                     <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
                       Profil
@@ -774,17 +773,12 @@ export function Navigation() {
                       Chaînes TV
                     </Link>
                   </Button>
-                  <Button
-                    asChild
-                    variant="ghost"
-                    className="w-full justify-start"
-                    style={{ color: "hsl(var(--nav-text))" }}
-                  >
+                  <DropdownMenuItem asChild>
                     <Link
                       href="https://sports-stream.sbs/"
                       target="_blank"
                       rel="noopener noreferrer"
-                      onClick={() => setIsMenuOpen(false)}
+                      style={{ color: "hsl(var(--nav-text))" }}
                       className="flex items-center justify-between"
                     >
                       Live Sports
@@ -792,7 +786,7 @@ export function Navigation() {
                         NEW
                       </Badge>
                     </Link>
-                  </Button>
+                  </DropdownMenuItem>
                   <Button
                     asChild
                     variant="ghost"
@@ -848,9 +842,4 @@ export function Navigation() {
       )}
     </nav>
   )
-})" }}>
-                    <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>
-                      Tableau de bord
-                    </Link>
-                  </Button>
-                  <Button asChild variant="ghost" className="justify-start" style={{ color: "hsl(var(--nav-text)
+}
