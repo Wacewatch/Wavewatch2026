@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -31,6 +31,20 @@ export function TrendingTVChannels() {
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  const [shuffledChannels, setShuffledChannels] = useState<TVChannel[]>([])
+
+  useEffect(() => {
+    if (channels.length > 0) {
+      // Fisher-Yates shuffle algorithm
+      const shuffled = [...channels]
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+      }
+      setShuffledChannels(shuffled)
+    }
+  }, [channels])
 
   const handleChannelClick = (channel: TVChannel) => {
     setSelectedChannel(channel)
@@ -74,7 +88,7 @@ export function TrendingTVChannels() {
     )
   }
 
-  const trendingChannels = channels.slice(0, 25)
+  const trendingChannels = shuffledChannels.slice(0, 25)
 
   return (
     <>

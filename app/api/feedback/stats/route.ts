@@ -1,8 +1,21 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { NextResponse } from "next/server"
 
+let cachedData: {
+  stats: { content: number; functionality: number; design: number; totalFeedback: number }
+  guestbookMessages: Array<{ message: string; username: string; created_at: string }>
+} | null = null
+let cacheTime = 0
+const CACHE_DURATION = 30000 // 30 seconds
+
 export async function GET() {
   try {
+    const now = Date.now()
+    if (cachedData && now - cacheTime < CACHE_DURATION) {
+      console.log("[v0] Returning cached feedback stats")
+      return NextResponse.json(cachedData)
+    }
+
     const supabase = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -18,6 +31,10 @@ export async function GET() {
 
     if (error) {
       console.error("[v0] Error fetching feedback:", error)
+      if (cachedData) {
+        console.log("[v0] Returning stale cache due to error")
+        return NextResponse.json(cachedData)
+      }
       return NextResponse.json({
         stats: { content: 0, functionality: 0, design: 0, totalFeedback: 0 },
         guestbookMessages: [],
@@ -40,6 +57,10 @@ export async function GET() {
 
     if (feedbackError) {
       console.error("[v0] Error fetching guestbook messages:", feedbackError)
+      if (cachedData) {
+        console.log("[v0] Returning stale cache due to guestbook error")
+        return NextResponse.json(cachedData)
+      }
       return NextResponse.json({
         stats: {
           content: contentAvg,
@@ -51,12 +72,8 @@ export async function GET() {
       })
     }
 
-    console.log("[v0] Found", feedbackMessages?.length || 0, "guestbook messages")
-
     // Get unique user IDs
     const userIds = [...new Set((feedbackMessages || []).map((f) => f.user_id).filter(Boolean))]
-
-    console.log("[v0] Loading profiles for", userIds.length, "users")
 
     const { data: profiles, error: profilesError } = await supabase
       .from("user_profiles")
@@ -67,12 +84,9 @@ export async function GET() {
       console.error("[v0] Error loading user profiles:", profilesError)
     }
 
-    console.log("[v0] Loaded", profiles?.length || 0, "user profiles")
-
     const usernameMap = new Map(
       (profiles || []).map((p) => {
         const displayName = p.username || (p.email ? p.email.split("@")[0] : "Utilisateur")
-        console.log("[v0] Mapping user", p.id, "to", displayName)
         return [p.id, displayName]
       }),
     )
@@ -82,7 +96,6 @@ export async function GET() {
       .filter((f) => f.guestbook_message && f.guestbook_message.trim() !== "")
       .map((f) => {
         const username = usernameMap.get(f.user_id) || "Utilisateur anonyme"
-        console.log("[v0] Message from user_id", f.user_id, "-> username:", username)
         return {
           message: f.guestbook_message,
           username: username,
@@ -90,10 +103,7 @@ export async function GET() {
         }
       })
 
-    console.log("[v0] Guestbook messages processed:", guestbookMessages.length)
-    console.log("[v0] Sample messages:", guestbookMessages.slice(0, 2))
-
-    return NextResponse.json({
+    cachedData = {
       stats: {
         content: contentAvg,
         functionality: functionalityAvg,
@@ -101,9 +111,16 @@ export async function GET() {
         totalFeedback,
       },
       guestbookMessages,
-    })
+    }
+    cacheTime = now
+
+    return NextResponse.json(cachedData)
   } catch (error) {
     console.error("[v0] Error in feedback stats route:", error)
+    if (cachedData) {
+      console.log("[v0] Returning stale cache due to exception")
+      return NextResponse.json(cachedData)
+    }
     return NextResponse.json(
       {
         stats: { content: 0, functionality: 0, design: 0, totalFeedback: 0 },

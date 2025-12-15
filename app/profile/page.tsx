@@ -10,12 +10,27 @@ import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
-import { User, ArrowLeft, Camera, Calendar, MapPin, Edit, Crown, Shield, Mail, Save, X, Flag as Flask, MessageSquare, Palette, Lock } from 'lucide-react'
+import {
+  User,
+  ArrowLeft,
+  Camera,
+  Calendar,
+  MapPin,
+  Edit,
+  Crown,
+  Shield,
+  Mail,
+  Save,
+  X,
+  Flag as Flask,
+  MessageSquare,
+  Lock,
+} from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { VIPSystem } from "@/lib/vip-system"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
-import { useRouter } from 'next/navigation'
+import { useRouter } from "next/navigation"
 import { useUserPreferences } from "@/hooks/use-user-preferences"
 import { useMessaging } from "@/hooks/use-messaging"
 import { useTheme } from "@/components/theme-provider"
@@ -40,7 +55,7 @@ export default function ProfilePage() {
 
   const [activationCode, setActivationCode] = useState("")
   const [isActivating, setIsActivating] = useState(false)
-  const { preferences, updatePreferences, loading: preferencesLoading } = useUserPreferences()
+  const { preferences, updatePreferences, loading: preferencesLoading, setPreferencesLoading } = useUserPreferences()
   const { updateMessagePreferences } = useMessaging()
   const { toast } = useToast()
   const router = useRouter()
@@ -323,6 +338,7 @@ export default function ProfilePage() {
   }
 
   const handleAdultContentToggle = async (enabled: boolean) => {
+    setPreferencesLoading(true)
     try {
       const success = await updatePreferences({
         showAdultContent: enabled,
@@ -350,6 +366,8 @@ export default function ProfilePage() {
         description: "Une erreur est survenue lors de la sauvegarde",
         variant: "destructive",
       })
+    } finally {
+      setPreferencesLoading(false)
     }
   }
 

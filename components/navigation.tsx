@@ -108,7 +108,7 @@ export function Navigation() {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 group">
-            <div className="relative w-60 h-16 sm:w-78 sm:h-20 md:w-96 md:h-24 transition-transform group-hover:scale-105">
+            <div className="relative w-80 h-20 sm:w-96 sm:h-24 md:w-[450px] md:h-28 transition-transform group-hover:scale-105">
               <Image
                 src="/images/logo-20ww-202026.png"
                 alt="WaveWatch - Plateforme de Streaming Premium"
@@ -503,7 +503,7 @@ export function Navigation() {
           <div className="container mx-auto px-4 py-6">
             <div className="flex justify-between items-center mb-6">
               <Link href="/" className="flex items-center space-x-3" onClick={() => setIsMenuOpen(false)}>
-                <div className="relative w-48 h-14">
+                <div className="relative w-64 h-16">
                   <Image src="/images/logo-20ww-202026.png" alt="WaveWatch" fill className="object-contain" priority />
                 </div>
               </Link>

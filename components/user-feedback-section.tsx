@@ -53,8 +53,21 @@ export function UserFeedbackSection() {
   const fetchGuestbookStats = async () => {
     try {
       const response = await fetch("/api/feedback/stats")
-      const data = await response.json()
-      setGuestbookStats(data)
+
+      if (!response.ok) {
+        console.error("Error fetching feedback:", response.status, response.statusText)
+        return
+      }
+
+      const text = await response.text()
+
+      try {
+        const data = JSON.parse(text)
+        setGuestbookStats(data)
+      } catch (parseError) {
+        console.error("Error parsing feedback response:", parseError)
+        console.error("Response text:", text.substring(0, 100))
+      }
     } catch (error) {
       console.error("Error fetching guestbook stats:", error)
     }
@@ -63,6 +76,12 @@ export function UserFeedbackSection() {
   const fetchUserFeedback = async () => {
     try {
       const response = await fetch(`/api/feedback?user_id=${user?.id}`)
+
+      if (!response.ok) {
+        console.error("Error fetching user feedback:", response.status)
+        return
+      }
+
       const data = await response.json()
       if (data.feedback && data.feedback.length > 0) {
         const userFeedback = data.feedback[0]

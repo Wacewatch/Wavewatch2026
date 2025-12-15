@@ -5,6 +5,7 @@ import { TrendingTVShows } from "@/components/trending-tv-shows"
 import { PopularAnime } from "@/components/popular-anime"
 import { TrendingActors } from "@/components/trending-actors"
 import { TrendingTVChannels } from "@/components/trending-tv-channels"
+import { SportsStreamPromo } from "@/components/sports-stream-promo"
 import { CalendarWidget } from "@/components/calendar-widget"
 import { FootballCalendarWidget } from "@/components/football-calendar-widget"
 import { RandomContent } from "@/components/random-content"
@@ -120,6 +121,7 @@ export default async function HomePage() {
             <TrendingTVChannels />
           </Suspense>
         )}
+        <SportsStreamPromo />
         {modules.subscription_offer && <SubscriptionOffer />}
         {modules.random_content && (
           <Suspense fallback={<LoadingSection />}>
