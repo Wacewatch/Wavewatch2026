@@ -25,6 +25,10 @@ export const metadata: Metadata = {
     telephone: false,
   },
   generator: "WaveWatch Platform",
+  icons: {
+    icon: [{ url: "/icon.png", sizes: "32x32", type: "image/png" }],
+    apple: "/apple-icon.png",
+  },
   openGraph: {
     title: "WaveWatch - Plateforme de Streaming Premium",
     description: "Découvrez et streamez des milliers de films, séries TV, animés et contenus exclusifs",
