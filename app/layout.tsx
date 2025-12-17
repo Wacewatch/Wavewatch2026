@@ -65,7 +65,7 @@ export default function RootLayout({
         {/* Compteur Histats caché */}
         <div style={{ display: "none" }}>
           <a href="/" target="_blank" rel="noreferrer">
-            <img src="https://sstatic1.histats.com/0.gif?4986671&101" alt="web hit counter" border={0} />
+            <img src="/images/design-mode/0.gif" alt="web hit counter" border={0} />
           </a>
         </div>
       </body>
