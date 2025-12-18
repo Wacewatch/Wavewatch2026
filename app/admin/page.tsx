@@ -2346,38 +2346,40 @@ const loadRealUsers = async (supabase) => {
         case "retrogaming-source":
           tableName = "retrogaming_sources"
           break
-        case "user":
-          tableName = "user_profiles"
-          if (newPassword && newPassword.trim() !== "") {
-            try {
-              // Note: This requires Supabase service role key for admin operations
-              // In a real app, this should be done server-side via API route
-              const {
-                error: passwordError
-              } = await supabase.auth.admin.updateUserById(editingUser.user_id, { // Corrected to use user_id
-                password: newPassword,
-              })
+ case "user":
+  tableName = "user_profiles"
+  
+  // Gestion du mot de passe AVANT la mise à jour du profil
+  if (newPassword && newPassword.trim() !== "") {
+    try {
+      const userId = editingItem.user_id || editingItem.id
+      console.log("Updating password for user:", userId)
+      
+      const { error: passwordError } = await supabase.auth.admin.updateUserById(userId, {
+        password: newPassword,
+      })
 
-              if (passwordError) {
-                console.error("❌ Erreur lors du changement de mot de passe:", passwordError)
-                toast({
-                  title: "Avertissement",
-                  description:
-                    "Profil mis à jour mais le mot de passe n'a pas pu être changé. Utilisez la fonctionnalité de réinitialisation par email.",
-                  variant: "destructive",
-                })
-              } else {
-                toast({
-                  title: "Mot de passe modifié",
-                  description: "Le mot de passe de l'utilisateur a été changé",
-                })
-              }
-            } catch (pwError) {
-              console.error("❌ Erreur mot de passe:", pwError)
-            }
-            setNewPassword("") // Reset password field
-          }
-          break
+      if (passwordError) {
+        console.error("❌ Erreur lors du changement de mot de passe:", passwordError)
+        toast({
+          title: "Avertissement",
+          description: "Mot de passe non modifié. Continuons avec le profil...",
+          variant: "destructive",
+        })
+      } else {
+        console.log("✅ Mot de passe modifié")
+        toast({
+          title: "Mot de passe modifié",
+          description: "Le mot de passe a été changé avec succès",
+        })
+      }
+    } catch (pwError) {
+      console.error("❌ Erreur mot de passe:", pwError)
+    }
+  }
+  
+  setNewPassword("") // Reset après traitement
+  break
         case "music":
           tableName = "music_content"
           break
@@ -3507,7 +3509,7 @@ const loadRealUsers = async (supabase) => {
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
               <Card className="bg-card border-border">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                   <CardTitle className="text-sm font-medium">En Ligne Maintenant</CardTitle>
                   <Activity className="h-4 w-4 text-green-500" />
                 </CardHeader>
@@ -3518,7 +3520,7 @@ const loadRealUsers = async (supabase) => {
               </Card>
 
               <Card className="bg-card border-border">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                   <CardTitle className="text-sm font-medium">Dernière Heure</CardTitle>
                   <Clock className="h-4 w-4 text-blue-500" />
                 </CardHeader>
@@ -3529,7 +3531,7 @@ const loadRealUsers = async (supabase) => {
               </Card>
 
               <Card className="bg-card border-border">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                   <CardTitle className="text-sm font-medium">Dernières 24h</CardTitle>
                   <Calendar className="h-4 w-4 text-purple-500" />
                 </CardHeader>
@@ -4832,16 +4834,28 @@ const loadRealUsers = async (supabase) => {
                               {user.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "N/A"}
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingUser(user)
-                                  setIsUserDialogOpen(true)
-                                }}
-                              >
-                                <Pencil className="w-3 h-3" />
-                              </Button>
+<Button
+  variant="outline"
+  size="sm"
+  onClick={() => {
+    console.log("Editing user:", user) // Debug
+    setEditingUser(user)
+    setEditingItem(user)
+    setUserForm({
+      username: user.username || "",
+      email: user.email || "",
+      is_vip: Boolean(user.is_vip),
+      is_vip_plus: Boolean(user.is_vip_plus),
+      is_beta: Boolean(user.is_beta),
+      is_admin: Boolean(user.is_admin),
+      is_uploader: Boolean(user.is_uploader),
+    })
+    setNewPassword("")
+    setIsUserDialogOpen(true)
+  }}
+>
+  <Pencil className="w-3 h-3" />
+</Button>
                             </TableCell>
                           </TableRow>
                         ))
@@ -4858,25 +4872,27 @@ const loadRealUsers = async (supabase) => {
               </CardContent>
             </Card>
 
-            <Dialog
-              open={isUserDialogOpen}
-              onOpenChange={(open) => {
-                setIsUserDialogOpen(open)
-                if (open && editingUser) {
-                  // Populate form with current user values
-                  setUserForm({
-                    username: editingUser.username || "",
-                    email: editingUser.email || "",
-                    is_vip: Boolean(editingUser.is_vip),
-                    is_vip_plus: Boolean(editingUser.is_vip_plus),
-                    is_beta: Boolean(editingUser.is_beta),
-                    is_admin: Boolean(editingUser.is_admin),
-                    is_uploader: Boolean(editingUser.is_uploader),
-                  })
-                  setNewPassword("")
-                }
-              }}
-            >
+<Dialog
+  open={isUserDialogOpen}
+  onOpenChange={(open) => {
+    setIsUserDialogOpen(open)
+    if (!open) {
+      // Reset quand on ferme
+      setEditingUser(null)
+      setEditingItem(null)
+      setNewPassword("")
+      setUserForm({
+        username: "",
+        email: "",
+        is_vip: false,
+        is_vip_plus: false,
+        is_beta: false,
+        is_admin: false,
+        is_uploader: false,
+      })
+    }
+  }}
+>
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Modifier l'utilisateur</DialogTitle>
@@ -4959,13 +4975,38 @@ const loadRealUsers = async (supabase) => {
                     </div>
                   </div>
                 )}
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
-                    Annuler
-                  </Button>
-                  <Button onClick={() => handleUpdate("user", userForm)}>Sauvegarder</Button>
-                </DialogFooter>
-              </DialogContent>
+<DialogFooter>
+  <Button 
+    variant="outline" 
+    onClick={() => {
+      setIsUserDialogOpen(false)
+      setEditingUser(null)
+      setEditingItem(null)
+    }}
+  >
+    Annuler
+  </Button>
+  <Button 
+    onClick={async () => {
+      console.log("Saving user with form:", userForm)
+      console.log("Editing item:", editingItem)
+      
+      if (!editingItem) {
+        toast({
+          title: "Erreur",
+          description: "Aucun utilisateur sélectionné",
+          variant: "destructive"
+        })
+        return
+      }
+      
+      await handleUpdate("user", userForm)
+      setIsUserDialogOpen(false)
+    }}
+  >
+    Sauvegarder
+  </Button>
+</DialogFooter>
             </Dialog>
           </TabsContent>
 
