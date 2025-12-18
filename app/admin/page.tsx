@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Separator } from "@/components/ui/separator"
 import {
   Plus,
   Edit,
@@ -64,7 +65,6 @@ import {
 import { useRouter } from "next/navigation"
 // REMOVED: import { supabase } from "@/lib/supabase" // Removed incorrect Supabase import
 import { createBrowserClient } from "@supabase/ssr" // Import for Supabase client
-import { Separator } from "@/components/ui/separator" // Import Separator
 
 // Constants for user pagination
 const USERS_PER_PAGE = 10
@@ -149,6 +149,12 @@ export default function AdminPage() {
       errorRate: "0.1%",
       bandwidth: "2.5 TB",
     },
+  })
+
+  const [onlineStats, setOnlineStats] = useState({
+    onlineNow: 0,
+    onlineLastHour: 0,
+    onlineLast24h: 0,
   })
 
   const [recentActivities, setRecentActivities] = useState([])
@@ -288,6 +294,7 @@ export default function AdminPage() {
     is_vip_plus: false,
     is_beta: false,
     is_admin: false,
+    is_uploader: false, // Added is_uploader state
   })
   const [newPassword, setNewPassword] = useState("")
   const [editingUser, setEditingUser] = useState(null)
@@ -657,57 +664,71 @@ export default function AdminPage() {
     }
   }
 
-  const loadRealUsers = async (supabase) => {
-    try {
-      console.log("[v0] Loading users from database...")
+const loadRealUsers = async (supabase) => {
+  try {
+    console.log("[v0] Loading users from database...")
 
-      // Get total count
-      const { count: totalCount, error: countError } = await supabase
-        .from("user_profiles")
-        .select("*", { count: "exact", head: true })
+    // Get total count
+    const { count: totalCount, error: countError } = await supabase
+      .from("user_profiles")
+      .select("*", { count: "exact", head: true })
 
-      if (countError) {
-        console.error("[v0] Error counting users:", countError)
-        setTotalUsersInDB(0)
-      } else {
-        setTotalUsersInDB(totalCount || 0)
-        console.log(`[v0] Total users in DB: ${totalCount}`)
-      }
+    if (countError) {
+      console.error("[v0] Error counting users:", countError)
+      setTotalUsersInDB(0)
+    } else {
+      setTotalUsersInDB(totalCount || 0)
+      console.log(`[v0] Total users in DB: ${totalCount}`)
+    }
 
-      // Load all users with proper fields
-      const { data: allUsers, error: usersError } = await supabase
+    // Load ALL users with pagination to avoid limits
+    let allUsers = []
+    let page = 0
+    const pageSize = 1000
+    let hasMore = true
+
+    while (hasMore) {
+      const { data: pageData, error: usersError } = await supabase
         .from("user_profiles")
         .select("id, user_id, username, email, status, is_admin, is_uploader, is_vip, is_vip_plus, is_beta, created_at, vip_expires_at")
         .order("created_at", { ascending: false })
-        .limit(1000)
+        .range(page * pageSize, (page + 1) * pageSize - 1)
 
       if (usersError) {
         console.error("[v0] Error loading users:", usersError)
-        setUsers([])
         throw usersError
       }
 
-      console.log(`[v0] Loaded ${allUsers?.length || 0} user profiles`)
-
-      // Process users with proper defaults
-      const processedUsers = (allUsers || []).map((user) => ({
-        ...user,
-        is_admin: Boolean(user.is_admin),
-        is_uploader: Boolean(user.is_uploader),
-        is_vip: Boolean(user.is_vip),
-        is_vip_plus: Boolean(user.is_vip_plus),
-        is_beta: Boolean(user.is_beta),
-        status: user.status || "active",
-        username: user.username || user.email?.split("@")[0] || "Unknown User",
-      }))
-
-      setUsers(processedUsers)
-      console.log(`[v0] Processed ${processedUsers.length} users successfully`)
-    } catch (error) {
-      console.error("[v0] Fatal error loading users:", error)
-      setUsers([])
+      if (pageData && pageData.length > 0) {
+        allUsers = [...allUsers, ...pageData]
+        page++
+        hasMore = pageData.length === pageSize
+      } else {
+        hasMore = false
+      }
     }
+
+    console.log(`[v0] Loaded ${allUsers.length} user profiles`)
+
+    // Process users with proper defaults
+    const processedUsers = allUsers.map((user) => ({
+      ...user,
+      is_admin: Boolean(user.is_admin),
+      is_uploader: Boolean(user.is_uploader),
+      is_vip: Boolean(user.is_vip),
+      is_vip_plus: Boolean(user.is_vip_plus),
+      is_beta: Boolean(user.is_beta),
+      status: user.status || "active",
+      username: user.username || user.email?.split("@")[0] || "Unknown User",
+    }))
+
+    setUsers(processedUsers)
+    console.log(`[v0] Processed ${processedUsers.length} users successfully`)
+  } catch (error) {
+    console.error("[v0] Fatal error loading users:", error)
+    setUsers([])
   }
+}
 
   const loadRequests = async (supabase) => {
     try {
@@ -1555,6 +1576,43 @@ export default function AdminPage() {
     }
   }
 
+  const loadOnlineStatistics = async (supabase) => {
+    try {
+      const now = new Date()
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000)
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000)
+      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+      // Users online now (active in last 5 minutes)
+      const { count: onlineNow } = await supabase
+        .from("user_online_status")
+        .select("*", { count: "exact", head: true })
+        .gte("last_seen", fiveMinutesAgo.toISOString())
+
+      // Users online in last hour
+      const { count: onlineLastHour } = await supabase
+        .from("user_online_status")
+        .select("*", { count: "exact", head: true })
+        .gte("last_seen", oneHourAgo.toISOString())
+
+      // Users online in last 24h
+      const { count: onlineLast24h } = await supabase
+        .from("user_online_status")
+        .select("*", { count: "exact", head: true })
+        .gte("last_seen", twentyFourHoursAgo.toISOString())
+
+      setOnlineStats({
+        onlineNow: onlineNow || 0,
+        onlineLastHour: onlineLastHour || 0,
+        onlineLast24h: onlineLast24h || 0,
+      })
+
+      console.log("[v0] Online stats:", { onlineNow, onlineLastHour, onlineLast24h })
+    } catch (error) {
+      console.error("[v0] Error loading online statistics:", error)
+    }
+  }
+
   const loadStatistics = async () => {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -1562,6 +1620,8 @@ export default function AdminPage() {
     )
     try {
       console.log("🔄 Calcul des statistiques...")
+
+      await loadOnlineStatistics(supabase)
 
       // Essayer d'utiliser la fonction SQL pour obtenir les stats
       let dbStats = null
@@ -2186,6 +2246,7 @@ export default function AdminPage() {
           is_vip_plus: item.is_vip_plus || false,
           is_beta: item.is_beta || false,
           is_admin: item.is_admin || false,
+          is_uploader: item.is_uploader || false,
         })
         break
       case "music":
@@ -2293,7 +2354,7 @@ export default function AdminPage() {
               // In a real app, this should be done server-side via API route
               const {
                 error: passwordError
-              } = await supabase.auth.admin.updateUserById(editingItem.id, {
+              } = await supabase.auth.admin.updateUserById(editingUser.user_id, { // Corrected to use user_id
                 password: newPassword,
               })
 
@@ -3444,8 +3505,46 @@ export default function AdminPage() {
 
           {/* Dashboard avec Statistiques */}
           <TabsContent value="dashboard" className="space-y-6">
-            {/* Stats Cards - Only showing Total Content and Total Users */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <Card className="bg-card border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">En Ligne Maintenant</CardTitle>
+                  <Activity className="h-4 w-4 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-500">{onlineStats.onlineNow}</div>
+                  <p className="text-xs text-muted-foreground">Actifs (5 dernières minutes)</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Dernière Heure</CardTitle>
+                  <Clock className="h-4 w-4 text-blue-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-500">{onlineStats.onlineLastHour}</div>
+                  <p className="text-xs text-muted-foreground">Utilisateurs actifs</p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Dernières 24h</CardTitle>
+                  <Calendar className="h-4 w-4 text-purple-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-purple-500">{onlineStats.onlineLast24h}</div>
+                  <p className="text-xs text-muted-foreground">Utilisateurs actifs</p>
+                </CardContent>
+              </Card>
+
+              
+            </div>
+
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
               <Card className="bg-card border-border">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">Contenu Total</CardTitle>
@@ -3461,7 +3560,7 @@ export default function AdminPage() {
 
               <Card className="bg-card border-border">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Utilisateurs</CardTitle>
+                  <CardTitle className="text-sm font-medium">Utilisateurs Total</CardTitle>
                   <Users className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
@@ -3892,8 +3991,7 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2 p-4 bg-blue-900/20 border border-blue-700 rounded-lg">
                     <Users className="w-5 h-5 text-blue-400" />
                     <span className="text-sm text-blue-300">
-                      Ce message sera envoyé à {totalUsersInDB} utilisateur(s) inscrit(s) (filtré:{" "}
-                      {getFilteredUsers().length})
+                      Ce message sera envoyé à {totalUsersInDB} utilisateur(s) inscrit(s)
                     </span>
                   </div>
                   <Button
@@ -4760,8 +4858,25 @@ export default function AdminPage() {
               </CardContent>
             </Card>
 
-            {/* User Edit Dialog */}
-            <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+            <Dialog
+              open={isUserDialogOpen}
+              onOpenChange={(open) => {
+                setIsUserDialogOpen(open)
+                if (open && editingUser) {
+                  // Populate form with current user values
+                  setUserForm({
+                    username: editingUser.username || "",
+                    email: editingUser.email || "",
+                    is_vip: Boolean(editingUser.is_vip),
+                    is_vip_plus: Boolean(editingUser.is_vip_plus),
+                    is_beta: Boolean(editingUser.is_beta),
+                    is_admin: Boolean(editingUser.is_admin),
+                    is_uploader: Boolean(editingUser.is_uploader),
+                  })
+                  setNewPassword("")
+                }
+              }}
+            >
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Modifier l'utilisateur</DialogTitle>
@@ -4809,7 +4924,7 @@ export default function AdminPage() {
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id="is_uploader"
-                            checked={userForm.is_uploader} // Add uploader checkbox
+                            checked={userForm.is_uploader}
                             onCheckedChange={(checked) => setUserForm({ ...userForm, is_uploader: !!checked })}
                           />
                           <Label htmlFor="is_uploader">Uploader</Label>
@@ -6692,7 +6807,7 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <label className="flex items-center gap-2 text-sm text-gray-300">
                       <input
                         type="checkbox"
@@ -6702,16 +6817,19 @@ export default function AdminPage() {
                           setWorldSettings({ ...worldSettings, playerInteractionsEnabled: e.target.checked })
                         }
                       />
-                      Activer les interactions entre joueurs
+                      Interactions Joueurs
                     </label>
+
                     <label className="flex items-center gap-2 text-sm text-gray-300">
                       <input
                         type="checkbox"
                         className="rounded"
                         checked={worldSettings.showStatusBadges}
-                        onChange={(e) => setWorldSettings({ ...worldSettings, showStatusBadges: e.target.checked })}
+                        onChange={(e) =>
+                          setWorldSettings({ ...worldSettings, showStatusBadges: e.target.checked })
+                        }
                       />
-                      Afficher les badges de statut
+                      Afficher Badges Statut
                     </label>
                     <label className="flex items-center gap-2 text-sm text-gray-300">
                       <input
@@ -6777,9 +6895,7 @@ export default function AdminPage() {
                               onChange={(e) => {
                                 setCinemaRooms(
                                   cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r,
-                                      room_number: Number.parseInt(e.target.value)
-                                    } : r,
+                                    r.id === room.id ? { ...r, room_number: Number.parseInt(e.target.value) } : r,
                                   ),
                                 )
                               }}
@@ -6805,9 +6921,7 @@ export default function AdminPage() {
                             <Input
                               type="number"
                               value={room.capacity}
-                              onChange={(
-                                e,
-                              ) => {
+                              onChange={(e) => {
                                 setCinemaRooms(
                                   cinemaRooms.map((r) =>
                                     r.id === room.id ? { ...r, capacity: Number.parseInt(e.target.value) } : r,
@@ -6817,105 +6931,284 @@ export default function AdminPage() {
                               className="bg-gray-600 border-gray-500 text-white"
                             />
                           </div>
- <div className="space-y-2">
-  <label className="text-sm text-gray-300">Thème</label>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Thème</label>
+                            <select
+                              value={room.theme}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) => (r.id === room.id ? { ...r, theme: e.target.value } : r)),
+                                )
+                              }}
+                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                            >
+                              <option value="default">Par défaut</option>
+                              <option value="luxury">Luxe</option>
+                              <option value="retro">Rétro</option>
+                              <option value="modern">Moderne</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Titre du Film</label>
+                            <Input
+                              value={room.movie_title}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, movie_title: e.target.value } : r,
+                                  ),
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">ID TMDB du Film</label>
+                            <Input
+                              type="number"
+                              value={room.movie_tmdb_id || ""}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id
+                                      ? { ...r, movie_tmdb_id: Number.parseInt(e.target.value) || null }
+                                      : r,
+                                  ),
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">URL Affiche</label>
+                            <Input
+                              value={room.movie_poster || ""}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, movie_poster: e.target.value } : r,
+                                  ),
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+<div className="space-y-2">
+  <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
   <Input
-    value={room.theme}
+    value={room.embed_url || ""}
     onChange={(e) => {
       setCinemaRooms(
-        cinemaRooms.map((r) => 
-          r.id === room.id ? { ...r, theme: e.target.value } : r
-        )
+        cinemaRooms.map((r) => (r.id === room.id ? { ...r, embed_url: e.target.value } : r))
       )
     }}
     className="bg-gray-600 border-gray-500 text-white"
-    placeholder="default, sci-fi, retro..."
   />
 </div>
-
 <div className="space-y-2">
-  <label className="text-sm text-gray-300">Titre du Film</label>
-  <Input
-    value={room.movie_title}
-    onChange={(e) => {
-      setCinemaRooms(
-        cinemaRooms.map((r) => 
-          r.id === room.id ? { ...r, movie_title: e.target.value } : r
-        )
-      )
-    }}
-    className="bg-gray-600 border-gray-500 text-white"
-    placeholder="Titre du film à diffuser"
-  />
-</div>
+                            <label className="text-sm text-gray-300">Début de séance</label>
+                            <Input
+                              type="datetime-local"
+                              value={room.schedule_start || ""}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, schedule_start: e.target.value } : r
+                                  )
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
 
-<div className="space-y-2">
-  <label className="text-sm text-gray-300">URL Stream</label>
-  <Input
-    value={room.embed_url || ''}
-    onChange={(e) => {
-      setCinemaRooms(
-        cinemaRooms.map((r) => 
-          r.id === room.id ? { ...r, embed_url: e.target.value } : r
-        )
-      )
-    }}
-    className="bg-gray-600 border-gray-500 text-white"
-    placeholder="URL de diffusion du film"
-  />
-</div>
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Fin de séance</label>
+                            <Input
+                              type="datetime-local"
+                              value={room.schedule_end || ""}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, schedule_end: e.target.value } : r
+                                  )
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
 
-<div className="space-y-2">
-  <label className="text-sm text-gray-300">Niveau d'Accès</label>
-  <select
-    value={room.access_level}
-    onChange={(e) => {
-      setCinemaRooms(
-        cinemaRooms.map((r) => 
-          r.id === room.id ? { ...r, access_level: e.target.value } : r
-        )
-      )
-    }}
-    className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-  >
-    <option value="public">Public</option>
-    <option value="vip">VIP</option>
-    <option value="vip_plus">VIP+</option>
-  </select>
-</div>
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Niveau d'accès</label>
+                            <select
+                              value={room.access_level}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, access_level: e.target.value } : r
+                                  )
+                                )
+                              }}
+                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                            >
+                              <option value="public">Public</option>
+                              <option value="vip">VIP</option>
+                              <option value="vip_plus">VIP+</option>
+                            </select>
+                          </div>
 
-<div className="flex items-center gap-2">
-  <label className="flex items-center gap-2 text-sm text-gray-300">
-    <input
-      type="checkbox"
-      className="rounded"
-      checked={room.is_open}
-      onChange={(e) => {
-        setCinemaRooms(
-          cinemaRooms.map((r) => 
-            r.id === room.id ? { ...r, is_open: e.target.checked } : r
-          )
-        )
-      }}
-    />
-    Salle ouverte
-  </label>
-</div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={room.is_open}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, is_open: e.target.checked } : r
+                                  )
+                                )
+                              }}
+                              className="rounded"
+                            />
+                            <label className="text-sm text-gray-300">Salle ouverte</label>
+                          </div>
+                        </div>
 
-<div className="flex justify-end gap-2 mt-4 col-span-full">
-  <Button
-    onClick={() => handleUpdateCinemaRoom(room)}
-    size="sm"
-    className="bg-blue-600 hover:bg-blue-700"
-  >
-    <Save className="w-4 h-4 mr-2" />
-    Sauvegarder
-  </Button>
-</div>
-
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Button
+                            onClick={() => handleUpdateCinemaRoom(room)}
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Save className="w-4 h-4 mr-2" />
+                            Sauvegarder
+                          </Button>
                         </div>
                       </div>
                     ))}
+
+                    {cinemaRooms.length === 0 && (
+                      <div className="text-center py-8 text-gray-400">
+                        <Film className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>Aucune salle de cinéma créée</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section des options d'avatar */}
+                <Separator className="bg-gray-700" />
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white">Options de Personnalisation d'Avatar</h3>
+                  
+                  {/* Formulaire d'ajout */}
+                  <div className="p-4 bg-gray-700 rounded-lg border border-gray-600">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <select
+                        value={newOption.category}
+                        onChange={(e) => setNewOption({ ...newOption, category: e.target.value })}
+                        className="px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                      >
+                        <option value="hair_style">Coiffure</option>
+                        <option value="hair_color">Couleur cheveux</option>
+                        <option value="skin_tone">Teinte peau</option>
+                        <option value="outfit">Tenue</option>
+                      </select>
+
+                      <Input
+                        placeholder="Label (ex: Blonde)"
+                        value={newOption.label}
+                        onChange={(e) => setNewOption({ ...newOption, label: e.target.value })}
+                        className="bg-gray-600 border-gray-500 text-white"
+                      />
+
+                      <Input
+                        placeholder="Valeur (ex: #FFD700)"
+                        value={newOption.value}
+                        onChange={(e) => setNewOption({ ...newOption, value: e.target.value })}
+                        className="bg-gray-600 border-gray-500 text-white"
+                      />
+
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 text-sm text-gray-300">
+                          <input
+                            type="checkbox"
+                            checked={newOption.is_premium}
+                            onChange={(e) => setNewOption({ ...newOption, is_premium: e.target.checked })}
+                            className="rounded"
+                          />
+                          Premium
+                        </label>
+                        <Button onClick={handleAddAvatarOption} size="sm" className="bg-green-600 hover:bg-green-700">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Ajouter
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Liste des options */}
+                  <div className="space-y-2">
+                    {avatarOptions.map((option) => (
+                      <div key={option.id} className="flex items-center justify-between p-3 bg-gray-700 rounded border border-gray-600">
+                        <div className="flex items-center gap-4">
+                          <Badge variant="outline">{option.category}</Badge>
+                          <span className="text-white">{option.label}</span>
+                          <span className="text-gray-400 text-sm">{option.value}</span>
+                          {option.is_premium && <Badge className="bg-yellow-600">Premium</Badge>}
+                        </div>
+                        <Button
+                          onClick={() => handleDeleteAvatarOption(option.id)}
+                          size="sm"
+                          variant="destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Section des statistiques en temps réel */}
+                <Separator className="bg-gray-700" />
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white">Statistiques en Temps Réel</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="bg-gray-700 border-gray-600">
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <Users className="w-8 h-8 mx-auto mb-2 text-blue-400" />
+                          <div className="text-3xl font-bold text-white">{onlineUsersCount}</div>
+                          <p className="text-sm text-gray-400">Utilisateurs en ligne</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gray-700 border-gray-600">
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <Film className="w-8 h-8 mx-auto mb-2 text-purple-400" />
+                          <div className="text-3xl font-bold text-white">{cinemaRooms.length}</div>
+                          <p className="text-sm text-gray-400">Salles de cinéma</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gray-700 border-gray-600">
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <Sparkles className="w-8 h-8 mx-auto mb-2 text-green-400" />
+                          <div className="text-3xl font-bold text-white">{avatarOptions.length}</div>
+                          <p className="text-sm text-gray-400">Options d'avatar</p>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
               </CardContent>
