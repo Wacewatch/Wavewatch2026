@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Separator } from "@/components/ui/separator"
 import {
   Plus,
   Edit,
@@ -48,11 +49,14 @@ import {
   Sparkles,
   LogIn,
   MessageSquare,
+  CheckCircle,
+  XCircle,
   Music,
   Download,
   BookOpen,
   Send,
   SettingsIcon,
+  Save,
   ChevronLeft,
   ChevronRight,
   Globe,
@@ -379,7 +383,7 @@ export default function AdminPage() {
     if (!user || (!user.isAdmin && !user.isUploader)) {
       router.push("/") // Redirect to homepage if not admin or uploader
     }
-  }, [user, router]) // Dependency on 'user' ensures it runs when authentication state changes
+  }, [user, router])
 
   // CHANGE: Fetches all data on mount or when user role changes
   useEffect(() => {
@@ -591,6 +595,8 @@ export default function AdminPage() {
       setSendingBroadcast(false)
     }
   }
+
+  // REMOVED: loadAllData function, replaced by fetchAllData
 
   const loadRealTVChannels = async (supabase) => {
     try {
@@ -1038,7 +1044,7 @@ const loadRealUsers = async (supabase) => {
     }
   }
 
-  const saveWorldSettings = async () => { // Renamed from handleSaveWorldSettings to match the call
+  const handleSaveWorldSettings = async () => {
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -2340,40 +2346,38 @@ const loadRealUsers = async (supabase) => {
         case "retrogaming-source":
           tableName = "retrogaming_sources"
           break
- case "user":
-  tableName = "user_profiles"
-  
-  // Gestion du mot de passe AVANT la mise à jour du profil
-  if (newPassword && newPassword.trim() !== "") {
-    try {
-      const userId = editingItem.user_id || editingItem.id
-      console.log("Updating password for user:", userId)
-      
-      const { error: passwordError } = await supabase.auth.admin.updateUserById(userId, {
-        password: newPassword,
-      })
+        case "user":
+          tableName = "user_profiles"
+          if (newPassword && newPassword.trim() !== "") {
+            try {
+              // Note: This requires Supabase service role key for admin operations
+              // In a real app, this should be done server-side via API route
+              const {
+                error: passwordError
+              } = await supabase.auth.admin.updateUserById(editingUser.user_id, { // Corrected to use user_id
+                password: newPassword,
+              })
 
-      if (passwordError) {
-        console.error("❌ Erreur lors du changement de mot de passe:", passwordError)
-        toast({
-          title: "Avertissement",
-          description: "Mot de passe non modifié. Continuons avec le profil...",
-          variant: "destructive",
-        })
-      } else {
-        console.log("✅ Mot de passe modifié")
-        toast({
-          title: "Mot de passe modifié",
-          description: "Le mot de passe a été changé avec succès",
-        })
-      }
-    } catch (pwError) {
-      console.error("❌ Erreur mot de passe:", pwError)
-    }
-  }
-  
-  setNewPassword("") // Reset après traitement
-  break
+              if (passwordError) {
+                console.error("❌ Erreur lors du changement de mot de passe:", passwordError)
+                toast({
+                  title: "Avertissement",
+                  description:
+                    "Profil mis à jour mais le mot de passe n'a pas pu être changé. Utilisez la fonctionnalité de réinitialisation par email.",
+                  variant: "destructive",
+                })
+              } else {
+                toast({
+                  title: "Mot de passe modifié",
+                  description: "Le mot de passe de l'utilisateur a été changé",
+                })
+              }
+            } catch (pwError) {
+              console.error("❌ Erreur mot de passe:", pwError)
+            }
+            setNewPassword("") // Reset password field
+          }
+          break
         case "music":
           tableName = "music_content"
           break
@@ -4828,28 +4832,16 @@ const loadRealUsers = async (supabase) => {
                               {user.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "N/A"}
                             </TableCell>
                             <TableCell className="text-right">
-<Button
-  variant="outline"
-  size="sm"
-  onClick={() => {
-    console.log("Editing user:", user) // Debug
-    setEditingUser(user)
-    setEditingItem(user)
-    setUserForm({
-      username: user.username || "",
-      email: user.email || "",
-      is_vip: Boolean(user.is_vip),
-      is_vip_plus: Boolean(user.is_vip_plus),
-      is_beta: Boolean(user.is_beta),
-      is_admin: Boolean(user.is_admin),
-      is_uploader: Boolean(user.is_uploader),
-    })
-    setNewPassword("")
-    setIsUserDialogOpen(true)
-  }}
->
-  <Pencil className="w-3 h-3" />
-</Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingUser(user)
+                                  setIsUserDialogOpen(true)
+                                }}
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))
@@ -4866,27 +4858,25 @@ const loadRealUsers = async (supabase) => {
               </CardContent>
             </Card>
 
-<Dialog
-  open={isUserDialogOpen}
-  onOpenChange={(open) => {
-    setIsUserDialogOpen(open)
-    if (!open) {
-      // Reset quand on ferme
-      setEditingUser(null)
-      setEditingItem(null)
-      setNewPassword("")
-      setUserForm({
-        username: "",
-        email: "",
-        is_vip: false,
-        is_vip_plus: false,
-        is_beta: false,
-        is_admin: false,
-        is_uploader: false,
-      })
-    }
-  }}
->
+            <Dialog
+              open={isUserDialogOpen}
+              onOpenChange={(open) => {
+                setIsUserDialogOpen(open)
+                if (open && editingUser) {
+                  // Populate form with current user values
+                  setUserForm({
+                    username: editingUser.username || "",
+                    email: editingUser.email || "",
+                    is_vip: Boolean(editingUser.is_vip),
+                    is_vip_plus: Boolean(editingUser.is_vip_plus),
+                    is_beta: Boolean(editingUser.is_beta),
+                    is_admin: Boolean(editingUser.is_admin),
+                    is_uploader: Boolean(editingUser.is_uploader),
+                  })
+                  setNewPassword("")
+                }
+              }}
+            >
               <DialogContent className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Modifier l'utilisateur</DialogTitle>
@@ -4969,38 +4959,13 @@ const loadRealUsers = async (supabase) => {
                     </div>
                   </div>
                 )}
-<DialogFooter>
-  <Button 
-    variant="outline" 
-    onClick={() => {
-      setIsUserDialogOpen(false)
-      setEditingUser(null)
-      setEditingItem(null)
-    }}
-  >
-    Annuler
-  </Button>
-  <Button 
-    onClick={async () => {
-      console.log("Saving user with form:", userForm)
-      console.log("Editing item:", editingItem)
-      
-      if (!editingItem) {
-        toast({
-          title: "Erreur",
-          description: "Aucun utilisateur sélectionné",
-          variant: "destructive"
-        })
-        return
-      }
-      
-      await handleUpdate("user", userForm)
-      setIsUserDialogOpen(false)
-    }}
-  >
-    Sauvegarder
-  </Button>
-</DialogFooter>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button onClick={() => handleUpdate("user", userForm)}>Sauvegarder</Button>
+                </DialogFooter>
+              </DialogContent>
             </Dialog>
           </TabsContent>
 
@@ -5039,127 +5004,422 @@ const loadRealUsers = async (supabase) => {
                   <TableBody>
                     {getFilteredData(requests, "requests").map((request) => (
                       <TableRow key={request.id}>
+                        <TableCell className="font-medium">{request.username}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
-                              {request.user_name?.charAt(0).toUpperCase() || "U"}
-                            </div>
-                            <span className="text-sm">{request.user_name || "Anonyme"}</span>
-                          </div>
+                          <Badge variant="secondary">{request.type}</Badge>
                         </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{request.content_type}</Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">{request.title}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell>{request.title}</TableCell>
+                        <TableCell className="text-muted-foreground">
                           {new Date(request.created_at).toLocaleDateString("fr-FR")}
                         </TableCell>
                         <TableCell>
-                          <Select value={request.status} onValueChange={(value) => handleUpdateRequestStatus(request.id, value)}>
-                            <SelectTrigger className="w-32">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">En attente</SelectItem>
-                              <SelectItem value="in_progress">En cours</SelectItem>
-                              <SelectItem value="completed">Terminé</SelectItem>
-                              <SelectItem value="rejected">Rejeté</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Badge
+                            variant={
+                              request.status === "completed"
+                                ? "default"
+                                : request.status === "pending"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
+                            {request.status === "completed"
+                              ? "Complété"
+                              : request.status === "pending"
+                                ? "En attente"
+                                : "Rejeté"}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            {canDelete && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteRequest(request.id)}
-                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUpdateRequestStatus(request.id, "completed")}
+                            >
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleUpdateRequestStatus(request.id, "rejected")}
+                            >
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDeleteRequest(request.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
                     ))}
-                    {getFilteredData(requests, "requests").length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          Aucune demande trouvée
-                        </TableCell>
-                      </TableRow>
-                    )}
                   </TableBody>
                 </Table>
+
+                {requests.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Aucune demande trouvée dans la base de données</p>
+                    <p className="text-sm mt-2">Les nouvelles demandes apparaîtront ici automatiquement</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Add other TabsContent components for changelogs, settings, etc. */}
-          <TabsContent value="changelogs" className="space-y-6">
+          <TabsContent value="music" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Gestion des Changelogs</CardTitle>
-                  <CardDescription>{changelogs.length} entrées enregistrées</CardDescription>
+                  <CardTitle>Gestion du Contenu Musical</CardTitle>
+                  <CardDescription>Gérez votre catalogue de musique et concerts</CardDescription>
                 </div>
-                <Dialog
-                  open={activeModal === "new-log"}
-                  onOpenChange={(open) => !open && setActiveModal(null)}
-                >
+                <Dialog open={activeModal === "music"} onOpenChange={(open) => !open && setActiveModal(null)}>
                   <DialogTrigger asChild>
                     <Button
                       onClick={() => {
-                        setNewChangelog({
-                          version: "",
+                        setEditingItem(null)
+                        setMusicForm({
                           title: "",
+                          artist: "",
                           description: "",
-                          release_date: new Date().toISOString().split("T")[0],
+                          thumbnail_url: "",
+                          video_url: "",
+                          streaming_url: "", // Reset streaming_url
+                          duration: 0,
+                          release_year: new Date().getFullYear().toString(),
+                          genre: "",
+                          type: "Single", // Changed default type
+                          quality: "HD",
+                          is_active: true,
                         })
-                        setActiveModal("new-log")
+                        setActiveModal("music")
                       }}
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Ajouter un changelog
+                      Ajouter un morceau
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-3xl">
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                      <DialogTitle>Ajouter un nouveau changelog</DialogTitle>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} un contenu musical</DialogTitle>
                     </DialogHeader>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2 col-span-2">
-                        <Label>Version</Label>
-                        <Input
-                          value={newChangelog.version}
-                          onChange={(e) => setNewChangelog({ ...newChangelog, version: e.target.value })}
-                          placeholder="Ex: 1.2.3"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Date de publication</Label>
-                        <Input
-                          type="date"
-                          value={newChangelog.release_date}
-                          onChange={(e) => setNewChangelog({ ...newChangelog, release_date: e.target.value })}
-                        />
-                      </div>
                       <div className="space-y-2">
                         <Label>Titre</Label>
                         <Input
-                          value={newChangelog.title}
-                          onChange={(e) => setNewChangelog({ ...newChangelog, title: e.target.value })}
-                          placeholder="Ex: Amélioration du système de recherche"
+                          value={musicForm.title}
+                          onChange={(e) => setMusicForm({ ...musicForm, title: e.target.value })}
+                          placeholder="Nom de la chanson ou concert"
                         />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Artiste/Groupe</Label>
+                        <Input
+                          value={musicForm.artist}
+                          onChange={(e) => setMusicForm({ ...musicForm, artist: e.target.value })}
+                          placeholder="Nom de l'artiste ou du groupe"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Genre</Label>
+                        <Select
+                          value={musicForm.genre}
+                          onValueChange={(value) => setMusicForm({ ...musicForm, genre: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un genre" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px] overflow-y-auto">
+                            <SelectItem value="Accordéon">Accordéon</SelectItem>
+                            <SelectItem value="Acid Jazz">Acid Jazz</SelectItem>
+                            <SelectItem value="Alternative">Alternative</SelectItem>
+                            <SelectItem value="Ambient">Ambient</SelectItem>
+                            <SelectItem value="Americana">Americana</SelectItem>
+                            <SelectItem value="Anti-Folk">Anti-Folk</SelectItem>
+                            <SelectItem value="Art Punk">Art Punk</SelectItem>
+                            <SelectItem value="Art Rock">Art Rock</SelectItem>
+                            <SelectItem value="Avant-garde">Avant-garde</SelectItem>
+                            <SelectItem value="Ballade">Ballade</SelectItem>
+                            <SelectItem value="Black Metal">Black Metal</SelectItem>
+                            <SelectItem value="Black Metal Symphonique">Black Metal Symphonique</SelectItem>
+                            <SelectItem value="Blue-eyed soul">Blue-eyed soul</SelectItem>
+                            <SelectItem value="Blues">Blues</SelectItem>
+                            <SelectItem value="Blues Rock">Blues Rock</SelectItem>
+                            <SelectItem value="Bossa Nova">Bossa Nova</SelectItem>
+                            <SelectItem value="Britpop">Britpop</SelectItem>
+                            <SelectItem value="Chanson Française">Chanson Française</SelectItem>
+                            <SelectItem value="Chanson Italienne">Chanson Italienne</SelectItem>
+                            <SelectItem value="Chill">Chill</SelectItem>
+                            <SelectItem value="Chill-out">Chill-out</SelectItem>
+                            <SelectItem value="Chillwave">Chillwave</SelectItem>
+                            <SelectItem value="Classique">Classique</SelectItem>
+                            <SelectItem value="Country">Country</SelectItem>
+                            <SelectItem value="Country Alternative">Country Alternative</SelectItem>
+                            <SelectItem value="Country pop">Country pop</SelectItem>
+                            <SelectItem value="Country Rock">Country Rock</SelectItem>
+                            <SelectItem value="Crossover">Crossover</SelectItem>
+                            <SelectItem value="Dance">Dance</SelectItem>
+                            <SelectItem value="Dance-Pop">Dance-Pop</SelectItem>
+                            <SelectItem value="Dancehall">Dancehall</SelectItem>
+                            <SelectItem value="Dark Metal">Dark Metal</SelectItem>
+                            <SelectItem value="Death Metal">Death Metal</SelectItem>
+                            <SelectItem value="Death Metal Mélodique">Death Metal Mélodique</SelectItem>
+                            <SelectItem value="Deep House">Deep House</SelectItem>
+                            <SelectItem value="Dirty Rap">Dirty Rap</SelectItem>
+                            <SelectItem value="Dirty South">Dirty South</SelectItem>
+                            <SelectItem value="Doom Metal">Doom Metal</SelectItem>
+                            <SelectItem value="Downtempo">Downtempo</SelectItem>
+                            <SelectItem value="Drame">Drame</SelectItem>
+                            <SelectItem value="Dream pop">Dream pop</SelectItem>
+                            <SelectItem value="Dub">Dub</SelectItem>
+                            <SelectItem value="Electro">Electro</SelectItem>
+                            <SelectItem value="Electro Chill">Electro Chill</SelectItem>
+                            <SelectItem value="Electro House">Electro House</SelectItem>
+                            <SelectItem value="Electronic">Electronic</SelectItem>
+                            <SelectItem value="Electronica">Electronica</SelectItem>
+                            <SelectItem value="Electropop">Electropop</SelectItem>
+                            <SelectItem value="Eurodance">Eurodance</SelectItem>
+                            <SelectItem value="Europop">Europop</SelectItem>
+                            <SelectItem value="Flamenco">Flamenco</SelectItem>
+                            <SelectItem value="Folk">Folk</SelectItem>
+                            <SelectItem value="Folk Rock">Folk Rock</SelectItem>
+                            <SelectItem value="Folklore">Folklore</SelectItem>
+                            <SelectItem value="French touch">French touch</SelectItem>
+                            <SelectItem value="Funk">Funk</SelectItem>
+                            <SelectItem value="Funk Rock">Funk Rock</SelectItem>
+                            <SelectItem value="Funky">Funky</SelectItem>
+                            <SelectItem value="G-funk">G-funk</SelectItem>
+                            <SelectItem value="Gangsta Rap">Gangsta Rap</SelectItem>
+                            <SelectItem value="Glam Metal">Glam Metal</SelectItem>
+                            <SelectItem value="Glam Rock">Glam Rock</SelectItem>
+                            <SelectItem value="Gospel">Gospel</SelectItem>
+                            <SelectItem value="Gothic Metal">Gothic Metal</SelectItem>
+                            <SelectItem value="Grime">Grime</SelectItem>
+                            <SelectItem value="Guitare">Guitare</SelectItem>
+                            <SelectItem value="Hard Rock">Hard Rock</SelectItem>
+                            <SelectItem value="Hardcore">Hardcore</SelectItem>
+                            <SelectItem value="Heavy Metal">Heavy Metal</SelectItem>
+                            <SelectItem value="Hindi">Hindi</SelectItem>
+                            <SelectItem value="Hip-Hop">Hip-Hop</SelectItem>
+                            <SelectItem value="Hip-Hop Alternatif">Hip-Hop Alternatif</SelectItem>
+                            <SelectItem value="Hip-Hop Politique">Hip-Hop Politique</SelectItem>
+                            <SelectItem value="Horrorcore">Horrorcore</SelectItem>
+                            <SelectItem value="House">House</SelectItem>
+                            <SelectItem value="House Progressive">House Progressive</SelectItem>
+                            <SelectItem value="Midwest rap">Midwest rap</SelectItem>
+                            <SelectItem value="Indie">Indie</SelectItem>
+                            <SelectItem value="Indie Pop">Indie Pop</SelectItem>
+                            <SelectItem value="Indie Rock">Indie Rock</SelectItem>
+                            <SelectItem value="Instrumental">Instrumental</SelectItem>
+                            <SelectItem value="Italo Dance">Italo Dance</SelectItem>
+                            <SelectItem value="Italo house">Italo house</SelectItem>
+                            <SelectItem value="Jazz">Jazz</SelectItem>
+                            <SelectItem value="Jazz fusion">Jazz fusion</SelectItem>
+                            <SelectItem value="Jazz rap">Jazz rap</SelectItem>
+                            <SelectItem value="Krautrock">Krautrock</SelectItem>
+                            <SelectItem value="Lo-Fi">Lo-Fi</SelectItem>
+                            <SelectItem value="Lounge">Lounge</SelectItem>
+                            <SelectItem value="Metal">Metal</SelectItem>
+                            <SelectItem value="Metal Alternatif">Metal Alternatif</SelectItem>
+                            <SelectItem value="Metal Celtique">Metal Celtique</SelectItem>
+                            <SelectItem value="Metal Chrétien">Metal Chrétien</SelectItem>
+                            <SelectItem value="Metal Gothique">Metal Gothique</SelectItem>
+                            <SelectItem value="Metal Industriel">Metal Industriel</SelectItem>
+                            <SelectItem value="Multi instrumentaliste">Multi instrumentaliste</SelectItem>
+                            <SelectItem value="Musique Celtique">Musique Celtique</SelectItem>
+                            <SelectItem value="Musique Expérimentale">Musique Expérimentale</SelectItem>
+                            <SelectItem value="Musique Humoristique">Musique Humoristique</SelectItem>
+                            <SelectItem value="Musique Industrielle">Musique Industrielle</SelectItem>
+                            <SelectItem value="Musique Irlandaise">Musique Irlandaise</SelectItem>
+                            <SelectItem value="Musique Minimaliste">Musique Minimaliste</SelectItem>
+                            <SelectItem value="Musique Percussive">Musique Percussive</SelectItem>
+                            <SelectItem value="Neo Soul">Neo Soul</SelectItem>
+                            <SelectItem value="New Age">New Age</SelectItem>
+                            <SelectItem value="New Beat">New Beat</SelectItem>
+                            <SelectItem value="New Wave">New Wave</SelectItem>
+                            <SelectItem value="Nu Metal">Nu Metal</SelectItem>
+                            <SelectItem value="Opera">Opera</SelectItem>
+                            <SelectItem value="Opera-Rock">Opera-Rock</SelectItem>
+                            <SelectItem value="OST">OST</SelectItem>
+                            <SelectItem value="P-Funk">P-Funk</SelectItem>
+                            <SelectItem value="Piano">Piano</SelectItem>
+                            <SelectItem value="Pop">Pop</SelectItem>
+                            <SelectItem value="Pop Folk">Pop Folk</SelectItem>
+                            <SelectItem value="Pop latino">Pop latino</SelectItem>
+                            <SelectItem value="Pop Rock">Pop Rock</SelectItem>
+                            <SelectItem value="Pop-rap">Pop-rap</SelectItem>
+                            <SelectItem value="Post-grunge">Post-grunge</SelectItem>
+                            <SelectItem value="Post-hardcore">Post-hardcore</SelectItem>
+                            <SelectItem value="Post-punk">Post-punk</SelectItem>
+                            <SelectItem value="Post-rock">Post-rock</SelectItem>
+                            <SelectItem value="Power Metal">Power Metal</SelectItem>
+                            <SelectItem value="Power Pop">Power Pop</SelectItem>
+                            <SelectItem value="Punk Hardcore">Punk Hardcore</SelectItem>
+                            <SelectItem value="Punk Rock">Punk Rock</SelectItem>
+                            <SelectItem value="R&B">R&B</SelectItem>
+                            <SelectItem value="Ragga">Ragga</SelectItem>
+                            <SelectItem value="Rap">Rap</SelectItem>
+                            <SelectItem value="Rap East Coast">Rap East Coast</SelectItem>
+                            <SelectItem value="Rap Français">Rap Français</SelectItem>
+                            <SelectItem value="Rap Hardcore">Rap Hardcore</SelectItem>
+                            <SelectItem value="Rap Metal">Rap Metal</SelectItem>
+                            <SelectItem value="Rap Politique">Rap Politique</SelectItem>
+                            <SelectItem value="Rap rock">Rap rock</SelectItem>
+                            <SelectItem value="Rap West Coast">Rap West Coast</SelectItem>
+                            <SelectItem value="Reggae">Reggae</SelectItem>
+                            <SelectItem value="Rhythm and Blues">Rhythm and Blues</SelectItem>
+                            <SelectItem value="RnB">RnB</SelectItem>
+                            <SelectItem value="RnB contemporain">RnB contemporain</SelectItem>
+                            <SelectItem value="Rock">Rock</SelectItem>
+                            <SelectItem value="Rock Alternatif">Rock Alternatif</SelectItem>
+                            <SelectItem value="Rock Celtique">Rock Celtique</SelectItem>
+                            <SelectItem value="Rock Chrétien">Rock Chrétien</SelectItem>
+                            <SelectItem value="Rock Experimental">Rock Experimental</SelectItem>
+                            <SelectItem value="Rock Français">Rock Français</SelectItem>
+                            <SelectItem value="Rock Indépendant">Rock Indépendant</SelectItem>
+                            <SelectItem value="Rock Italien">Rock Italien</SelectItem>
+                            <SelectItem value="Rock Progressif">Rock Progressif</SelectItem>
+                            <SelectItem value="Rocksteady">Rocksteady</SelectItem>
+                            <SelectItem value="Salsa">Salsa</SelectItem>
+                            <SelectItem value="Samba">Samba</SelectItem>
+                            <SelectItem value="Saxophone">Saxophone</SelectItem>
+                            <SelectItem value="Saxophone électrique">Saxophone électrique</SelectItem>
+                            <SelectItem value="Ska">Ska</SelectItem>
+                            <SelectItem value="Slam">Slam</SelectItem>
+                            <SelectItem value="Slow">Slow</SelectItem>
+                            <SelectItem value="Soap">Soap</SelectItem>
+                            <SelectItem value="Soft Rock">Soft Rock</SelectItem>
+                            <SelectItem value="Soul">Soul</SelectItem>
+                            <SelectItem value="Soul Jazz">Soul Jazz</SelectItem>
+                            <SelectItem value="Space Music">Space Music</SelectItem>
+                            <SelectItem value="Space Rock">Space Rock</SelectItem>
+                            <SelectItem value="Symphonic Metal">Symphonic Metal</SelectItem>
+                            <SelectItem value="Symphonie">Symphonie</SelectItem>
+                            <SelectItem value="Synth-pop">Synth-pop</SelectItem>
+                            <SelectItem value="Synth-wave">Synth-wave</SelectItem>
+                            <SelectItem value="Synthétiseur">Synthétiseur</SelectItem>
+                            <SelectItem value="Talk">Talk</SelectItem>
+                            <SelectItem value="Tango">Tango</SelectItem>
+                            <SelectItem value="Techno">Techno</SelectItem>
+                            <SelectItem value="Techno House">Techno House</SelectItem>
+                            <SelectItem value="Teen pop">Teen pop</SelectItem>
+                            <SelectItem value="Thrash Metal">Thrash Metal</SelectItem>
+                            <SelectItem value="Trance">Trance</SelectItem>
+                            <SelectItem value="Trap">Trap</SelectItem>
+                            <SelectItem value="Trip hop">Trip hop</SelectItem>
+                            <SelectItem value="Urban">Urban</SelectItem>
+                            <SelectItem value="Urban pop">Urban pop</SelectItem>
+                            <SelectItem value="Variété française">Variété française</SelectItem>
+                            <SelectItem value="Viking Metal">Viking Metal</SelectItem>
+                            <SelectItem value="Violoncelle électrique">Violoncelle électrique</SelectItem>
+                            <SelectItem value="West Coast hip-hop">West Coast hip-hop</SelectItem>
+                            <SelectItem value="Zouk">Zouk</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Type</Label>
+                        <Select
+                          value={musicForm.type}
+                          onValueChange={(value) => setMusicForm({ ...musicForm, type: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Single">Single</SelectItem>
+                            <SelectItem value="Album">Album</SelectItem>
+                            <SelectItem value="Concert">Concert</SelectItem>
+                            <SelectItem value="Live Session">Live Session</SelectItem>
+                            <SelectItem value="Compilation">Compilation</SelectItem>
+                            <SelectItem value="OST">OST</SelectItem>
+                            <SelectItem value="Discographie">Discographie</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Année de sortie</Label>
+                        <Input
+                          type="text"
+                          value={musicForm.release_year}
+                          onChange={(e) => setMusicForm({ ...musicForm, release_year: e.target.value })}
+                          placeholder="2023 ou 2005-2021"
+                        />
+                        <p className="text-xs text-muted-foreground">Format: année simple (2023) ou plage (2005-2021)</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Qualité</Label>
+                        <Select
+                          value={musicForm.quality}
+                          onValueChange={(value) => setMusicForm({ ...musicForm, quality: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une qualité" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="FLAC">FLAC</SelectItem>
+                            <SelectItem value="MP3">MP3</SelectItem>
+                            <SelectItem value="WAV">WAV</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de la vignette</Label>
+                        <Input
+                          value={musicForm.thumbnail_url}
+                          onChange={(e) => setMusicForm({ ...musicForm, thumbnail_url: e.target.value })}
+                          placeholder="https://example.com/thumbnail.jpg"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL Telechargement</Label>
+                        <Input
+                          value={musicForm.video_url}
+                          onChange={(e) => setMusicForm({ ...musicForm, video_url: e.target.value })}
+                          placeholder="https://stream.wavewatch.xyz/music/..."
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL lecture directe</Label>
+                        <Input
+                          value={musicForm.streaming_url}
+                          onChange={(e) => setMusicForm({ ...musicForm, streaming_url: e.target.value })}
+                          placeholder="https://stream.wavewatch.xyz/listen/..."
+                        />
+                        <p className="text-xs text-muted-foreground">Lien pour le bouton "Écouter" (optionnel)</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Durée (secondes)</Label>
+                        <Input
+                          type="number"
+                          value={musicForm.duration}
+                          onChange={(e) =>
+                            setMusicForm({ ...musicForm, duration: Number.parseInt(e.target.value, 10) })
+                          }
+                          placeholder="180"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Statut</Label>
+                        <Select
+                          value={musicForm.is_active ? "active" : "inactive"}
+                          onValueChange={(value) => setMusicForm({ ...musicForm, is_active: value === "active" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            <SelectItem value="inactive">Inactif</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2 col-span-2">
                         <Label>Description</Label>
                         <Textarea
-                          value={newChangelog.description}
-                          onChange={(e) => setNewChangelog({ ...newChangelog, description: e.target.value })}
-                          placeholder="Détails des changements..."
-                          rows={4}
+                          value={musicForm.description}
+                          onChange={(e) => setMusicForm({ ...musicForm, description: e.target.value })}
+                          placeholder="Description du morceau ou du concert..."
+                          rows={3}
                         />
                       </div>
                     </div>
@@ -5167,216 +5427,1789 @@ const loadRealUsers = async (supabase) => {
                       <Button variant="outline" onClick={() => setActiveModal(null)}>
                         Annuler
                       </Button>
-                      <Button onClick={handleCreateChangelog}>Ajouter</Button>
+                      <Button
+                        onClick={() => (editingItem ? handleUpdate("music", musicForm) : handleAdd("music", musicForm))}
+                      >
+                        {editingItem ? "Modifier" : "Ajouter"}
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Version</TableHead>
-                        <TableHead>Titre</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {changelogs.map((log) => (
-                        <TableRow key={log.id}>
-                          <TableCell className="font-medium">{log.version}</TableCell>
-                          <TableCell>{log.title}</TableCell>
-                          <TableCell>{new Date(log.release_date).toLocaleDateString("fr-FR")}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Button variant="outline" size="sm" onClick={() => handleEditLog(log)}>
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleDeleteChangelog(log.id)}>
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher un morceau..."
+                      value={searchTerms.music || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, music: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
                 </div>
-                {changelogs.length === 0 && (
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Titre</TableHead>
+                      <TableHead>Artiste</TableHead>
+                      <TableHead>Genre</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Qualité</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(musicContent, "music").map((content) => (
+                      <TableRow key={content.id}>
+                        <TableCell className="font-medium">{content.title}</TableCell>
+                        <TableCell>{content.artist}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{content.genre}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{content.type}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{content.quality}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={content.is_active === true ? "default" : "secondary"}>
+                            {content.is_active === true ? "Actif" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => toggleStatus("music", content.id)}>
+                              {content.is_active === true ? (
+                                <EyeOff className="w-4 h-4" />
+                              ) : (
+                                <Eye className="w-4 h-4" />
+                              )}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit("music", content)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete("music", content.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {musicContent.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun changelog trouvé</p>
-                    <p className="text-sm">Ajoutez votre premier changelog pour informer les utilisateurs des mises à jour.</p>
+                    <Music className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun contenu musical trouvé</p>
+                    <p className="text-sm">Ajoutez votre premier morceau ou concert pour commencer</p>
                   </div>
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
 
-            {/* Edit Log Dialog */}
-            <Dialog
-              open={activeModal === "edit-log"}
-              onOpenChange={(open) => !open && setActiveModal(null)}
-            >
-              <DialogContent className="max-w-3xl">
+          <TabsContent value="software" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Logiciels</CardTitle>
+                  <CardDescription>Gérez votre catalogue de logiciels et applications</CardDescription>
+                </div>
+                <Dialog open={activeModal === "software"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setEditingItem(null)
+                        setSoftwareForm({
+                          name: "",
+                          developer: "",
+                          description: "",
+                          icon_url: "",
+                          download_url: "",
+                          version: "",
+                          category: "",
+                          platform: "",
+                          license: "Free",
+                          file_size: "",
+                          is_active: true,
+                        })
+                        setActiveModal("software")
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter un logiciel
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} un logiciel</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Nom du logiciel</Label>
+                        <Input
+                          value={softwareForm.name}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, name: e.target.value })}
+                          placeholder="Ex: VS Code, Adobe Photoshop"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Développeur</Label>
+                        <Input
+                          value={softwareForm.developer}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, developer: e.target.value })}
+                          placeholder="Ex: Microsoft, Adobe"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Catégorie</Label>
+                        <Select
+                          value={softwareForm.category}
+                          onValueChange={(value) => setSoftwareForm({ ...softwareForm, category: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une catégorie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Productivité">Productivité</SelectItem>
+                            <SelectItem value="Design">Design</SelectItem>
+                            <SelectItem value="Développement">Développement</SelectItem>
+                            <SelectItem value="Utilitaires">Utilitaires</SelectItem>
+                            <SelectItem value="Multimédia">Multimédia</SelectItem>
+                            <SelectItem value="Jeux">Jeux</SelectItem>
+                            <SelectItem value="Sécurité">Sécurité</SelectItem>
+                            <SelectItem value="Système">Système</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Plateforme</Label>
+                        <Select
+                          value={softwareForm.platform}
+                          onValueChange={(value) => setSoftwareForm({ ...softwareForm, platform: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une plateforme" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Windows">Windows</SelectItem>
+                            <SelectItem value="macOS">macOS</SelectItem>
+                            <SelectItem value="Linux">Linux</SelectItem>
+                            <SelectItem value="Android">Android</SelectItem>
+                            <SelectItem value="iOS">iOS</SelectItem>
+                            <SelectItem value="Web">Web</SelectItem>
+                            <SelectItem value="Multiplateforme">Multiplateforme</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Version</Label>
+                        <Input
+                          value={softwareForm.version}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, version: e.target.value })}
+                          placeholder="Ex: 2023.1.1"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Licence</Label>
+                        <Select
+                          value={softwareForm.license}
+                          onValueChange={(value) => setSoftwareForm({ ...softwareForm, license: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une licence" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Gratuit">Gratuit</SelectItem>
+                            <SelectItem value="Payant">Payant</SelectItem>
+                            <SelectItem value="Open Source">Open Source</SelectItem>
+                            <SelectItem value="Essai gratuit">Essai gratuit</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de l'icône</Label>
+                        <Input
+                          value={softwareForm.icon_url}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, icon_url: e.target.value })}
+                          placeholder="https://example.com/icon.png"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de téléchargement</Label>
+                        <Input
+                          value={softwareForm.download_url}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, download_url: e.target.value })}
+                          placeholder="https://download.example.com/software.exe"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Taille du fichier</Label>
+                        <Input
+                          value={softwareForm.file_size}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, file_size: e.target.value })}
+                          placeholder="Ex: 100 MB, 2 GB"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Statut</Label>
+                        <Select
+                          value={softwareForm.is_active ? "active" : "inactive"}
+                          onValueChange={(value) => setSoftwareForm({ ...softwareForm, is_active: value === "active" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            <SelectItem value="inactive">Inactif</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={softwareForm.description}
+                          onChange={(e) => setSoftwareForm({ ...softwareForm, description: e.target.value })}
+                          placeholder="Description du logiciel..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)}>
+                        Annuler
+                      </Button>
+                      <Button
+                        onClick={() =>
+                          editingItem ? handleUpdate("software", softwareForm) : handleAdd("software", softwareForm)
+                        }
+                      >
+                        {editingItem ? "Modifier" : "Ajouter"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher un logiciel..."
+                      value={searchTerms.software || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, software: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nom</TableHead>
+                      <TableHead>Développeur</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Plateforme</TableHead>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Licence</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(software, "software").map((sw) => (
+                      <TableRow key={sw.id}>
+                        <TableCell className="font-medium">{sw.name}</TableCell>
+                        <TableCell>{sw.developer}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{sw.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{sw.platform}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{sw.version}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{sw.license}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={sw.is_active === true ? "default" : "secondary"}>
+                            {sw.is_active === true ? "Actif" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => toggleStatus("software", sw.id)}>
+                              {sw.is_active === true ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit("software", sw)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete("software", sw.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {software.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Download className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun logiciel trouvé</p>
+                    <p className="text-sm">Ajoutez votre premier logiciel pour commencer</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="games" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Jeux</CardTitle>
+                  <CardDescription>Gérez votre catalogue de jeux</CardDescription>
+                </div>
+                <Dialog open={activeModal === "game"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setEditingItem(null)
+                        setGameForm({
+                          title: "",
+                          developer: "",
+                          publisher: "",
+                          description: "",
+                          cover_url: "",
+                          download_url: "",
+                          version: "",
+                          genre: "",
+                          platform: "",
+                          rating: "PEGI 3",
+                          file_size: "",
+                          is_active: true,
+                        })
+                        setActiveModal("game")
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter un jeu
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} un jeu</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Titre du jeu</Label>
+                        <Input
+                          value={gameForm.title}
+                          onChange={(e) => setGameForm({ ...gameForm, title: e.target.value })}
+                          placeholder="Ex: Cyberpunk 2077, Elden Ring"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Développeur</Label>
+                        <Input
+                          value={gameForm.developer}
+                          onChange={(e) => setGameForm({ ...gameForm, developer: e.target.value })}
+                          placeholder="Ex: CD Projekt Red, FromSoftware"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Éditeur</Label>
+                        <Input
+                          value={gameForm.publisher}
+                          onChange={(e) => setGameForm({ ...gameForm, publisher: e.target.value })}
+                          placeholder="Ex: Bandai Namco, Sony Interactive"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Genre</Label>
+                        <Select
+                          value={gameForm.genre}
+                          onValueChange={(value) => setGameForm({ ...gameForm, genre: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un genre" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Action">Action</SelectItem>
+                            <SelectItem value="Aventure">Aventure</SelectItem>
+                            <SelectItem value="RPG">RPG</SelectItem>
+                            <SelectItem value="Stratégie">Stratégie</SelectItem>
+                            <SelectItem value="Simulation">Simulation</SelectItem>
+                            <SelectItem value="Sport">Sport</SelectItem>
+                            <SelectItem value="Course">Course</SelectItem>
+                            <SelectItem value="Puzzle">Puzzle</SelectItem>
+                            <SelectItem value="Indépendant">Indépendant</SelectItem>
+                            <SelectItem value="MMO">MMO</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Plateforme</Label>
+                        <Select
+                          value={gameForm.platform}
+                          onValueChange={(value) => setGameForm({ ...gameForm, platform: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une plateforme" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PC">PC</SelectItem>
+                            <SelectItem value="PlayStation">PlayStation</SelectItem>
+                            <SelectItem value="Xbox">Xbox</SelectItem>
+                            <SelectItem value="Nintendo Switch">Nintendo Switch</SelectItem>
+                            <SelectItem value="Mobile">Mobile</SelectItem>
+                            <SelectItem value="Web">Web</SelectItem>
+                            <SelectItem value="Multiplateforme">Multiplateforme</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Classification PEGI</Label>
+                        <Select
+                          value={gameForm.rating}
+                          onValueChange={(value) => setGameForm({ ...gameForm, rating: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une classification" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PEGI 3">PEGI 3</SelectItem>
+                            <SelectItem value="PEGI 7">PEGI 7</SelectItem>
+                            <SelectItem value="PEGI 12">PEGI 12</SelectItem>
+                            <SelectItem value="PEGI 16">PEGI 16</SelectItem>
+                            <SelectItem value="PEGI 18">PEGI 18</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de la couverture</Label>
+                        <Input
+                          value={gameForm.cover_url}
+                          onChange={(e) => setGameForm({ ...gameForm, cover_url: e.target.value })}
+                          placeholder="https://example.com/cover.jpg"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de téléchargement</Label>
+                        <Input
+                          value={gameForm.download_url}
+                          onChange={(e) => setGameForm({ ...gameForm, download_url: e.target.value })}
+                          placeholder="https://download.example.com/game.zip"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Version</Label>
+                        <Input
+                          value={gameForm.version}
+                          onChange={(e) => setGameForm({ ...gameForm, version: e.target.value })}
+                          placeholder="Ex: 1.0.5"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Taille du fichier</Label>
+                        <Input
+                          value={gameForm.file_size}
+                          onChange={(e) => setGameForm({ ...gameForm, file_size: e.target.value })}
+                          placeholder="Ex: 50 GB"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Statut</Label>
+                        <Select
+                          value={gameForm.is_active ? "active" : "inactive"}
+                          onValueChange={(value) => setGameForm({ ...gameForm, is_active: value === "active" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            <SelectItem value="inactive">Inactif</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={gameForm.description}
+                          onChange={(e) => setGameForm({ ...gameForm, description: e.target.value })}
+                          placeholder="Description du jeu..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)}>
+                        Annuler
+                      </Button>
+                      <Button
+                        onClick={() => (editingItem ? handleUpdate("game", gameForm) : handleAdd("game", gameForm))}
+                      >
+                        {editingItem ? "Modifier" : "Ajouter"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher un jeu..."
+                      value={searchTerms.games || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, games: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Titre</TableHead>
+                      <TableHead>Développeur</TableHead>
+                      <TableHead>Genre</TableHead>
+                      <TableHead>Plateforme</TableHead>
+                      <TableHead>Classification</TableHead>
+                      <TableHead>Version</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(games, "games").map((game) => (
+                      <TableRow key={game.id}>
+                        <TableCell className="font-medium">{game.title}</TableCell>
+                        <TableCell>{game.developer}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{game.genre}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{game.platform}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{game.rating}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{game.version}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={game.is_active === true ? "default" : "secondary"}>
+                            {game.is_active === true ? "Actif" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => toggleStatus("game", game.id)}>
+                              {game.is_active === true ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit("game", game)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete("game", game.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {games.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Gamepad2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun jeu trouvé</p>
+                    <p className="text-sm">Ajoutez votre premier jeu pour commencer</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ebooks" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Ebooks</CardTitle>
+                  <CardDescription>Gérez votre catalogue d'ebooks</CardDescription>
+                </div>
+                <Dialog open={activeModal === "ebook"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                  <DialogTrigger asChild>
+                    <Button
+                      onClick={() => {
+                        setEditingItem(null)
+                        setEbookForm({
+                          title: "",
+                          author: "",
+                          description: "",
+                          cover_url: "",
+                          download_url: "",
+                          reading_url: "", // Reset reading_url
+                          isbn: "",
+                          publisher: "",
+                          category: "",
+                          language: "Français",
+                          pages: 0,
+                          file_format: "PDF",
+                          file_size: "",
+                          is_audiobook: false,
+                          audiobook_url: "",
+                          is_active: true,
+                        })
+                        setActiveModal("ebook")
+                      }}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Ajouter un ebook
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingItem ? "Modifier" : "Ajouter"} un ebook</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Titre</Label>
+                        <Input
+                          value={ebookForm.title}
+                          onChange={(e) => setEbookForm({ ...ebookForm, title: e.target.value })}
+                          placeholder="Ex: Le Petit Prince"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Auteur</Label>
+                        <Input
+                          value={ebookForm.author}
+                          onChange={(e) => setEbookForm({ ...ebookForm, author: e.target.value })}
+                          placeholder="Ex: Antoine de Saint-Exupéry"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Éditeur</Label>
+                        <Input
+                          value={ebookForm.publisher}
+                          onChange={(e) => setEbookForm({ ...ebookForm, publisher: e.target.value })}
+                          placeholder="Ex: Gallimard"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Catégorie</Label>
+                        <Select
+                          value={ebookForm.category}
+                          onValueChange={(value) => setEbookForm({ ...ebookForm, category: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une catégorie" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Fiction">Fiction</SelectItem>
+                            <SelectItem value="Non-Fiction">Non-Fiction</SelectItem>
+                            <SelectItem value="Science">Science</SelectItem>
+                            <SelectItem value="Histoire">Histoire</SelectItem>
+                            <SelectItem value="Biographie">Biographie</SelectItem>
+                            <SelectItem value="Jeunesse">Jeunesse</SelectItem>
+                            <SelectItem value="Fantaisie">Fantaisie</SelectItem>
+                            <SelectItem value="Science-Fiction">Science-Fiction</SelectItem>
+                            <SelectItem value="Thriller">Thriller</SelectItem>
+                            <SelectItem value="Romance">Romance</SelectItem>
+                            <SelectItem value="Magazine">Magazine</SelectItem>
+                            <SelectItem value="Journal">Journal</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Langue</Label>
+                        <Select
+                          value={ebookForm.language}
+                          onValueChange={(value) => setEbookForm({ ...ebookForm, language: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner une langue" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Français">Français</SelectItem>
+                            <SelectItem value="Anglais">Anglais</SelectItem>
+                            <SelectItem value="Espagnol">Espagnol</SelectItem>
+                            <SelectItem value="Allemand">Allemand</SelectItem>
+                            <SelectItem value="Italien">Italien</SelectItem>
+                            <SelectItem value="Autre">Autre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Format du fichier</Label>
+                        <Select
+                          value={ebookForm.file_format}
+                          onValueChange={(value) => setEbookForm({ ...ebookForm, file_format: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionner un format" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="PDF">PDF</SelectItem>
+                            <SelectItem value="EPUB">EPUB</SelectItem>
+                            <SelectItem value="MOBI">MOBI</SelectItem>
+                            <SelectItem value="TXT">TXT</SelectItem>
+                            <SelectItem value="DOCX">DOCX</SelectItem>
+                            <SelectItem value="Audio">Audio</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>ISBN</Label>
+                        <Input
+                          value={ebookForm.isbn}
+                          onChange={(e) => setEbookForm({ ...ebookForm, isbn: e.target.value })}
+                          placeholder="Ex: 978-2-07-030000-0"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de la couverture</Label>
+                        <Input
+                          value={ebookForm.cover_url}
+                          onChange={(e) => setEbookForm({ ...ebookForm, cover_url: e.target.value })}
+                          placeholder="https://example.com/cover.jpg"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <Label>URL de téléchargement</Label>
+                        <Input
+                          value={ebookForm.download_url}
+                          onChange={(e) => setEbookForm({ ...ebookForm, download_url: e.target.value })}
+                          placeholder="https://download.example.com/ebook.pdf"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nombre de pages</Label>
+                        <Input
+                          type="number"
+                          value={ebookForm.pages}
+                          onChange={(e) => setEbookForm({ ...ebookForm, pages: Number.parseInt(e.target.value, 10) })}
+                          placeholder="300"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Taille du fichier</Label>
+                        <Input
+                          value={ebookForm.file_size}
+                          onChange={(e) => setEbookForm({ ...ebookForm, file_size: e.target.value })}
+                          placeholder="Ex: 5 MB"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Statut</Label>
+                        <Select
+                          value={ebookForm.is_active ? "active" : "inactive"}
+                          onValueChange={(value) => setEbookForm({ ...ebookForm, is_active: value === "active" })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="active">Actif</SelectItem>
+                            <SelectItem value="inactive">Inactif</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="is_audiobook"
+                            checked={ebookForm.is_audiobook}
+                            onCheckedChange={(checked) =>
+                              setEbookForm({ ...ebookForm, is_audiobook: checked as boolean })
+                            }
+                          />
+                          <Label htmlFor="is_audiobook" className="cursor-pointer">
+                            Audio Book
+                          </Label>
+                        </div>
+                      </div>
+                      {ebookForm.is_audiobook && (
+                        <div className="space-y-2 col-span-2">
+                          <Label>Lien de lecture audio</Label>
+                          <Input
+                            value={ebookForm.audiobook_url}
+                            onChange={(e) => setEbookForm({ ...ebookForm, audiobook_url: e.target.value })}
+                            placeholder="https://example.com/audiobook-stream"
+                          />
+                        </div>
+                      )}
+                      {!ebookForm.is_audiobook && (
+                        <div className="space-y-2 col-span-2">
+                          <Label>URL de lecture directe</Label>
+                          <Input
+                            value={ebookForm.reading_url}
+                            onChange={(e) => setEbookForm({ ...ebookForm, reading_url: e.target.value })}
+                            placeholder="https://example.com/reader?book=..."
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Lien pour le bouton "Lire en ligne" (optionnel)
+                          </p>
+                        </div>
+                      )}
+                      <div className="space-y-2 col-span-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={ebookForm.description}
+                          onChange={(e) => setEbookForm({ ...ebookForm, description: e.target.value })}
+                          placeholder="Description de l'ebook..."
+                          rows={3}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)}>
+                        Annuler
+                      </Button>
+                      <Button
+                        onClick={() => (editingItem ? handleUpdate("ebook", ebookForm) : handleAdd("ebook", ebookForm))}
+                      >
+                        {editingItem ? "Modifier" : "Ajouter"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Input
+                      placeholder="Rechercher un ebook..."
+                      value={searchTerms.ebooks || ""}
+                      onChange={(e) => setSearchTerms({ ...searchTerms, ebooks: e.target.value })}
+                      className="pl-10"
+                    />
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Titre</TableHead>
+                      <TableHead>Auteur</TableHead>
+                      <TableHead>Catégorie</TableHead>
+                      <TableHead>Langue</TableHead>
+                      <TableHead>Format</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {getFilteredData(ebooks, "ebooks").map((ebook) => (
+                      <TableRow key={ebook.id}>
+                        <TableCell className="font-medium">{ebook.title}</TableCell>
+                        <TableCell>{ebook.author}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{ebook.category}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{ebook.language}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{ebook.file_format}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={ebook.is_active === true ? "default" : "secondary"}>
+                            {ebook.is_active === true ? "Actif" : "Inactif"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => toggleStatus("ebook", ebook.id)}>
+                              {ebook.is_active === true ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit("ebook", ebook)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete("ebook", ebook.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {ebooks.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Aucun ebook trouvé</p>
+                    <p className="text-sm">Ajoutez votre premier ebook pour commencer</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="changelogs" className="space-y-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Gestion des Changelogs</CardTitle>
+                  <CardDescription>Gérez l'historique des versions et mises à jour</CardDescription>
+                </div>
+                <Dialog open={activeModal === "changelog"} onOpenChange={(open) => !open && setActiveModal(null)}>
+                  <DialogTrigger asChild>
+                    <Button onClick={() => setActiveModal("changelog")} className="bg-blue-600 hover:bg-blue-700">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Nouveau Changelog
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-blue-900 border-blue-700 max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-white">Créer un Changelog</DialogTitle>
+                      <DialogDescription className="text-blue-300">
+                        Ajoutez une nouvelle version avec ses changements
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-white mb-2 block">Version</label>
+                          <Input
+                            placeholder="1.0.0"
+                            value={newChangelog.version}
+                            onChange={(e) => setNewChangelog({ ...newChangelog, version: e.target.value })}
+                            className="bg-blue-800 border-blue-600 text-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-white mb-2 block">Date de sortie</label>
+                          <Input
+                            type="date"
+                            value={newChangelog.release_date}
+                            onChange={(e) => setNewChangelog({ ...newChangelog, release_date: e.target.value })}
+                            className="bg-blue-800 border-blue-600 text-white"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-white mb-2 block">Titre</label>
+                        <Input
+                          placeholder="Nouvelle fonctionnalité"
+                          value={newChangelog.title}
+                          onChange={(e) => setNewChangelog({ ...newChangelog, title: e.target.value })}
+                          className="bg-blue-800 border-blue-600 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-white mb-2 block">Description</label>
+                        <textarea
+                          placeholder="Décrivez les changements de cette version..."
+                          value={newChangelog.description}
+                          onChange={(e) => setNewChangelog({ ...newChangelog, description: e.target.value })}
+                          className="w-full min-h-[200px] bg-blue-800 border-blue-600 text-white rounded-md p-3"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setActiveModal(null)} className="border-blue-600">
+                        Annuler
+                      </Button>
+                      <Button onClick={handleCreateChangelog} className="bg-blue-600 hover:bg-blue-700">
+                        Créer
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-blue-800">
+                      <TableHead className="text-blue-300">Version</TableHead>
+                      <TableHead className="text-blue-300">Titre</TableHead>
+                      <TableHead className="text-blue-300">Date</TableHead>
+                      <TableHead className="text-blue-300 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {changelogs.map((changelog) => (
+                      <TableRow key={changelog.id} className="border-blue-800">
+                        <TableCell className="font-medium text-white">{changelog.version}</TableCell>
+                        <TableCell className="text-blue-200">{changelog.title}</TableCell>
+                        <TableCell className="text-blue-300">
+                          {new Date(changelog.release_date).toLocaleDateString("fr-FR")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditLog(changelog)}
+                              className="text-blue-400 hover:text-blue-300 hover:bg-blue-950"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteChangelog(changelog.id)}
+                              className="text-red-400 hover:text-red-300 hover:bg-red-950"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                {changelogs.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="w-12 h-12 mx-auto mb-2 text-blue-600" />
+                    <p>Aucun changelog pour le moment</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            {/* Modal for editing changelog */}
+            <Dialog open={activeModal === "edit-log"} onOpenChange={(open) => !open && (setActiveModal(null), setEditingLog(null))}>
+              <DialogContent className="bg-blue-900 border-blue-700 max-w-2xl">
                 <DialogHeader>
-                  <DialogTitle>Modifier le Changelog</DialogTitle>
+                  <DialogTitle className="text-white">Modifier le Changelog</DialogTitle>
+                  <DialogDescription className="text-blue-300">
+                    Mettez à jour les détails de cette version
+                  </DialogDescription>
                 </DialogHeader>
                 {editingLog && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2 col-span-2">
-                      <Label>Version</Label>
-                      <Input
-                        value={editingLog.version}
-                        onChange={(e) => setEditingLog({ ...editingLog, version: e.target.value })}
-                        placeholder="Ex: 1.2.3"
-                      />
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-white mb-2 block">Version</label>
+                        <Input
+                          placeholder="1.0.0"
+                          value={editingLog.version}
+                          onChange={(e) => setEditingLog({ ...editingLog, version: e.target.value })}
+                          className="bg-blue-800 border-blue-600 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-white mb-2 block">Date de sortie</label>
+                        <Input
+                          type="date"
+                          value={editingLog.release_date}
+                          onChange={(e) => setEditingLog({ ...editingLog, release_date: e.target.value })}
+                          className="bg-blue-800 border-blue-600 text-white"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Date de publication</Label>
+                    <div>
+                      <label className="text-sm font-medium text-white mb-2 block">Titre</label>
                       <Input
-                        type="date"
-                        value={editingLog.release_date}
-                        onChange={(e) => setEditingLog({ ...editingLog, release_date: e.target.value })}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Titre</Label>
-                      <Input
+                        placeholder="Nouvelle fonctionnalité"
                         value={editingLog.title}
                         onChange={(e) => setEditingLog({ ...editingLog, title: e.target.value })}
-                        placeholder="Ex: Amélioration du système de recherche"
+                        className="bg-blue-800 border-blue-600 text-white"
                       />
                     </div>
-                    <div className="space-y-2 col-span-2">
-                      <Label>Description</Label>
-                      <Textarea
+                    <div>
+                      <label className="text-sm font-medium text-white mb-2 block">Description</label>
+                      <textarea
+                        placeholder="Décrivez les changements de cette version..."
                         value={editingLog.description}
                         onChange={(e) => setEditingLog({ ...editingLog, description: e.target.value })}
-                        placeholder="Détails des changements..."
-                        rows={4}
+                        className="w-full min-h-[200px] bg-blue-800 border-blue-600 text-white rounded-md p-3"
                       />
                     </div>
                   </div>
                 )}
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setActiveModal(null)}>
+                  <Button variant="outline" onClick={() => (setActiveModal(null), setEditingLog(null))} className="border-blue-600">
                     Annuler
                   </Button>
-                  <Button onClick={handleUpdateLog}>Mettre à jour</Button>
+                  <Button onClick={handleUpdateLog} className="bg-blue-600 hover:bg-blue-700">
+                    Mettre à jour
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
-            <Card>
+            <Card className="bg-card border-border">
               <CardHeader>
-                <CardTitle>Paramètres du Site</CardTitle>
-                <CardDescription>Configurez les modules et fonctionnalités affichés sur la page d'accueil</CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <SettingsIcon className="w-5 h-5" />
+                  Paramètres du Site
+                </CardTitle>
+                <CardDescription>Gérez les modules affichés sur la page d'accueil</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="hero"
-                      checked={siteSettings.hero}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, hero: !!checked })}
-                    />
-                    <Label htmlFor="hero" className="font-medium">Section Hero</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="trending_movies"
-                      checked={siteSettings.trending_movies}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, trending_movies: !!checked })}
-                    />
-                    <Label htmlFor="trending_movies" className="font-medium">Films Tendances</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="trending_tv_shows"
-                      checked={siteSettings.trending_tv_shows}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, trending_tv_shows: !!checked })}
-                    />
-                    <Label htmlFor="trending_tv_shows" className="font-medium">Séries Tendances</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="popular_anime"
-                      checked={siteSettings.popular_anime}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, popular_anime: !!checked })}
-                    />
-                    <Label htmlFor="popular_anime" className="font-medium">Animés Populaires</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="popular_collections"
-                      checked={siteSettings.popular_collections}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, popular_collections: !!checked })}
-                    />
-                    <Label htmlFor="popular_collections" className="font-medium">Collections Populaires</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="public_playlists"
-                      checked={siteSettings.public_playlists}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, public_playlists: !!checked })}
-                    />
-                    <Label htmlFor="public_playlists" className="font-medium">Playlists Publiques</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="trending_actors"
-                      checked={siteSettings.trending_actors}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, trending_actors: !!checked })}
-                    />
-                    <Label htmlFor="trending_actors" className="font-medium">Acteurs Tendances</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="trending_tv_channels"
-                      checked={siteSettings.trending_tv_channels}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, trending_tv_channels: !!checked })}
-                    />
-                    <Label htmlFor="trending_tv_channels" className="font-medium">Chaînes TV Tendances</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="subscription_offer"
-                      checked={siteSettings.subscription_offer}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, subscription_offer: !!checked })}
-                    />
-                    <Label htmlFor="subscription_offer" className="font-medium">Offre d'Abonnement</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="random_content"
-                      checked={siteSettings.random_content}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, random_content: !!checked })}
-                    />
-                    <Label htmlFor="random_content" className="font-medium">Contenu Aléatoire</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="football_calendar"
-                      checked={siteSettings.football_calendar}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, football_calendar: !!checked })}
-                    />
-                    <Label htmlFor="football_calendar" className="font-medium">Calendrier Football</Label>
-                  </div>
-                  <div className="flex items-center space-x-2 rounded-md border p-4">
-                    <Checkbox
-                      id="calendar_widget"
-                      checked={siteSettings.calendar_widget}
-                      onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, calendar_widget: !!checked })}
-                    />
-                    <Label htmlFor="calendar_widget" className="font-medium">Widget Calendrier</Label>
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-4">Modules de la page d'accueil</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Activez ou désactivez les modules qui apparaissent sur la page d'accueil du site
+                    </p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="hero" className="text-base font-medium">
+                            Hero (Carousel)
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Carousel des tendances en haut</p>
+                        </div>
+                        <Checkbox
+                          id="hero"
+                          checked={siteSettings.hero}
+                          onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, hero: !!checked })}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="trending_movies" className="text-base font-medium">
+                            Films Tendance
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des films populaires</p>
+                        </div>
+                        <Checkbox
+                          id="trending_movies"
+                          checked={siteSettings.trending_movies}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, trending_movies: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="trending_tv_shows" className="text-base font-medium">
+                            Séries Tendance
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des séries populaires</p>
+                        </div>
+                        <Checkbox
+                          id="trending_tv_shows"
+                          checked={siteSettings.trending_tv_shows}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, trending_tv_shows: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="popular_anime" className="text-base font-medium">
+                            Animés Populaires
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des animés</p>
+                        </div>
+                        <Checkbox
+                          id="popular_anime"
+                          checked={siteSettings.popular_anime}
+                          onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, popular_anime: !!checked })}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="popular_collections" className="text-base font-medium">
+                            Collections Populaires
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des collections</p>
+                        </div>
+                        <Checkbox
+                          id="popular_collections"
+                          checked={siteSettings.popular_collections}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, popular_collections: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="public_playlists" className="text-base font-medium">
+                            Playlists Publiques
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des playlists partagées</p>
+                        </div>
+                        <Checkbox
+                          id="public_playlists"
+                          checked={siteSettings.public_playlists}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, public_playlists: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="trending_actors" className="text-base font-medium">
+                            Acteurs Tendance
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des acteurs populaires</p>
+                        </div>
+                        <Checkbox
+                          id="trending_actors"
+                          checked={siteSettings.trending_actors}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, trending_actors: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="trending_tv_channels" className="text-base font-medium">
+                            Chaînes TV
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Section des chaînes télé</p>
+                        </div>
+                        <Checkbox
+                          id="trending_tv_channels"
+                          checked={siteSettings.trending_tv_channels}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, trending_tv_channels: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="subscription_offer" className="text-base font-medium">
+                            Offre d'Abonnement
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Bandeau publicitaire VIP</p>
+                        </div>
+                        <Checkbox
+                          id="subscription_offer"
+                          checked={siteSettings.subscription_offer}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, subscription_offer: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="random_content" className="text-base font-medium">
+                            Contenu Aléatoire
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Suggestion de contenu random</p>
+                        </div>
+                        <Checkbox
+                          id="random_content"
+                          checked={siteSettings.random_content}
+                          onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, random_content: !!checked })}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="football_calendar" className="text-base font-medium">
+                            Calendrier Football
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Widget calendrier sportif</p>
+                        </div>
+                        <Checkbox
+                          id="football_calendar"
+                          checked={siteSettings.football_calendar}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, football_calendar: !!checked })
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                        <div>
+                          <Label htmlFor="calendar_widget" className="text-base font-medium">
+                            Calendrier Général
+                          </Label>
+                          <p className="text-xs text-muted-foreground">Widget calendrier événements</p>
+                        </div>
+                        <Checkbox
+                          id="calendar_widget"
+                          checked={siteSettings.calendar_widget}
+                          onCheckedChange={(checked) =>
+                            setSiteSettings({ ...siteSettings, calendar_widget: !!checked })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-6 flex justify-end">
+                      <Button onClick={handleSaveSiteSettings}>
+                        <Save className="w-4 h-4 mr-2" />
+                        Sauvegarder les paramètres
+                      </Button>
+                    </div>
                   </div>
                 </div>
-                <div className="mt-6 pt-6 border-t">
-                  <Button onClick={handleSaveSiteSettings} className="w-full">Sauvegarder les paramètres</Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="interactive-world">
+            <Card className="bg-gray-800 border-gray-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Globe className="w-5 h-5" />
+                  Monde Interactif - Configuration Complète
+                </CardTitle>
+                <CardDescription className="text-gray-400">
+                  Gérez tous les paramètres du monde interactif, salles de cinéma et options de personnalisation
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white">Paramètres Généraux du Monde</h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-300">Capacité Maximale</label>
+                      <Input
+                        type="number"
+                        value={worldSettings.maxCapacity}
+                        onChange={(e) =>
+                          setWorldSettings({ ...worldSettings, maxCapacity: Number.parseInt(e.target.value, 10) })
+                        }
+                        className="bg-gray-700 border-gray-600 text-white"
+                        placeholder="Nombre max d'utilisateurs"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-300">Mode du Monde</label>
+                      <select
+                        value={worldSettings.worldMode}
+                        onChange={(e) => setWorldSettings({ ...worldSettings, worldMode: e.target.value })}
+                        className="w-full px-3 py-2 bg-gray-700 border-gray-600 rounded-md text-white"
+                      >
+                        <option value="day">Jour</option>
+                        <option value="night">Nuit</option>
+                        <option value="sunset">Coucher de soleil</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={worldSettings.playerInteractionsEnabled}
+                        onChange={(e) =>
+                          setWorldSettings({ ...worldSettings, playerInteractionsEnabled: e.target.checked })
+                        }
+                      />
+                      Interactions Joueurs
+                    </label>
+
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={worldSettings.showStatusBadges}
+                        onChange={(e) =>
+                          setWorldSettings({ ...worldSettings, showStatusBadges: e.target.checked })
+                        }
+                      />
+                      Afficher Badges Statut
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={worldSettings.enableChat}
+                        onChange={(e) => setWorldSettings({ ...worldSettings, enableChat: e.target.checked })}
+                      />
+                      Activer le chat texte
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={worldSettings.enableEmojis}
+                        onChange={(e) => setWorldSettings({ ...worldSettings, enableEmojis: e.target.checked })}
+                      />
+                      Activer les émojis
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-gray-300">
+                      <input
+                        type="checkbox"
+                        className="rounded"
+                        checked={worldSettings.enableJumping}
+                        onChange={(e) => setWorldSettings({ ...worldSettings, enableJumping: e.target.checked })}
+                      />
+                      Activer le saut
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end pt-4">
+                    {/* CHANGE: Renamed handleWorldSettings to handleSaveWorldSettings */}
+                    <Button onClick={handleSaveWorldSettings} className="bg-blue-600 hover:bg-blue-700">
+                      <Save className="w-4 h-4 mr-2" />
+                      Sauvegarder les Paramètres
+                    </Button>
+                  </div>
+                </div>
+
+                <Separator className="bg-gray-700" />
+
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Film className="w-5 h-5" />
+                      Gestion des Salles de Cinéma
+                    </h3>
+                    <Button onClick={handleCreateCinemaRoom} size="sm" className="bg-green-600 hover:bg-green-700">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Créer une Salle
+                    </Button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {cinemaRooms.map((room) => (
+                      <div key={room.id} className="p-4 bg-gray-700 rounded-lg border border-gray-600">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Numéro de Salle</label>
+                            <Input
+                              type="number"
+                              value={room.room_number}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, room_number: Number.parseInt(e.target.value) } : r,
+                                  ),
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Nom de la Salle</label>
+                            <Input
+                              value={room.name}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) => (r.id === room.id ? { ...r, name: e.target.value } : r)),
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Capacité</label>
+                            <Input
+                              type="number"
+                              value={room.capacity}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, capacity: Number.parseInt(e.target.value) } : r,
+                                  ),
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Thème</label>
+                            <select
+                              value={room.theme}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) => (r.id === room.id ? { ...r, theme: e.target.value } : r)),
+                                )
+                              }}
+                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                            >
+                              <option value="default">Par défaut</option>
+                              <option value="luxury">Luxe</option>
+                              <option value="retro">Rétro</option>
+                              <option value="modern">Moderne</option>
+                            </select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Titre du Film</label>
+                            <Input
+                              value={room.movie_title}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, movie_title: e.target.value } : r,
+                                  ),
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">ID TMDB du Film</label>
+                            <Input
+                              type="number"
+                              value={room.movie_tmdb_id || ""}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id
+                                      ? { ...r, movie_tmdb_id: Number.parseInt(e.target.value) || null }
+                                      : r,
+                                  ),
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">URL Affiche</label>
+                            <Input
+                              value={room.movie_poster || ""}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, movie_poster: e.target.value } : r,
+                                  ),
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+<div className="space-y-2">
+  <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
+  <Input
+    value={room.embed_url || ""}
+    onChange={(e) => {
+      setCinemaRooms(
+        cinemaRooms.map((r) => (r.id === room.id ? { ...r, embed_url: e.target.value } : r))
+      )
+    }}
+    className="bg-gray-600 border-gray-500 text-white"
+  />
+</div>
+<div className="space-y-2">
+                            <label className="text-sm text-gray-300">Début de séance</label>
+                            <Input
+                              type="datetime-local"
+                              value={room.schedule_start || ""}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, schedule_start: e.target.value } : r
+                                  )
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Fin de séance</label>
+                            <Input
+                              type="datetime-local"
+                              value={room.schedule_end || ""}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, schedule_end: e.target.value } : r
+                                  )
+                                )
+                              }}
+                              className="bg-gray-600 border-gray-500 text-white"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <label className="text-sm text-gray-300">Niveau d'accès</label>
+                            <select
+                              value={room.access_level}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, access_level: e.target.value } : r
+                                  )
+                                )
+                              }}
+                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                            >
+                              <option value="public">Public</option>
+                              <option value="vip">VIP</option>
+                              <option value="vip_plus">VIP+</option>
+                            </select>
+                          </div>
+
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={room.is_open}
+                              onChange={(e) => {
+                                setCinemaRooms(
+                                  cinemaRooms.map((r) =>
+                                    r.id === room.id ? { ...r, is_open: e.target.checked } : r
+                                  )
+                                )
+                              }}
+                              className="rounded"
+                            />
+                            <label className="text-sm text-gray-300">Salle ouverte</label>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end gap-2 mt-4">
+                          <Button
+                            onClick={() => handleUpdateCinemaRoom(room)}
+                            size="sm"
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Save className="w-4 h-4 mr-2" />
+                            Sauvegarder
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+
+                    {cinemaRooms.length === 0 && (
+                      <div className="text-center py-8 text-gray-400">
+                        <Film className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>Aucune salle de cinéma créée</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Section des options d'avatar */}
+                <Separator className="bg-gray-700" />
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white">Options de Personnalisation d'Avatar</h3>
+                  
+                  {/* Formulaire d'ajout */}
+                  <div className="p-4 bg-gray-700 rounded-lg border border-gray-600">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      <select
+                        value={newOption.category}
+                        onChange={(e) => setNewOption({ ...newOption, category: e.target.value })}
+                        className="px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                      >
+                        <option value="hair_style">Coiffure</option>
+                        <option value="hair_color">Couleur cheveux</option>
+                        <option value="skin_tone">Teinte peau</option>
+                        <option value="outfit">Tenue</option>
+                      </select>
+
+                      <Input
+                        placeholder="Label (ex: Blonde)"
+                        value={newOption.label}
+                        onChange={(e) => setNewOption({ ...newOption, label: e.target.value })}
+                        className="bg-gray-600 border-gray-500 text-white"
+                      />
+
+                      <Input
+                        placeholder="Valeur (ex: #FFD700)"
+                        value={newOption.value}
+                        onChange={(e) => setNewOption({ ...newOption, value: e.target.value })}
+                        className="bg-gray-600 border-gray-500 text-white"
+                      />
+
+                      <div className="flex items-center gap-4">
+                        <label className="flex items-center gap-2 text-sm text-gray-300">
+                          <input
+                            type="checkbox"
+                            checked={newOption.is_premium}
+                            onChange={(e) => setNewOption({ ...newOption, is_premium: e.target.checked })}
+                            className="rounded"
+                          />
+                          Premium
+                        </label>
+                        <Button onClick={handleAddAvatarOption} size="sm" className="bg-green-600 hover:bg-green-700">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Ajouter
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Liste des options */}
+                  <div className="space-y-2">
+                    {avatarOptions.map((option) => (
+                      <div key={option.id} className="flex items-center justify-between p-3 bg-gray-700 rounded border border-gray-600">
+                        <div className="flex items-center gap-4">
+                          <Badge variant="outline">{option.category}</Badge>
+                          <span className="text-white">{option.label}</span>
+                          <span className="text-gray-400 text-sm">{option.value}</span>
+                          {option.is_premium && <Badge className="bg-yellow-600">Premium</Badge>}
+                        </div>
+                        <Button
+                          onClick={() => handleDeleteAvatarOption(option.id)}
+                          size="sm"
+                          variant="destructive"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Section des statistiques en temps réel */}
+                <Separator className="bg-gray-700" />
+
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white">Statistiques en Temps Réel</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card className="bg-gray-700 border-gray-600">
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <Users className="w-8 h-8 mx-auto mb-2 text-blue-400" />
+                          <div className="text-3xl font-bold text-white">{onlineUsersCount}</div>
+                          <p className="text-sm text-gray-400">Utilisateurs en ligne</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gray-700 border-gray-600">
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <Film className="w-8 h-8 mx-auto mb-2 text-purple-400" />
+                          <div className="text-3xl font-bold text-white">{cinemaRooms.length}</div>
+                          <p className="text-sm text-gray-400">Salles de cinéma</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-gray-700 border-gray-600">
+                      <CardContent className="pt-6">
+                        <div className="text-center">
+                          <Sparkles className="w-8 h-8 mx-auto mb-2 text-green-400" />
+                          <div className="text-3xl font-bold text-white">{avatarOptions.length}</div>
+                          <p className="text-sm text-gray-400">Options d'avatar</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -5384,5 +7217,5 @@ const loadRealUsers = async (supabase) => {
         </Tabs>
       </div>
     </div>
-  )\
+  )
 }
