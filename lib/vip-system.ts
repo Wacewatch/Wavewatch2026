@@ -1,4 +1,4 @@
-export type VIPLevel = "free" | "vip" | "vip_plus" | "beta"
+export type VIPLevel = "free" | "vip" | "vip_plus" | "beta" | "uploader"
 
 export interface VIPUser {
   id: string
@@ -93,6 +93,8 @@ export class VIPSystem {
         return { text: "VIP+", color: "text-purple-600 border-purple-600" }
       case "beta":
         return { text: "BETA", color: "text-cyan-400 border-cyan-400" }
+      case "uploader":
+        return { text: "UPLOADER", color: "text-green-500 border-green-500" }
       default:
         return { text: "", color: "" }
     }
@@ -106,6 +108,8 @@ export class VIPSystem {
         return "text-purple-600"
       case "beta":
         return "text-cyan-400"
+      case "uploader":
+        return "text-green-500"
       default:
         return "text-foreground"
     }
@@ -172,6 +176,12 @@ export class VIPSystem {
           "Priorité dans le classement",
           "Soutien premium au développement",
         ],
+      },
+      uploader: {
+        name: "Uploader",
+        price: "0€",
+        description: "Uploader de contenu",
+        features: ["Uploader des vidéos", "Accès à l'espace uploader", "Support au contenu"],
       },
     }
   }

@@ -19,7 +19,6 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   Plus,
   Edit,
-  Pencil,
   Trash2,
   Users,
   Tv,
@@ -31,9 +30,7 @@ import {
   FileText,
   Zap,
   Trophy,
-  Crown,
   Shield,
-  UserX,
   Clock,
   Activity,
   Heart,
@@ -42,7 +39,6 @@ import {
   ThumbsUp,
   ThumbsDown,
   Calendar,
-  FlagIcon as FlaskIcon,
   TrendingUp,
   Monitor,
   Headphones,
@@ -63,6 +59,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Globe,
+  Pencil,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 // REMOVED: import { supabase } from "@/lib/supabase" // Removed incorrect Supabase import
@@ -293,6 +290,8 @@ export default function AdminPage() {
     is_admin: false,
   })
   const [newPassword, setNewPassword] = useState("")
+  const [editingUser, setEditingUser] = useState(null)
+  const [isUserDialogOpen, setIsUserDialogOpen] = useState(false)
 
   // State for user table filtering and pagination
   const [userRoleFilter, setUserRoleFilter] = useState<string>("all") // Renamed from userGradeFilter
@@ -354,25 +353,64 @@ export default function AdminPage() {
     use_proxy: false,
   })
 
-  const [activeTab, setActiveTab] = useState("dashboard") // State to track active tab
+  // CHANGE: Define isFullAdmin and isUploader
+  const isFullAdmin = user?.isAdmin || false
+  const isUploader = user?.isUploader && !user?.isAdmin // Only uploader if NOT admin
 
-  // useEffect moved inside the AdminPage component if it depends on user state
+  // CHANGE: Define tabs accessible to uploaders
+  const uploaderAllowedTabs = ["music", "games", "software", "ebooks", "requests"]
+  const canAccessTab = (tab: string) => {
+    if (isFullAdmin) return true
+    if (isUploader) return uploaderAllowedTabs.includes(tab)
+    return false
+  }
+
+  // CHANGE: Only full admins can delete content, uploaders cannot
+  const canDelete = isFullAdmin
+
+  // CHANGE: Uploaders start on "music" tab, full admins on "dashboard"
+  const [activeTab, setActiveTab] = useState(isFullAdmin ? "dashboard" : "music")
+
+  // CHANGE: Combined user and uploader check for access
   useEffect(() => {
-    // Check if user is available and an admin before loading data
-    if (user?.isAdmin) {
-      // fetchAllData(); // Initial load moved to the main useEffect below
-      // Load specific data based on active tab (or defer until tab is active)
-      if (activeTab === "interactive-world") {
-        loadWorldSettings()
-        loadCinemaRooms()
-        loadAvatarOptions()
-        loadOnlineUsers()
-        loadArcadeMachines()
-        loadStadium()
-      }
+    if (!user || (!user.isAdmin && !user.isUploader)) {
+      router.push("/") // Redirect to homepage if not admin or uploader
     }
-    // Ensure dependency array includes user and activeTab if they affect the effect's execution
-  }, [user, activeTab]) // Added activeTab dependency
+  }, [user, router])
+
+  // CHANGE: Fetches all data on mount or when user role changes
+  useEffect(() => {
+    // Only fetch data if user is logged in and has appropriate role
+    if (user && (user.isAdmin || user.isUploader)) {
+      console.log("[v0] Admin page: Fetching initial data...")
+      fetchAllData()
+    }
+  }, [user]) // Dependency on 'user' ensures it runs when authentication state changes
+
+  // CHANGE: Fetch interactive world data only when that tab is active
+  useEffect(() => {
+    if (user && (user.isAdmin || user.isUploader) && activeTab === "interactive-world" && !loading) {
+      loadWorldSettings()
+      loadCinemaRooms()
+      loadAvatarOptions()
+      loadOnlineUsers()
+      loadArcadeMachines()
+      loadStadium()
+    }
+  }, [user, activeTab, loading]) // Added loading dependency to ensure it runs after initial data load
+
+  // CHANGE: Refactored the online user interval logic to be dependent on activeTab and loading state
+  useEffect(() => {
+    // Only set interval if the user is logged in and the interactive world tab is active
+    if (user && (user.isAdmin || user.isUploader) && activeTab === "interactive-world" && !loading) {
+      const intervalId = setInterval(() => {
+        loadOnlineUsers()
+      }, 15000) // Refresh every 15 seconds
+
+      // Cleanup interval on component unmount or when activeTab changes away from interactive-world
+      return () => clearInterval(intervalId)
+    }
+  }, [user, activeTab, loading]) // Dependencies ensure reactivity
 
   const handleUpdateRequestStatus = async (id: string, status: string) => {
     const supabase = createBrowserClient(
@@ -380,7 +418,7 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      const { error } = await supabase.from("requests").update({ status }).eq("id", id)
+      const { error } = await supabase.from("content_requests").update({ status }).eq("id", id)
       if (error) throw error
       setRequests((prev) => prev.map((req) => (req.id === id ? { ...req, status } : req)))
       toast({ title: "Statut mis à jour", description: `La demande #${id} est maintenant ${status}.` })
@@ -395,12 +433,21 @@ export default function AdminPage() {
   }
 
   const handleDeleteRequest = async (id: string) => {
+    if (!canDelete) {
+      toast({
+        title: "Permission refusée",
+        description: "Vous n'avez pas la permission de supprimer des demandes.",
+        variant: "destructive",
+      })
+      return
+    }
+
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      const { error } = await supabase.from("requests").delete().eq("id", id)
+      const { error } = await supabase.from("content_requests").delete().eq("id", id)
       if (error) throw error
       setRequests((prev) => prev.filter((req) => req.id !== id))
       toast({ title: "Demande supprimée", description: `La demande #${id} a été supprimée.` })
@@ -491,7 +538,7 @@ export default function AdminPage() {
         data: allUsers,
         error: usersError,
         count: totalUsersCount,
-      } = await supabase.from("user_profiles").select("id", { count: "exact" })
+      } = await supabase.from("user_profiles").select("id", { count: "exact", head: true })
 
       if (usersError) throw usersError
 
@@ -612,94 +659,67 @@ export default function AdminPage() {
 
   const loadRealUsers = async (supabase) => {
     try {
-      console.log("🔄 Chargement des utilisateurs...")
+      console.log("[v0] Loading users from database...")
 
+      // Get total count
       const { count: totalCount, error: countError } = await supabase
         .from("user_profiles")
         .select("*", { count: "exact", head: true })
 
       if (countError) {
-        console.error("❌ Erreur lors du comptage des utilisateurs:", countError)
+        console.error("[v0] Error counting users:", countError)
+        setTotalUsersInDB(0)
       } else {
         setTotalUsersInDB(totalCount || 0)
         console.log(`[v0] Total users in DB: ${totalCount}`)
       }
 
-      const {
-        data: allUsers,
-        error: usersError,
-        count,
-      } = await supabase.from("user_profiles").select("*", { count: "exact" }).order("created_at", { ascending: false })
+      // Load all users with proper fields
+      const { data: allUsers, error: usersError } = await supabase
+        .from("user_profiles")
+        .select("id, user_id, username, email, status, is_admin, is_uploader, is_vip, is_vip_plus, is_beta, created_at, vip_expires_at")
+        .order("created_at", { ascending: false })
+        .limit(1000)
 
       if (usersError) {
-        console.error("❌ Erreur lors du chargement des utilisateurs:", usersError)
-        setUsers([]) // Ensure users state is empty if there's an error
+        console.error("[v0] Error loading users:", usersError)
+        setUsers([])
         throw usersError
-      } else {
-        console.log(`✅ ${allUsers?.length || 0} utilisateurs chargés depuis Supabase (count: ${count})`)
-
-        const correctedUsers = (allUsers || []).map((user) => ({
-          ...user,
-          // S'assurer que les booléens sont bien définis
-          is_admin: Boolean(user.is_admin),
-          is_vip: Boolean(user.is_vip),
-          is_vip_plus: Boolean(user.is_vip_plus),
-          is_beta: Boolean(user.is_beta),
-          // Définir un statut par défaut si non défini
-          status: user.status || "active",
-          // S'assurer que le nom d'utilisateur est défini
-          username: user.username || user.email?.split("@")[0] || "Utilisateur",
-        }))
-
-        setUsers(correctedUsers)
-        console.log(`[v0] Total users loaded: ${correctedUsers.length}`)
-        return { users: correctedUsers, count } // Return count as well
       }
+
+      console.log(`[v0] Loaded ${allUsers?.length || 0} user profiles`)
+
+      // Process users with proper defaults
+      const processedUsers = (allUsers || []).map((user) => ({
+        ...user,
+        is_admin: Boolean(user.is_admin),
+        is_uploader: Boolean(user.is_uploader),
+        is_vip: Boolean(user.is_vip),
+        is_vip_plus: Boolean(user.is_vip_plus),
+        is_beta: Boolean(user.is_beta),
+        status: user.status || "active",
+        username: user.username || user.email?.split("@")[0] || "Unknown User",
+      }))
+
+      setUsers(processedUsers)
+      console.log(`[v0] Processed ${processedUsers.length} users successfully`)
     } catch (error) {
-      console.error("❌ Erreur lors du chargement des utilisateurs:", error)
-      setUsers([]) // Ensure users state is empty on error
-      throw error
+      console.error("[v0] Fatal error loading users:", error)
+      setUsers([])
     }
   }
 
   const loadRequests = async (supabase) => {
     try {
-      console.log("[v0] Loading content requests...")
       const { data, error } = await supabase
         .from("content_requests")
-        .select(`
-          *,
-          user_profiles!content_requests_user_id_fkey(username, email)
-        `)
+        .select("*, user_profiles(username, email)")
         .order("created_at", { ascending: false })
 
-      if (error) {
-        console.error("[v0] Supabase error loading content_requests:", error)
-        throw error
-      }
-
-      console.log("[v0] Raw content_requests data:", data)
-
-      const requestsWithUserInfo = (data || []).map((req) => ({
-        id: req.id,
-        user_id: req.user_id,
-        type: req.content_type || "movie",
-        title: req.title || "Sans titre",
-        description: req.description || "",
-        status: req.status || "pending",
-        created_at: req.created_at,
-        updated_at: req.updated_at,
-        admin_notes: req.admin_notes || "",
-        username: req.user_profiles?.username || req.user_profiles?.email || "Utilisateur inconnu",
-      }))
-
-      console.log("[v0] Processed requests:", requestsWithUserInfo)
-      setRequests(requestsWithUserInfo)
-      return requestsWithUserInfo
+      if (error) throw error
+      setRequests(data || [])
     } catch (error) {
-      console.error("[v0] Error loading content requests:", error)
-      setRequests([])
-      throw error
+      console.error("Error loading requests:", error)
     }
   }
 
@@ -720,7 +740,9 @@ export default function AdminPage() {
           *,
           user_profiles!user_login_history_user_id_fkey(username, email)
         `)
-        .order("login_at", { ascending: false })
+        .order("login_at", {
+          ascending: false
+        })
         .limit(50)
 
       if (loginError) {
@@ -744,7 +766,9 @@ export default function AdminPage() {
       const { data: newUsers, error: usersError } = await supabase
         .from("user_profiles")
         .select("*")
-        .order("created_at", { ascending: false })
+        .order("created_at", {
+          ascending: false
+        })
         .limit(20)
 
       if (usersError) {
@@ -771,7 +795,9 @@ export default function AdminPage() {
           *,
           user_profiles!user_watch_history_user_id_fkey(username, email)
         `)
-        .order("last_watched_at", { ascending: false })
+        .order("last_watched_at", {
+          ascending: false
+        })
         .limit(30)
 
       if (watchError) {
@@ -799,7 +825,9 @@ export default function AdminPage() {
           *,
           user_profiles!user_ratings_user_id_fkey(username, email)
         `)
-        .order("created_at", { ascending: false })
+        .order("created_at", {
+          ascending: false
+        })
         .limit(30)
 
       if (ratingsError) {
@@ -828,7 +856,9 @@ export default function AdminPage() {
           *,
           user_profiles!user_wishlist_user_id_fkey(username, email)
         `)
-        .order("created_at", { ascending: false })
+        .order("created_at", {
+          ascending: false
+        })
         .limit(20)
 
       if (wishlistError) {
@@ -918,7 +948,9 @@ export default function AdminPage() {
       }
 
       try {
-        await fetch("/api/revalidate?path=/", { method: "POST" })
+        await fetch("/api/revalidate?path=/", {
+          method: "POST"
+        })
       } catch (revalError) {
         console.error("Error revalidating homepage:", revalError)
       }
@@ -1063,7 +1095,9 @@ export default function AdminPage() {
       const { data, error } = await supabase
         .from("interactive_cinema_rooms")
         .select("*")
-        .order("room_number", { ascending: true }) // Order by room number for consistency
+        .order("room_number", {
+          ascending: true
+        }) // Order by room number for consistency
 
       if (error) {
         console.warn("Error loading cinema rooms:", error.message || error)
@@ -1167,9 +1201,11 @@ export default function AdminPage() {
     )
     try {
       const { data, error } = await supabase
-        .from("interactive_avatar_options")
+        .from("avatar_customization_options")
         .select("*")
-        .order("id", { ascending: true })
+        .order("id", {
+          ascending: true
+        })
 
       if (error) {
         console.warn("Error loading avatar options:", error.message || error)
@@ -1264,9 +1300,15 @@ export default function AdminPage() {
     )
     try {
       // Query for users that are marked as online in the interactive_profiles table
-      const { count, error } = await supabase
+      const {
+        count,
+        error
+      } = await supabase
         .from("interactive_profiles")
-        .select("*", { count: "exact", head: true }) // count: 'exact' and head: true optimizes for count only
+        .select("*", {
+          count: "exact",
+          head: true
+        }) // count: 'exact' and head: true optimizes for count only
         .eq("is_online", true) // Filter for online users
 
       if (error) throw error
@@ -1284,7 +1326,9 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
     try {
-      const { data, error } = await supabase.from("arcade_games").select("*").order("display_order", { ascending: true })
+      const { data, error } = await supabase.from("arcade_games").select("*").order("display_order", {
+        ascending: true
+      })
 
       if (error) {
         console.warn("Error loading arcade machines:", error.message || error)
@@ -1327,11 +1371,25 @@ export default function AdminPage() {
 
       setArcadeMachines([...arcadeMachines, data])
       setShowAddArcadeGame(false)
-      setArcadeGameForm({ name: '', url: '', image_url: '', media_type: 'image', open_in_new_tab: false, use_proxy: false })
-      toast({ title: "Jeu ajouté", description: `${data.name} a été ajouté à l'arcade.` })
+      setArcadeGameForm({
+        name: '',
+        url: '',
+        image_url: '',
+        media_type: 'image',
+        open_in_new_tab: false,
+        use_proxy: false
+      })
+      toast({
+        title: "Jeu ajouté",
+        description: `${data.name} a été ajouté à l'arcade.`
+      })
     } catch (error) {
       console.error('Error adding arcade game:', error)
-      toast({ title: "Erreur", description: "Impossible d'ajouter le jeu.", variant: "destructive" })
+      toast({
+        title: "Erreur",
+        description: "Impossible d'ajouter le jeu.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -1360,11 +1418,25 @@ export default function AdminPage() {
 
       setArcadeMachines(arcadeMachines.map(g => g.id === editingArcadeGame.id ? data : g))
       setEditingArcadeGame(null)
-      setArcadeGameForm({ name: '', url: '', image_url: '', media_type: 'image', open_in_new_tab: false, use_proxy: false })
-      toast({ title: "Jeu modifié", description: `${data.name} a été mis à jour.` })
+      setArcadeGameForm({
+        name: '',
+        url: '',
+        image_url: '',
+        media_type: 'image',
+        open_in_new_tab: false,
+        use_proxy: false
+      })
+      toast({
+        title: "Jeu modifié",
+        description: `${data.name} a été mis à jour.`
+      })
     } catch (error) {
       console.error('Error updating arcade game:', error)
-      toast({ title: "Erreur", description: "Impossible de modifier le jeu.", variant: "destructive" })
+      toast({
+        title: "Erreur",
+        description: "Impossible de modifier le jeu.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -1378,10 +1450,17 @@ export default function AdminPage() {
       const { error } = await supabase.from('arcade_games').delete().eq('id', id)
       if (error) throw error
       setArcadeMachines(arcadeMachines.filter(g => g.id !== id))
-      toast({ title: "Jeu supprimé", description: "Le jeu a été supprimé de l'arcade." })
+      toast({
+        title: "Jeu supprimé",
+        description: "Le jeu a été supprimé de l'arcade."
+      })
     } catch (error) {
       console.error('Error deleting arcade game:', error)
-      toast({ title: "Erreur", description: "Impossible de supprimer le jeu.", variant: "destructive" })
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer le jeu.",
+        variant: "destructive"
+      })
     }
   }
 
@@ -1437,7 +1516,11 @@ export default function AdminPage() {
     )
 
     if (!stadium) {
-      toast({ title: "Erreur", description: "Aucun stade configuré à mettre à jour.", variant: "destructive" })
+      toast({
+        title: "Erreur",
+        description: "Aucun stade configuré à mettre à jour.",
+        variant: "destructive"
+      })
       return
     }
 
@@ -1447,7 +1530,7 @@ export default function AdminPage() {
         .update({
           name: stadium.name,
           match_title: stadium.match_title,
-          embed_url: stadium.embed_url,
+          embed_url: stadium.embed_url, // This should be stream_url based on the form
           schedule_start: stadium.schedule_start,
           schedule_end: stadium.schedule_end,
           access_level: stadium.access_level,
@@ -1495,7 +1578,10 @@ export default function AdminPage() {
 
       const { count: userCount, error: countError } = await supabase
         .from("user_profiles")
-        .select("id", { count: "exact", head: true })
+        .select("id", {
+          count: "exact",
+          head: true
+        })
 
       if (!countError && userCount !== null) {
         supabaseUserCount = userCount
@@ -1505,13 +1591,34 @@ export default function AdminPage() {
 
       const [tvChannelsResult, radioResult, retrogamingResult, musicResult, softwareResult, gamesResult, ebooksResult] =
         await Promise.all([
-          supabase.from("tv_channels").select("id", { count: "exact", head: true }),
-          supabase.from("radio_stations").select("id", { count: "exact", head: true }),
-          supabase.from("retrogaming_sources").select("id", { count: "exact", head: true }),
-          supabase.from("music_content").select("id", { count: "exact", head: true }),
-          supabase.from("software").select("id", { count: "exact", head: true }),
-          supabase.from("games").select("id", { count: "exact", head: true }),
-          supabase.from("ebooks").select("id", { count: "exact", head: true }),
+          supabase.from("tv_channels").select("id", {
+            count: "exact",
+            head: true
+          }),
+          supabase.from("radio_stations").select("id", {
+            count: "exact",
+            head: true
+          }),
+          supabase.from("retrogaming_sources").select("id", {
+            count: "exact",
+            head: true
+          }),
+          supabase.from("music_content").select("id", {
+            count: "exact",
+            head: true
+          }),
+          supabase.from("software").select("id", {
+            count: "exact",
+            head: true
+          }),
+          supabase.from("games").select("id", {
+            count: "exact",
+            head: true
+          }),
+          supabase.from("ebooks").select("id", {
+            count: "exact",
+            head: true
+          }),
         ])
 
       const totalTVChannels = tvChannelsResult.count || 0
@@ -1567,7 +1674,11 @@ export default function AdminPage() {
           tmdbAnime = animeData.total_results || 8000
         }
 
-        console.log("✅ Données TMDB chargées:", { tmdbMovies, tmdbTVShows, tmdbAnime })
+        console.log("✅ Données TMDB chargées:", {
+          tmdbMovies,
+          tmdbTVShows,
+          tmdbAnime
+        })
       } catch (error) {
         console.error("⚠️ Erreur lors du chargement des données TMDB, utilisation des valeurs par défaut:", error)
       }
@@ -1576,9 +1687,14 @@ export default function AdminPage() {
       let totalViews = dbStats?.watched_items || 0
       if (!dbStats?.watched_items) {
         try {
-          const { count: watchedCount } = await supabase
+          const {
+            count: watchedCount
+          } = await supabase
             .from("watched_items")
-            .select("id", { count: "exact", head: true })
+            .select("id", {
+              count: "exact",
+              head: true
+            })
           totalViews = watchedCount || 0
         } catch (error) {
           console.error("⚠️ Erreur lors du chargement des vues:", error)
@@ -1614,27 +1730,83 @@ export default function AdminPage() {
           ebooks: totalEbooks, // Using exact count
         },
         userGrowth: [
-          { month: "Jan", users: Math.floor(totalUsers * 0.6) },
-          { month: "Fév", users: Math.floor(totalUsers * 0.7) },
-          { month: "Mar", users: Math.floor(totalUsers * 0.8) },
-          { month: "Avr", users: Math.floor(totalUsers * 0.85) },
-          { month: "Mai", users: Math.floor(totalUsers * 0.92) },
-          { month: "Juin", users: totalUsers },
+          {
+            month: "Jan",
+            users: Math.floor(totalUsers * 0.6)
+          },
+          {
+            month: "Fév",
+            users: Math.floor(totalUsers * 0.7)
+          },
+          {
+            month: "Mar",
+            users: Math.floor(totalUsers * 0.8)
+          },
+          {
+            month: "Avr",
+            users: Math.floor(totalUsers * 0.85)
+          },
+          {
+            month: "Mai",
+            users: Math.floor(totalUsers * 0.92)
+          },
+          {
+            month: "Juin",
+            users: totalUsers
+          },
         ],
         revenueByMonth: [
-          { month: "Jan", revenue: Math.floor(vipUsers * 1.99 * 0.6) },
-          { month: "Fév", revenue: Math.floor(vipUsers * 1.99 * 0.7) },
-          { month: "Mar", revenue: Math.floor(vipUsers * 1.99 * 0.8) },
-          { month: "Avr", revenue: Math.floor(vipUsers * 1.99 * 0.9) },
-          { month: "Mai", revenue: Math.floor(vipUsers * 1.99 * 0.95) },
-          { month: "Juin", revenue: vipUsers * 1.99 },
+          {
+            month: "Jan",
+            revenue: Math.floor(vipUsers * 1.99 * 0.6)
+          },
+          {
+            month: "Fév",
+            revenue: Math.floor(vipUsers * 1.99 * 0.7)
+          },
+          {
+            month: "Mar",
+            revenue: Math.floor(vipUsers * 1.99 * 0.8)
+          },
+          {
+            month: "Avr",
+            revenue: Math.floor(vipUsers * 1.99 * 0.9)
+          },
+          {
+            month: "Mai",
+            revenue: Math.floor(vipUsers * 1.99 * 0.95)
+          },
+          {
+            month: "Juin",
+            revenue: vipUsers * 1.99
+          },
         ],
         topContent: [
-          { title: "Top Movie", type: "movie", views: 15420 },
-          { title: "Top TV Show", type: "tv", views: 12350 },
-          { title: "Top Anime", type: "anime", views: 9870 },
-          { title: "Popular Channel", type: "tv", views: 8650 },
-          { title: "Hit Movie", type: "movie", views: 7890 },
+          {
+            title: "Top Movie",
+            type: "movie",
+            views: 15420
+          },
+          {
+            title: "Top TV Show",
+            type: "tv",
+            views: 12350
+          },
+          {
+            title: "Top Anime",
+            type: "anime",
+            views: 9870
+          },
+          {
+            title: "Popular Channel",
+            type: "tv",
+            views: 8650
+          },
+          {
+            title: "Hit Movie",
+            type: "movie",
+            views: 7890
+          },
         ],
         systemHealth: {
           uptime: "99.9%",
@@ -1659,7 +1831,9 @@ export default function AdminPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ type }),
+        body: JSON.stringify({
+          type
+        }),
       })
 
       const result = await response.json()
@@ -1688,7 +1862,9 @@ export default function AdminPage() {
   }
 
   const handleSystemCheck = async () => {
-    setSystemCheck((prev) => ({ ...prev, checking: true }))
+    setSystemCheck((prev) => ({ ...prev,
+      checking: true
+    }))
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 2000))
@@ -1697,9 +1873,18 @@ export default function AdminPage() {
         checking: false,
         lastCheck: new Date().toLocaleString("fr-FR"),
         results: {
-          tmdb: { status: "operational", responseTime: Math.floor(Math.random() * 100 + 80) + "ms" },
-          database: { status: "connected", responseTime: Math.floor(Math.random() * 50 + 30) + "ms" },
-          servers: { status: "online", responseTime: Math.floor(Math.random() * 80 + 60) + "ms" },
+          tmdb: {
+            status: "operational",
+            responseTime: Math.floor(Math.random() * 100 + 80) + "ms"
+          },
+          database: {
+            status: "connected",
+            responseTime: Math.floor(Math.random() * 50 + 30) + "ms"
+          },
+          servers: {
+            status: "online",
+            responseTime: Math.floor(Math.random() * 80 + 60) + "ms"
+          },
         },
       })
 
@@ -1708,7 +1893,9 @@ export default function AdminPage() {
         description: "Tous les systèmes sont opérationnels",
       })
     } catch (error) {
-      setSystemCheck((prev) => ({ ...prev, checking: false }))
+      setSystemCheck((prev) => ({ ...prev,
+        checking: false
+      }))
       toast({
         title: "Erreur de vérification",
         description: "Impossible de vérifier l'état du système",
@@ -1922,7 +2109,7 @@ export default function AdminPage() {
             description: "",
             cover_url: "",
             download_url: "",
-            reading_url: "", // Reset reading_url
+            reading_url: "", // Load reading_url
             isbn: "",
             publisher: "",
             category: "",
@@ -2082,7 +2269,10 @@ export default function AdminPage() {
     }
 
     try {
-      console.log(`🔄 Mise à jour d'un ${type}:`, { id: editingItem.id, formData })
+      console.log(`🔄 Mise à jour d'un ${type}:`, {
+        id: editingItem.id,
+        formData
+      })
       let tableName
 
       switch (type) {
@@ -2101,7 +2291,9 @@ export default function AdminPage() {
             try {
               // Note: This requires Supabase service role key for admin operations
               // In a real app, this should be done server-side via API route
-              const { error: passwordError } = await supabase.auth.admin.updateUserById(editingItem.id, {
+              const {
+                error: passwordError
+              } = await supabase.auth.admin.updateUserById(editingItem.id, {
                 password: newPassword,
               })
 
@@ -2141,7 +2333,9 @@ export default function AdminPage() {
           throw new Error(`Type ${type} non supporté`)
       }
 
-      const { error } = await supabase.from(tableName).update(formData).eq("id", editingItem.id)
+      const {
+        error
+      } = await supabase.from(tableName).update(formData).eq("id", editingItem.id)
 
       if (error) {
         console.error(`❌ Erreur lors de la mise à jour dans ${tableName}:`, error)
@@ -2156,7 +2350,9 @@ export default function AdminPage() {
 
       console.log(`✅ ${type} mis à jour avec succès`)
 
-      const updatedItem = { ...editingItem, ...formData }
+      const updatedItem = { ...editingItem,
+        ...formData
+      }
 
       // Mettre à jour l'état local
       switch (type) {
@@ -2207,6 +2403,15 @@ export default function AdminPage() {
   }
 
   const handleDelete = async (type, id) => {
+    if (!canDelete) {
+      toast({
+        title: "Permission refusée",
+        description: "Vous n'avez pas la permission de supprimer du contenu.",
+        variant: "destructive",
+      })
+      return
+    }
+
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -2241,7 +2446,9 @@ export default function AdminPage() {
           throw new Error(`Type ${type} non supporté`)
       }
 
-      const { error } = await supabase.from(tableName).delete().eq("id", id)
+      const {
+        error
+      } = await supabase.from(tableName).delete().eq("id", id)
 
       if (error) {
         console.error(`❌ Erreur lors de la suppression dans ${tableName}:`, error)
@@ -2281,7 +2488,10 @@ export default function AdminPage() {
           break
       }
 
-      toast({ title: "Supprimé avec succès", description: `${type} supprimé de la base de données.` })
+      toast({
+        title: "Supprimé avec succès",
+        description: `${type} supprimé de la base de données.`
+      })
 
       // Recharger les statistiques
       await loadStatistics()
@@ -2343,11 +2553,15 @@ export default function AdminPage() {
       }
 
       const newStatus = !currentItem.is_active
-      const updateData = { is_active: newStatus }
+      const updateData = {
+        is_active: newStatus
+      }
 
       console.log(`🔄 Nouveau statut: ${newStatus}`)
 
-      const { error } = await supabase.from(tableName).update(updateData).eq("id", id)
+      const {
+        error
+      } = await supabase.from(tableName).update(updateData).eq("id", id)
 
       if (error) {
         console.error(`❌ Erreur lors du changement de statut dans ${tableName}:`, error)
@@ -2362,7 +2576,9 @@ export default function AdminPage() {
 
       console.log(`✅ Statut changé avec succès`)
 
-      const updatedItem = { ...currentItem, is_active: newStatus }
+      const updatedItem = { ...currentItem,
+        is_active: newStatus
+      }
 
       // Mettre à jour l'état local
       switch (type) {
@@ -2416,7 +2632,11 @@ export default function AdminPage() {
 
       const newVipStatus = !currentUser.is_vip
 
-      const { error } = await supabase.from("user_profiles").update({ is_vip: newVipStatus }).eq("id", id)
+      const {
+        error
+      } = await supabase.from("user_profiles").update({
+        is_vip: newVipStatus
+      }).eq("id", id)
 
       if (error) {
         console.error("❌ Erreur lors du changement VIP:", error)
@@ -2429,12 +2649,17 @@ export default function AdminPage() {
         throw error
       }
 
-      console.log(`✅ Statut VIP changé: ${newVipStatus}`)
+      console.log(`✅ Statut VIP changed: ${newVipStatus}`)
 
-      const updatedUser = { ...currentUser, is_vip: newVipStatus }
+      const updatedUser = { ...currentUser,
+        is_vip: newVipStatus
+      }
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))
 
-      toast({ title: "Statut VIP modifié", description: "Le statut VIP de l'utilisateur a été modifié." })
+      toast({
+        title: "Statut VIP modifié",
+        description: "Le statut VIP de l'utilisateur a été modifié."
+      })
 
       // Recharger les statistiques
       await loadStatistics()
@@ -2460,7 +2685,11 @@ export default function AdminPage() {
 
       const newAdminStatus = !currentUser.is_admin
 
-      const { error } = await supabase.from("user_profiles").update({ is_admin: newAdminStatus }).eq("id", id)
+      const {
+        error
+      } = await supabase.from("user_profiles").update({
+        is_admin: newAdminStatus
+      }).eq("id", id)
 
       if (error) {
         console.error("❌ Erreur lors du changement Admin:", error)
@@ -2473,12 +2702,17 @@ export default function AdminPage() {
         throw error
       }
 
-      console.log(`✅ Statut Admin changé: ${newAdminStatus}`)
+      console.log(`✅ Statut Admin changed: ${newAdminStatus}`)
 
-      const updatedUser = { ...currentUser, is_admin: newAdminStatus }
+      const updatedUser = { ...currentUser,
+        is_admin: newAdminStatus
+      }
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))
 
-      toast({ title: "Statut Admin modifié", description: "Le statut administrateur a été modifié." })
+      toast({
+        title: "Statut Admin modifié",
+        description: "Le statut administrateur a été modifié."
+      })
     } catch (error) {
       console.error("❌ Erreur lors du changement Admin:", error)
       toast({
@@ -2501,7 +2735,11 @@ export default function AdminPage() {
 
       const newVipPlusStatus = !currentUser.is_vip_plus
 
-      const { error } = await supabase.from("user_profiles").update({ is_vip_plus: newVipPlusStatus }).eq("id", id)
+      const {
+        error
+      } = await supabase.from("user_profiles").update({
+        is_vip_plus: newVipPlusStatus
+      }).eq("id", id)
 
       if (error) {
         console.error("❌ Erreur lors du changement VIP+:", error)
@@ -2514,12 +2752,17 @@ export default function AdminPage() {
         throw error
       }
 
-      console.log(`✅ Statut VIP+ changé: ${newVipPlusStatus}`)
+      console.log(`✅ Statut VIP+ changed: ${newVipPlusStatus}`)
 
-      const updatedUser = { ...currentUser, is_vip_plus: newVipPlusStatus }
+      const updatedUser = { ...currentUser,
+        is_vip_plus: newVipPlusStatus
+      }
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))
 
-      toast({ title: "Statut VIP+ modifié", description: "Le statut VIP+ de l'utilisateur a été modifié." })
+      toast({
+        title: "Statut VIP+ modifié",
+        description: "Le statut VIP+ de l'utilisateur a été modifié."
+      })
 
       // Recharger les statistiques
       await loadStatistics()
@@ -2545,7 +2788,11 @@ export default function AdminPage() {
 
       const newBetaStatus = !currentUser.is_beta
 
-      const { error } = await supabase.from("user_profiles").update({ is_beta: newBetaStatus }).eq("id", id)
+      const {
+        error
+      } = await supabase.from("user_profiles").update({
+        is_beta: newBetaStatus
+      }).eq("id", id)
 
       if (error) {
         console.error("❌ Erreur lors du changement Beta:", error)
@@ -2558,12 +2805,17 @@ export default function AdminPage() {
         throw error
       }
 
-      console.log(`✅ Statut Beta changé: ${newBetaStatus}`)
+      console.log(`✅ Statut Beta changed: ${newBetaStatus}`)
 
-      const updatedUser = { ...currentUser, is_beta: newBetaStatus }
+      const updatedUser = { ...currentUser,
+        is_beta: newBetaStatus
+      }
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))
 
-      toast({ title: "Statut Beta modifié", description: "Le statut Beta de l'utilisateur a été modifié." })
+      toast({
+        title: "Statut Beta modifié",
+        description: "Le statut Beta de l'utilisateur a été modifié."
+      })
     } catch (error) {
       console.error("❌ Erreur lors du changement Beta:", error)
       toast({
@@ -2586,7 +2838,11 @@ export default function AdminPage() {
 
       const newStatus = currentUser.status === "banned" ? "active" : "banned"
 
-      const { error } = await supabase.from("user_profiles").update({ status: newStatus }).eq("id", id)
+      const {
+        error
+      } = await supabase.from("user_profiles").update({
+        status: newStatus
+      }).eq("id", id)
 
       if (error) {
         console.error("❌ Erreur lors du bannissement:", error)
@@ -2601,7 +2857,9 @@ export default function AdminPage() {
 
       console.log(`✅ Statut utilisateur changed: ${newStatus}`)
 
-      const updatedUser = { ...currentUser, status: newStatus }
+      const updatedUser = { ...currentUser,
+        status: newStatus
+      }
       setUsers((prev) => prev.map((user) => (user.id === id ? updatedUser : user)))
 
       toast({
@@ -2619,6 +2877,15 @@ export default function AdminPage() {
   }
 
   const handleDeleteUser = async (userId: string) => {
+    if (!canDelete) {
+      toast({
+        title: "Permission refusée",
+        description: "Vous n'avez pas la permission de supprimer des utilisateurs.",
+        variant: "destructive",
+      })
+      return
+    }
+
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -2632,7 +2899,9 @@ export default function AdminPage() {
       await supabase.from("user_profiles_extended").delete().eq("user_id", userId)
 
       // Delete from user_profiles
-      const { error } = await supabase.from("user_profiles").delete().eq("id", userId)
+      const {
+        error
+      } = await supabase.from("user_profiles").delete().eq("id", userId)
 
       if (error) {
         console.error("❌ Erreur lors de la suppression:", error)
@@ -2671,15 +2940,17 @@ export default function AdminPage() {
 
       switch (userRoleFilter) {
         case "admin":
-          return user.is_admin
+          return user.is_admin && !user.is_uploader
+        case "uploader":
+          return user.is_uploader
         case "vip_plus":
           return user.is_vip_plus
         case "vip":
-          return user.is_vip
+          return user.is_vip && !user.is_vip_plus
         case "beta":
           return user.is_beta
         case "member":
-          return !user.is_admin && !user.is_vip && !user.is_vip_plus && !user.is_beta
+          return !user.is_admin && !user.is_uploader && !user.is_vip && !user.is_vip_plus && !user.is_beta
         case "all":
         default:
           return true
@@ -2744,12 +3015,12 @@ export default function AdminPage() {
       return
     }
 
-    const { error } = await supabase.from("changelogs").insert([
-      {
-        ...newChangelog,
-        created_by: user?.id,
-      },
-    ])
+    const {
+      error
+    } = await supabase.from("changelogs").insert([{
+      ...newChangelog,
+      created_by: user?.id,
+    }, ])
 
     if (error) {
       toast({
@@ -2779,7 +3050,9 @@ export default function AdminPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
 
-    const { error } = await supabase.from("changelogs").delete().eq("id", id)
+    const {
+      error
+    } = await supabase.from("changelogs").delete().eq("id", id)
 
     if (error) {
       toast({
@@ -2810,7 +3083,7 @@ export default function AdminPage() {
         tvData,
         radioData,
         retroData,
-        usersData,
+        usersData, // Renamed from loadRealUsers
         changelogsData,
         requestsData, // Added requestsData
         musicData, // Added musicData
@@ -2821,35 +3094,47 @@ export default function AdminPage() {
         supabase.from("tv_channels").select("*").order("name"),
         supabase.from("radio_stations").select("*").order("name"),
         supabase.from("retrogaming_sources").select("*").order("name"),
-        supabase.from("user_profiles").select("*", { count: "exact" }),
-        supabase.from("changelogs").select("*").order("release_date", { ascending: false }),
+        loadRealUsers(supabase), // Use the newly defined function
+        supabase.from("changelogs").select("*").order("release_date", {
+          ascending: false
+        }),
         supabase
-          .from("requests")
-          .select(`*, user_profiles(username, email)`)
-          .order("created_at", { ascending: false }), // Added request loading
+        .from("content_requests") // Use the corrected table name
+        .select(`*, user_profiles(username, email)`)
+        .order("created_at", {
+          ascending: false
+        }), // Added request loading
         supabase
-          .from("music_content")
-          .select("*")
-          .order("created_at", { ascending: false }), // Added music content loading
+        .from("music_content")
+        .select("*")
+        .order("created_at", {
+          ascending: false
+        }), // Added music content loading
         supabase
-          .from("software")
-          .select("*")
-          .order("created_at", { ascending: false }), // Added software loading
+        .from("software")
+        .select("*")
+        .order("created_at", {
+          ascending: false
+        }), // Added software loading
         supabase
-          .from("games")
-          .select("*")
-          .order("created_at", { ascending: false }), // Added games loading
+        .from("games")
+        .select("*")
+        .order("created_at", {
+          ascending: false
+        }), // Added games loading
         supabase
-          .from("ebooks")
-          .select("*")
-          .order("created_at", { ascending: false }), // Added ebooks loading
+        .from("ebooks")
+        .select("*")
+        .order("created_at", {
+          ascending: false
+        }), // Added ebooks loading
       ])
 
       // Update states
       if (tvData.data) setTvChannels(tvData.data)
       if (radioData.data) setRadioStations(radioData.data)
       if (retroData.data) setRetrogamingSources(retroData.data)
-      if (usersData.data) setUsers(usersData.data)
+      // 'usersData' is already handled by loadRealUsers setting the 'users' state
       if (changelogsData.data) setChangelogs(changelogsData.data)
       if (requestsData.data)
         setRequests(
@@ -2911,7 +3196,9 @@ export default function AdminPage() {
     if (!editingLog) return // Should not happen if called correctly
 
     try {
-      const { error } = await supabase
+      const {
+        error
+      } = await supabase
         .from("changelogs")
         .update({
           version: editingLog.version,
@@ -2940,14 +3227,10 @@ export default function AdminPage() {
     }
   }
 
-  // Add loadChangelogs function to be called by fetchAllData
-  // This function is now integrated within fetchAllData for efficiency
-  // const loadChangelogs = async () => { ... }
-
-  // Use fetchAllData for the initial load if user is admin
+  // This useEffect is now primarily for managing the interval for online users,
+  // and the initial data loading is handled by the useEffect above.
   useEffect(() => {
-    if (user?.isAdmin) {
-      fetchAllData() // Initial load when component mounts and user is admin
+    if ((user?.isAdmin || user?.isUploader) && !loading) { // Ensure loading is false before setting interval
       // Reload online users periodically if the interactive-world tab is active
       const intervalId = setInterval(() => {
         if (activeTab === "interactive-world") {
@@ -2955,18 +3238,19 @@ export default function AdminPage() {
         }
       }, 15000) // Refresh every 15 seconds
 
-      // Cleanup interval on component unmount
+      // Cleanup interval on component unmount or when activeTab changes away from interactive-world
       return () => clearInterval(intervalId)
     }
-  }, [user, activeTab]) // Re-run if user or activeTab changes
+  }, [user, activeTab, loading]) // Dependencies ensure reactivity
 
-  if (!user || !user.isAdmin) {
+  // CHANGE: Combined user and uploader check for access
+  if (!user || (!user.isAdmin && !user.isUploader)) {
     return (
       <div className="min-h-screen bg-gray-900 text-white">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Accès refusé</h1>
-            <p>Vous n'avez pas les permissions d'administrateur.</p>
+            <p>Vous n'avez pas les permissions d'administrateur ou d'uploader.</p>
           </div>
         </div>
       </div>
@@ -3015,119 +3299,146 @@ export default function AdminPage() {
           </div>
         </div>
 
-        <Tabs defaultValue="dashboard" className="space-y-6" onValueChange={(value) => setActiveTab(value)}>
+        {/* CHANGE: Use isFullAdmin for default tab, otherwise use isUploader's default */}
+        <Tabs defaultValue={isFullAdmin ? "dashboard" : "music"} className="space-y-6" onValueChange={(value) => setActiveTab(value)}>
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="inline-flex w-auto min-w-full bg-gray-800 border-gray-700 flex-nowrap">
-              <TabsTrigger
-                value="dashboard"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <BarChart3 className="w-4 h-4" />
-                <span className="hidden sm:inline">Dashboard</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="broadcast"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <Send className="w-4 h-4" />
-                <span className="hidden sm:inline">Message</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="tvchannels"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <Zap className="w-4 h-4" />
-                <span className="hidden sm:inline">TV ({tvChannels.length})</span>
-                <span className="sm:hidden">TV</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="radio"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <Radio className="w-4 h-4" />
-                <span className="hidden sm:inline">Radio ({radioStations.length})</span>
-                <span className="sm:hidden">Radio</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="music"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <Music className="w-4 h-4" />
-                <span className="hidden sm:inline">Musique ({musicContent.length})</span>
-                <span className="sm:hidden">Music</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="software"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">Logiciels ({software.length})</span>
-                <span className="sm:hidden">Soft</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="games"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <Gamepad2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Jeux ({games.length})</span>
-                <span className="sm:hidden">Jeux</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="ebooks"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <BookOpen className="w-4 h-4" />
-                <span className="hidden sm:inline">Ebooks ({ebooks.length})</span>
-                <span className="sm:hidden">Books</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="retrogaming"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <Trophy className="w-4 h-4" />
-                <span className="hidden sm:inline">Rétro ({retrogamingSources.length})</span>
-                <span className="sm:hidden">Rétro</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="users"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Users ({users.length})</span>
-                <span className="sm:hidden">Users</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="requests"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <MessageSquare className="w-4 h-4" />
-                <span className="hidden sm:inline">Demandes ({requests.length})</span>
-                <span className="sm:hidden">Req</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="changelogs"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <FileText className="w-4 h-4" />
-                <span className="hidden sm:inline">Logs ({changelogs.length})</span>
-                <span className="sm:hidden">Logs</span>
-              </TabsTrigger>
-              {/* Added new Settings tab to the TabsList */}
-              <TabsTrigger
-                value="settings"
-                className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
-              >
-                <SettingsIcon className="w-4 h-4" />
-                <span className="hidden sm:inline">Paramètres</span>
-              </TabsTrigger>
-              {/* Link to Interactive World dedicated page */}
-              <a
-                href="/admin/interactive-world"
-                className="flex items-center justify-center gap-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-md whitespace-nowrap transition-all"
-              >
-                <Globe className="w-4 h-4" />
-                <span className="hidden sm:inline">Monde Interactif</span>
-              </a>
+              {isFullAdmin && (
+                <TabsTrigger
+                  value="dashboard"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Dashboard</span>
+                </TabsTrigger>
+              )}
+              {isFullAdmin && (
+                <TabsTrigger
+                  value="broadcast"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <Send className="w-4 h-4" />
+                  <span className="hidden sm:inline">Message</span>
+                </TabsTrigger>
+              )}
+              {canAccessTab("tvchannels") && (
+                <TabsTrigger
+                  value="tvchannels"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <Zap className="w-4 h-4" />
+                  <span className="hidden sm:inline">TV ({tvChannels.length})</span>
+                  <span className="sm:hidden">TV</span>
+                </TabsTrigger>
+              )}
+              {canAccessTab("radio") && (
+                <TabsTrigger
+                  value="radio"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <Radio className="w-4 h-4" />
+                  <span className="hidden sm:inline">Radio ({radioStations.length})</span>
+                  <span className="sm:hidden">Radio</span>
+                </TabsTrigger>
+              )}
+              {canAccessTab("music") && (
+                <TabsTrigger
+                  value="music"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <Music className="w-4 h-4" />
+                  <span className="hidden sm:inline">Musique ({musicContent.length})</span>
+                  <span className="sm:hidden">Music</span>
+                </TabsTrigger>
+              )}
+              {canAccessTab("software") && (
+                <TabsTrigger
+                  value="software"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Logiciels ({software.length})</span>
+                  <span className="sm:hidden">Soft</span>
+                </TabsTrigger>
+              )}
+              {canAccessTab("games") && (
+                <TabsTrigger
+                  value="games"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <Gamepad2 className="w-4 h-4" />
+                  <span className="hidden sm:inline">Jeux ({games.length})</span>
+                  <span className="sm:hidden">Jeux</span>
+                </TabsTrigger>
+              )}
+              {canAccessTab("ebooks") && (
+                <TabsTrigger
+                  value="ebooks"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span className="hidden sm:inline">Ebooks ({ebooks.length})</span>
+                  <span className="sm:hidden">Books</span>
+                </TabsTrigger>
+              )}
+              {canAccessTab("retrogaming") && (
+                <TabsTrigger
+                  value="retrogaming"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <Trophy className="w-4 h-4" />
+                  <span className="hidden sm:inline">Rétro ({retrogamingSources.length})</span>
+                  <span className="sm:hidden">Rétro</span>
+                </TabsTrigger>
+              )}
+              {canAccessTab("requests") && (
+                <TabsTrigger
+                  value="requests"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span className="hidden sm:inline">Demandes ({requests.length})</span>
+                  <span className="sm:hidden">Req</span>
+                </TabsTrigger>
+              )}
+              {isFullAdmin && (
+                <TabsTrigger
+                  value="users"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:inline">Users ({users.length})</span>
+                  <span className="sm:hidden">Users</span>
+                </TabsTrigger>
+              )}
+              {isFullAdmin && (
+                <TabsTrigger
+                  value="changelogs"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span className="hidden sm:inline">Logs ({changelogs.length})</span>
+                  <span className="sm:hidden">Logs</span>
+                </TabsTrigger>
+              )}
+              {isFullAdmin && (
+                <TabsTrigger
+                  value="settings"
+                  className="flex items-center justify-center gap-1 data-[state=active]:bg-gray-700 text-gray-300 text-xs sm:text-sm px-2 sm:px-3 whitespace-nowrap"
+                >
+                  <SettingsIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">Paramètres</span>
+                </TabsTrigger>
+              )}
+              {isFullAdmin && (
+                <a
+                  href="/admin/interactive-world"
+                  className="flex items-center justify-center gap-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-md whitespace-nowrap transition-all"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span className="hidden sm:inline">Monde Interactif</span>
+                </a>
+              )}
             </TabsList>
           </div>
 
@@ -3607,7 +3918,6 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Gestion des Chaînes TV */}
           <TabsContent value="tvchannels" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -3837,7 +4147,6 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Gestion Radio FM */}
           <TabsContent value="radio" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -4072,7 +4381,6 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Gestion Retrogaming */}
           <TabsContent value="retrogaming" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -4293,22 +4601,24 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Gestion des Utilisateurs */}
           <TabsContent value="users" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Gestion des Utilisateurs</CardTitle>
-                  <CardDescription>Gérez les comptes utilisateurs et leurs privilèges</CardDescription>
+                  <CardDescription>
+                    {totalUsersInDB} utilisateurs inscrits · {getFilteredUsers().length} affichés
+                  </CardDescription>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-4 mb-4">
+                  {/* Search and Filter Row */}
                   <div className="flex items-center gap-4">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                       <Input
-                        placeholder="Rechercher un utilisateur..."
+                        placeholder="Rechercher un utilisateur par nom ou email..."
                         value={searchTerms.users || ""}
                         onChange={(e) => setSearchTerms({ ...searchTerms, users: e.target.value })}
                         className="pl-10"
@@ -4321,6 +4631,7 @@ export default function AdminPage() {
                       <SelectContent>
                         <SelectItem value="all">Tous les grades</SelectItem>
                         <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="uploader">Uploader</SelectItem>
                         <SelectItem value="vip_plus">VIP+</SelectItem>
                         <SelectItem value="vip">VIP</SelectItem>
                         <SelectItem value="beta">Beta</SelectItem>
@@ -4328,11 +4639,13 @@ export default function AdminPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Pagination Controls */}
                   <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>
-                      Affichage {(userCurrentPage - 1) * USERS_PER_PAGE + 1} à{" "}
-                      {Math.min(userCurrentPage * USERS_PER_PAGE, getFilteredUsers().length)} sur {totalUsersInDB}{" "}
-                      utilisateurs (filtré: {getFilteredUsers().length})
+                      Affichage {Math.min((userCurrentPage - 1) * USERS_PER_PAGE + 1, getFilteredUsers().length)} à{" "}
+                      {Math.min(userCurrentPage * USERS_PER_PAGE, getFilteredUsers().length)} sur{" "}
+                      {getFilteredUsers().length} utilisateurs
                     </span>
                     <div className="flex items-center gap-2">
                       <Button
@@ -4342,9 +4655,10 @@ export default function AdminPage() {
                         disabled={userCurrentPage === 1}
                       >
                         <ChevronLeft className="w-4 h-4" />
+                        Précédent
                       </Button>
                       <span>
-                        Page {userCurrentPage} / {Math.ceil(getFilteredUsers().length / USERS_PER_PAGE)}
+                        Page {userCurrentPage} / {Math.ceil(getFilteredUsers().length / USERS_PER_PAGE) || 1}
                       </span>
                       <Button
                         variant="outline"
@@ -4356,195 +4670,188 @@ export default function AdminPage() {
                         }
                         disabled={userCurrentPage >= Math.ceil(getFilteredUsers().length / USERS_PER_PAGE)}
                       >
+                        Suivant
                         <ChevronRight className="w-4 h-4" />
                       </Button>
                     </div>
                   </div>
                 </div>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Utilisateur</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead>Privilèges</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {getPaginatedUsers().map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-medium">{user.username}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              user.status === "active"
-                                ? "default"
-                                : user.status === "banned"
-                                  ? "destructive"
-                                  : "secondary"
-                            }
-                          >
-                            {user.status === "active" ? "Actif" : user.status === "banned" ? "Banni" : "Inactif"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1 flex-wrap">
-                            {user.is_admin && (
-                              <Badge variant="destructive" className="text-xs">
-                                <Shield className="w-3 h-3 mr-1" />
-                                Admin
-                              </Badge>
-                            )}
-                            {user.is_vip_plus && (
-                              <Badge variant="secondary" className="text-purple-600 border-purple-400 text-xs">
-                                <Crown className="w-3 h-3 mr-1" />
-                                VIP+
-                              </Badge>
-                            )}
-                            {user.is_vip && !user.is_vip_plus && (
-                              <Badge variant="secondary" className="text-yellow-600 border-yellow-400 text-xs">
-                                <Crown className="w-3 h-3 mr-1" />
-                                VIP
-                              </Badge>
-                            )}
-                            {user.is_beta && (
-                              <Badge variant="secondary" className="text-cyan-400 border-cyan-400 text-xs">
-                                <FlaskIcon className="w-3 h-3 mr-1" />
-                                BETA
-                              </Badge>
-                            )}
-                            {!user.is_admin && !user.is_vip && !user.is_vip_plus && !user.is_beta && (
-                              <Badge variant="outline" className="text-xs">
-                                Standard
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button variant="outline" size="sm" onClick={() => toggleUserVIP(user.id)}>
-                              <Crown className="w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => toggleUserVIPPlus(user.id)}>
-                              <Crown className="w-4 h-4 text-purple-600" />
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => toggleUserBeta(user.id)}>
-                              <FlaskIcon className="w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => toggleUserAdmin(user.id)}>
-                              <Shield className="w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => banUser(user.id)}>
-                              <UserX className="w-4 h-4" />
-                            </Button>
-                            {/* Added delete button in user actions */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDeleteUser(user.id)}
-                              className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" onClick={() => handleEdit("user", user)}>
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                              </DialogTrigger>
-                              {/* Modified user edit dialog to include password field */}
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Modifier l'utilisateur</DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  <div className="space-y-2">
-                                    <Label>Nom d'utilisateur</Label>
-                                    <Input
-                                      value={userForm.username}
-                                      onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label>Email</Label>
-                                    <Input
-                                      value={userForm.email}
-                                      onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                                    />
-                                  </div>
-                                  <div className="space-y-2">
-                                    <Label>Nouveau mot de passe (optionnel)</Label>
-                                    <Input
-                                      type="password"
-                                      placeholder="Laisser vide pour ne pas changer"
-                                      value={newPassword}
-                                      onChange={(e) => setNewPassword(e.target.value)}
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                      Entrez un nouveau mot de passe seulement si vous voulez le changer
-                                    </p>
-                                  </div>
-                                  <div className="space-y-4">
-                                    <div className="flex items-center space-x-2">
-                                      <Checkbox
-                                        id="is_admin"
-                                        checked={userForm.is_admin}
-                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_admin: !!checked })}
-                                      />
-                                      <Label htmlFor="is_admin">Administrateur</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <Checkbox
-                                        id="is_vip_plus"
-                                        checked={userForm.is_vip_plus}
-                                        onCheckedChange={(checked) =>
-                                          setUserForm({ ...userForm, is_vip_plus: !!checked })
-                                        }
-                                      />
-                                      <Label htmlFor="is_vip_plus">VIP+</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <Checkbox
-                                        id="is_vip"
-                                        checked={userForm.is_vip}
-                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_vip: !!checked })}
-                                      />
-                                      <Label htmlFor="is_vip">VIP</Label>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <Checkbox
-                                        id="is_beta"
-                                        checked={userForm.is_beta}
-                                        onCheckedChange={(checked) => setUserForm({ ...userForm, is_beta: !!checked })}
-                                      />
-                                      <Label htmlFor="is_beta">Bêta Testeur</Label>
-                                    </div>
-                                  </div>
-                                </div>
-                                <DialogFooter>
-                                  <Button onClick={() => handleUpdate("user", userForm)}>Sauvegarder</Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </TableCell>
+                {/* Users Table */}
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[200px]">Utilisateur</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="w-[100px]">Statut</TableHead>
+                        <TableHead className="w-[200px]">Privilèges</TableHead>
+                        <TableHead className="w-[120px]">Inscription</TableHead>
+                        <TableHead className="w-[100px] text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-
-                {users.length === 0 && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>Aucun utilisateur trouvé</p>
-                    <p className="text-sm">Les utilisateurs apparaîtront ici une fois inscrits</p>
-                  </div>
-                )}
+                    </TableHeader>
+                    <TableBody>
+                      {getPaginatedUsers().length > 0 ? (
+                        getPaginatedUsers().map((user) => (
+                          <TableRow key={user.id}>
+                            <TableCell className="font-medium">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold">
+                                  {user.username?.charAt(0)?.toUpperCase() || "?"}
+                                </div>
+                                {user.username}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{user.email}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  user.status === "active"
+                                    ? "default"
+                                    : user.status === "banned"
+                                      ? "destructive"
+                                      : "secondary"
+                                }
+                              >
+                                {user.status || "active"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {user.is_admin && !user.is_uploader && <Badge className="bg-red-500">Admin</Badge>}
+                                {user.is_uploader && <Badge className="bg-green-500">Uploader</Badge>}
+                                {user.is_vip_plus && <Badge className="bg-yellow-500">VIP+</Badge>}
+                                {user.is_vip && !user.is_vip_plus && <Badge className="bg-blue-500">VIP</Badge>}
+                                {user.is_beta && <Badge className="bg-purple-500">Beta</Badge>}
+                                {!user.is_admin &&
+                                  !user.is_uploader &&
+                                  !user.is_vip &&
+                                  !user.is_vip_plus &&
+                                  !user.is_beta && <Badge variant="outline">Membre</Badge>}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {user.created_at ? new Date(user.created_at).toLocaleDateString("fr-FR") : "N/A"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingUser(user)
+                                  setIsUserDialogOpen(true)
+                                }}
+                              >
+                                <Pencil className="w-3 h-3" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            Aucun utilisateur trouvé
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
+
+            {/* User Edit Dialog */}
+            <Dialog open={isUserDialogOpen} onOpenChange={setIsUserDialogOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Modifier l'utilisateur</DialogTitle>
+                  <DialogDescription>Gérer les informations et privilèges de l'utilisateur.</DialogDescription>
+                </DialogHeader>
+                {editingUser && (
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Nom d'utilisateur</Label>
+                      <Input
+                        value={userForm.username}
+                        onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email</Label>
+                      <Input
+                        value={userForm.email}
+                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Nouveau mot de passe (optionnel)</Label>
+                      <Input
+                        type="password"
+                        placeholder="Laisser vide pour ne pas changer"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Entrez un nouveau mot de passe seulement si vous voulez le changer
+                      </p>
+                    </div>
+                    <div className="pt-4 border-t">
+                      <h4 className="font-medium mb-2">Privilèges</h4>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="is_admin"
+                            checked={userForm.is_admin}
+                            onCheckedChange={(checked) => setUserForm({ ...userForm, is_admin: !!checked })}
+                          />
+                          <Label htmlFor="is_admin">Administrateur</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="is_uploader"
+                            checked={userForm.is_uploader} // Add uploader checkbox
+                            onCheckedChange={(checked) => setUserForm({ ...userForm, is_uploader: !!checked })}
+                          />
+                          <Label htmlFor="is_uploader">Uploader</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="is_vip_plus"
+                            checked={userForm.is_vip_plus}
+                            onCheckedChange={(checked) =>
+                              setUserForm({ ...userForm, is_vip_plus: !!checked })
+                            }
+                          />
+                          <Label htmlFor="is_vip_plus">VIP+</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="is_vip"
+                            checked={userForm.is_vip}
+                            onCheckedChange={(checked) => setUserForm({ ...userForm, is_vip: !!checked })}
+                          />
+                          <Label htmlFor="is_vip">VIP</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="is_beta"
+                            checked={userForm.is_beta}
+                            onCheckedChange={(checked) => setUserForm({ ...userForm, is_beta: !!checked })}
+                          />
+                          <Label htmlFor="is_beta">Bêta Testeur</Label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsUserDialogOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button onClick={() => handleUpdate("user", userForm)}>Sauvegarder</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="requests" className="space-y-6">
@@ -4643,7 +4950,6 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Gestion Music Content */}
           <TabsContent value="music" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -4664,7 +4970,7 @@ export default function AdminPage() {
                           video_url: "",
                           streaming_url: "", // Reset streaming_url
                           duration: 0,
-                          release_year: new Date().getFullYear(),
+                          release_year: new Date().getFullYear().toString(),
                           genre: "",
                           type: "Single", // Changed default type
                           quality: "HD",
@@ -4707,192 +5013,192 @@ export default function AdminPage() {
                           <SelectTrigger>
                             <SelectValue placeholder="Sélectionner un genre" />
                           </SelectTrigger>
-<SelectContent className="max-h-[300px] overflow-y-auto">
-  <SelectItem value="Accordéon">Accordéon</SelectItem>
-  <SelectItem value="Acid Jazz">Acid Jazz</SelectItem>
-  <SelectItem value="Alternative">Alternative</SelectItem>
-  <SelectItem value="Ambient">Ambient</SelectItem>
-  <SelectItem value="Americana">Americana</SelectItem>
-  <SelectItem value="Anti-Folk">Anti-Folk</SelectItem>
-  <SelectItem value="Art Punk">Art Punk</SelectItem>
-  <SelectItem value="Art Rock">Art Rock</SelectItem>
-  <SelectItem value="Avant-garde">Avant-garde</SelectItem>
-  <SelectItem value="Ballade">Ballade</SelectItem>
-  <SelectItem value="Black Metal">Black Metal</SelectItem>
-  <SelectItem value="Black Metal Symphonique">Black Metal Symphonique</SelectItem>
-  <SelectItem value="Blue-eyed soul">Blue-eyed soul</SelectItem>
-  <SelectItem value="Blues">Blues</SelectItem>
-  <SelectItem value="Blues Rock">Blues Rock</SelectItem>
-  <SelectItem value="Bossa Nova">Bossa Nova</SelectItem>
-  <SelectItem value="Britpop">Britpop</SelectItem>
-  <SelectItem value="Chanson Française">Chanson Française</SelectItem>
-  <SelectItem value="Chanson Italienne">Chanson Italienne</SelectItem>
-  <SelectItem value="Chill">Chill</SelectItem>
-  <SelectItem value="Chill-out">Chill-out</SelectItem>
-  <SelectItem value="Chillwave">Chillwave</SelectItem>
-  <SelectItem value="Classique">Classique</SelectItem>
-  <SelectItem value="Country">Country</SelectItem>
-  <SelectItem value="Country Alternative">Country Alternative</SelectItem>
-  <SelectItem value="Country pop">Country pop</SelectItem>
-  <SelectItem value="Country Rock">Country Rock</SelectItem>
-  <SelectItem value="Crossover">Crossover</SelectItem>
-  <SelectItem value="Dance">Dance</SelectItem>
-  <SelectItem value="Dance-Pop">Dance-Pop</SelectItem>
-  <SelectItem value="Dancehall">Dancehall</SelectItem>
-  <SelectItem value="Dark Metal">Dark Metal</SelectItem>
-  <SelectItem value="Death Metal">Death Metal</SelectItem>
-  <SelectItem value="Death Metal Mélodique">Death Metal Mélodique</SelectItem>
-  <SelectItem value="Deep House">Deep House</SelectItem>
-  <SelectItem value="Dirty Rap">Dirty Rap</SelectItem>
-  <SelectItem value="Dirty South">Dirty South</SelectItem>
-  <SelectItem value="Doom Metal">Doom Metal</SelectItem>
-  <SelectItem value="Downtempo">Downtempo</SelectItem>
-  <SelectItem value="Drame">Drame</SelectItem>
-  <SelectItem value="Dream pop">Dream pop</SelectItem>
-  <SelectItem value="Dub">Dub</SelectItem>
-  <SelectItem value="Electro">Electro</SelectItem>
-  <SelectItem value="Electro Chill">Electro Chill</SelectItem>
-  <SelectItem value="Electro House">Electro House</SelectItem>
-  <SelectItem value="Electronic">Electronic</SelectItem>
-  <SelectItem value="Electronica">Electronica</SelectItem>
-  <SelectItem value="Electropop">Electropop</SelectItem>
-  <SelectItem value="Eurodance">Eurodance</SelectItem>
-  <SelectItem value="Europop">Europop</SelectItem>
-  <SelectItem value="Flamenco">Flamenco</SelectItem>
-  <SelectItem value="Folk">Folk</SelectItem>
-  <SelectItem value="Folk Rock">Folk Rock</SelectItem>
-  <SelectItem value="Folklore">Folklore</SelectItem>
-  <SelectItem value="French touch">French touch</SelectItem>
-  <SelectItem value="Funk">Funk</SelectItem>
-  <SelectItem value="Funk Rock">Funk Rock</SelectItem>
-  <SelectItem value="Funky">Funky</SelectItem>
-  <SelectItem value="G-funk">G-funk</SelectItem>
-  <SelectItem value="Gangsta Rap">Gangsta Rap</SelectItem>
-  <SelectItem value="Glam Metal">Glam Metal</SelectItem>
-  <SelectItem value="Glam Rock">Glam Rock</SelectItem>
-  <SelectItem value="Gospel">Gospel</SelectItem>
-  <SelectItem value="Gothic Metal">Gothic Metal</SelectItem>
-  <SelectItem value="Grime">Grime</SelectItem>
-  <SelectItem value="Guitare">Guitare</SelectItem>
-  <SelectItem value="Hard Rock">Hard Rock</SelectItem>
-  <SelectItem value="Hardcore">Hardcore</SelectItem>
-  <SelectItem value="Heavy Metal">Heavy Metal</SelectItem>
-  <SelectItem value="Hindi">Hindi</SelectItem>
-  <SelectItem value="Hip-Hop">Hip-Hop</SelectItem>
-  <SelectItem value="Hip-Hop Alternatif">Hip-Hop Alternatif</SelectItem>
-  <SelectItem value="Hip-Hop Politique">Hip-Hop Politique</SelectItem>
-  <SelectItem value="Horrorcore">Horrorcore</SelectItem>
-  <SelectItem value="House">House</SelectItem>
-  <SelectItem value="House Progressive">House Progressive</SelectItem>
-  <SelectItem value="Midwest rap">Midwest rap</SelectItem>
-  <SelectItem value="Indie">Indie</SelectItem>
-  <SelectItem value="Indie Pop">Indie Pop</SelectItem>
-  <SelectItem value="Indie Rock">Indie Rock</SelectItem>
-  <SelectItem value="Instrumental">Instrumental</SelectItem>
-  <SelectItem value="Italo Dance">Italo Dance</SelectItem>
-  <SelectItem value="Italo house">Italo house</SelectItem>
-  <SelectItem value="Jazz">Jazz</SelectItem>
-  <SelectItem value="Jazz fusion">Jazz fusion</SelectItem>
-  <SelectItem value="Jazz rap">Jazz rap</SelectItem>
-  <SelectItem value="Krautrock">Krautrock</SelectItem>
-  <SelectItem value="Lo-Fi">Lo-Fi</SelectItem>
-  <SelectItem value="Lounge">Lounge</SelectItem>
-  <SelectItem value="Metal">Metal</SelectItem>
-  <SelectItem value="Metal Alternatif">Metal Alternatif</SelectItem>
-  <SelectItem value="Metal Celtique">Metal Celtique</SelectItem>
-  <SelectItem value="Metal Chrétien">Metal Chrétien</SelectItem>
-  <SelectItem value="Metal Gothique">Metal Gothique</SelectItem>
-  <SelectItem value="Metal Industriel">Metal Industriel</SelectItem>
-  <SelectItem value="Multi instrumentaliste">Multi instrumentaliste</SelectItem>
-  <SelectItem value="Musique Celtique">Musique Celtique</SelectItem>
-  <SelectItem value="Musique Expérimentale">Musique Expérimentale</SelectItem>
-  <SelectItem value="Musique Humoristique">Musique Humoristique</SelectItem>
-  <SelectItem value="Musique Industrielle">Musique Industrielle</SelectItem>
-  <SelectItem value="Musique Irlandaise">Musique Irlandaise</SelectItem>
-  <SelectItem value="Musique Minimaliste">Musique Minimaliste</SelectItem>
-  <SelectItem value="Musique Percussive">Musique Percussive</SelectItem>
-  <SelectItem value="Neo Soul">Neo Soul</SelectItem>
-  <SelectItem value="New Age">New Age</SelectItem>
-  <SelectItem value="New Beat">New Beat</SelectItem>
-  <SelectItem value="New Wave">New Wave</SelectItem>
-  <SelectItem value="Nu Metal">Nu Metal</SelectItem>
-  <SelectItem value="Opera">Opera</SelectItem>
-  <SelectItem value="Opera-Rock">Opera-Rock</SelectItem>
-  <SelectItem value="OST">OST</SelectItem>
-  <SelectItem value="P-Funk">P-Funk</SelectItem>
-  <SelectItem value="Piano">Piano</SelectItem>
-  <SelectItem value="Pop">Pop</SelectItem>
-  <SelectItem value="Pop Folk">Pop Folk</SelectItem>
-  <SelectItem value="Pop latino">Pop latino</SelectItem>
-  <SelectItem value="Pop Rock">Pop Rock</SelectItem>
-  <SelectItem value="Pop-rap">Pop-rap</SelectItem>
-  <SelectItem value="Post-grunge">Post-grunge</SelectItem>
-  <SelectItem value="Post-hardcore">Post-hardcore</SelectItem>
-  <SelectItem value="Post-punk">Post-punk</SelectItem>
-  <SelectItem value="Post-rock">Post-rock</SelectItem>
-  <SelectItem value="Power Metal">Power Metal</SelectItem>
-  <SelectItem value="Power Pop">Power Pop</SelectItem>
-  <SelectItem value="Punk Hardcore">Punk Hardcore</SelectItem>
-  <SelectItem value="Punk Rock">Punk Rock</SelectItem>
-  <SelectItem value="R&B">R&B</SelectItem>
-  <SelectItem value="Ragga">Ragga</SelectItem>
-  <SelectItem value="Rap">Rap</SelectItem>
-  <SelectItem value="Rap East Coast">Rap East Coast</SelectItem>
-  <SelectItem value="Rap Français">Rap Français</SelectItem>
-  <SelectItem value="Rap Hardcore">Rap Hardcore</SelectItem>
-  <SelectItem value="Rap Metal">Rap Metal</SelectItem>
-  <SelectItem value="Rap Politique">Rap Politique</SelectItem>
-  <SelectItem value="Rap rock">Rap rock</SelectItem>
-  <SelectItem value="Rap West Coast">Rap West Coast</SelectItem>
-  <SelectItem value="Reggae">Reggae</SelectItem>
-  <SelectItem value="Rhythm and Blues">Rhythm and Blues</SelectItem>
-  <SelectItem value="RnB">RnB</SelectItem>
-  <SelectItem value="RnB contemporain">RnB contemporain</SelectItem>
-  <SelectItem value="Rock">Rock</SelectItem>
-  <SelectItem value="Rock Alternatif">Rock Alternatif</SelectItem>
-  <SelectItem value="Rock Celtique">Rock Celtique</SelectItem>
-  <SelectItem value="Rock Chrétien">Rock Chrétien</SelectItem>
-  <SelectItem value="Rock Experimental">Rock Experimental</SelectItem>
-  <SelectItem value="Rock Français">Rock Français</SelectItem>
-  <SelectItem value="Rock Indépendant">Rock Indépendant</SelectItem>
-  <SelectItem value="Rock Italien">Rock Italien</SelectItem>
-  <SelectItem value="Rock Progressif">Rock Progressif</SelectItem>
-  <SelectItem value="Rocksteady">Rocksteady</SelectItem>
-  <SelectItem value="Salsa">Salsa</SelectItem>
-  <SelectItem value="Samba">Samba</SelectItem>
-  <SelectItem value="Saxophone">Saxophone</SelectItem>
-  <SelectItem value="Saxophone électrique">Saxophone électrique</SelectItem>
-  <SelectItem value="Ska">Ska</SelectItem>
-  <SelectItem value="Slam">Slam</SelectItem>
-  <SelectItem value="Slow">Slow</SelectItem>
-  <SelectItem value="Soap">Soap</SelectItem>
-  <SelectItem value="Soft Rock">Soft Rock</SelectItem>
-  <SelectItem value="Soul">Soul</SelectItem>
-  <SelectItem value="Soul Jazz">Soul Jazz</SelectItem>
-  <SelectItem value="Space Music">Space Music</SelectItem>
-  <SelectItem value="Space Rock">Space Rock</SelectItem>
-  <SelectItem value="Symphonic Metal">Symphonic Metal</SelectItem>
-  <SelectItem value="Symphonie">Symphonie</SelectItem>
-  <SelectItem value="Synth-pop">Synth-pop</SelectItem>
-  <SelectItem value="Synth-wave">Synth-wave</SelectItem>
-  <SelectItem value="Synthétiseur">Synthétiseur</SelectItem>
-  <SelectItem value="Talk">Talk</SelectItem>
-  <SelectItem value="Tango">Tango</SelectItem>
-  <SelectItem value="Techno">Techno</SelectItem>
-  <SelectItem value="Techno House">Techno House</SelectItem>
-  <SelectItem value="Teen pop">Teen pop</SelectItem>
-  <SelectItem value="Thrash Metal">Thrash Metal</SelectItem>
-  <SelectItem value="Trance">Trance</SelectItem>
-  <SelectItem value="Trap">Trap</SelectItem>
-  <SelectItem value="Trip hop">Trip hop</SelectItem>
-  <SelectItem value="Urban">Urban</SelectItem>
-  <SelectItem value="Urban pop">Urban pop</SelectItem>
-  <SelectItem value="Variété française">Variété française</SelectItem>
-  <SelectItem value="Viking Metal">Viking Metal</SelectItem>
-  <SelectItem value="Violoncelle électrique">Violoncelle électrique</SelectItem>
-  <SelectItem value="West Coast hip-hop">West Coast hip-hop</SelectItem>
-  <SelectItem value="Zouk">Zouk</SelectItem>
-</SelectContent>
+                          <SelectContent className="max-h-[300px] overflow-y-auto">
+                            <SelectItem value="Accordéon">Accordéon</SelectItem>
+                            <SelectItem value="Acid Jazz">Acid Jazz</SelectItem>
+                            <SelectItem value="Alternative">Alternative</SelectItem>
+                            <SelectItem value="Ambient">Ambient</SelectItem>
+                            <SelectItem value="Americana">Americana</SelectItem>
+                            <SelectItem value="Anti-Folk">Anti-Folk</SelectItem>
+                            <SelectItem value="Art Punk">Art Punk</SelectItem>
+                            <SelectItem value="Art Rock">Art Rock</SelectItem>
+                            <SelectItem value="Avant-garde">Avant-garde</SelectItem>
+                            <SelectItem value="Ballade">Ballade</SelectItem>
+                            <SelectItem value="Black Metal">Black Metal</SelectItem>
+                            <SelectItem value="Black Metal Symphonique">Black Metal Symphonique</SelectItem>
+                            <SelectItem value="Blue-eyed soul">Blue-eyed soul</SelectItem>
+                            <SelectItem value="Blues">Blues</SelectItem>
+                            <SelectItem value="Blues Rock">Blues Rock</SelectItem>
+                            <SelectItem value="Bossa Nova">Bossa Nova</SelectItem>
+                            <SelectItem value="Britpop">Britpop</SelectItem>
+                            <SelectItem value="Chanson Française">Chanson Française</SelectItem>
+                            <SelectItem value="Chanson Italienne">Chanson Italienne</SelectItem>
+                            <SelectItem value="Chill">Chill</SelectItem>
+                            <SelectItem value="Chill-out">Chill-out</SelectItem>
+                            <SelectItem value="Chillwave">Chillwave</SelectItem>
+                            <SelectItem value="Classique">Classique</SelectItem>
+                            <SelectItem value="Country">Country</SelectItem>
+                            <SelectItem value="Country Alternative">Country Alternative</SelectItem>
+                            <SelectItem value="Country pop">Country pop</SelectItem>
+                            <SelectItem value="Country Rock">Country Rock</SelectItem>
+                            <SelectItem value="Crossover">Crossover</SelectItem>
+                            <SelectItem value="Dance">Dance</SelectItem>
+                            <SelectItem value="Dance-Pop">Dance-Pop</SelectItem>
+                            <SelectItem value="Dancehall">Dancehall</SelectItem>
+                            <SelectItem value="Dark Metal">Dark Metal</SelectItem>
+                            <SelectItem value="Death Metal">Death Metal</SelectItem>
+                            <SelectItem value="Death Metal Mélodique">Death Metal Mélodique</SelectItem>
+                            <SelectItem value="Deep House">Deep House</SelectItem>
+                            <SelectItem value="Dirty Rap">Dirty Rap</SelectItem>
+                            <SelectItem value="Dirty South">Dirty South</SelectItem>
+                            <SelectItem value="Doom Metal">Doom Metal</SelectItem>
+                            <SelectItem value="Downtempo">Downtempo</SelectItem>
+                            <SelectItem value="Drame">Drame</SelectItem>
+                            <SelectItem value="Dream pop">Dream pop</SelectItem>
+                            <SelectItem value="Dub">Dub</SelectItem>
+                            <SelectItem value="Electro">Electro</SelectItem>
+                            <SelectItem value="Electro Chill">Electro Chill</SelectItem>
+                            <SelectItem value="Electro House">Electro House</SelectItem>
+                            <SelectItem value="Electronic">Electronic</SelectItem>
+                            <SelectItem value="Electronica">Electronica</SelectItem>
+                            <SelectItem value="Electropop">Electropop</SelectItem>
+                            <SelectItem value="Eurodance">Eurodance</SelectItem>
+                            <SelectItem value="Europop">Europop</SelectItem>
+                            <SelectItem value="Flamenco">Flamenco</SelectItem>
+                            <SelectItem value="Folk">Folk</SelectItem>
+                            <SelectItem value="Folk Rock">Folk Rock</SelectItem>
+                            <SelectItem value="Folklore">Folklore</SelectItem>
+                            <SelectItem value="French touch">French touch</SelectItem>
+                            <SelectItem value="Funk">Funk</SelectItem>
+                            <SelectItem value="Funk Rock">Funk Rock</SelectItem>
+                            <SelectItem value="Funky">Funky</SelectItem>
+                            <SelectItem value="G-funk">G-funk</SelectItem>
+                            <SelectItem value="Gangsta Rap">Gangsta Rap</SelectItem>
+                            <SelectItem value="Glam Metal">Glam Metal</SelectItem>
+                            <SelectItem value="Glam Rock">Glam Rock</SelectItem>
+                            <SelectItem value="Gospel">Gospel</SelectItem>
+                            <SelectItem value="Gothic Metal">Gothic Metal</SelectItem>
+                            <SelectItem value="Grime">Grime</SelectItem>
+                            <SelectItem value="Guitare">Guitare</SelectItem>
+                            <SelectItem value="Hard Rock">Hard Rock</SelectItem>
+                            <SelectItem value="Hardcore">Hardcore</SelectItem>
+                            <SelectItem value="Heavy Metal">Heavy Metal</SelectItem>
+                            <SelectItem value="Hindi">Hindi</SelectItem>
+                            <SelectItem value="Hip-Hop">Hip-Hop</SelectItem>
+                            <SelectItem value="Hip-Hop Alternatif">Hip-Hop Alternatif</SelectItem>
+                            <SelectItem value="Hip-Hop Politique">Hip-Hop Politique</SelectItem>
+                            <SelectItem value="Horrorcore">Horrorcore</SelectItem>
+                            <SelectItem value="House">House</SelectItem>
+                            <SelectItem value="House Progressive">House Progressive</SelectItem>
+                            <SelectItem value="Midwest rap">Midwest rap</SelectItem>
+                            <SelectItem value="Indie">Indie</SelectItem>
+                            <SelectItem value="Indie Pop">Indie Pop</SelectItem>
+                            <SelectItem value="Indie Rock">Indie Rock</SelectItem>
+                            <SelectItem value="Instrumental">Instrumental</SelectItem>
+                            <SelectItem value="Italo Dance">Italo Dance</SelectItem>
+                            <SelectItem value="Italo house">Italo house</SelectItem>
+                            <SelectItem value="Jazz">Jazz</SelectItem>
+                            <SelectItem value="Jazz fusion">Jazz fusion</SelectItem>
+                            <SelectItem value="Jazz rap">Jazz rap</SelectItem>
+                            <SelectItem value="Krautrock">Krautrock</SelectItem>
+                            <SelectItem value="Lo-Fi">Lo-Fi</SelectItem>
+                            <SelectItem value="Lounge">Lounge</SelectItem>
+                            <SelectItem value="Metal">Metal</SelectItem>
+                            <SelectItem value="Metal Alternatif">Metal Alternatif</SelectItem>
+                            <SelectItem value="Metal Celtique">Metal Celtique</SelectItem>
+                            <SelectItem value="Metal Chrétien">Metal Chrétien</SelectItem>
+                            <SelectItem value="Metal Gothique">Metal Gothique</SelectItem>
+                            <SelectItem value="Metal Industriel">Metal Industriel</SelectItem>
+                            <SelectItem value="Multi instrumentaliste">Multi instrumentaliste</SelectItem>
+                            <SelectItem value="Musique Celtique">Musique Celtique</SelectItem>
+                            <SelectItem value="Musique Expérimentale">Musique Expérimentale</SelectItem>
+                            <SelectItem value="Musique Humoristique">Musique Humoristique</SelectItem>
+                            <SelectItem value="Musique Industrielle">Musique Industrielle</SelectItem>
+                            <SelectItem value="Musique Irlandaise">Musique Irlandaise</SelectItem>
+                            <SelectItem value="Musique Minimaliste">Musique Minimaliste</SelectItem>
+                            <SelectItem value="Musique Percussive">Musique Percussive</SelectItem>
+                            <SelectItem value="Neo Soul">Neo Soul</SelectItem>
+                            <SelectItem value="New Age">New Age</SelectItem>
+                            <SelectItem value="New Beat">New Beat</SelectItem>
+                            <SelectItem value="New Wave">New Wave</SelectItem>
+                            <SelectItem value="Nu Metal">Nu Metal</SelectItem>
+                            <SelectItem value="Opera">Opera</SelectItem>
+                            <SelectItem value="Opera-Rock">Opera-Rock</SelectItem>
+                            <SelectItem value="OST">OST</SelectItem>
+                            <SelectItem value="P-Funk">P-Funk</SelectItem>
+                            <SelectItem value="Piano">Piano</SelectItem>
+                            <SelectItem value="Pop">Pop</SelectItem>
+                            <SelectItem value="Pop Folk">Pop Folk</SelectItem>
+                            <SelectItem value="Pop latino">Pop latino</SelectItem>
+                            <SelectItem value="Pop Rock">Pop Rock</SelectItem>
+                            <SelectItem value="Pop-rap">Pop-rap</SelectItem>
+                            <SelectItem value="Post-grunge">Post-grunge</SelectItem>
+                            <SelectItem value="Post-hardcore">Post-hardcore</SelectItem>
+                            <SelectItem value="Post-punk">Post-punk</SelectItem>
+                            <SelectItem value="Post-rock">Post-rock</SelectItem>
+                            <SelectItem value="Power Metal">Power Metal</SelectItem>
+                            <SelectItem value="Power Pop">Power Pop</SelectItem>
+                            <SelectItem value="Punk Hardcore">Punk Hardcore</SelectItem>
+                            <SelectItem value="Punk Rock">Punk Rock</SelectItem>
+                            <SelectItem value="R&B">R&B</SelectItem>
+                            <SelectItem value="Ragga">Ragga</SelectItem>
+                            <SelectItem value="Rap">Rap</SelectItem>
+                            <SelectItem value="Rap East Coast">Rap East Coast</SelectItem>
+                            <SelectItem value="Rap Français">Rap Français</SelectItem>
+                            <SelectItem value="Rap Hardcore">Rap Hardcore</SelectItem>
+                            <SelectItem value="Rap Metal">Rap Metal</SelectItem>
+                            <SelectItem value="Rap Politique">Rap Politique</SelectItem>
+                            <SelectItem value="Rap rock">Rap rock</SelectItem>
+                            <SelectItem value="Rap West Coast">Rap West Coast</SelectItem>
+                            <SelectItem value="Reggae">Reggae</SelectItem>
+                            <SelectItem value="Rhythm and Blues">Rhythm and Blues</SelectItem>
+                            <SelectItem value="RnB">RnB</SelectItem>
+                            <SelectItem value="RnB contemporain">RnB contemporain</SelectItem>
+                            <SelectItem value="Rock">Rock</SelectItem>
+                            <SelectItem value="Rock Alternatif">Rock Alternatif</SelectItem>
+                            <SelectItem value="Rock Celtique">Rock Celtique</SelectItem>
+                            <SelectItem value="Rock Chrétien">Rock Chrétien</SelectItem>
+                            <SelectItem value="Rock Experimental">Rock Experimental</SelectItem>
+                            <SelectItem value="Rock Français">Rock Français</SelectItem>
+                            <SelectItem value="Rock Indépendant">Rock Indépendant</SelectItem>
+                            <SelectItem value="Rock Italien">Rock Italien</SelectItem>
+                            <SelectItem value="Rock Progressif">Rock Progressif</SelectItem>
+                            <SelectItem value="Rocksteady">Rocksteady</SelectItem>
+                            <SelectItem value="Salsa">Salsa</SelectItem>
+                            <SelectItem value="Samba">Samba</SelectItem>
+                            <SelectItem value="Saxophone">Saxophone</SelectItem>
+                            <SelectItem value="Saxophone électrique">Saxophone électrique</SelectItem>
+                            <SelectItem value="Ska">Ska</SelectItem>
+                            <SelectItem value="Slam">Slam</SelectItem>
+                            <SelectItem value="Slow">Slow</SelectItem>
+                            <SelectItem value="Soap">Soap</SelectItem>
+                            <SelectItem value="Soft Rock">Soft Rock</SelectItem>
+                            <SelectItem value="Soul">Soul</SelectItem>
+                            <SelectItem value="Soul Jazz">Soul Jazz</SelectItem>
+                            <SelectItem value="Space Music">Space Music</SelectItem>
+                            <SelectItem value="Space Rock">Space Rock</SelectItem>
+                            <SelectItem value="Symphonic Metal">Symphonic Metal</SelectItem>
+                            <SelectItem value="Symphonie">Symphonie</SelectItem>
+                            <SelectItem value="Synth-pop">Synth-pop</SelectItem>
+                            <SelectItem value="Synth-wave">Synth-wave</SelectItem>
+                            <SelectItem value="Synthétiseur">Synthétiseur</SelectItem>
+                            <SelectItem value="Talk">Talk</SelectItem>
+                            <SelectItem value="Tango">Tango</SelectItem>
+                            <SelectItem value="Techno">Techno</SelectItem>
+                            <SelectItem value="Techno House">Techno House</SelectItem>
+                            <SelectItem value="Teen pop">Teen pop</SelectItem>
+                            <SelectItem value="Thrash Metal">Thrash Metal</SelectItem>
+                            <SelectItem value="Trance">Trance</SelectItem>
+                            <SelectItem value="Trap">Trap</SelectItem>
+                            <SelectItem value="Trip hop">Trip hop</SelectItem>
+                            <SelectItem value="Urban">Urban</SelectItem>
+                            <SelectItem value="Urban pop">Urban pop</SelectItem>
+                            <SelectItem value="Variété française">Variété française</SelectItem>
+                            <SelectItem value="Viking Metal">Viking Metal</SelectItem>
+                            <SelectItem value="Violoncelle électrique">Violoncelle électrique</SelectItem>
+                            <SelectItem value="West Coast hip-hop">West Coast hip-hop</SelectItem>
+                            <SelectItem value="Zouk">Zouk</SelectItem>
+                          </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2">
@@ -4915,16 +5221,16 @@ export default function AdminPage() {
                           </SelectContent>
                         </Select>
                       </div>
-<div className="space-y-2">
-  <Label>Année de sortie</Label>
-  <Input
-    type="text"
-    value={musicForm.release_year}
-    onChange={(e) => setMusicForm({ ...musicForm, release_year: e.target.value })}
-    placeholder="2023 ou 2005-2021"
-  />
-  <p className="text-xs text-muted-foreground">Format: année simple (2023) ou plage (2005-2021)</p>
-</div>
+                      <div className="space-y-2">
+                        <Label>Année de sortie</Label>
+                        <Input
+                          type="text"
+                          value={musicForm.release_year}
+                          onChange={(e) => setMusicForm({ ...musicForm, release_year: e.target.value })}
+                          placeholder="2023 ou 2005-2021"
+                        />
+                        <p className="text-xs text-muted-foreground">Format: année simple (2023) ou plage (2005-2021)</p>
+                      </div>
                       <div className="space-y-2">
                         <Label>Qualité</Label>
                         <Select
@@ -4934,11 +5240,11 @@ export default function AdminPage() {
                           <SelectTrigger>
                             <SelectValue placeholder="Sélectionner une qualité" />
                           </SelectTrigger>
-<SelectContent>
-  <SelectItem value="FLAC">FLAC</SelectItem>
-  <SelectItem value="MP3">MP3</SelectItem>
-  <SelectItem value="WAV">WAV</SelectItem>
-</SelectContent>
+                          <SelectContent>
+                            <SelectItem value="FLAC">FLAC</SelectItem>
+                            <SelectItem value="MP3">MP3</SelectItem>
+                            <SelectItem value="WAV">WAV</SelectItem>
+                          </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-2 col-span-2">
@@ -5092,7 +5398,6 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Gestion Software */}
           <TabsContent value="software" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -5353,7 +5658,6 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Gestion Games */}
           <TabsContent value="games" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -5624,7 +5928,6 @@ export default function AdminPage() {
             </Card>
           </TabsContent>
 
-          {/* Gestion Ebooks */}
           <TabsContent value="ebooks" className="space-y-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -6066,6 +6369,67 @@ export default function AdminPage() {
                 )}
               </CardContent>
             </Card>
+            {/* Modal for editing changelog */}
+            <Dialog open={activeModal === "edit-log"} onOpenChange={(open) => !open && (setActiveModal(null), setEditingLog(null))}>
+              <DialogContent className="bg-blue-900 border-blue-700 max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle className="text-white">Modifier le Changelog</DialogTitle>
+                  <DialogDescription className="text-blue-300">
+                    Mettez à jour les détails de cette version
+                  </DialogDescription>
+                </DialogHeader>
+                {editingLog && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-white mb-2 block">Version</label>
+                        <Input
+                          placeholder="1.0.0"
+                          value={editingLog.version}
+                          onChange={(e) => setEditingLog({ ...editingLog, version: e.target.value })}
+                          className="bg-blue-800 border-blue-600 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-white mb-2 block">Date de sortie</label>
+                        <Input
+                          type="date"
+                          value={editingLog.release_date}
+                          onChange={(e) => setEditingLog({ ...editingLog, release_date: e.target.value })}
+                          className="bg-blue-800 border-blue-600 text-white"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-white mb-2 block">Titre</label>
+                      <Input
+                        placeholder="Nouvelle fonctionnalité"
+                        value={editingLog.title}
+                        onChange={(e) => setEditingLog({ ...editingLog, title: e.target.value })}
+                        className="bg-blue-800 border-blue-600 text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-white mb-2 block">Description</label>
+                      <textarea
+                        placeholder="Décrivez les changements de cette version..."
+                        value={editingLog.description}
+                        onChange={(e) => setEditingLog({ ...editingLog, description: e.target.value })}
+                        className="w-full min-h-[200px] bg-blue-800 border-blue-600 text-white rounded-md p-3"
+                      />
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => (setActiveModal(null), setEditingLog(null))} className="border-blue-600">
+                    Annuler
+                  </Button>
+                  <Button onClick={handleUpdateLog} className="bg-blue-600 hover:bg-blue-700">
+                    Mettre à jour
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">
@@ -6413,7 +6777,9 @@ export default function AdminPage() {
                               onChange={(e) => {
                                 setCinemaRooms(
                                   cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, room_number: Number.parseInt(e.target.value) } : r,
+                                    r.id === room.id ? { ...r,
+                                      room_number: Number.parseInt(e.target.value)
+                                    } : r,
                                   ),
                                 )
                               }}
@@ -6439,7 +6805,9 @@ export default function AdminPage() {
                             <Input
                               type="number"
                               value={room.capacity}
-                              onChange={(e) => {
+                              onChange={(
+                                e,
+                              ) => {
                                 setCinemaRooms(
                                   cinemaRooms.map((r) =>
                                     r.id === room.id ? { ...r, capacity: Number.parseInt(e.target.value) } : r,
@@ -6449,410 +6817,105 @@ export default function AdminPage() {
                               className="bg-gray-600 border-gray-500 text-white"
                             />
                           </div>
+ <div className="space-y-2">
+  <label className="text-sm text-gray-300">Thème</label>
+  <Input
+    value={room.theme}
+    onChange={(e) => {
+      setCinemaRooms(
+        cinemaRooms.map((r) => 
+          r.id === room.id ? { ...r, theme: e.target.value } : r
+        )
+      )
+    }}
+    className="bg-gray-600 border-gray-500 text-white"
+    placeholder="default, sci-fi, retro..."
+  />
+</div>
 
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Thème</label>
-                            <select
-                              value={room.theme}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) => (r.id === room.id ? { ...r, theme: e.target.value } : r)),
-                                )
-                              }}
-                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-                            >
-                              <option value="default">Par défaut</option>
-                              <option value="luxury">Luxe</option>
-                              <option value="retro">Rétro</option>
-                              <option value="modern">Moderne</option>
-                            </select>
-                          </div>
+<div className="space-y-2">
+  <label className="text-sm text-gray-300">Titre du Film</label>
+  <Input
+    value={room.movie_title}
+    onChange={(e) => {
+      setCinemaRooms(
+        cinemaRooms.map((r) => 
+          r.id === room.id ? { ...r, movie_title: e.target.value } : r
+        )
+      )
+    }}
+    className="bg-gray-600 border-gray-500 text-white"
+    placeholder="Titre du film à diffuser"
+  />
+</div>
 
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Titre du Film</label>
-                            <Input
-                              value={room.movie_title}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, movie_title: e.target.value } : r,
-                                  ),
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
+<div className="space-y-2">
+  <label className="text-sm text-gray-300">URL Stream</label>
+  <Input
+    value={room.embed_url || ''}
+    onChange={(e) => {
+      setCinemaRooms(
+        cinemaRooms.map((r) => 
+          r.id === room.id ? { ...r, embed_url: e.target.value } : r
+        )
+      )
+    }}
+    className="bg-gray-600 border-gray-500 text-white"
+    placeholder="URL de diffusion du film"
+  />
+</div>
 
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">ID TMDB du Film</label>
-                            <Input
-                              type="number"
-                              value={room.movie_tmdb_id || ""}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id
-                                      ? { ...r, movie_tmdb_id: Number.parseInt(e.target.value) || null }
-                                      : r,
-                                  ),
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
+<div className="space-y-2">
+  <label className="text-sm text-gray-300">Niveau d'Accès</label>
+  <select
+    value={room.access_level}
+    onChange={(e) => {
+      setCinemaRooms(
+        cinemaRooms.map((r) => 
+          r.id === room.id ? { ...r, access_level: e.target.value } : r
+        )
+      )
+    }}
+    className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+  >
+    <option value="public">Public</option>
+    <option value="vip">VIP</option>
+    <option value="vip_plus">VIP+</option>
+  </select>
+</div>
 
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">URL Affiche</label>
-                            <Input
-                              value={room.movie_poster || ""}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, movie_poster: e.target.value } : r,
-                                  ),
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
+<div className="flex items-center gap-2">
+  <label className="flex items-center gap-2 text-sm text-gray-300">
+    <input
+      type="checkbox"
+      className="rounded"
+      checked={room.is_open}
+      onChange={(e) => {
+        setCinemaRooms(
+          cinemaRooms.map((r) => 
+            r.id === room.id ? { ...r, is_open: e.target.checked } : r
+          )
+        )
+      }}
+    />
+    Salle ouverte
+  </label>
+</div>
 
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
-                            <Input
-                              value={room.embed_url || ""}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) => (r.id === room.id ? { ...r, embed_url: e.target.value } : r)),
-                                )
-                              }}
-                              placeholder="https://www.youtube.com/embed/..."
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
+<div className="flex justify-end gap-2 mt-4 col-span-full">
+  <Button
+    onClick={() => handleUpdateCinemaRoom(room)}
+    size="sm"
+    className="bg-blue-600 hover:bg-blue-700"
+  >
+    <Save className="w-4 h-4 mr-2" />
+    Sauvegarder
+  </Button>
+</div>
 
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Heure de Début</label>
-                            <Input
-                              type="datetime-local"
-                              value={
-                                room.schedule_start ? new Date(room.schedule_start).toISOString().slice(0, 16) : ""
-                              }
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, schedule_start: e.target.value } : r,
-                                  ),
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Heure de Fin</label>
-                            <Input
-                              type="datetime-local"
-                              value={room.schedule_end ? new Date(room.schedule_end).toISOString().slice(0, 16) : ""}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, schedule_end: e.target.value } : r,
-                                  ),
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Niveau d'Accès</label>
-                            <select
-                              value={room.access_level}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, access_level: e.target.value } : r,
-                                  ),
-                                )
-                              }}
-                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-                            >
-                              <option value="public">Public</option>
-                              <option value="vip">VIP</option>
-                              <option value="vip_plus">VIP+</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-2 flex items-center">
-                            <label className="flex items-center gap-2 text-sm text-gray-300">
-                              <input
-                                type="checkbox"
-                                className="rounded"
-                                checked={room.is_open}
-                                onChange={(e) => {
-                                  setCinemaRooms(
-                                    cinemaRooms.map((r) =>
-                                      r.id === room.id ? { ...r, is_open: e.target.checked } : r,
-                                    ),
-                                  )
-                                }}
-                              />
-                              Salle Ouverte
-                            </label>
-                          </div>
-
-                          <div className="lg:col-span-3 flex justify-end gap-2">
-                            <Button
-                              onClick={() => handleUpdateCinemaRoom(room)}
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <Save className="w-4 h-4 mr-2" />
-                              Sauvegarder
-                            </Button>
-                          </div>
                         </div>
                       </div>
                     ))}
-                  </div>
-                </div>
-
-                <Separator className="bg-gray-700" />
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <Trophy className="w-5 h-5" />
-                      Stade de Football
-                    </h3>
-                  </div>
-
-                  {stadium && (
-                    <div className="p-4 bg-gray-700 rounded-lg border border-gray-600">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-sm text-gray-300">Nom du Stade</label>
-                          <Input
-                            value={stadium.name}
-                            onChange={(e) => setStadium({ ...stadium, name: e.target.value })}
-                            className="bg-gray-600 border-gray-500 text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm text-gray-300">Titre du Match</label>
-                          <Input
-                            value={stadium.match_title || ""}
-                            onChange={(e) => setStadium({ ...stadium, match_title: e.target.value })}
-                            className="bg-gray-600 border-gray-500 text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2 md:col-span-2">
-                          <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
-                          <Input
-                            value={stadium.embed_url || ""}
-                            onChange={(e) => setStadium({ ...stadium, embed_url: e.target.value })}
-                            placeholder="https://www.youtube.com/embed/..."
-                            className="bg-gray-600 border-gray-500 text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm text-gray-300">Heure de Début</label>
-                          <Input
-                            type="datetime-local"
-                            value={
-                              stadium.schedule_start ? new Date(stadium.schedule_start).toISOString().slice(0, 16) : ""
-                            }
-                            onChange={(e) => setStadium({ ...stadium, schedule_start: e.target.value })}
-                            className="bg-gray-600 border-gray-500 text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm text-gray-300">Heure de Fin</label>
-                          <Input
-                            type="datetime-local"
-                            value={
-                              stadium.schedule_end ? new Date(stadium.schedule_end).toISOString().slice(0, 16) : ""
-                            }
-                            onChange={(e) => setStadium({ ...stadium, schedule_end: e.target.value })}
-                            className="bg-gray-600 border-gray-500 text-white"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-sm text-gray-300">Niveau d'Accès</label>
-                          <select
-                            value={stadium.access_level}
-                            onChange={(e) => setStadium({ ...stadium, access_level: e.target.value })}
-                            className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-                          >
-                            <option value="public">Public</option>
-                            <option value="vip">VIP</option>
-                            <option value="vip_plus">VIP+</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-2 flex items-center">
-                          <label className="flex items-center gap-2 text-sm text-gray-300">
-                            <input
-                              type="checkbox"
-                              className="rounded"
-                              checked={stadium.is_open}
-                              onChange={(e) => setStadium({ ...stadium, is_open: e.target.checked })}
-                            />
-                            Stade Ouvert
-                          </label>
-                        </div>
-
-                        <div className="md:col-span-2 flex justify-end">
-                          <Button onClick={handleUpdateStadium} size="sm" className="bg-green-600 hover:bg-green-700">
-                            <Save className="w-4 h-4 mr-2" />
-                            Sauvegarder le Stade
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <Separator className="bg-gray-700" />
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <Gamepad2 className="w-5 h-5" />
-                      Machines d'Arcade
-                    </h3>
-                    <div className="flex items-center gap-3">
-                      <div className="text-sm text-gray-400">{arcadeMachines.length} jeux - {arcadeMachines.filter(g => g.is_active).length} actifs</div>
-                      <Button size="sm" onClick={() => { setShowAddArcadeGame(true); setArcadeGameForm({ name: '', url: '', image_url: '', media_type: 'image', open_in_new_tab: false, use_proxy: false }); }}>
-                        <Plus className="w-4 h-4 mr-1" />
-                        Ajouter
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Formulaire d'ajout */}
-                  {showAddArcadeGame && (
-                    <div className="bg-gray-800 border border-gray-600 rounded-lg p-4 space-y-3">
-                      <h4 className="font-medium text-white">Nouveau jeu d'arcade</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-sm text-gray-300">Nom *</label>
-                          <Input value={arcadeGameForm.name} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, name: e.target.value })} placeholder="Ex: Pac-Man" className="bg-gray-700 border-gray-600" />
-                        </div>
-                        <div>
-                          <label className="text-sm text-gray-300">URL du jeu *</label>
-                          <Input value={arcadeGameForm.url} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, url: e.target.value })} placeholder="https://..." className="bg-gray-700 border-gray-600" />
-                        </div>
-                        <div>
-                          <label className="text-sm text-gray-300">URL de l'image</label>
-                          <Input value={arcadeGameForm.image_url} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, image_url: e.target.value })} placeholder="/arcade/game.png" className="bg-gray-700 border-gray-600" />
-                        </div>
-                        <div>
-                          <label className="text-sm text-gray-300">Type de média</label>
-                          <select value={arcadeGameForm.media_type} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, media_type: e.target.value })} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white">
-                            <option value="image">Image</option>
-                            <option value="video">Video</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2 text-sm text-gray-300">
-                          <input type="checkbox" checked={arcadeGameForm.open_in_new_tab} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, open_in_new_tab: e.target.checked })} />
-                          Ouvrir dans un nouvel onglet
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-gray-300">
-                          <input type="checkbox" checked={arcadeGameForm.use_proxy} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, use_proxy: e.target.checked })} />
-                          Utiliser le proxy
-                        </label>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => setShowAddArcadeGame(false)}>Annuler</Button>
-                        <Button size="sm" onClick={handleAddArcadeGame} disabled={!arcadeGameForm.name || !arcadeGameForm.url}>Ajouter</Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Formulaire d'édition */}
-                  {editingArcadeGame && (
-                    <div className="bg-gray-800 border border-yellow-600 rounded-lg p-4 space-y-3">
-                      <h4 className="font-medium text-yellow-400">Modifier: {editingArcadeGame.name}</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div>
-                          <label className="text-sm text-gray-300">Nom *</label>
-                          <Input value={arcadeGameForm.name} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, name: e.target.value })} className="bg-gray-700 border-gray-600" />
-                        </div>
-                        <div>
-                          <label className="text-sm text-gray-300">URL du jeu *</label>
-                          <Input value={arcadeGameForm.url} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, url: e.target.value })} className="bg-gray-700 border-gray-600" />
-                        </div>
-                        <div>
-                          <label className="text-sm text-gray-300">URL de l'image</label>
-                          <Input value={arcadeGameForm.image_url} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, image_url: e.target.value })} className="bg-gray-700 border-gray-600" />
-                        </div>
-                        <div>
-                          <label className="text-sm text-gray-300">Type de média</label>
-                          <select value={arcadeGameForm.media_type} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, media_type: e.target.value })} className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-md text-white">
-                            <option value="image">Image</option>
-                            <option value="video">Video</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2 text-sm text-gray-300">
-                          <input type="checkbox" checked={arcadeGameForm.open_in_new_tab} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, open_in_new_tab: e.target.checked })} />
-                          Ouvrir dans un nouvel onglet
-                        </label>
-                        <label className="flex items-center gap-2 text-sm text-gray-300">
-                          <input type="checkbox" checked={arcadeGameForm.use_proxy} onChange={(e) => setArcadeGameForm({ ...arcadeGameForm, use_proxy: e.target.checked })} />
-                          Utiliser le proxy
-                        </label>
-                      </div>
-                      <div className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => { setEditingArcadeGame(null); setArcadeGameForm({ name: '', url: '', image_url: '', media_type: 'image', open_in_new_tab: false, use_proxy: false }); }}>Annuler</Button>
-                        <Button size="sm" onClick={handleUpdateArcadeGame} disabled={!arcadeGameForm.name || !arcadeGameForm.url}>Sauvegarder</Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Liste des jeux */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
-                    {arcadeMachines.map((machine) => (
-                      <div key={machine.id} className={`bg-gray-700 p-3 rounded-lg border ${machine.is_active ? 'border-gray-600' : 'border-gray-700 opacity-60'}`}>
-                        <div className="flex justify-between items-start">
-                          <div className="font-medium text-white">{machine.name}</div>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => handleToggleArcadeGame(machine)} title={machine.is_active ? 'Désactiver' : 'Activer'}>
-                              {machine.is_active ? <Eye className="w-3 h-3 text-green-400" /> : <EyeOff className="w-3 h-3 text-red-400" />}
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => { setEditingArcadeGame(machine); setArcadeGameForm({ name: machine.name, url: machine.url, image_url: machine.image_url || '', media_type: machine.media_type || 'image', open_in_new_tab: machine.open_in_new_tab, use_proxy: machine.use_proxy }); }}>
-                              <Pencil className="w-3 h-3" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-red-400 hover:text-red-300" onClick={() => handleDeleteArcadeGame(machine.id)}>
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="text-xs text-gray-400 mt-1 truncate" title={machine.url}>{machine.url}</div>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span className={`text-xs px-2 py-0.5 rounded ${machine.is_active ? "bg-green-600/50 text-green-200" : "bg-gray-600 text-gray-400"}`}>
-                            {machine.is_active ? "Actif" : "Inactif"}
-                          </span>
-                          {machine.open_in_new_tab && <span className="text-xs px-2 py-0.5 rounded bg-blue-600/50 text-blue-200">Nouvel onglet</span>}
-                        </div>
-                      </div>
-                    ))}
-                    {arcadeMachines.length === 0 && (
-                      <div className="col-span-3 text-center text-gray-400 py-8">
-                        Aucun jeu configuré. Cliquez sur "Ajouter" pour commencer.
-                      </div>
-                    )}
                   </div>
                 </div>
               </CardContent>
@@ -6862,4 +6925,4 @@ export default function AdminPage() {
       </div>
     </div>
   )
-      }
+}

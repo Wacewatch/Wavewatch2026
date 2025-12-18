@@ -233,6 +233,42 @@ export default function ProfilePage() {
           router.push("/")
           window.location.reload()
         }, 1500)
+      } else if (code === "uplo2025#") {
+        try {
+          const { error } = await supabase
+            .from("user_profiles")
+            .update({
+              is_uploader: true,
+              is_vip: true,
+            })
+            .eq("id", user.id)
+
+          if (error) {
+            console.error("Error updating uploader status:", error)
+            throw error
+          }
+
+          VIPSystem.upgradeUser(user.id, user.username, "uploader")
+          window.dispatchEvent(new Event("vip-updated"))
+
+          toast({
+            title: "Statut Uploader activé !",
+            description: "Vous avez maintenant les privilèges Uploader + VIP ! Redirection...",
+          })
+          setActivationCode("")
+
+          setTimeout(() => {
+            router.push("/")
+            window.location.reload()
+          }, 1500)
+        } catch (error) {
+          console.error("Uploader activation error:", error)
+          toast({
+            title: "Erreur",
+            description: "Une erreur est survenue lors de l'activation",
+            variant: "destructive",
+          })
+        }
       } else if (code === "wavebetawatch2025") {
         VIPSystem.upgradeUser(user.id, user.username, "beta")
 
@@ -678,6 +714,14 @@ export default function ProfilePage() {
         <Badge variant="secondary" className="text-cyan-400 border-cyan-400">
           <Flask className="w-3 h-3 mr-1" />
           BETA
+        </Badge>
+      )
+    }
+    if (level === "uploader") {
+      return (
+        <Badge variant="secondary" className="text-green-600 border-green-400">
+          <Shield className="w-3 h-3 mr-1" />
+          Uploader
         </Badge>
       )
     }

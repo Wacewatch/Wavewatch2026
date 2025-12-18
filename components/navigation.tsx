@@ -2,7 +2,6 @@
 
 import type React from "react"
 import Link from "next/link"
-import Image from "next/image"
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -109,11 +108,7 @@ export function Navigation() {
           {/* Logo - Optimisé pour toutes les tailles */}
           <Link href="/" className="flex items-center flex-shrink-0 group">
             <div className="relative h-12 w-auto sm:h-14 md:h-16 lg:h-20 transition-transform group-hover:scale-105">
-<img
-  src="/images/design-mode/wwlogo2026.png" 
-  alt="WaveWatch" 
-  className="h-full w-auto object-contain" 
-/>
+              <img src="/images/design-mode/wwlogo2026.png" alt="WaveWatch" className="h-full w-auto object-contain" />
             </div>
           </Link>
 
@@ -422,11 +417,13 @@ export function Navigation() {
                     <p className="text-xs" style={{ color: "hsl(var(--nav-text-secondary))" }}>
                       {user.isAdmin
                         ? "Administrateur"
-                        : user.isVipPlus
-                          ? "Membre VIP Plus"
-                          : user.isVip
-                            ? "Membre VIP"
-                            : "Membre Standard"}
+                        : user.isUploader
+                          ? "Uploader"
+                          : user.isVipPlus
+                            ? "Membre VIP Plus"
+                            : user.isVip
+                              ? "Membre VIP"
+                              : "Membre Standard"}
                     </p>
                   </div>
                   <DropdownMenuItem asChild>
@@ -447,7 +444,7 @@ export function Navigation() {
                       </Link>
                     </DropdownMenuItem>
                   )}
-                  {user.isAdmin && (
+                  {(user.isAdmin || user.isUploader) && (
                     <DropdownMenuItem asChild>
                       <Link href="/admin" className="text-red-400 hover:text-red-300">
                         <Shield className="w-4 h-4 mr-2" />
@@ -500,11 +497,11 @@ export function Navigation() {
             <div className="flex justify-between items-center mb-6">
               <Link href="/" className="flex items-center group">
                 <div className="relative h-10 w-auto sm:h-12 transition-transform group-hover:scale-105">
-<img
-  src="/images/design-mode/wwlogo2026.png" 
-  alt="WaveWatch" 
-  className="h-full w-auto object-contain" 
-/>
+                  <img
+                    src="/images/design-mode/wwlogo2026.png"
+                    alt="WaveWatch"
+                    className="h-full w-auto object-contain"
+                  />
                 </div>
               </Link>
               <Button variant="ghost" size="icon" onClick={() => setIsMenuOpen(false)}>
@@ -586,11 +583,13 @@ export function Navigation() {
                       <p className="text-xs" style={{ color: "hsl(var(--nav-text-secondary))" }}>
                         {user.isAdmin
                           ? "Administrateur"
-                          : user.isVipPlus
-                            ? "Membre VIP Plus"
-                            : user.isVip
-                              ? "Membre VIP"
-                              : "Membre Standard"}
+                          : user.isUploader
+                            ? "Uploader"
+                            : user.isVipPlus
+                              ? "Membre VIP Plus"
+                              : user.isVip
+                                ? "Membre VIP"
+                                : "Membre Standard"}
                       </p>
                     </div>
                   </div>
@@ -612,7 +611,7 @@ export function Navigation() {
                       </Link>
                     </Button>
                   )}
-                  {user.isAdmin && (
+                  {(user.isAdmin || user.isUploader) && (
                     <Button asChild variant="ghost" className="justify-start text-red-400 hover:text-red-300">
                       <Link href="/admin" onClick={() => setIsMenuOpen(false)}>
                         <Shield className="w-4 h-4 mr-2" />
