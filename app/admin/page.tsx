@@ -6803,10 +6803,10 @@ const loadRealUsers = async (supabase) => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+</TabsContent>
 
-          <TabsContent value="interactive-world">
-            <Card className="bg-gray-800 border-gray-700">
+   <TabsContent value="interactive-world">
+     <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <Globe className="w-5 h-5" />
