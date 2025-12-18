@@ -290,12 +290,12 @@ export default function PlaylistContentPage() {
     }
 
     if (item.media_type === "music") {
-      router.push(`/music/${item.tmdb_id || item.content_id}`)
+      router.push(`/musique/${item.tmdb_id || item.content_id}`)
       return
     }
 
     if (item.media_type === "software") {
-      router.push(`/software/${item.tmdb_id || item.content_id}`)
+      router.push(`/logiciels/${item.tmdb_id || item.content_id}`)
       return
     }
 
@@ -629,10 +629,10 @@ export default function PlaylistContentPage() {
                     if (mediaType === "game") return null
 
                     if (mediaType === "music") {
-                      return `/music/${item.tmdb_id || item.content_id}`
+                      return `/musique/${item.tmdb_id || item.content_id}`
                     }
                     if (mediaType === "software") {
-                      return `/software/${item.tmdb_id || item.content_id}`
+                      return `/logiciels/${item.tmdb_id || item.content_id}`
                     }
 
                     if (mediaType === "ebook") {
