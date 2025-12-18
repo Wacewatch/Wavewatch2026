@@ -6776,7 +6776,7 @@ const loadRealUsers = async (supabase) => {
                         />
                       </div>
 
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
+                       <div className="flex items-center justify-between p-4 border rounded-lg">
                         <div>
                           <Label htmlFor="calendar_widget" className="text-base font-medium">
                             Calendrier Général
@@ -6847,7 +6847,6 @@ const loadRealUsers = async (supabase) => {
                       </select>
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <label className="flex items-center gap-2 text-sm text-gray-300">
                       <input
