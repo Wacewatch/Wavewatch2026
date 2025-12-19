@@ -163,16 +163,19 @@ export function Navigation() {
                     </Badge>
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/logiciels" style={{ color: "hsl(var(--nav-text))" }}>
+                    Logiciels
+                    <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
+                      NEW
+                    </Badge>
+                  </Link>
+                </DropdownMenuItem>
                 {user?.isAdmin ? (
                   <>
                     <DropdownMenuItem asChild>
                       <Link href="/musique" style={{ color: "hsl(var(--nav-text))" }}>
                         Musiques
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/logiciels" style={{ color: "hsl(var(--nav-text))" }}>
-                        Logiciels
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
@@ -185,9 +188,6 @@ export function Navigation() {
                   <>
                     <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
                       Musiques <span className="ml-auto text-xs">Bientôt</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
-                      Logiciels <span className="ml-auto text-xs">Bientôt</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem disabled style={{ color: "hsl(var(--nav-text-secondary))", opacity: 0.6 }}>
                       Jeux <span className="ml-auto text-xs">Bientôt</span>
@@ -693,6 +693,19 @@ export function Navigation() {
                       </Badge>
                     </Link>
                   </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                  >
+                    <Link href="/logiciels" onClick={() => setIsMenuOpen(false)}>
+                      Logiciels
+                      <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
+                        NEW
+                      </Badge>
+                    </Link>
+                  </Button>
                   {user?.isAdmin ? (
                     <>
                       <Button
@@ -703,16 +716,6 @@ export function Navigation() {
                       >
                         <Link href="/musique" onClick={() => setIsMenuOpen(false)}>
                           Musiques
-                        </Link>
-                      </Button>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        className="w-full justify-start"
-                        style={{ color: "hsl(var(--nav-text))" }}
-                      >
-                        <Link href="/logiciels" onClick={() => setIsMenuOpen(false)}>
-                          Logiciels
                         </Link>
                       </Button>
                       <Button
@@ -735,14 +738,6 @@ export function Navigation() {
                         style={{ color: "hsl(var(--nav-text-secondary))" }}
                       >
                         Musiques <span className="ml-auto text-xs">Bientôt</span>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        disabled
-                        className="w-full justify-start opacity-60 cursor-not-allowed"
-                        style={{ color: "hsl(var(--nav-text-secondary))" }}
-                      >
-                        Logiciels <span className="ml-auto text-xs">Bientôt</span>
                       </Button>
                       <Button
                         variant="ghost"

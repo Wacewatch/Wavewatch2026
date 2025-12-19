@@ -79,7 +79,7 @@ export function EbookDetails({ ebook }: EbookDetailsProps) {
     })
   }
 
-  const readUrl = `https://embed.wavewatch.xyz/read/ebook?id=${ebook.id}`
+  const readUrl = ebook.reading_url || `https://embed.wavewatch.xyz/read/ebook?id=${ebook.id}`
   const downloadUrl = ebook.download_url || `https://embed.wavewatch.xyz/download/ebook?id=${ebook.id}`
   const audiobookUrl = ebook.audiobook_url || `https://embed.wavewatch.xyz/audio/ebook?id=${ebook.id}`
 

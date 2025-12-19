@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Star, Search, Filter, Monitor } from "lucide-react"
+import { Search, Filter, Monitor } from "lucide-react"
 import { supabase } from "@/lib/supabase-client"
 import Link from "next/link"
 
@@ -157,7 +157,7 @@ export default function LogicielsPage() {
                 <img
                   src={soft.icon_url || "/placeholder.svg?height=100&width=100"}
                   alt={soft.name}
-                  className="w-12 h-12 md:w-16 md:h-16 object-contain transition-transform duration-300 group-hover:scale-110"
+                  className="w-20 h-20 md:w-24 md:h-24 object-contain transition-transform duration-300 group-hover:scale-110"
                 />
                 <div className="absolute top-2 left-2">
                   <Badge
@@ -171,12 +171,6 @@ export default function LogicielsPage() {
                   >
                     {soft.license}
                   </Badge>
-                </div>
-                <div className="absolute top-2 right-2">
-                  <div className="flex items-center bg-black/60 rounded px-2 py-1">
-                    <Star className="w-3 h-3 text-yellow-400 mr-1" />
-                    <span className="text-white text-xs font-medium">{soft.rating?.toFixed(1) || "N/A"}</span>
-                  </div>
                 </div>
               </div>
 
@@ -197,16 +191,6 @@ export default function LogicielsPage() {
                   <div className="flex items-center justify-between">
                     <span>Taille:</span>
                     <span className="text-white">{soft.file_size}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span>Téléchargements:</span>
-                    <span className="text-white">
-                      {soft.downloads > 1000000
-                        ? `${(soft.downloads / 1000000).toFixed(1)}M`
-                        : soft.downloads > 1000
-                          ? `${(soft.downloads / 1000).toFixed(0)}K`
-                          : soft.downloads}
-                    </span>
                   </div>
                 </div>
               </CardContent>
