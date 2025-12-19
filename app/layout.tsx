@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { AuthProvider } from "@/components/auth-provider"
 import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
-import Script from "next/script" // Import du composant Script
+import Script from "next/script"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -15,26 +15,7 @@ export const metadata: Metadata = {
   title: "WaveWatch - Plateforme de Streaming Premium",
   description:
     "Découvrez et streamez des milliers de films, séries TV, animés et contenus exclusifs en haute qualité sur WaveWatch",
-  keywords: "streaming, films, séries, animés, WaveWatch, plateforme streaming, contenu premium",
-  authors: [{ name: "WaveWatch Team" }],
-  creator: "WaveWatch",
-  publisher: "WaveWatch",
-  formatDetection: {
-    email: false,
-    address: false,
-    telephone: false,
-  },
-  generator: "WaveWatch Platform",
-  icons: {
-    icon: [{ url: "/icon.png", sizes: "32x32", type: "image/png" }],
-    apple: "/apple-icon.png",
-  },
-  openGraph: {
-    title: "WaveWatch - Plateforme de Streaming Premium",
-    description: "Découvrez et streamez des milliers de films, séries TV, animés et contenus exclusifs",
-    type: "website",
-    locale: "fr_FR",
-  },
+    generator: 'v0.app'
 }
 
 export default function RootLayout({
@@ -54,20 +35,44 @@ export default function RootLayout({
           </AuthProvider>
         </ThemeProvider>
 
-        {/* Script Ahrefs Analytics */}
+        {/* ================= HISTATS ================= */}
+        <Script id="histats-init" strategy="afterInteractive">
+          {`
+            var _Hasync = _Hasync || [];
+            _Hasync.push(['Histats.start', '1,4986671,4,0,0,0,00010000']);
+            _Hasync.push(['Histats.fasi', '1']);
+            _Hasync.push(['Histats.track_hits', '']);
+
+            (function() {
+              var hs = document.createElement('script');
+              hs.type = 'text/javascript';
+              hs.async = true;
+              hs.src = '//s10.histats.com/js15_as.js';
+              (document.head || document.body).appendChild(hs);
+            })();
+          `}
+        </Script>
+
+        {/* Fallback NOSCRIPT (caché) */}
+        <noscript>
+          <div style={{ display: "none" }}>
+            <a href="/" target="_blank" rel="noreferrer">
+              <img
+                src="//sstatic1.histats.com/0.gif?4986671&101"
+                alt="counter easy hit"
+              />
+            </a>
+          </div>
+        </noscript>
+        {/* ================= FIN HISTATS ================= */}
+
+        {/* Ahrefs Analytics */}
         <Script
           src="https://analytics.ahrefs.com/analytics.js"
           data-key="H7U+kFL0zyofiO02zN/tSg"
           strategy="afterInteractive"
           async
         />
-
-        {/* Compteur Histats caché */}
-        <div style={{ display: "none" }}>
-          <a href="/" target="_blank" rel="noreferrer">
-            <img src="/images/design-mode/0.gif" alt="web hit counter" border={0} />
-          </a>
-        </div>
       </body>
     </html>
   )
