@@ -8,7 +8,7 @@ import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { IframeModal } from "@/components/iframe-modal"
-import { AddToListSelector } from "@/components/add-to-list-selector"
+import { AddToPlaylistButtonGeneric } from "@/components/add-to-playlist-button-generic"
 import { Star, Calendar, Download, ThumbsUp, ThumbsDown, BookOpen, FileText, User, Headphones } from "lucide-react"
 
 interface EbookDetailsProps {
@@ -263,10 +263,14 @@ export function EbookDetails({ ebook }: EbookDetailsProps) {
                 <Download className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                 Télécharger
               </Button>
-              <AddToListSelector
-                content={{ id: ebook.id, title: ebook.title, poster_path: ebook.cover_url }}
-                contentType="movie"
-                className="w-full sm:w-auto"
+              <AddToPlaylistButtonGeneric
+                itemId={ebook.id}
+                mediaType="ebook"
+                title={ebook.title}
+                posterPath={ebook.cover_url}
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto border-green-600 text-green-400 hover:bg-green-900/20 bg-transparent"
               />
               <Button
                 size="lg"

@@ -221,6 +221,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error
 
       if (data.user) {
+        try {
+          const { error: profileError } = await supabase.from("user_profiles").insert({
+            user_id: data.user.id,
+            username: username.trim(),
+            email: email.trim(),
+            is_admin: false,
+            is_vip: false,
+            is_vip_plus: false,
+            is_uploader: false,
+            status: "active",
+            join_date: new Date().toISOString().split("T")[0],
+          })
+
+          if (profileError && profileError.code !== "23505") {
+            console.error("[v0] Profile creation error:", profileError)
+          }
+        } catch (profileErr) {
+          console.error("[v0] Profile creation exception:", profileErr)
+        }
+
         toast({
           title: "Compte créé !",
           description: `Bienvenue ${username} !`,

@@ -8,7 +8,7 @@ import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 import { WatchTracker } from "@/lib/watch-tracking"
 import { IframeModal } from "@/components/iframe-modal"
-import { AddToListSelector } from "@/components/add-to-list-selector"
+import { AddToPlaylistButtonGeneric } from "@/components/add-to-playlist-button-generic"
 import { Star, Calendar, Download, ThumbsUp, ThumbsDown, Gamepad2, HardDrive } from "lucide-react"
 
 interface GameDetailsProps {
@@ -246,10 +246,14 @@ export function GameDetails({ game }: GameDetailsProps) {
                 <Download className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                 Télécharger
               </Button>
-              <AddToListSelector
-                content={{ id: game.id, title: game.title, poster_path: game.cover_url }}
-                contentType="movie"
-                className="w-full sm:w-auto"
+              <AddToPlaylistButtonGeneric
+                itemId={game.id}
+                mediaType="game"
+                title={game.title}
+                posterPath={game.cover_url}
+                variant="outline"
+                size="lg"
+                className="w-full sm:w-auto border-purple-600 text-purple-400 hover:bg-purple-900/20 bg-transparent"
               />
               <Button
                 size="lg"

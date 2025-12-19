@@ -388,6 +388,10 @@ export default function PlaylistContentPage() {
                     src={currentRadio.logoUrl || currentRadio.poster_path || "/placeholder.svg"}
                     alt={currentRadio.title}
                     className="w-full h-full object-contain p-1"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.src = "/placeholder.svg?height=300&width=200"
+                    }}
                   />
                 </div>
                 <div>
@@ -654,7 +658,7 @@ export default function PlaylistContentPage() {
 
                   const itemUrl = getItemUrl()
                   const mediaType = item.media_type || item.content_type
-                  const isPlayableItem = mediaType === "tv-channel" || mediaType === "radio" || mediaType === "game"
+                  const isPlayableItem = mediaType === "tv-channel" || mediaType === "radio"
 
                   const handleItemClick = (e: React.MouseEvent) => {
                     if (isPlayableItem) {
@@ -684,7 +688,7 @@ export default function PlaylistContentPage() {
                       case "radio":
                         return "Station Radio"
                       case "game":
-                        return "Jeu Rétro"
+                        return "Jeu"
                       case "ebook":
                         return "Ebook"
                       case "episode":
