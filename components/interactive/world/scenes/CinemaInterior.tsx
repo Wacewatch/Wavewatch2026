@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { useFrame } from "@react-three/fiber"
 import { Html } from "@react-three/drei"
 import * as THREE from "three"
@@ -108,177 +108,80 @@ function VideoScreen({
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [videoTexture, setVideoTexture] = useState<THREE.VideoTexture | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
-  const maxRetries = 5
 
-  const initializeVideo = useCallback(() => {
-    // Nettoyer l'ancienne vidéo si elle existe
-    if (videoRef.current) {
-      videoRef.current.pause()
-      videoRef.current.src = ""
-      videoRef.current.load()
-    }
-
-    setIsLoading(true)
-    setError(null)
-
+  useEffect(() => {
+    // Créer l'élément vidéo
     const video = document.createElement("video")
-
+    video.src = url
     video.crossOrigin = "anonymous"
     video.loop = false
     video.muted = muted
     video.playsInline = true
-    video.preload = "auto" // Précharger la vidéo
     video.setAttribute("playsinline", "true")
     video.setAttribute("webkit-playsinline", "true")
 
-    // Priorité basse pour le réseau (économie de bande passante)
-    if ("fetchPriority" in video) {
-      ;(video as any).fetchPriority = "high"
-    }
-
     videoRef.current = video
 
-    // Créer la texture vidéo avec configuration optimisée
+    // Créer la texture vidéo
     const texture = new THREE.VideoTexture(video)
     texture.minFilter = THREE.LinearFilter
     texture.magFilter = THREE.LinearFilter
     texture.format = THREE.RGBAFormat
     texture.colorSpace = THREE.SRGBColorSpace
-    texture.generateMipmaps = false // Désactiver les mipmaps pour plus de performance
     setVideoTexture(texture)
 
     // Calculer la position de synchronisation
     const syncToPosition = () => {
-      if (scheduleStart && video.duration > 0) {
+      if (scheduleStart) {
         const startDate = new Date(scheduleStart)
         const now = new Date()
         const elapsedSeconds = Math.floor((now.getTime() - startDate.getTime()) / 1000)
         if (elapsedSeconds > 0 && video.duration > elapsedSeconds) {
+          console.log(`[v0] VideoScreen syncing to ${elapsedSeconds}s`)
           video.currentTime = elapsedSeconds
         }
       }
     }
 
-    video.onloadstart = () => {
-      setIsLoading(true)
-    }
-
-    video.onloadeddata = () => {
-      setIsLoading(false)
-    }
-
     video.onloadedmetadata = () => {
       syncToPosition()
-      attemptPlay()
-    }
-
-    video.oncanplay = () => {
-      setIsLoading(false)
-      if (!isPlaying) {
-        attemptPlay()
-      }
-    }
-
-    video.oncanplaythrough = () => {
-      setIsLoading(false)
-    }
-
-    video.onplaying = () => {
-      setIsPlaying(true)
-      setIsLoading(false)
-      setError(null)
-    }
-
-    video.onwaiting = () => {
-      setIsLoading(true)
-    }
-
-    video.onstalled = () => {
-      // La vidéo est bloquée, tenter de relancer
-      setTimeout(() => {
-        if (video.paused) {
-          attemptPlay()
-        }
-      }, 1000)
-    }
-
-    video.onerror = (e) => {
-      console.error("[v0] Video error:", video.error)
-      setError(`Erreur de lecture: ${video.error?.message || "Connexion instable"}`)
-      setIsLoading(false)
-
-      // Retry automatique
-      if (retryCount < maxRetries) {
-        setTimeout(
-          () => {
-            setRetryCount((prev) => prev + 1)
-            initializeVideo()
-          },
-          2000 * (retryCount + 1),
-        ) // Délai croissant entre les retries
-      }
-    }
-
-    const attemptPlay = () => {
       video
         .play()
         .then(() => {
           setIsPlaying(true)
-          setIsLoading(false)
         })
         .catch((e) => {
-          console.log("[v0] Autoplay blocked, will retry on user interaction")
-          // Écouter une interaction utilisateur pour démarrer
-          const startOnInteraction = () => {
-            video.play().catch(() => {})
-            document.removeEventListener("click", startOnInteraction)
-            document.removeEventListener("keydown", startOnInteraction)
-          }
-          document.addEventListener("click", startOnInteraction, { once: true })
-          document.addEventListener("keydown", startOnInteraction, { once: true })
+          console.log("[v0] Autoplay blocked, waiting for user interaction")
         })
     }
 
-    // Charger la vidéo
-    video.src = url
-    video.load()
+    video.oncanplay = () => {
+      if (!isPlaying) {
+        video.play().catch(() => {})
+      }
+    }
 
     // Resync périodique
     const syncInterval = setInterval(() => {
-      if (video && scheduleStart && video.duration > 0 && !video.paused) {
+      if (video && scheduleStart && video.duration > 0) {
         const startDate = new Date(scheduleStart)
         const now = new Date()
         const expectedPosition = Math.floor((now.getTime() - startDate.getTime()) / 1000)
         const drift = Math.abs(expectedPosition - video.currentTime)
         if (drift > 5 && expectedPosition < video.duration) {
+          console.log(`[v0] VideoScreen drift ${drift}s, resyncing to ${expectedPosition}s`)
           video.currentTime = expectedPosition
         }
       }
     }, 10000)
 
-    // Vérification périodique de l'état de la vidéo
-    const healthCheck = setInterval(() => {
-      if (video && video.paused && !video.ended && isPlaying) {
-        attemptPlay()
-      }
-    }, 5000)
-
     return () => {
       clearInterval(syncInterval)
-      clearInterval(healthCheck)
       video.pause()
       video.src = ""
       video.load()
       texture.dispose()
     }
-  }, [url, scheduleStart, muted, retryCount])
-
-  useEffect(() => {
-    const cleanup = initializeVideo()
-    return cleanup
   }, [url, scheduleStart])
 
   // Mettre à jour le mute
@@ -296,47 +199,14 @@ function VideoScreen({
   })
 
   return (
-    <group>
-      <mesh ref={meshRef} position={position}>
-        <planeGeometry args={[width, height]} />
-        {videoTexture ? (
-          <meshBasicMaterial map={videoTexture} side={THREE.FrontSide} toneMapped={false} />
-        ) : (
-          <meshBasicMaterial color="#000000" />
-        )}
-      </mesh>
-
-      {isLoading && (
-        <Html position={[position[0], position[1], position[2] + 0.1]} center>
-          <div className="flex flex-col items-center justify-center p-4 bg-black/80 rounded-lg">
-            <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-2" />
-            <p className="text-white text-sm">Chargement...</p>
-            {retryCount > 0 && (
-              <p className="text-gray-400 text-xs mt-1">
-                Tentative {retryCount}/{maxRetries}
-              </p>
-            )}
-          </div>
-        </Html>
+    <mesh ref={meshRef} position={position}>
+      <planeGeometry args={[width, height]} />
+      {videoTexture ? (
+        <meshBasicMaterial map={videoTexture} side={THREE.FrontSide} toneMapped={false} />
+      ) : (
+        <meshBasicMaterial color="#000000" />
       )}
-
-      {error && !isLoading && (
-        <Html position={[position[0], position[1], position[2] + 0.1]} center>
-          <div className="flex flex-col items-center justify-center p-4 bg-black/80 rounded-lg">
-            <p className="text-red-400 text-sm mb-2">{error}</p>
-            <button
-              onClick={() => {
-                setRetryCount(0)
-                initializeVideo()
-              }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
-            >
-              Réessayer
-            </button>
-          </div>
-        </Html>
-      )}
-    </group>
+    </mesh>
   )
 }
 
@@ -358,32 +228,14 @@ function HLSVideoScreen3D({
   const meshRef = useRef<THREE.Mesh>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [videoTexture, setVideoTexture] = useState<THREE.VideoTexture | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [retryCount, setRetryCount] = useState(0)
   const hlsRef = useRef<any>(null)
-  const maxRetries = 5
 
-  const initializeHLS = useCallback(() => {
-    // Cleanup
-    if (hlsRef.current) {
-      hlsRef.current.destroy()
-      hlsRef.current = null
-    }
-    if (videoRef.current) {
-      videoRef.current.pause()
-      videoRef.current.src = ""
-    }
-
-    setIsLoading(true)
-    setError(null)
-
+  useEffect(() => {
     const video = document.createElement("video")
     video.crossOrigin = "anonymous"
     video.loop = false
     video.muted = muted
     video.playsInline = true
-    video.preload = "auto"
 
     videoRef.current = video
 
@@ -392,116 +244,28 @@ function HLSVideoScreen3D({
     texture.magFilter = THREE.LinearFilter
     texture.format = THREE.RGBAFormat
     texture.colorSpace = THREE.SRGBColorSpace
-    texture.generateMipmaps = false
     setVideoTexture(texture)
 
-    // Charger HLS dynamiquement avec configuration optimisée
-    import("hls.js")
-      .then(({ default: Hls }) => {
-        if (Hls.isSupported()) {
-          const hls = new Hls({
-            enableWorker: true,
-            lowLatencyMode: false, // Désactiver pour plus de stabilité
-            backBufferLength: 90, // Plus de buffer en arrière
-            maxBufferLength: 60, // Buffer max de 60 secondes
-            maxMaxBufferLength: 120, // Buffer max absolu
-            maxBufferSize: 60 * 1000 * 1000, // 60 MB max buffer
-            maxBufferHole: 0.5, // Tolérance aux trous dans le buffer
-            startLevel: -1, // Auto-sélection du niveau de qualité
-            abrEwmaDefaultEstimate: 500000, // Estimation bande passante initiale (500 Kbps)
-            abrEwmaFastLive: 3, // Adaptation rapide en live
-            abrEwmaSlowLive: 9,
-            abrBandWidthFactor: 0.8, // Facteur de sécurité pour la bande passante
-            abrBandWidthUpFactor: 0.5, // Monter en qualité plus lentement
-            fragLoadingTimeOut: 20000, // Timeout plus long pour fragments
-            fragLoadingMaxRetry: 6, // Plus de retries pour les fragments
-            fragLoadingRetryDelay: 1000, // Délai entre retries
-            manifestLoadingTimeOut: 15000, // Timeout manifest
-            manifestLoadingMaxRetry: 4,
-            levelLoadingTimeOut: 15000,
-            levelLoadingMaxRetry: 4,
-          })
-
-          hlsRef.current = hls
-
-          hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            setIsLoading(false)
-            video.play().catch(() => {
-              // Écouter une interaction utilisateur
-              const startOnInteraction = () => {
-                video.play().catch(() => {})
-                document.removeEventListener("click", startOnInteraction)
-              }
-              document.addEventListener("click", startOnInteraction, { once: true })
-            })
-          })
-
-          hls.on(Hls.Events.ERROR, (event, data) => {
-            if (data.fatal) {
-              console.error("[v0] HLS fatal error:", data.type, data.details)
-              setError(`Erreur de stream: ${data.details}`)
-              setIsLoading(false)
-
-              switch (data.type) {
-                case Hls.ErrorTypes.NETWORK_ERROR:
-                  // Retry sur erreur réseau
-                  if (retryCount < maxRetries) {
-                    setTimeout(
-                      () => {
-                        setRetryCount((prev) => prev + 1)
-                        hls.startLoad()
-                      },
-                      2000 * (retryCount + 1),
-                    )
-                  }
-                  break
-                case Hls.ErrorTypes.MEDIA_ERROR:
-                  hls.recoverMediaError()
-                  break
-                default:
-                  if (retryCount < maxRetries) {
-                    setTimeout(() => {
-                      setRetryCount((prev) => prev + 1)
-                      initializeHLS()
-                    }, 3000)
-                  }
-                  break
-              }
-            }
-          })
-
-          hls.on(Hls.Events.FRAG_BUFFERED, () => {
-            setIsLoading(false)
-          })
-
-          hls.on(Hls.Events.BUFFER_APPENDING, () => {
-            setIsLoading(false)
-          })
-
-          hls.loadSource(url)
-          hls.attachMedia(video)
-        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-          // Safari native HLS
-          video.src = url
-          video.addEventListener("loadeddata", () => setIsLoading(false))
+    // Charger HLS dynamiquement
+    import("hls.js").then(({ default: Hls }) => {
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+        })
+        hlsRef.current = hls
+        hls.loadSource(url)
+        hls.attachMedia(video)
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
           video.play().catch(() => {})
-        }
-      })
-      .catch((err) => {
-        console.error("[v0] Failed to load HLS.js:", err)
-        setError("Impossible de charger le lecteur vidéo")
-        setIsLoading(false)
-      })
-
-    // Health check pour HLS
-    const healthCheck = setInterval(() => {
-      if (video && video.paused && !video.ended) {
+        })
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = url
         video.play().catch(() => {})
       }
-    }, 5000)
+    })
 
     return () => {
-      clearInterval(healthCheck)
       if (hlsRef.current) {
         hlsRef.current.destroy()
       }
@@ -509,11 +273,6 @@ function HLSVideoScreen3D({
       video.src = ""
       texture.dispose()
     }
-  }, [url, muted, retryCount])
-
-  useEffect(() => {
-    const cleanup = initializeHLS()
-    return cleanup
   }, [url])
 
   useEffect(() => {
@@ -529,49 +288,14 @@ function HLSVideoScreen3D({
   })
 
   return (
-    <group>
-      <mesh ref={meshRef} position={position}>
-        <planeGeometry args={[width, height]} />
-        {videoTexture ? (
-          <meshBasicMaterial map={videoTexture} side={THREE.FrontSide} toneMapped={false} />
-        ) : (
-          <meshBasicMaterial color="#000000" />
-        )}
-      </mesh>
-
-      {/* Indicateur de chargement */}
-      {isLoading && (
-        <Html position={[position[0], position[1], position[2] + 0.1]} center>
-          <div className="flex flex-col items-center justify-center p-4 bg-black/80 rounded-lg">
-            <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin mb-2" />
-            <p className="text-white text-sm">Chargement du stream...</p>
-            {retryCount > 0 && (
-              <p className="text-gray-400 text-xs mt-1">
-                Tentative {retryCount}/{maxRetries}
-              </p>
-            )}
-          </div>
-        </Html>
+    <mesh ref={meshRef} position={position}>
+      <planeGeometry args={[width, height]} />
+      {videoTexture ? (
+        <meshBasicMaterial map={videoTexture} side={THREE.FrontSide} toneMapped={false} />
+      ) : (
+        <meshBasicMaterial color="#000000" />
       )}
-
-      {/* Affichage d'erreur */}
-      {error && !isLoading && (
-        <Html position={[position[0], position[1], position[2] + 0.1]} center>
-          <div className="flex flex-col items-center justify-center p-4 bg-black/80 rounded-lg">
-            <p className="text-red-400 text-sm mb-2">{error}</p>
-            <button
-              onClick={() => {
-                setRetryCount(0)
-                initializeHLS()
-              }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
-            >
-              Réessayer
-            </button>
-          </div>
-        </Html>
-      )}
-    </group>
+    </mesh>
   )
 }
 
