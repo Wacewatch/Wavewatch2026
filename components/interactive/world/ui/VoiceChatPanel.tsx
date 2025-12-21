@@ -65,7 +65,7 @@ export function VoiceChatPanel({
     }
   }, [isDragging, dragOffset])
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const handleDragHandleMouseDown = (e: React.MouseEvent) => {
     if (panelRef.current) {
       const rect = panelRef.current.getBoundingClientRect()
       setDragOffset({
@@ -88,33 +88,25 @@ export function VoiceChatPanel({
     return currentRoom
   }
 
-  const handleJoinVoice = (e: React.MouseEvent) => {
-    e.stopPropagation()
+  const handleJoinVoice = () => {
     console.log("[v0] [VoiceChatPanel] Join button clicked")
     onRequestMicAccess()
-  }
-
-  const handleToggleMic = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onToggleMic()
-  }
-
-  const handleDisconnect = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    onDisconnect()
   }
 
   return (
     <div
       ref={panelRef}
-      className="fixed bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 select-none z-50"
+      className="fixed bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 z-50"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
         minWidth: "200px",
       }}
     >
-      <div className="flex items-center gap-2 mb-2 cursor-grab active:cursor-grabbing" onMouseDown={handleMouseDown}>
+      <div
+        className="flex items-center gap-2 mb-2 cursor-grab active:cursor-grabbing select-none"
+        onMouseDown={handleDragHandleMouseDown}
+      >
         <GripVertical className="w-4 h-4 text-gray-500" />
         <Volume2 className="w-4 h-4 text-green-400" />
         <span className="text-sm font-medium text-white">Chat Vocal</span>
@@ -132,7 +124,7 @@ export function VoiceChatPanel({
       ) : !isVoiceConnected ? (
         <button
           onClick={handleJoinVoice}
-          className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm py-2 px-3 rounded-lg transition-colors cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm py-2 px-3 rounded-lg transition-colors"
         >
           <Phone className="w-4 h-4" />
           Rejoindre le vocal
@@ -147,8 +139,8 @@ export function VoiceChatPanel({
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={handleToggleMic}
-                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                onClick={onToggleMic}
+                className={`p-1.5 rounded-lg transition-colors ${
                   isMicMuted
                     ? "bg-red-600/20 text-red-400 hover:bg-red-600/30"
                     : "bg-green-600/20 text-green-400 hover:bg-green-600/30"
@@ -158,8 +150,8 @@ export function VoiceChatPanel({
                 {isMicMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </button>
               <button
-                onClick={handleDisconnect}
-                className="p-1.5 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors cursor-pointer"
+                onClick={onDisconnect}
+                className="p-1.5 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors"
                 title="Quitter le vocal"
               >
                 <PhoneOff className="w-4 h-4" />
