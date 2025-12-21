@@ -407,19 +407,27 @@ function NoSessionScreen3D({ roomName, roomNumber }: { roomName?: string; roomNu
 }
 
 export function CinemaInterior({ room, visibleAvatars, onBack, cinemaSessions = [] }: CinemaInteriorProps) {
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const sessions = cinemaSessions || []
+
   const themeColors = useMemo(() => getThemeColors(room?.theme), [room?.theme])
 
   const seatsPerRow = useMemo(() => {
-    if (visibleAvatars.length > 0) {
-      const maxSeatInRow = Math.max(...visibleAvatars.map((a) => a.seat_number))
-      return Math.max(maxSeatInRow, 10)
+    if (visibleAvatars && visibleAvatars.length > 0) {
+      const seatNumbers = visibleAvatars
+        .map((a) => a.seat_number)
+        .filter((n): n is number => typeof n === "number" && !isNaN(n))
+      if (seatNumbers.length > 0) {
+        const maxSeatInRow = Math.max(...seatNumbers)
+        return Math.max(maxSeatInRow, 10)
+      }
     }
     return 10
   }, [visibleAvatars])
 
   const currentSession = useMemo(() => {
     if (!room?.id) return null
-    const roomSessions = cinemaSessions.filter((s) => s.room_id === room.id)
+    const roomSessions = sessions.filter((s) => s.room_id === room.id)
     const now = new Date()
 
     // Find current playing session
@@ -446,7 +454,7 @@ export function CinemaInterior({ room, visibleAvatars, onBack, cinemaSessions = 
     }
 
     return upcoming || null
-  }, [room?.id, cinemaSessions])
+  }, [room?.id, sessions])
 
   const activeMovieTitle = currentSession?.movie_title || room?.movie_title || ""
   const activeMoviePoster = currentSession?.movie_poster || room?.movie_poster
@@ -460,16 +468,14 @@ export function CinemaInterior({ room, visibleAvatars, onBack, cinemaSessions = 
 
   const hasSession = !!(activeMovieTitle || videoUrl || currentSession)
 
-  const videoRef = useRef<HTMLVideoElement>(null)
-
   useEffect(() => {
     console.log("[v0] CinemaInterior mounted - room:", room?.id, "name:", room?.name)
     console.log("[v0] Room schedule_start:", room?.schedule_start, "embed_url:", room?.embed_url)
     console.log(
       "[v0] Cinema sessions for this room:",
-      cinemaSessions.filter((s) => s.room_id === room?.id),
+      sessions.filter((s) => s.room_id === room?.id),
     )
-  }, [room, cinemaSessions])
+  }, [room, sessions])
 
   useEffect(() => {
     console.log("[v0] Video URL:", videoUrl, "Type:", videoType)
@@ -735,36 +741,37 @@ export function CinemaInterior({ room, visibleAvatars, onBack, cinemaSessions = 
       )}
 
       {/* Sièges */}
-      {visibleAvatars.map((avatar) => {
-        const seatId = avatar.row_number * 100 + avatar.seat_number
-        const seatColor = "#ef4444"
+      {visibleAvatars &&
+        visibleAvatars.map((avatar) => {
+          const seatId = avatar.row_number * 100 + avatar.seat_number
+          const seatColor = "#ef4444"
 
-        const [x, y, z] = generateSeatPosition(avatar.row_number, avatar.seat_number, seatsPerRow)
+          const [x, y, z] = generateSeatPosition(avatar.row_number, avatar.seat_number, seatsPerRow)
 
-        return (
-          <group key={avatar.id} position={[x, y, z]} rotation={[0, Math.PI, 0]}>
-            {/* Assise */}
-            <mesh position={[0, 0.2, 0]}>
-              <boxGeometry args={[0.8, 0.15, 0.7]} />
-              <meshStandardMaterial color={seatColor} />
-            </mesh>
-            {/* Dossier */}
-            <mesh position={[0, 0.55, 0.3]}>
-              <boxGeometry args={[0.8, 0.6, 0.1]} />
-              <meshStandardMaterial color={seatColor} />
-            </mesh>
-            {/* Accoudoirs */}
-            <mesh position={[-0.45, 0.35, 0]}>
-              <boxGeometry args={[0.1, 0.3, 0.6]} />
-              <meshStandardMaterial color="#1f2937" />
-            </mesh>
-            <mesh position={[0.45, 0.35, 0]}>
-              <boxGeometry args={[0.1, 0.3, 0.6]} />
-              <meshStandardMaterial color="#1f2937" />
-            </mesh>
-          </group>
-        )
-      })}
+          return (
+            <group key={avatar.id} position={[x, y, z]} rotation={[0, Math.PI, 0]}>
+              {/* Assise */}
+              <mesh position={[0, 0.2, 0]}>
+                <boxGeometry args={[0.8, 0.15, 0.7]} />
+                <meshStandardMaterial color={seatColor} />
+              </mesh>
+              {/* Dossier */}
+              <mesh position={[0, 0.55, 0.3]}>
+                <boxGeometry args={[0.8, 0.6, 0.1]} />
+                <meshStandardMaterial color={seatColor} />
+              </mesh>
+              {/* Accoudoirs */}
+              <mesh position={[-0.45, 0.35, 0]}>
+                <boxGeometry args={[0.1, 0.3, 0.6]} />
+                <meshStandardMaterial color="#1f2937" />
+              </mesh>
+              <mesh position={[0.45, 0.35, 0]}>
+                <boxGeometry args={[0.1, 0.3, 0.6]} />
+                <meshStandardMaterial color="#1f2937" />
+              </mesh>
+            </group>
+          )
+        })}
 
       {/* Éclairage */}
       <ambientLight intensity={0.3} />
