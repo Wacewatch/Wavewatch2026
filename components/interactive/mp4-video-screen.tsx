@@ -34,8 +34,9 @@ export function MP4VideoScreen({
   const [isReady, setIsReady] = useState(false)
   const [hasError, setHasError] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
-  const [retryCount, setRetryCount] = useState(0)
+  const retryCountRef = useRef(0)
   const maxRetries = 5
+  const isActiveRef = useRef(true)
 
   const cleanupRef = useRef<(() => void) | null>(null)
 
@@ -78,6 +79,7 @@ export function MP4VideoScreen({
 
   useEffect(() => {
     return () => {
+      isActiveRef.current = false
       cleanupRef.current?.()
     }
   }, [])
@@ -85,38 +87,27 @@ export function MP4VideoScreen({
   useEffect(() => {
     if (!src || hasError) return
 
-    let isActive = true
+    isActiveRef.current = true
+    retryCountRef.current = 0
     const eventListeners: Array<{ target: HTMLVideoElement; event: string; handler: EventListener }> = []
 
     const initVideo = async () => {
       try {
         setIsLoading(true)
+        setIsReady(false)
 
-        // Create video element
         const video = document.createElement("video")
         video.crossOrigin = "anonymous"
         video.playsInline = true
-        video.muted = muted
+        video.muted = true // Always start muted for autoplay
         video.loop = false
         video.autoplay = false
-        video.preload = "auto"
+        video.preload = "metadata"
         video.setAttribute("playsinline", "")
         video.setAttribute("webkit-playsinline", "")
+        video.setAttribute("x-webkit-airplay", "allow")
+        video.setAttribute("disablePictureInPicture", "")
         videoRef.current = video
-
-        // Create texture
-        const newTexture = new VideoTexture(video)
-        newTexture.minFilter = LinearFilter
-        newTexture.magFilter = LinearFilter
-        newTexture.colorSpace = SRGBColorSpace
-        newTexture.generateMipmaps = false
-        newTexture.needsUpdate = true
-        textureRef.current = newTexture
-
-        if (materialRef.current) {
-          materialRef.current.map = newTexture
-          materialRef.current.needsUpdate = true
-        }
 
         const addEventListener = (event: string, handler: EventListener) => {
           video.addEventListener(event, handler)
@@ -125,10 +116,26 @@ export function MP4VideoScreen({
 
         let isVideoReady = false
         const markVideoReady = () => {
-          if (isVideoReady || !isActive) return
+          if (isVideoReady || !isActiveRef.current) return
 
           if (video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0) {
             isVideoReady = true
+            console.log(`[v0] MP4 video ready, size: ${video.videoWidth}x${video.videoHeight}`)
+
+            if (!textureRef.current) {
+              const newTexture = new VideoTexture(video)
+              newTexture.minFilter = LinearFilter
+              newTexture.magFilter = LinearFilter
+              newTexture.colorSpace = SRGBColorSpace
+              newTexture.generateMipmaps = false
+              textureRef.current = newTexture
+
+              if (materialRef.current) {
+                materialRef.current.map = newTexture
+                materialRef.current.needsUpdate = true
+              }
+            }
+
             setIsReady(true)
             setIsLoading(false)
             onReady?.()
@@ -141,19 +148,26 @@ export function MP4VideoScreen({
         addEventListener("playing", markVideoReady)
 
         addEventListener("error", () => {
-          if (!isActive) return
-          console.log(`[v0] MP4 load error, retry ${retryCount + 1}/${maxRetries}`)
+          if (!isActiveRef.current) return
 
-          if (retryCount < maxRetries) {
-            setTimeout(
-              () => {
-                if (isActive) {
-                  setRetryCount((prev) => prev + 1)
-                  video.load()
-                }
-              },
-              1000 * (retryCount + 1),
-            )
+          const errorCode = video.error?.code
+          const errorMessage = video.error?.message || "Unknown error"
+          console.log(
+            `[v0] MP4 load error (code: ${errorCode}): ${errorMessage}, retry ${retryCountRef.current + 1}/${maxRetries}`,
+          )
+
+          if (retryCountRef.current < maxRetries) {
+            const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 10000)
+            retryCountRef.current++
+
+            setTimeout(() => {
+              if (isActiveRef.current && videoRef.current) {
+                console.log(`[v0] Retrying MP4 load...`)
+                const cacheBuster = `${src.includes("?") ? "&" : "?"}_t=${Date.now()}`
+                videoRef.current.src = src + cacheBuster
+                videoRef.current.load()
+              }
+            }, delay)
           } else {
             setHasError(true)
             setIsLoading(false)
@@ -164,8 +178,8 @@ export function MP4VideoScreen({
         addEventListener("stalled", () => {
           console.log("[v0] MP4 video stalled, attempting recovery...")
           setTimeout(() => {
-            if (isActive && video.paused) {
-              video.play().catch(() => {})
+            if (isActiveRef.current && videoRef.current && videoRef.current.paused) {
+              videoRef.current.play().catch(() => {})
             }
           }, 2000)
         })
@@ -175,29 +189,38 @@ export function MP4VideoScreen({
         })
 
         addEventListener("loadedmetadata", () => {
-          if (!isActive) return
+          if (!isActiveRef.current) return
           console.log(`[v0] MP4 metadata loaded, duration: ${video.duration}s`)
 
-          // Sync to start time if provided
-          if (startTime > 0 && video.duration > startTime) {
+          if (startTime > 0 && startTime < video.duration - 1) {
             console.log(`[v0] Syncing MP4 to ${startTime}s`)
             video.currentTime = startTime
           }
 
           if (autoplay) {
-            video.play().catch((err) => {
-              console.log("[v0] MP4 autoplay failed, trying muted:", err)
-              video.muted = true
-              video.play().catch((e) => console.error("[v0] MP4 muted play failed:", e))
-            })
+            setTimeout(() => {
+              if (!isActiveRef.current || !videoRef.current) return
+              videoRef.current.play().catch((err) => {
+                console.log("[v0] MP4 autoplay failed, trying muted:", err)
+                if (videoRef.current) {
+                  videoRef.current.muted = true
+                  videoRef.current.play().catch((e) => console.error("[v0] MP4 muted play failed:", e))
+                }
+              })
+            }, 100)
           }
         })
 
+        addEventListener("abort", () => {
+          console.log("[v0] MP4 video aborted")
+        })
+
         // Set source and start loading
+        console.log(`[v0] Loading MP4 from: ${src}`)
         video.src = src
         video.load()
       } catch (err) {
-        if (isActive) {
+        if (isActiveRef.current) {
           console.error("[v0] MP4 init error:", err)
           setHasError(true)
           setIsLoading(false)
@@ -209,7 +232,7 @@ export function MP4VideoScreen({
     initVideo()
 
     return () => {
-      isActive = false
+      isActiveRef.current = false
       eventListeners.forEach(({ target, event, handler }) => {
         try {
           target.removeEventListener(event, handler)
@@ -219,7 +242,7 @@ export function MP4VideoScreen({
       })
       cleanupRef.current?.()
     }
-  }, [src, autoplay, muted, startTime, hasError, retryCount, onReady, onError])
+  }, [src, autoplay, startTime, hasError, onReady, onError])
 
   // Update muted state
   useEffect(() => {
@@ -242,6 +265,23 @@ export function MP4VideoScreen({
       }
     }
   })
+
+  useEffect(() => {
+    if (!isReady) return
+
+    const checkInterval = setInterval(() => {
+      if (videoRef.current && isActiveRef.current) {
+        const video = videoRef.current
+        // If video is paused but should be playing, restart it
+        if (video.paused && !video.ended && autoplay) {
+          console.log("[v0] MP4 video stopped unexpectedly, restarting...")
+          video.play().catch(() => {})
+        }
+      }
+    }, 5000)
+
+    return () => clearInterval(checkInterval)
+  }, [isReady, autoplay])
 
   return (
     <group position={position}>
