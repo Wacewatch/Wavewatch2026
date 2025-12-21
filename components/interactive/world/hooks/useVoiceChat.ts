@@ -30,12 +30,18 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
 
   // Request microphone access
   const requestMicAccess = useCallback(async () => {
+    console.log("[v0] [VoiceChat] requestMicAccess called")
+    console.log("[v0] [VoiceChat] voiceChatEnabled:", voiceChatEnabled)
+    console.log("[v0] [VoiceChat] userId:", userId)
+    console.log("[v0] [VoiceChat] currentRoom:", currentRoom)
+
     if (!voiceChatEnabled) {
-      console.log("[VoiceChat] Voice chat is disabled")
+      console.log("[v0] [VoiceChat] Voice chat is disabled in world settings")
       return false
     }
 
     try {
+      console.log("[v0] [VoiceChat] Requesting microphone access...")
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -45,6 +51,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
         video: false,
       })
 
+      console.log("[v0] [VoiceChat] Microphone access granted")
       localStreamRef.current = stream
 
       // Set up audio analysis for speaking detection
@@ -61,13 +68,14 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
 
       setIsVoiceConnected(true)
       setMicPermissionDenied(false)
+      console.log("[v0] [VoiceChat] Voice chat connected successfully")
       return true
     } catch (error) {
-      console.error("[VoiceChat] Error accessing microphone:", error)
+      console.error("[v0] [VoiceChat] Error accessing microphone:", error)
       setMicPermissionDenied(true)
       return false
     }
-  }, [voiceChatEnabled])
+  }, [voiceChatEnabled, userId, currentRoom])
 
   // Toggle microphone mute
   const toggleMic = useCallback(() => {

@@ -417,6 +417,7 @@ export function CinemaRoomsPanel({ rooms, sessions }: { rooms: any[]; sessions: 
                         <option value="luxury">Luxe</option>
                         <option value="retro">Rétro</option>
                         <option value="modern">Moderne</option>
+                        <option value="horror">Horreur</option>
                       </select>
                     </div>
 

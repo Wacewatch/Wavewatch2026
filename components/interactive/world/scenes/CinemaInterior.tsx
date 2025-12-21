@@ -63,6 +63,8 @@ function getThemeColors(theme?: string): { floor: string; wall: string; seatDefa
       return { floor: "#3d0c02", wall: "#1a0f0a", seatDefault: "#8b4513" }
     case "modern":
       return { floor: "#0f0f0f", wall: "#1f1f1f", seatDefault: "#4a4a4a" }
+    case "horror":
+      return { floor: "#0a0000", wall: "#1a0000", seatDefault: "#8b0000" }
     default:
       return { floor: "#2d1010", wall: "#1a0f0a", seatDefault: "#374151" }
   }
@@ -247,11 +249,310 @@ export function CinemaInterior({
 
   return (
     <>
+      {/* Floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[40, 50]} />
         <meshStandardMaterial color={themeColors.floor} />
       </mesh>
 
+      {/* Horror theme decorations */}
+      {room?.theme === "horror" && (
+        <>
+          {/* Red ambient lights */}
+          <pointLight position={[-15, 3, -20]} color="#ff0000" intensity={0.5} distance={15} />
+          <pointLight position={[15, 3, -20]} color="#ff0000" intensity={0.5} distance={15} />
+          <pointLight position={[-15, 3, 10]} color="#aa0000" intensity={0.3} distance={12} />
+          <pointLight position={[15, 3, 10]} color="#aa0000" intensity={0.3} distance={12} />
+
+          {/* Spider webs in corners */}
+          <mesh position={[-19, 7, -24]}>
+            <planeGeometry args={[2, 2]} />
+            <meshBasicMaterial color="#cccccc" transparent opacity={0.3} />
+          </mesh>
+          <mesh position={[19, 7, -24]}>
+            <planeGeometry args={[2, 2]} />
+            <meshBasicMaterial color="#cccccc" transparent opacity={0.3} />
+          </mesh>
+
+          {/* Skulls on walls */}
+          <mesh position={[-18, 5, 0]}>
+            <sphereGeometry args={[0.4, 16, 16]} />
+            <meshStandardMaterial color="#d4d4d4" />
+          </mesh>
+          <mesh position={[-18, 4.5, 0]}>
+            <boxGeometry args={[0.3, 0.3, 0.2]} />
+            <meshStandardMaterial color="#d4d4d4" />
+          </mesh>
+
+          <mesh position={[18, 5, 0]}>
+            <sphereGeometry args={[0.4, 16, 16]} />
+            <meshStandardMaterial color="#d4d4d4" />
+          </mesh>
+          <mesh position={[18, 4.5, 0]}>
+            <boxGeometry args={[0.3, 0.3, 0.2]} />
+            <meshStandardMaterial color="#d4d4d4" />
+          </mesh>
+
+          {/* Blood drips on screen frame */}
+          <mesh position={[-8, 9, -18]}>
+            <cylinderGeometry args={[0.05, 0.08, 1.5, 8]} />
+            <meshStandardMaterial color="#8b0000" />
+          </mesh>
+          <mesh position={[8, 9, -18]}>
+            <cylinderGeometry args={[0.05, 0.08, 1.5, 8]} />
+            <meshStandardMaterial color="#8b0000" />
+          </mesh>
+
+          {/* Flickering candles */}
+          <mesh position={[-10, 0.5, 20]}>
+            <cylinderGeometry args={[0.1, 0.15, 0.5, 8]} />
+            <meshStandardMaterial color="#2a1a0a" />
+          </mesh>
+          <pointLight position={[-10, 1, 20]} color="#ff8800" intensity={0.5} distance={3} />
+
+          <mesh position={[10, 0.5, 20]}>
+            <cylinderGeometry args={[0.1, 0.15, 0.5, 8]} />
+            <meshStandardMaterial color="#2a1a0a" />
+          </mesh>
+          <pointLight position={[10, 1, 20]} color="#ff8800" intensity={0.5} distance={3} />
+        </>
+      )}
+
+      {/* Luxury theme decorations */}
+      {room?.theme === "luxury" && (
+        <>
+          {/* Gold chandeliers */}
+          <mesh position={[0, 7, 0]}>
+            <cylinderGeometry args={[0.3, 0.5, 1, 8]} />
+            <meshStandardMaterial color="#c9a227" metalness={0.8} roughness={0.2} />
+          </mesh>
+          <pointLight position={[0, 6.5, 0]} color="#ffd700" intensity={1} distance={20} />
+
+          {/* Crystal lights */}
+          {[...Array(8)].map((_, i) => {
+            const angle = (i / 8) * Math.PI * 2
+            const x = Math.cos(angle) * 1.5
+            const z = Math.sin(angle) * 1.5
+            return (
+              <mesh key={i} position={[x, 6, z]}>
+                <octahedronGeometry args={[0.15, 0]} />
+                <meshStandardMaterial color="#ffffff" transparent opacity={0.8} metalness={1} roughness={0} />
+              </mesh>
+            )
+          })}
+
+          {/* Velvet curtains */}
+          <mesh position={[-9.5, 4, -18]}>
+            <boxGeometry args={[0.5, 10, 0.3]} />
+            <meshStandardMaterial color="#8b0a50" />
+          </mesh>
+          <mesh position={[9.5, 4, -18]}>
+            <boxGeometry args={[0.5, 10, 0.3]} />
+            <meshStandardMaterial color="#8b0a50" />
+          </mesh>
+
+          {/* Gold ornaments on walls */}
+          <mesh position={[-18, 6, -10]}>
+            <torusGeometry args={[0.5, 0.1, 16, 32]} />
+            <meshStandardMaterial color="#c9a227" metalness={0.9} roughness={0.1} />
+          </mesh>
+          <mesh position={[18, 6, -10]}>
+            <torusGeometry args={[0.5, 0.1, 16, 32]} />
+            <meshStandardMaterial color="#c9a227" metalness={0.9} roughness={0.1} />
+          </mesh>
+          <mesh position={[-18, 6, 10]}>
+            <torusGeometry args={[0.5, 0.1, 16, 32]} />
+            <meshStandardMaterial color="#c9a227" metalness={0.9} roughness={0.1} />
+          </mesh>
+          <mesh position={[18, 6, 10]}>
+            <torusGeometry args={[0.5, 0.1, 16, 32]} />
+            <meshStandardMaterial color="#c9a227" metalness={0.9} roughness={0.1} />
+          </mesh>
+
+          {/* Red carpet effect with gold trim */}
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 10]}>
+            <planeGeometry args={[6, 30]} />
+            <meshStandardMaterial color="#8b0000" />
+          </mesh>
+        </>
+      )}
+
+      {/* Retro theme decorations */}
+      {room?.theme === "retro" && (
+        <>
+          {/* Vintage popcorn machines */}
+          <mesh position={[-15, 0.8, 20]}>
+            <cylinderGeometry args={[0.4, 0.5, 1.5, 8]} />
+            <meshStandardMaterial color="#ff0000" />
+          </mesh>
+          <mesh position={[-15, 2, 20]}>
+            <sphereGeometry args={[0.5, 16, 16]} />
+            <meshStandardMaterial color="#ffff00" transparent opacity={0.3} />
+          </mesh>
+          <pointLight position={[-15, 2, 20]} color="#ffff00" intensity={0.4} distance={5} />
+
+          <mesh position={[15, 0.8, 20]}>
+            <cylinderGeometry args={[0.4, 0.5, 1.5, 8]} />
+            <meshStandardMaterial color="#ff0000" />
+          </mesh>
+          <mesh position={[15, 2, 20]}>
+            <sphereGeometry args={[0.5, 16, 16]} />
+            <meshStandardMaterial color="#ffff00" transparent opacity={0.3} />
+          </mesh>
+          <pointLight position={[15, 2, 20]} color="#ffff00" intensity={0.4} distance={5} />
+
+          {/* Vintage film reels on walls */}
+          <mesh position={[-18, 5, -5]}>
+            <cylinderGeometry args={[0.6, 0.6, 0.2, 32]} />
+            <meshStandardMaterial color="#8b4513" />
+          </mesh>
+          <mesh position={[-18, 5, -5]} rotation={[0, 0, Math.PI / 4]}>
+            <torusGeometry args={[0.4, 0.05, 16, 32]} />
+            <meshStandardMaterial color="#2f1f0f" />
+          </mesh>
+
+          <mesh position={[18, 5, -5]}>
+            <cylinderGeometry args={[0.6, 0.6, 0.2, 32]} />
+            <meshStandardMaterial color="#8b4513" />
+          </mesh>
+          <mesh position={[18, 5, -5]} rotation={[0, 0, Math.PI / 4]}>
+            <torusGeometry args={[0.4, 0.05, 16, 32]} />
+            <meshStandardMaterial color="#2f1f0f" />
+          </mesh>
+
+          {/* Retro neon lights */}
+          <mesh position={[0, 7, 24]}>
+            <boxGeometry args={[12, 0.3, 0.3]} />
+            <meshBasicMaterial color="#ff00ff" />
+          </mesh>
+          <pointLight position={[0, 7, 24]} color="#ff00ff" intensity={0.8} distance={15} />
+
+          {/* Old projector in back */}
+          <mesh position={[0, 2, 22]}>
+            <boxGeometry args={[1, 0.8, 1.2]} />
+            <meshStandardMaterial color="#4a4a4a" />
+          </mesh>
+          <mesh position={[0, 2.5, 21.5]}>
+            <cylinderGeometry args={[0.3, 0.3, 0.8, 16]} rotation={[Math.PI / 2, 0, 0]} />
+            <meshStandardMaterial color="#2a2a2a" />
+          </mesh>
+          <pointLight position={[0, 2.5, 21]} color="#ffff88" intensity={0.3} distance={8} />
+        </>
+      )}
+
+      {/* Modern theme decorations */}
+      {room?.theme === "modern" && (
+        <>
+          {/* LED strip lights on ceiling */}
+          <mesh position={[-18, 7.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <boxGeometry args={[50, 0.1, 0.1]} />
+            <meshBasicMaterial color="#00ffff" />
+          </mesh>
+          <pointLight position={[-18, 7.5, 0]} color="#00ffff" intensity={0.5} distance={15} />
+
+          <mesh position={[18, 7.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <boxGeometry args={[50, 0.1, 0.1]} />
+            <meshBasicMaterial color="#00ffff" />
+          </mesh>
+          <pointLight position={[18, 7.5, 0]} color="#00ffff" intensity={0.5} distance={15} />
+
+          {/* Minimalist light panels */}
+          <mesh position={[-18, 4, -15]}>
+            <boxGeometry args={[0.1, 3, 1.5]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+          <pointLight position={[-17.5, 4, -15]} color="#ffffff" intensity={0.8} distance={8} />
+
+          <mesh position={[18, 4, -15]}>
+            <boxGeometry args={[0.1, 3, 1.5]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+          <pointLight position={[17.5, 4, -15]} color="#ffffff" intensity={0.8} distance={8} />
+
+          <mesh position={[-18, 4, 15]}>
+            <boxGeometry args={[0.1, 3, 1.5]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+          <pointLight position={[-17.5, 4, 15]} color="#ffffff" intensity={0.8} distance={8} />
+
+          <mesh position={[18, 4, 15]}>
+            <boxGeometry args={[0.1, 3, 1.5]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+          <pointLight position={[17.5, 4, 15]} color="#ffffff" intensity={0.8} distance={8} />
+
+          {/* Geometric wall art */}
+          <mesh position={[-18, 5, 0]}>
+            <dodecahedronGeometry args={[0.8, 0]} />
+            <meshStandardMaterial color="#4a4a4a" metalness={0.9} roughness={0.1} />
+          </mesh>
+
+          <mesh position={[18, 5, 0]}>
+            <icosahedronGeometry args={[0.8, 0]} />
+            <meshStandardMaterial color="#4a4a4a" metalness={0.9} roughness={0.1} />
+          </mesh>
+
+          {/* Sleek speaker systems */}
+          <mesh position={[-9, 5, -18]}>
+            <boxGeometry args={[0.4, 2, 0.4]} />
+            <meshStandardMaterial color="#1a1a1a" metalness={0.8} roughness={0.2} />
+          </mesh>
+          <mesh position={[9, 5, -18]}>
+            <boxGeometry args={[0.4, 2, 0.4]} />
+            <meshStandardMaterial color="#1a1a1a" metalness={0.8} roughness={0.2} />
+          </mesh>
+        </>
+      )}
+
+      {/* Default theme decorations */}
+      {(!room?.theme || room?.theme === "default") && (
+        <>
+          {/* Classic cinema sconces */}
+          <mesh position={[-18, 5, -10]}>
+            <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
+            <meshStandardMaterial color="#8b7355" />
+          </mesh>
+          <pointLight position={[-17.5, 5, -10]} color="#ffaa00" intensity={0.5} distance={8} />
+
+          <mesh position={[18, 5, -10]}>
+            <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
+            <meshStandardMaterial color="#8b7355" />
+          </mesh>
+          <pointLight position={[17.5, 5, -10]} color="#ffaa00" intensity={0.5} distance={8} />
+
+          <mesh position={[-18, 5, 10]}>
+            <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
+            <meshStandardMaterial color="#8b7355" />
+          </mesh>
+          <pointLight position={[-17.5, 5, 10]} color="#ffaa00" intensity={0.5} distance={8} />
+
+          <mesh position={[18, 5, 10]}>
+            <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
+            <meshStandardMaterial color="#8b7355" />
+          </mesh>
+          <pointLight position={[17.5, 5, 10]} color="#ffaa00" intensity={0.5} distance={8} />
+
+          {/* Classic movie posters frames */}
+          <mesh position={[-18, 4, 0]}>
+            <boxGeometry args={[0.1, 2, 1.5]} />
+            <meshStandardMaterial color="#654321" />
+          </mesh>
+
+          <mesh position={[18, 4, 0]}>
+            <boxGeometry args={[0.1, 2, 1.5]} />
+            <meshStandardMaterial color="#654321" />
+          </mesh>
+
+          {/* Exit signs */}
+          <mesh position={[0, 6, 24]}>
+            <boxGeometry args={[1.5, 0.6, 0.2]} />
+            <meshBasicMaterial color="#00ff00" />
+          </mesh>
+          <pointLight position={[0, 6, 24]} color="#00ff00" intensity={0.4} distance={5} />
+        </>
+      )}
+
+      {/* Back wall with screen */}
       <mesh position={[0, 4, 25]}>
         <boxGeometry args={[40, 8, 0.5]} />
         <meshStandardMaterial color={themeColors.wall} />

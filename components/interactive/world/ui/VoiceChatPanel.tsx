@@ -88,10 +88,26 @@ export function VoiceChatPanel({
     return currentRoom
   }
 
+  const handleJoinVoice = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    console.log("[v0] [VoiceChatPanel] Join button clicked")
+    onRequestMicAccess()
+  }
+
+  const handleToggleMic = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onToggleMic()
+  }
+
+  const handleDisconnect = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onDisconnect()
+  }
+
   return (
     <div
       ref={panelRef}
-      className="fixed bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 cursor-move select-none z-50"
+      className="fixed bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 select-none z-50"
       style={{
         left: `${position.x}px`,
         top: `${position.y}px`,
@@ -115,8 +131,8 @@ export function VoiceChatPanel({
         </div>
       ) : !isVoiceConnected ? (
         <button
-          onClick={onRequestMicAccess}
-          className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm py-2 px-3 rounded-lg transition-colors"
+          onClick={handleJoinVoice}
+          className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm py-2 px-3 rounded-lg transition-colors cursor-pointer"
         >
           <Phone className="w-4 h-4" />
           Rejoindre le vocal
@@ -131,8 +147,8 @@ export function VoiceChatPanel({
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={onToggleMic}
-                className={`p-1.5 rounded-lg transition-colors ${
+                onClick={handleToggleMic}
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                   isMicMuted
                     ? "bg-red-600/20 text-red-400 hover:bg-red-600/30"
                     : "bg-green-600/20 text-green-400 hover:bg-green-600/30"
@@ -142,8 +158,8 @@ export function VoiceChatPanel({
                 {isMicMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </button>
               <button
-                onClick={onDisconnect}
-                className="p-1.5 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors"
+                onClick={handleDisconnect}
+                className="p-1.5 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors cursor-pointer"
                 title="Quitter le vocal"
               >
                 <PhoneOff className="w-4 h-4" />
