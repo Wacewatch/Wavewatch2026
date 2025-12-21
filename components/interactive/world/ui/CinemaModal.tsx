@@ -40,21 +40,39 @@ export function CinemaModal({ cinemaRooms, cinemaSessions, cinemaSeats, onEnterR
   const sessions = cinemaSessions || []
 
   useEffect(() => {
-    console.log("[v0] CinemaModal - Total sessions:", sessions.length)
+    console.log("[v0] CinemaModal - Total sessions received:", sessions.length)
+    console.log("[v0] CinemaModal - Current time:", new Date().toISOString())
     sessions.forEach((s) => {
+      const start = new Date(s.schedule_start)
+      const end = new Date(s.schedule_end)
       console.log("[v0] Session:", {
+        id: s.id,
         room_id: s.room_id,
         title: s.movie_title,
         start: s.schedule_start,
+        startParsed: start.toISOString(),
         end: s.schedule_end,
+        endParsed: end.toISOString(),
         is_active: s.is_active,
+        isValid: start < end, // Check if dates are valid
       })
     })
   }, [sessions])
 
   const getRoomSessions = (roomId: string) => {
-    const roomSessions = sessions.filter((s) => s.room_id === roomId && s.is_active)
-    console.log(`[v0] getRoomSessions for ${roomId}:`, roomSessions.length, "sessions")
+    const roomSessions = sessions.filter((s) => {
+      const start = new Date(s.schedule_start)
+      const end = new Date(s.schedule_end)
+      const isValid = start < end
+
+      if (!isValid) {
+        console.warn(`[v0] Invalid session dates for ${s.movie_title}: start ${start} >= end ${end}`)
+        return false
+      }
+
+      return s.room_id === roomId && s.is_active
+    })
+    console.log(`[v0] getRoomSessions for ${roomId}:`, roomSessions.length, "valid sessions")
     return roomSessions.sort((a, b) => new Date(a.schedule_start).getTime() - new Date(b.schedule_start).getTime())
   }
 
@@ -62,24 +80,27 @@ export function CinemaModal({ cinemaRooms, cinemaSessions, cinemaSeats, onEnterR
     const now = new Date()
     const sessions = getRoomSessions(roomId)
 
-    console.log(`[v0] getCurrentSession - now: ${now.toISOString()}`)
+    console.log(`[v0] getCurrentSession - Current time: ${now.toISOString()}`)
     sessions.forEach((s) => {
       const start = new Date(s.schedule_start)
       const end = new Date(s.schedule_end)
-      console.log(`[v0]   Session "${s.movie_title}":`)
-      console.log(`[v0]     start: ${start.toISOString()}`)
-      console.log(`[v0]     end: ${end.toISOString()}`)
-      console.log(`[v0]     isCurrent: ${start <= now && end > now}`)
-      console.log(`[v0]     isFuture: ${start > now}`)
+      const isCurrent = start <= now && end > now
+      console.log(
+        `[v0]   "${s.movie_title}": start ${start.toISOString()}, end ${end.toISOString()}, isCurrent: ${isCurrent}`,
+      )
     })
 
+    // Find currently running session
     const current = sessions.find((s) => new Date(s.schedule_start) <= now && new Date(s.schedule_end) > now)
+    // If no current session, find next upcoming session
     const next = sessions.find((s) => new Date(s.schedule_start) > now)
+
+    const result = current || next
     console.log(
-      `[v0] getCurrentSession for ${roomId}:`,
-      current ? `current: ${current.movie_title}` : next ? `next: ${next.movie_title}` : "none",
+      `[v0] getCurrentSession result:`,
+      result ? `"${result.movie_title}" (${current ? "CURRENT" : "NEXT"})` : "NONE",
     )
-    return current || next
+    return result
   }
 
   const getLastOrCurrentSession = (roomId: string) => {

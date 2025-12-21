@@ -108,43 +108,53 @@ export function CinemaInterior({
 }: CinemaInteriorProps) {
   const room = cinemaRooms.find((r) => r.id === currentCinemaRoom.id) || currentCinemaRoom
 
-  console.log("[v0] CinemaInterior - Room ID:", room.id)
-  console.log("[v0] CinemaInterior - Total sessions:", cinemaSessions.length)
+  console.log("[v0] CinemaInterior MOUNTED")
+  console.log("[v0] Room:", room.name || `Salle ${room.room_number}`, "ID:", room.id)
+  console.log("[v0] Total sessions received:", cinemaSessions.length)
+  console.log("[v0] Current time:", new Date().toISOString())
 
   const roomSessions = (cinemaSessions || [])
     .filter((s) => {
+      const start = new Date(s.schedule_start)
+      const end = new Date(s.schedule_end)
+      const isValid = start < end
+
+      if (!isValid) {
+        console.warn(`[v0] INVALID session dates for "${s.movie_title}": start >= end`)
+        return false
+      }
+
       const matches = s.room_id === room.id && s.is_active
-      console.log(`[v0] Session ${s.id} - room_id: ${s.room_id}, matches: ${matches}`)
+      console.log(
+        `[v0] Session "${s.movie_title}" - room match: ${s.room_id === room.id}, active: ${s.is_active}, valid: ${isValid}`,
+      )
       return matches
     })
     .sort((a, b) => new Date(a.schedule_start).getTime() - new Date(b.schedule_start).getTime())
 
-  console.log("[v0] CinemaInterior - Room sessions:", roomSessions.length)
+  console.log("[v0] Filtered room sessions:", roomSessions.length)
 
   const now = new Date()
-  console.log("[v0] Current time (now):", now.toISOString())
 
   roomSessions.forEach((s, idx) => {
     const start = new Date(s.schedule_start)
     const end = new Date(s.schedule_end)
-    console.log(`[v0] Session ${idx + 1} (${s.movie_title}):`)
-    console.log(`  - start: ${start.toISOString()} (${start.getTime()})`)
-    console.log(`  - end: ${end.toISOString()} (${end.getTime()})`)
-    console.log(`  - now: ${now.toISOString()} (${now.getTime()})`)
-    console.log(`  - is after start: ${start <= now}`)
-    console.log(`  - is before end: ${end > now}`)
-    console.log(`  - is current: ${start <= now && end > now}`)
+    const isCurrent = start <= now && end > now
+    const isFuture = start > now
+    console.log(`[v0] Session ${idx + 1}: "${s.movie_title}"`)
+    console.log(`[v0]   Start: ${start.toISOString()}`)
+    console.log(`[v0]   End: ${end.toISOString()}`)
+    console.log(`[v0]   Status: ${isCurrent ? "CURRENT" : isFuture ? "FUTURE" : "PAST"}`)
   })
 
   const currentSession =
     roomSessions.find((s) => {
       const start = new Date(s.schedule_start)
       const end = new Date(s.schedule_end)
-      const isCurrent = start <= now && end > now
-      return isCurrent
+      return start <= now && end > now
     }) || roomSessions.find((s) => new Date(s.schedule_start) > now)
 
-  console.log("[v0] CinemaInterior - Current session:", currentSession ? currentSession.movie_title : "none")
+  console.log("[v0] Selected session:", currentSession ? `"${currentSession.movie_title}"` : "NONE")
 
   const nextSession = roomSessions.find((s) => new Date(s.schedule_start) > now)
 
