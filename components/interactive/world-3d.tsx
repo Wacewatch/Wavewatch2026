@@ -1339,6 +1339,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           movieTitle={currentCinemaRoom.movie_title}
           embedUrl={currentCinemaRoom.embed_url}
           onClose={() => setShowMovieFullscreen(false)}
+          scheduleStart={currentCinemaRoom.schedule_start}
         />
       )}
 

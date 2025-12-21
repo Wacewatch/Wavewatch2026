@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { createClient } from "@/lib/supabase/client"
-import { Save, Mic } from "lucide-react"
+import { Save, Mic, Building2, Film, Gamepad2, Music, Trophy, Users, Eye, MessageSquare } from "lucide-react"
 
 interface WorldSettings {
   maxCapacity: number
@@ -16,6 +16,16 @@ interface WorldSettings {
   enableEmojis: boolean
   enableJumping: boolean
   voiceChatEnabled: boolean
+  enableCinema: boolean
+  enableArcade: boolean
+  enableDisco: boolean
+  enableStadium: boolean
+  enableInfoPanels: boolean
+  playerInteractionsEnabled: boolean
+  showOtherPlayers: boolean
+  enablePrivateMessages: boolean
+  enableDancing: boolean
+  enableSitting: boolean
 }
 
 export function WorldSettingsPanel({ settings }: { settings: any[] }) {
@@ -34,6 +44,16 @@ export function WorldSettingsPanel({ settings }: { settings: any[] }) {
     enableEmojis: existingSettings.enableEmojis ?? true,
     enableJumping: existingSettings.enableJumping ?? true,
     voiceChatEnabled: existingSettings.voiceChatEnabled ?? false,
+    enableCinema: existingSettings.enableCinema ?? true,
+    enableArcade: existingSettings.enableArcade ?? true,
+    enableDisco: existingSettings.enableDisco ?? true,
+    enableStadium: existingSettings.enableStadium ?? true,
+    enableInfoPanels: existingSettings.enableInfoPanels ?? true,
+    playerInteractionsEnabled: existingSettings.playerInteractionsEnabled ?? true,
+    showOtherPlayers: existingSettings.showOtherPlayers ?? true,
+    enablePrivateMessages: existingSettings.enablePrivateMessages ?? true,
+    enableDancing: existingSettings.enableDancing ?? true,
+    enableSitting: existingSettings.enableSitting ?? true,
   })
 
   const handleSave = async () => {
@@ -99,43 +119,162 @@ export function WorldSettingsPanel({ settings }: { settings: any[] }) {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          <label className="flex items-center gap-2 text-sm text-gray-300">
-            <input
-              type="checkbox"
-              className="rounded"
-              checked={worldSettings.showStatusBadges}
-              onChange={(e) => setWorldSettings({ ...worldSettings, showStatusBadges: e.target.checked })}
-            />
-            Afficher les badges de statut
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-300">
-            <input
-              type="checkbox"
-              className="rounded"
-              checked={worldSettings.enableChat}
-              onChange={(e) => setWorldSettings({ ...worldSettings, enableChat: e.target.checked })}
-            />
-            Activer le chat texte
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-300">
-            <input
-              type="checkbox"
-              className="rounded"
-              checked={worldSettings.enableEmojis}
-              onChange={(e) => setWorldSettings({ ...worldSettings, enableEmojis: e.target.checked })}
-            />
-            Activer les émojis
-          </label>
-          <label className="flex items-center gap-2 text-sm text-gray-300">
-            <input
-              type="checkbox"
-              className="rounded"
-              checked={worldSettings.enableJumping}
-              onChange={(e) => setWorldSettings({ ...worldSettings, enableJumping: e.target.checked })}
-            />
-            Activer le saut
-          </label>
+        <div className="border-t border-gray-700 pt-4 mt-4">
+          <h4 className="text-md font-semibold text-white mb-3 flex items-center gap-2">
+            <Building2 className="w-4 h-4" />
+            Lieux / Bâtiments
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.enableCinema}
+                onChange={(e) => setWorldSettings({ ...worldSettings, enableCinema: e.target.checked })}
+              />
+              <Film className="w-4 h-4" />
+              Activer le Cinéma
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.enableArcade}
+                onChange={(e) => setWorldSettings({ ...worldSettings, enableArcade: e.target.checked })}
+              />
+              <Gamepad2 className="w-4 h-4" />
+              Activer l'Arcade
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.enableDisco}
+                onChange={(e) => setWorldSettings({ ...worldSettings, enableDisco: e.target.checked })}
+              />
+              <Music className="w-4 h-4" />
+              Activer la Discothèque
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.enableStadium}
+                onChange={(e) => setWorldSettings({ ...worldSettings, enableStadium: e.target.checked })}
+              />
+              <Trophy className="w-4 h-4" />
+              Activer le Stade
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.enableInfoPanels}
+                onChange={(e) => setWorldSettings({ ...worldSettings, enableInfoPanels: e.target.checked })}
+              />
+              <Eye className="w-4 h-4" />
+              Activer les Panneaux d'Infos
+            </label>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-700 pt-4 mt-4">
+          <h4 className="text-md font-semibold text-white mb-3 flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Interactions Joueurs
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.showOtherPlayers}
+                onChange={(e) => setWorldSettings({ ...worldSettings, showOtherPlayers: e.target.checked })}
+              />
+              Afficher les autres joueurs
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.playerInteractionsEnabled}
+                onChange={(e) => setWorldSettings({ ...worldSettings, playerInteractionsEnabled: e.target.checked })}
+              />
+              Activer les interactions entre joueurs
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.enablePrivateMessages}
+                onChange={(e) => setWorldSettings({ ...worldSettings, enablePrivateMessages: e.target.checked })}
+              />
+              Activer les messages privés
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.showStatusBadges}
+                onChange={(e) => setWorldSettings({ ...worldSettings, showStatusBadges: e.target.checked })}
+              />
+              Afficher les badges de statut
+            </label>
+          </div>
+        </div>
+
+        <div className="border-t border-gray-700 pt-4 mt-4">
+          <h4 className="text-md font-semibold text-white mb-3 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Actions & Communication
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.enableChat}
+                onChange={(e) => setWorldSettings({ ...worldSettings, enableChat: e.target.checked })}
+              />
+              Activer le chat texte
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.enableEmojis}
+                onChange={(e) => setWorldSettings({ ...worldSettings, enableEmojis: e.target.checked })}
+              />
+              Activer les émojis
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.enableJumping}
+                onChange={(e) => setWorldSettings({ ...worldSettings, enableJumping: e.target.checked })}
+              />
+              Activer le saut
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.enableDancing}
+                onChange={(e) => setWorldSettings({ ...worldSettings, enableDancing: e.target.checked })}
+              />
+              Activer la danse
+            </label>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                className="rounded"
+                checked={worldSettings.enableSitting}
+                onChange={(e) => setWorldSettings({ ...worldSettings, enableSitting: e.target.checked })}
+              />
+              Activer s'asseoir
+            </label>
+          </div>
         </div>
 
         <div className="border-t border-gray-700 pt-4 mt-4">
