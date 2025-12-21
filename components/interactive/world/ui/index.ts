@@ -1,18 +1,19 @@
-export { ChatInput } from './ChatInput'
-export { SettingsModal } from './SettingsModal'
-export { MapModal } from './MapModal'
-export { AvatarCustomizer } from './AvatarCustomizer'
-export { CinemaModal } from './CinemaModal'
-export { ClosedModal } from './ClosedModal'
-export { ArcadeModal } from './ArcadeModal'
-export { ArcadeGameView } from './ArcadeGameView'
-export { ExternalGameModal } from './ExternalGameModal'
-export { StadiumModal } from './StadiumModal'
-export { StadiumInfoBar } from './StadiumInfoBar'
-export { QuickActionsPanel } from './QuickActionsPanel'
-export { RoomActionButtons } from './RoomActionButtons'
-export { ActionButtons } from './ActionButtons'
-export { MenuDropdown } from './MenuDropdown'
-export { ChatModal } from './ChatModal'
-export { MovieFullscreenModal } from './MovieFullscreenModal'
-export { default as WorldLoadingScreen } from './WorldLoadingScreen'
+export { ChatInput } from "./ChatInput"
+export { SettingsModal } from "./SettingsModal"
+export { MapModal } from "./MapModal"
+export { AvatarCustomizer } from "./AvatarCustomizer"
+export { CinemaModal } from "./CinemaModal"
+export { ClosedModal } from "./ClosedModal"
+export { ArcadeModal } from "./ArcadeModal"
+export { ArcadeGameView } from "./ArcadeGameView"
+export { ExternalGameModal } from "./ExternalGameModal"
+export { StadiumModal } from "./StadiumModal"
+export { StadiumInfoBar } from "./StadiumInfoBar"
+export { QuickActionsPanel } from "./QuickActionsPanel"
+export { RoomActionButtons } from "./RoomActionButtons"
+export { ActionButtons } from "./ActionButtons"
+export { MenuDropdown } from "./MenuDropdown"
+export { ChatModal } from "./ChatModal"
+export { MovieFullscreenModal } from "./MovieFullscreenModal"
+export { default as WorldLoadingScreen } from "./WorldLoadingScreen"
+export { VoiceChatPanel } from "./VoiceChatPanel"

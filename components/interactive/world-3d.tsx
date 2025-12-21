@@ -1,18 +1,12 @@
 "use client"
 
+import type React from "react"
+
 import { Canvas } from "@react-three/fiber"
 import { OrbitControls, Html, PerspectiveCamera, Stats } from "@react-three/drei"
 import { useEffect, useRef, useState, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
-import {
-  Minimize,
-  Crown,
-  Shield,
-  Menu,
-  Play,
-  Maximize2,
-  Star,
-} from "lucide-react"
+import { Minimize, Crown, Shield, Menu, Play, Maximize2, Star } from "lucide-react"
 import { useRouter } from "next/navigation"
 
 // Import refactored components from world/
@@ -57,6 +51,7 @@ import {
   ChatModal,
   MovieFullscreenModal,
   WorldLoadingScreen,
+  VoiceChatPanel,
   // Building Components
   DiscoBuilding,
   CinemaBuilding,
@@ -77,7 +72,7 @@ import {
   useDataLoaders,
   useWorldChat,
   useWorldPreloader,
-  // useWorldSettings, // Available for future integration
+  useVoiceChat,
   // Debug components
   CollisionDebugVisualization,
 } from "./world"
@@ -118,9 +113,9 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   const [showChatInput, setShowChatInput] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [showBadgesPreference, setShowBadgesPreference] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('interactive_show_badges')
-      return saved !== null ? saved === 'true' : true
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("interactive_show_badges")
+      return saved !== null ? saved === "true" : true
     }
     return true
   })
@@ -153,33 +148,98 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   const [stadiumSeat, setStadiumSeat] = useState<{ row: number; side: string } | null>(null) // Siège dans le stade
   const [showMenu, setShowMenu] = useState(false) // Added this state
 
+  const [currentRoom, setCurrentRoom] = useState<string | null>(null)
+  const [nearbyBuilding, setNearbyBuilding] = useState<{ name: string; type: string; emoji: string } | null>(null)
+  const [nearbyInfoPanel, setNearbyInfoPanel] = useState(false) // Panneau info près du spawn
+
+  // World Settings state
+  const [worldSettings, setWorldSettings] = useState({
+    maxCapacity: 100,
+    worldMode: "day" as "day" | "night" | "sunset" | "christmas",
+    voiceChatEnabled: false,
+    playerInteractionsEnabled: true,
+    showStatusBadges: true,
+    enableChat: true,
+    enableEmojis: true,
+    enableJumping: true,
+  })
+
+  const [graphicsQuality, setGraphicsQuality] = useState("medium")
+  const [isMobileMode, setIsMobileMode] = useState(false)
+  const [controlMode, setControlMode] = useState<"auto" | "pc" | "mobile">("auto")
+  const [povMode, setPovMode] = useState(false)
+  const [fpsRotation, setFpsRotation] = useState({ yaw: 0, pitch: 0 })
+
+  const [countdown, setCountdown] = useState<string>("")
+
+  // Synchronized actions state
+  const [playerActions, setPlayerActions] = useState<
+    Record<string, { action: string; timestamp: number; emoji?: string }>
+  >({})
+  const actionsChannelRef = useRef<any>(null)
+  const fpsStatsContainerRef = useRef<HTMLDivElement>(null)
+  const [quickAction, setQuickAction] = useState<string | null>(null) // State for current quick action animation
+  const cameraAngleRef = useRef<number>(0) // Ref for tracking camera azimuth angle
+  const orbitControlsRef = useRef<any>(null) // Ref for OrbitControls
+  const handleJumpRef = useRef<() => void>(() => {}) // Ref for jump function (updated after handleJump is defined)
+
+  const isMoving = movement.x !== 0 || movement.z !== 0
+
+  // World preloader hook - shows loading screen while assets are loading
+  const {
+    isLoading: isWorldLoading,
+    progress: loadingProgress,
+    currentStep: loadingStep,
+    completedSteps: loadingCompletedSteps,
+    forceComplete: skipLoading,
+  } = useWorldPreloader({ enabled: true, minLoadingTime: 2500 })
+
+  // Voice Chat State - moved after currentRoom declaration
+  const {
+    isVoiceConnected,
+    isMicMuted,
+    isSpeaking,
+    voicePeers,
+    micPermissionDenied,
+    requestMicAccess,
+    toggleMic,
+    disconnect,
+  } = useVoiceChat({
+    userId: userId, // Changed from visitorId to userId for consistency
+    currentRoom,
+    voiceChatEnabled: worldSettings.voiceChatEnabled,
+  })
+
   // Room visit tracking
   const currentRoomVisitIdRef = useRef<string | null>(null)
   const currentRoomStartTimeRef = useRef<Date | null>(null)
 
   // Track room entry
-  const handleRoomEnter = useCallback(async (roomName: string) => {
-    if (!visitId) return
+  const handleRoomEnter = useCallback(
+    async (roomName: string) => {
+      if (!visitId) return
 
-    try {
-      const { data, error } = await supabase
-        .from("interactive_room_visits")
-        .insert({
-          visit_id: visitId,
-          user_id: userId,
-          room_name: roomName,
-        })
-        .select("id")
-        .single()
+      try {
+        const { data, error } = await supabase
+          .from("interactive_room_visits")
+          .insert({
+            visit_id: visitId,
+            user_id: userId,
+            room_name: roomName,
+          })
+          .select("id")
+          .single()
 
-      if (data) {
-        currentRoomVisitIdRef.current = data.id
-        currentRoomStartTimeRef.current = new Date()
+        if (data) {
+          currentRoomVisitIdRef.current = data.id
+          currentRoomStartTimeRef.current = new Date()
+        }
+      } catch (err) {
+        console.error("Error tracking room entry:", err)
       }
-    } catch (err) {
-      console.error("Error tracking room entry:", err)
-    }
-  }, [visitId, userId])
+    },
+    [visitId, userId],
+  )
 
   // Track room exit
   const handleRoomLeave = useCallback(async (roomName: string) => {
@@ -204,51 +264,8 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     }
   }, [])
 
-  const [currentRoom, setCurrentRoom] = useState<string | null>(null)
-  const [nearbyBuilding, setNearbyBuilding] = useState<{ name: string; type: string; emoji: string } | null>(null)
-  const [nearbyInfoPanel, setNearbyInfoPanel] = useState(false) // Panneau info près du spawn
-
-  // États d'ouverture des lieux - fournis par useDataLoaders
+  // États d'ouverture des lieux - fourni par useDataLoaders
   // isArcadeOpen, isStadiumOpen, isDiscoOpen, setIsArcadeOpen, setIsStadiumOpen, setIsDiscoOpen
-
-  const [worldSettings, setWorldSettings] = useState({
-    maxCapacity: 100,
-    worldMode: "day" as "day" | "night" | "sunset" | "christmas",
-    voiceChatEnabled: false,
-    playerInteractionsEnabled: true,
-    showStatusBadges: true,
-    enableChat: true,
-    enableEmojis: true,
-    enableJumping: true,
-  })
-
-  const [graphicsQuality, setGraphicsQuality] = useState("medium")
-  const [isMobileMode, setIsMobileMode] = useState(false)
-  const [controlMode, setControlMode] = useState<"auto" | "pc" | "mobile">("auto")
-  const [povMode, setPovMode] = useState(false)
-  const [fpsRotation, setFpsRotation] = useState({ yaw: 0, pitch: 0 })
-
-  const [countdown, setCountdown] = useState<string>("")
-
-  // Synchronized actions state
-  const [playerActions, setPlayerActions] = useState<Record<string, { action: string; timestamp: number; emoji?: string }>>({})
-  const actionsChannelRef = useRef<any>(null)
-  const fpsStatsContainerRef = useRef<HTMLDivElement>(null)
-  const [quickAction, setQuickAction] = useState<string | null>(null) // State for current quick action animation
-  const cameraAngleRef = useRef<number>(0) // Ref for tracking camera azimuth angle
-  const orbitControlsRef = useRef<any>(null) // Ref for OrbitControls
-  const handleJumpRef = useRef<() => void>(() => {}) // Ref for jump function (updated after handleJump is defined)
-
-  const isMoving = movement.x !== 0 || movement.z !== 0
-
-  // World preloader hook - shows loading screen while assets are loading
-  const {
-    isLoading: isWorldLoading,
-    progress: loadingProgress,
-    currentStep: loadingStep,
-    completedSteps: loadingCompletedSteps,
-    forceComplete: skipLoading,
-  } = useWorldPreloader({ enabled: true, minLoadingTime: 2500 })
 
   // Arrêter la danse quand le joueur bouge et mettre à jour la BDD
   useEffect(() => {
@@ -278,14 +295,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   } = useDataLoaders({ userId })
 
   // Chat hook - provides messages, chat input, chat bubbles and send functionality
-  const {
-    messages,
-    roomMessages,
-    chatInput,
-    setChatInput,
-    playerChatBubbles,
-    sendMessage,
-  } = useWorldChat({
+  const { messages, roomMessages, chatInput, setChatInput, playerChatBubbles, sendMessage } = useWorldChat({
     userId: userProfile?.id || userId,
     username: myProfile?.username || userProfile?.username || "Joueur",
     currentCinemaRoom,
@@ -293,10 +303,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   })
 
   // Player movement hook - handles keyboard, joystick, collisions
-  const {
-    handleJoystickMove,
-    handleCameraRotate: hookHandleCameraRotate,
-  } = usePlayerMovement({
+  const { handleJoystickMove, handleCameraRotate: hookHandleCameraRotate } = usePlayerMovement({
     userId,
     currentRoom,
     povMode,
@@ -314,9 +321,12 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   })
 
   // Wrapper for camera rotation that provides setFpsRotation
-  const handleCameraRotate = useCallback((deltaYaw: number, deltaPitch: number) => {
-    hookHandleCameraRotate(deltaYaw, deltaPitch, setFpsRotation)
-  }, [hookHandleCameraRotate])
+  const handleCameraRotate = useCallback(
+    (deltaYaw: number, deltaPitch: number) => {
+      hookHandleCameraRotate(deltaYaw, deltaPitch, setFpsRotation)
+    },
+    [hookHandleCameraRotate],
+  )
 
   // Custom hooks for room navigation and seating
   const {
@@ -367,10 +377,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     setIsStadiumOpen,
   })
 
-  const {
-    handleSitInStadium,
-    handleStandUpFromStadium,
-  } = useStadiumSeating({
+  const { handleSitInStadium, handleStandUpFromStadium } = useStadiumSeating({
     userId,
     myPosition,
     stadiumSeat,
@@ -380,10 +387,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     setStadiumSeat,
   })
 
-  const {
-    handleSitInAnySeat,
-    handleSitInSeat,
-  } = useCinemaSeats({
+  const { handleSitInAnySeat, handleSitInSeat } = useCinemaSeats({
     userId,
     currentCinemaRoom,
     mySeat,
@@ -396,10 +400,10 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   // Recalculate online count based on actually displayed players (with same filters as rendering)
   useEffect(() => {
     const actualPlayersInWorld = otherPlayers.filter((p) => {
-      const playerIsInSameRoom =
-        currentRoom === p.current_room || (currentRoom === null && p.current_room === null)
-      const hasValidProfile = (p.user_profiles?.username || p.username) ? true : false
-      const isAtDefaultPosition = (p.position_x === 0 && p.position_z === 0 && (p.position_y === 0 || p.position_y === 0.5))
+      const playerIsInSameRoom = currentRoom === p.current_room || (currentRoom === null && p.current_room === null)
+      const hasValidProfile = p.user_profiles?.username || p.username ? true : false
+      const isAtDefaultPosition =
+        p.position_x === 0 && p.position_z === 0 && (p.position_y === 0 || p.position_y === 0.5)
       return playerIsInSameRoom && hasValidProfile && !isAtDefaultPosition
     })
     setOnlineCount(actualPlayersInWorld.length + 1) // +1 for current user
@@ -421,15 +425,15 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   // Désactiver le scroll quand un jeu arcade est ouvert
   useEffect(() => {
     if (currentArcadeMachine) {
-      document.body.style.overflow = 'hidden'
-      document.documentElement.style.overflow = 'hidden'
+      document.body.style.overflow = "hidden"
+      document.documentElement.style.overflow = "hidden"
     } else {
-      document.body.style.overflow = ''
-      document.documentElement.style.overflow = ''
+      document.body.style.overflow = ""
+      document.documentElement.style.overflow = ""
     }
     return () => {
-      document.body.style.overflow = ''
-      document.documentElement.style.overflow = ''
+      document.body.style.overflow = ""
+      document.documentElement.style.overflow = ""
     }
   }, [currentArcadeMachine])
 
@@ -472,7 +476,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   // Collision zones for debug visualization - imported from constants.ts
   const collisionZonesData = useMemo(
     () => getCollisionZonesForQuality(graphicsQuality as GraphicsQuality),
-    [graphicsQuality]
+    [graphicsQuality],
   )
 
   // checkCollision is now provided by usePlayerMovement hook
@@ -509,14 +513,14 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           event: "*",
           schema: "public",
           table: "interactive_world_settings",
-          filter: "setting_key=eq.world_config"
+          filter: "setting_key=eq.world_config",
         },
         (payload: any) => {
           console.log("[WorldSettings] Realtime update received:", payload)
           if (payload.new && payload.new.setting_value) {
             setWorldSettings(payload.new.setting_value as any)
           }
-        }
+        },
       )
       .subscribe()
 
@@ -698,10 +702,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     setShowQuickActions(false)
 
     // Update dance state in database (synced via realtime subscription)
-    await supabase
-      .from("interactive_profiles")
-      .update({ is_dancing: newDancingState })
-      .eq("user_id", userId)
+    await supabase.from("interactive_profiles").update({ is_dancing: newDancingState }).eq("user_id", userId)
   }, [isDancing, userProfile, userId])
 
   // sendMessage is now provided by useWorldChat hook
@@ -731,7 +732,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
   const handleOpenExternalMachine = () => {
     if (pendingExternalMachine && externalCountdown === 0) {
-      window.open(pendingExternalMachine.url, '_blank')
+      window.open(pendingExternalMachine.url, "_blank")
       setPendingExternalMachine(null)
     }
   }
@@ -767,6 +768,18 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   // Gestion des touches F ou Enter pour entrer dans les bâtiments ou ouvrir la map
   useEffect(() => {
     const handleInteractKey = (e: KeyboardEvent) => {
+      // Handling interact key (F or Enter) for entering buildings
+      if ((e.key === "e" || e.key === "E") && currentRoom === "cinema" && !showChatInput) {
+        if (mySeat !== null) {
+          // Se lever
+          handleSitInSeat()
+        } else {
+          // S'asseoir
+          handleSitInAnySeat()
+        }
+        return
+      }
+
       if ((e.key === "f" || e.key === "F" || e.key === "Enter") && currentRoom === null && !showChatInput) {
         // Si près d'un bâtiment interactif, entrer dedans
         if (nearbyBuilding) {
@@ -784,7 +797,16 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     return () => {
       window.removeEventListener("keydown", handleInteractKey)
     }
-  }, [nearbyBuilding, nearbyInfoPanel, currentRoom, showMap, showChatInput])
+  }, [
+    nearbyBuilding,
+    nearbyInfoPanel,
+    currentRoom,
+    showMap,
+    showChatInput,
+    mySeat,
+    handleSitInAnySeat,
+    handleSitInSeat,
+  ])
 
   // Détecter la proximité des bâtiments et du panneau info
   useEffect(() => {
@@ -796,10 +818,10 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
     const distanceToArcade = Math.sqrt(Math.pow(myPosition.x - 0, 2) + Math.pow(myPosition.z - 15, 2))
     const distanceToCinema = Math.sqrt(Math.pow(myPosition.x - 15, 2) + Math.pow(myPosition.z - 0, 2))
-    const distanceToStadium = Math.sqrt(Math.pow(myPosition.x - 25, 2) + Math.pow(myPosition.z - (-15), 2))
-    const distanceToDisco = Math.sqrt(Math.pow(myPosition.x - (-15), 2) + Math.pow(myPosition.z - (-20), 2))
+    const distanceToStadium = Math.sqrt(Math.pow(myPosition.x - 25, 2) + Math.pow(myPosition.z - -15, 2))
+    const distanceToDisco = Math.sqrt(Math.pow(myPosition.x - -15, 2) + Math.pow(myPosition.z - -20, 2))
     // Panneau info près de la plaza (position: 6.3, -17.1)
-    const distanceToInfoPanel = Math.sqrt(Math.pow(myPosition.x - 6.3, 2) + Math.pow(myPosition.z - (-17.1), 2))
+    const distanceToInfoPanel = Math.sqrt(Math.pow(myPosition.x - 6.3, 2) + Math.pow(myPosition.z - -17.1, 2))
 
     const proximityThreshold = 8
     const infoPanelThreshold = 5
@@ -916,7 +938,11 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       setMyProfile(data)
 
       if (data) {
-        const isInSpecialRoom = data.current_room === "stadium" || data.current_room === "arcade" || data.current_room === "disco" || (data.current_room && data.current_room.startsWith('cinema_'))
+        const isInSpecialRoom =
+          data.current_room === "stadium" ||
+          data.current_room === "arcade" ||
+          data.current_room === "disco" ||
+          (data.current_room && data.current_room.startsWith("cinema_"))
 
         // Si l'utilisateur était dans une salle spéciale (cinéma, stade, arcade),
         // on le remet au spawn et on libère son siège car c'est un nouveau chargement de page
@@ -928,28 +954,28 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           setSavedMapPosition(spawnPosition)
 
           // Libérer le siège dans le cinéma si c'était une salle de cinéma
-          if (data.current_room && data.current_room.startsWith('cinema_')) {
+          if (data.current_room && data.current_room.startsWith("cinema_")) {
             supabase
-              .from('interactive_cinema_seats')
+              .from("interactive_cinema_seats")
               .update({ is_occupied: false, user_id: null, occupied_at: null })
-              .eq('user_id', data.user_id)
+              .eq("user_id", data.user_id)
               .then(() => {
-                console.log('[Cinema] Released seat on page reload')
+                console.log("[Cinema] Released seat on page reload")
               })
           }
 
           // Mettre à jour la BDD pour refléter la nouvelle position
           supabase
-            .from('interactive_profiles')
+            .from("interactive_profiles")
             .update({
               current_room: null,
               position_x: spawnPosition.x,
               position_y: spawnPosition.y,
               position_z: spawnPosition.z,
             })
-            .eq('user_id', userId)
+            .eq("user_id", userId)
             .then(() => {
-              console.log('[Profile] Reset to spawn on page reload')
+              console.log("[Profile] Reset to spawn on page reload")
             })
         } else {
           // Comportement normal pour les joueurs sur la map
@@ -970,7 +996,11 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
     // If user is in a special room (cinema, stadium, arcade), reset to spawn
     // Otherwise, save current position to restore it next time
-    const isInSpecialRoom = currentRoom === "stadium" || currentRoom === "arcade" || currentRoom === "disco" || (typeof currentRoom === 'object' && currentRoom !== null)
+    const isInSpecialRoom =
+      currentRoom === "stadium" ||
+      currentRoom === "arcade" ||
+      currentRoom === "disco" ||
+      (typeof currentRoom === "object" && currentRoom !== null)
 
     const positionToSave = isInSpecialRoom
       ? { x: 4.5, y: -0.35, z: -27 }
@@ -1004,7 +1034,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
     // Longer delay to ensure all updates are committed before navigation
     console.log("[World] Waiting before navigation...")
-    await new Promise(resolve => setTimeout(resolve, 300))
+    await new Promise((resolve) => setTimeout(resolve, 300))
 
     console.log("[World] Navigating to home...")
     router.push("/")
@@ -1023,7 +1053,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       )}
 
       {/* FPS Stats container - centered left */}
-      {process.env.NODE_ENV === 'development' && (
+      {process.env.NODE_ENV === "development" && (
         <div ref={fpsStatsContainerRef} className="absolute left-4 top-1/2 -translate-y-1/2 z-50" />
       )}
       <Canvas
@@ -1038,7 +1068,9 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         }}
       >
         {/* FPS Stats - only in development mode */}
-        {process.env.NODE_ENV === 'development' && fpsStatsContainerRef.current && <Stats showPanel={0} parent={fpsStatsContainerRef as React.RefObject<HTMLElement>} />}
+        {process.env.NODE_ENV === "development" && fpsStatsContainerRef.current && (
+          <Stats showPanel={0} parent={fpsStatsContainerRef as React.RefObject<HTMLElement>} />
+        )}
 
         {povMode && (
           <>
@@ -1055,7 +1087,9 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         <WorldEnvironment
           worldMode={worldSettings.worldMode}
           graphicsQuality={graphicsQuality as GraphicsQuality}
-          isIndoors={!!(currentCinemaRoom || currentRoom === "stadium" || currentRoom === "arcade" || currentRoom === "disco")}
+          isIndoors={
+            !!(currentCinemaRoom || currentRoom === "stadium" || currentRoom === "arcade" || currentRoom === "disco")
+          }
         />
 
         {/* Update rendering logic to use currentRoom state instead of userProfile */}
@@ -1071,18 +1105,10 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
             {showCollisionDebug && <CollisionDebugVisualization collisionZones={collisionZonesData} />}
 
             {/* Arcade building */}
-            <ArcadeBuilding
-              position={[0, 0, 15]}
-              playerPosition={myPosition}
-              onEnter={handleEnterArcade}
-            />
+            <ArcadeBuilding position={[0, 0, 15]} playerPosition={myPosition} onEnter={handleEnterArcade} />
 
             {/* Stadium building */}
-            <StadiumBuilding
-              position={[25, 0, -15]}
-              playerPosition={myPosition}
-              onEnter={handleEnterStadium}
-            />
+            <StadiumBuilding position={[25, 0, -15]} playerPosition={myPosition} onEnter={handleEnterStadium} />
 
             {/* Decorative buildings (non-interactive) */}
             <DecorativeBuildings />
@@ -1096,18 +1122,10 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
             />
 
             {/* Discothèque Building */}
-            <DiscoBuilding
-              position={[-15, 0, -20]}
-              playerPosition={myPosition}
-              onEnter={handleEnterDisco}
-            />
+            <DiscoBuilding position={[-15, 0, -20]} playerPosition={myPosition} onEnter={handleEnterDisco} />
 
             {/* Cinema Building */}
-            <CinemaBuilding
-              position={[15, 0, 0]}
-              playerPosition={myPosition}
-              onEnter={() => setShowCinema(true)}
-            />
+            <CinemaBuilding position={[15, 0, 0]} playerPosition={myPosition} onEnter={() => setShowCinema(true)} />
 
             {/* Path Network - paved paths connecting buildings */}
             <PathNetwork worldMode={worldSettings.worldMode} graphicsQuality={graphicsQuality as GraphicsQuality} />
@@ -1116,10 +1134,16 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
             <CentralPlaza worldMode={worldSettings.worldMode} graphicsQuality={graphicsQuality as GraphicsQuality} />
 
             {/* Ambient colored lampposts around the world */}
-            <AmbientLamppostCollection worldMode={worldSettings.worldMode} graphicsQuality={graphicsQuality as GraphicsQuality} />
+            <AmbientLamppostCollection
+              worldMode={worldSettings.worldMode}
+              graphicsQuality={graphicsQuality as GraphicsQuality}
+            />
 
             {/* Decorations (trees, lampposts, benches, bushes) - extracted component */}
-            <WorldDecorations worldMode={worldSettings.worldMode} graphicsQuality={graphicsQuality as GraphicsQuality} />
+            <WorldDecorations
+              worldMode={worldSettings.worldMode}
+              graphicsQuality={graphicsQuality as GraphicsQuality}
+            />
           </>
         ) : currentRoom === "arcade" ? (
           <ArcadeInterior
@@ -1153,10 +1177,11 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
             const playerIsInSameRoom =
               currentRoom === p.current_room || (currentRoom === null && p.current_room === null)
             // Filter out players without valid username
-            const hasValidProfile = (p.user_profiles?.username || p.username) ? true : false
+            const hasValidProfile = p.user_profiles?.username || p.username ? true : false
 
             // Filter out players at default spawn position (not really in interactive)
-            const isAtDefaultPosition = (p.position_x === 0 && p.position_z === 0 && (p.position_y === 0 || p.position_y === 0.5))
+            const isAtDefaultPosition =
+              p.position_x === 0 && p.position_z === 0 && (p.position_y === 0 || p.position_y === 0.5)
 
             return playerIsInSameRoom && hasValidProfile && !isAtDefaultPosition
           })
@@ -1166,7 +1191,10 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
               player={player}
               avatarStyle={player.avatar_style || { bodyColor: "#ef4444", headColor: "#fbbf24", faceSmiley: "😊" }}
               playerAction={playerActions[player.user_id]}
-              worldSettings={{ ...worldSettings, showStatusBadges: worldSettings.showStatusBadges && showBadgesPreference }}
+              worldSettings={{
+                ...worldSettings,
+                showStatusBadges: worldSettings.showStatusBadges && showBadgesPreference,
+              }}
               playerChatBubbles={playerChatBubbles}
             />
           ))}
@@ -1185,7 +1213,9 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
               <Html position={[0, 2.6, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
                 <div className="flex flex-col items-center gap-1 pointer-events-none">
                   <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
-                    <span className="text-white text-xs font-medium whitespace-nowrap">{myProfile?.username || userProfile.username || "Vous"}</span>
+                    <span className="text-white text-xs font-medium whitespace-nowrap">
+                      {myProfile?.username || userProfile.username || "Vous"}
+                    </span>
                     {/* Le joueur voit toujours son propre badge (indépendamment du réglage admin) */}
                     {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
                     {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
@@ -1208,10 +1238,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
         {!povMode && (
           <>
-            <CameraFollower
-              characterPosition={myPosition}
-              orbitControlsRef={orbitControlsRef}
-            />
+            <CameraFollower characterPosition={myPosition} orbitControlsRef={orbitControlsRef} />
             <OrbitControls
               ref={orbitControlsRef}
               target={[myPosition.x, myPosition.y + 1, myPosition.z]}
@@ -1227,41 +1254,41 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
       {/* Menu Button - caché quand un jeu arcade est ouvert */}
       {!currentArcadeMachine && (
-      <div className={`absolute z-[100] flex flex-col ${isMobileMode ? 'top-4 left-4 gap-2' : 'top-6 left-6 gap-4'}`}>
-        <button
-          onClick={() => setShowMenu(!showMenu)}
-          className="bg-blue-600 hover:bg-blue-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
-          title="Menu"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
+        <div className={`absolute z-[100] flex flex-col ${isMobileMode ? "top-4 left-4 gap-2" : "top-6 left-6 gap-4"}`}>
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="bg-blue-600 hover:bg-blue-700 text-white w-11 h-11 rounded-lg shadow-2xl flex items-center justify-center transition-all hover:scale-105 border-2 border-white/20"
+            title="Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
 
-        {showMenu && (
-          <MenuDropdown
-            isMobileMode={isMobileMode}
-            myProfile={myProfile}
-            onlineCount={onlineCount}
-            enableChat={worldSettings.enableChat}
-            onOpenSettings={() => {
-              setShowSettings(true)
-              setShowMenu(false)
-            }}
-            onOpenAvatar={() => {
-              setShowAvatarCustomizer(true)
-              setShowMenu(false)
-            }}
-            onOpenChat={() => {
-              setShowChat(true)
-              setShowMenu(false)
-            }}
-            onOpenMap={() => {
-              setShowMap(true)
-              setShowMenu(false)
-            }}
-            onQuit={handleQuitWorld}
-          />
-        )}
-      </div>
+          {showMenu && (
+            <MenuDropdown
+              isMobileMode={isMobileMode}
+              myProfile={myProfile}
+              onlineCount={onlineCount}
+              enableChat={worldSettings.enableChat}
+              onOpenSettings={() => {
+                setShowSettings(true)
+                setShowMenu(false)
+              }}
+              onOpenAvatar={() => {
+                setShowAvatarCustomizer(true)
+                setShowMenu(false)
+              }}
+              onOpenChat={() => {
+                setShowChat(true)
+                setShowMenu(false)
+              }}
+              onOpenMap={() => {
+                setShowMap(true)
+                setShowMenu(false)
+              }}
+              onQuit={handleQuitWorld}
+            />
+          )}
+        </div>
       )}
 
       {/* Bouton plein écran - caché en mode mobile */}
@@ -1382,7 +1409,21 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         onLeaveStadium={handleLeaveStadium}
       />
 
-
+      {/* Voice Chat Panel */}
+      {worldSettings.voiceChatEnabled && (
+        <div className="fixed bottom-4 left-4 z-50">
+          <VoiceChatPanel
+            isVoiceConnected={isVoiceConnected}
+            isMicMuted={isMicMuted}
+            isSpeaking={isSpeaking}
+            micPermissionDenied={micPermissionDenied}
+            voicePeers={voicePeers}
+            onRequestMicAccess={requestMicAccess}
+            onToggleMic={toggleMic}
+            onDisconnect={disconnect}
+          />
+        </div>
+      )}
 
       {!isMobileMode && (
         <div className="absolute bottom-4 left-4 bg-black/50 text-white px-4 py-2 rounded-lg text-sm backdrop-blur-sm">
@@ -1390,9 +1431,15 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
             // Assis dans le stade - uniquement indication de saut
             <>🏟️ Assis dans les gradins{worldSettings.enableJumping && " | Espace = Sauter"}</>
           ) : povMode ? (
-            <>🎮 Cliquez pour contrôler la caméra | ESC pour libérer | ZQSD pour bouger | Shift = Sprint{worldSettings.enableJumping && " | Espace = Sauter"}</>
+            <>
+              🎮 Cliquez pour contrôler la caméra | ESC pour libérer | ZQSD pour bouger | Shift = Sprint
+              {worldSettings.enableJumping && " | Espace = Sauter"}
+            </>
           ) : (
-            <>⌨️ Touches ZQSD ou Flèches pour se déplacer | Shift = Sprint{worldSettings.enableJumping && " | Espace = Sauter"}</>
+            <>
+              ⌨️ Touches ZQSD ou Flèches pour se déplacer | Shift = Sprint
+              {worldSettings.enableJumping && " | Espace = Sauter"}
+            </>
           )}
         </div>
       )}
@@ -1401,7 +1448,6 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       {isMobileMode && <CameraJoystick onRotate={handleCameraRotate} />}
       {isMobileMode && <CenterTouchZone onRotate={handleCameraRotate} />}
       {isMobileMode && <JoystickBlockZones />}
-
 
       {showAFKWarning && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
@@ -1413,21 +1459,13 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         </div>
       )}
 
-      {showDiscoClosedModal && (
-        <ClosedModal type="disco" onClose={() => setShowDiscoClosedModal(false)} />
-      )}
+      {showDiscoClosedModal && <ClosedModal type="disco" onClose={() => setShowDiscoClosedModal(false)} />}
 
-      {showArcadeClosedModal && (
-        <ClosedModal type="arcade" onClose={() => setShowArcadeClosedModal(false)} />
-      )}
+      {showArcadeClosedModal && <ClosedModal type="arcade" onClose={() => setShowArcadeClosedModal(false)} />}
 
-      {showStadiumClosedModal && (
-        <ClosedModal type="stadium" onClose={() => setShowStadiumClosedModal(false)} />
-      )}
+      {showStadiumClosedModal && <ClosedModal type="stadium" onClose={() => setShowStadiumClosedModal(false)} />}
 
-      {showCinemaClosedModal && (
-        <ClosedModal type="cinema" onClose={() => setShowCinemaClosedModal(false)} />
-      )}
+      {showCinemaClosedModal && <ClosedModal type="cinema" onClose={() => setShowCinemaClosedModal(false)} />}
 
       {showSettings && (
         <SettingsModal
@@ -1483,12 +1521,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         />
       )}
 
-      {currentArcadeMachine && (
-        <ArcadeGameView
-          machine={currentArcadeMachine}
-          onClose={handleCloseArcadeMachine}
-        />
-      )}
+      {currentArcadeMachine && <ArcadeGameView machine={currentArcadeMachine} onClose={handleCloseArcadeMachine} />}
 
       {pendingExternalMachine && (
         <ExternalGameModal
@@ -1500,11 +1533,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       )}
 
       {showStadium && stadium && (
-        <StadiumModal
-          stadium={stadium}
-          onEnter={handleEnterStadium}
-          onClose={() => setShowStadium(false)}
-        />
+        <StadiumModal stadium={stadium} onEnter={handleEnterStadium} onClose={() => setShowStadium(false)} />
       )}
 
       {currentRoom === "stadium" && stadiumSeat !== null && (
@@ -1525,7 +1554,6 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           onClose={() => setShowCinema(false)}
         />
       )}
-
     </div>
   )
 }
