@@ -46,7 +46,8 @@ function generateSeatPosition(rowNumber: number, seatNumber: number, totalSeatsP
   const rowSpacing = 2.5
   const seatSpacing = 1.5
   const startX = -((totalSeatsPerRow - 1) * seatSpacing) / 2
-  const firstRowZ = -11 // First row closer to middle of room
+  const screenZ = -19
+  const firstRowZ = screenZ + 8
 
   return {
     x: startX + (seatNumber - 1) * seatSpacing,
@@ -290,23 +291,17 @@ export function useCinemaSeats({
     const perRow = Math.min(10, Math.ceil(Math.sqrt(capacity)))
     const seatPosition = generateSeatPosition(availableSeat.row_number, availableSeat.seat_number, perRow)
 
-    const avatarPosition = {
-      x: seatPosition.x,
-      y: seatPosition.y + 0.3, // Sit on top of seat
-      z: seatPosition.z,
-    }
-
-    console.log("[v0] Sitting at position:", avatarPosition)
+    console.log("[v0] Sitting at position:", seatPosition)
 
     setMySeat(availableSeat.row_number * 100 + availableSeat.seat_number)
-    setMyPosition(avatarPosition)
+    setMyPosition(seatPosition)
 
     await supabase
       .from("interactive_profiles")
       .update({
-        position_x: avatarPosition.x,
-        position_y: avatarPosition.y,
-        position_z: avatarPosition.z,
+        position_x: seatPosition.x,
+        position_y: seatPosition.y,
+        position_z: seatPosition.z,
       })
       .eq("user_id", userId)
 
@@ -361,6 +356,6 @@ export function useCinemaSeats({
   return {
     loadSeats,
     handleSitInAnySeat,
-    handleStandUp,
+    handleSitInSeat: handleStandUp,
   }
 }
