@@ -1,13 +1,10 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useState, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
-import {
-  setGlobalDiscoStreamUrls,
-  setGlobalDiscoVolume,
-  setGlobalDiscoIsOpen,
-  setGlobalArcadeIsOpen,
-} from "../audio"
+import { setGlobalDiscoStreamUrls, setGlobalDiscoVolume, setGlobalDiscoIsOpen, setGlobalArcadeIsOpen } from "../audio"
 
 const supabase = createClient()
 
@@ -18,6 +15,18 @@ interface ArcadeGame {
   media: { type: string; src: string }
   openInNewTab: boolean
   useProxy: boolean
+}
+
+interface CinemaSession {
+  id: string
+  room_id: string
+  movie_title: string | null
+  movie_tmdb_id: number | null
+  movie_poster: string | null
+  embed_url: string | null
+  schedule_start: string
+  schedule_end: string
+  is_active: boolean
 }
 
 interface UseDataLoadersProps {
@@ -41,6 +50,7 @@ interface UseDataLoadersReturn {
   setIsDiscoOpen: React.Dispatch<React.SetStateAction<boolean>>
   // Cinema
   cinemaRooms: any[]
+  cinemaSessions: CinemaSession[]
   loadCinemaRooms: () => Promise<void>
 }
 
@@ -61,6 +71,7 @@ export function useDataLoaders({ userId }: UseDataLoadersProps): UseDataLoadersR
 
   // Cinema state
   const [cinemaRooms, setCinemaRooms] = useState<any[]>([])
+  const [cinemaSessions, setCinemaSessions] = useState<CinemaSession[]>([])
 
   // Load players
   useEffect(() => {
@@ -153,17 +164,17 @@ export function useDataLoaders({ userId }: UseDataLoadersProps): UseDataLoadersR
 
     const handleBeforeUnload = () => {
       const payload = JSON.stringify({ user_id: userId })
-      navigator.sendBeacon?.('/api/interactive/disconnect', payload)
+      navigator.sendBeacon?.("/api/interactive/disconnect", payload)
     }
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    window.addEventListener('pagehide', handleBeforeUnload)
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    window.addEventListener("pagehide", handleBeforeUnload)
 
     return () => {
       clearInterval(interval)
       clearInterval(heartbeatInterval)
       document.removeEventListener("visibilitychange", handleVisibilityChange)
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      window.removeEventListener('pagehide', handleBeforeUnload)
+      window.removeEventListener("beforeunload", handleBeforeUnload)
+      window.removeEventListener("pagehide", handleBeforeUnload)
       supabase.removeChannel(channel)
       supabase
         .from("interactive_profiles")
@@ -178,26 +189,26 @@ export function useDataLoaders({ userId }: UseDataLoadersProps): UseDataLoadersR
     const loadArcadeGames = async () => {
       try {
         const { data, error } = await supabase
-          .from('arcade_games')
-          .select('*')
-          .eq('is_active', true)
-          .order('display_order')
+          .from("arcade_games")
+          .select("*")
+          .eq("is_active", true)
+          .order("display_order")
 
         if (error) throw error
 
         if (data && data.length > 0) {
-          const formattedGames = data.map(game => ({
+          const formattedGames = data.map((game) => ({
             id: game.id,
             name: game.name,
             url: game.url,
-            media: { type: game.media_type, src: game.image_url || '' },
+            media: { type: game.media_type, src: game.image_url || "" },
             openInNewTab: game.open_in_new_tab,
-            useProxy: game.use_proxy
+            useProxy: game.use_proxy,
           }))
           setArcadeMachines(formattedGames)
         }
       } catch (error) {
-        console.error('[DataLoaders] Error loading arcade games:', error)
+        console.error("[DataLoaders] Error loading arcade games:", error)
       }
     }
 
@@ -238,10 +249,7 @@ export function useDataLoaders({ userId }: UseDataLoadersProps): UseDataLoadersR
   // Load disco settings
   useEffect(() => {
     const loadDiscoSettings = async () => {
-      const { data } = await supabase
-        .from("interactive_disco")
-        .select("*")
-        .single()
+      const { data } = await supabase.from("interactive_disco").select("*").single()
 
       if (data) {
         if (data.stream_urls && Array.isArray(data.stream_urls) && data.stream_urls.length > 0) {
@@ -261,10 +269,7 @@ export function useDataLoaders({ userId }: UseDataLoadersProps): UseDataLoadersR
   // Load arcade settings
   useEffect(() => {
     const loadArcadeSettings = async () => {
-      const { data } = await supabase
-        .from("interactive_arcade_settings")
-        .select("*")
-        .single()
+      const { data } = await supabase.from("interactive_arcade_settings").select("*").single()
 
       if (data) {
         setGlobalArcadeIsOpen(data.is_open !== false)
@@ -275,21 +280,21 @@ export function useDataLoaders({ userId }: UseDataLoadersProps): UseDataLoadersR
     loadArcadeSettings()
   }, [])
 
-  // Load cinema rooms
+  // Load cinema rooms and sessions
   const loadCinemaRooms = useCallback(async () => {
-    const { data } = await supabase
-      .from("interactive_cinema_rooms")
-      .select("*")
-      .eq("is_open", true)
-      .order("room_number")
+    const [roomsResult, sessionsResult] = await Promise.all([
+      supabase.from("interactive_cinema_rooms").select("*").eq("is_open", true).order("room_number"),
+      supabase.from("interactive_cinema_sessions").select("*").eq("is_active", true).order("schedule_start"),
+    ])
 
-    if (data) setCinemaRooms(data)
+    if (roomsResult.data) setCinemaRooms(roomsResult.data)
+    if (sessionsResult.data) setCinemaSessions(sessionsResult.data)
   }, [])
 
   useEffect(() => {
     loadCinemaRooms()
 
-    const channel = supabase
+    const roomsChannel = supabase
       .channel("cinema_rooms")
       .on(
         "postgres_changes",
@@ -302,8 +307,22 @@ export function useDataLoaders({ userId }: UseDataLoadersProps): UseDataLoadersR
       )
       .subscribe()
 
+    const sessionsChannel = supabase
+      .channel("cinema_sessions")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "interactive_cinema_sessions",
+        },
+        loadCinemaRooms,
+      )
+      .subscribe()
+
     return () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(roomsChannel)
+      supabase.removeChannel(sessionsChannel)
     }
   }, [loadCinemaRooms])
 
@@ -319,6 +338,7 @@ export function useDataLoaders({ userId }: UseDataLoadersProps): UseDataLoadersR
     isDiscoOpen,
     setIsDiscoOpen,
     cinemaRooms,
+    cinemaSessions,
     loadCinemaRooms,
   }
 }

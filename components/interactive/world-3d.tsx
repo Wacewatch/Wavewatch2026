@@ -264,9 +264,6 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     }
   }, [])
 
-  // États d'ouverture des lieux - fourni par useDataLoaders
-  // isArcadeOpen, isStadiumOpen, isDiscoOpen, setIsArcadeOpen, setIsStadiumOpen, setIsDiscoOpen
-
   // Arrêter la danse quand le joueur bouge et mettre à jour la BDD
   useEffect(() => {
     if (isMoving && isDancing) {
@@ -292,6 +289,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     isDiscoOpen,
     setIsDiscoOpen,
     cinemaRooms,
+    cinemaSessions, // Added cinemaSessions
   } = useDataLoaders({ userId })
 
   // Chat hook - provides messages, chat input, chat bubbles and send functionality
@@ -539,12 +537,29 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   useEffect(() => {
     if (!currentCinemaRoom || currentCinemaRoom === "world") return
 
-    const room = cinemaRooms.find((r) => r.id === currentCinemaRoom.id) // Use currentCinemaRoom directly
-    if (!room || !room.schedule_start) return
+    const now = new Date()
+    const roomSessions = cinemaSessions.filter((s) => s.room_id === currentCinemaRoom.id && s.is_active)
+
+    // Find current or next session
+    let activeSession = roomSessions.find((s) => {
+      const start = new Date(s.schedule_start)
+      const end = new Date(s.schedule_end)
+      return now >= start && now <= end
+    })
+
+    if (!activeSession) {
+      activeSession = roomSessions
+        .filter((s) => new Date(s.schedule_start) > now)
+        .sort((a, b) => new Date(a.schedule_start).getTime() - new Date(b.schedule_start).getTime())[0]
+    }
+
+    // Use session schedule if available, otherwise fall back to room schedule
+    const scheduleStart = activeSession?.schedule_start || currentCinemaRoom.schedule_start
+    if (!scheduleStart) return
 
     const interval = setInterval(() => {
       const now = new Date().getTime()
-      const start = new Date(room.schedule_start!).getTime()
+      const start = new Date(scheduleStart).getTime()
       const distance = start - now
 
       if (distance < 0) {
@@ -555,10 +570,10 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         const seconds = Math.floor((distance % (1000 * 60)) / 1000)
         setCountdown(`${hours}h ${minutes}m ${seconds}s`)
       }
-    }, 5000)
+    }, 1000) // Updated to 1 second for smoother countdown
 
     return () => clearInterval(interval)
-  }, [currentCinemaRoom, cinemaRooms]) // Added currentCinemaRoom to dependencies
+  }, [currentCinemaRoom, cinemaSessions]) // Added currentCinemaRoom and cinemaSessions to dependencies
 
   const handleFullscreen = async () => {
     try {
@@ -1163,6 +1178,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           <CinemaInterior
             currentCinemaRoom={currentCinemaRoom}
             cinemaRooms={cinemaRooms}
+            cinemaSessions={cinemaSessions} // Pass sessions to CinemaInterior
             cinemaSeats={cinemaSeats}
             mySeat={mySeat}
             showMovieFullscreen={showMovieFullscreen}
@@ -1550,6 +1566,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       {showCinema && (
         <CinemaModal
           cinemaRooms={cinemaRooms}
+          cinemaSessions={cinemaSessions} // Pass sessions to CinemaModal
           cinemaSeats={cinemaSeats}
           onEnterRoom={handleEnterCinemaRoom}
           onClose={() => setShowCinema(false)}
