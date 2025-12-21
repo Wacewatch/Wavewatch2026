@@ -98,10 +98,17 @@ function getVideoType(url: string): "mp4" | "m3u8" | "iframe" | "unknown" {
   return "mp4"
 }
 
-function calculateSyncPosition(scheduleStart: string): number {
+function calculateSyncPosition(scheduleStart: string, videoDuration?: number): number {
   const startDate = new Date(scheduleStart)
   const now = new Date()
   const elapsedSeconds = Math.floor((now.getTime() - startDate.getTime()) / 1000)
+
+  // If we have video duration, use modulo to loop the video
+  if (videoDuration && videoDuration > 0) {
+    return elapsedSeconds % Math.floor(videoDuration)
+  }
+
+  // Without duration, just return elapsed time (fallback)
   return Math.max(0, elapsedSeconds)
 }
 
@@ -473,110 +480,97 @@ export function CinemaInterior({
   }, [roomSeats, roomCapacity, room?.id])
 
   useEffect(() => {
-    // Only for mp4/php videos
-    if (videoType !== "mp4" || !isMovieStarted || isMovieEnded || !videoUrl) {
-      console.log("[v0] MP4 video not needed:", { videoType, isMovieStarted, isMovieEnded, hasUrl: !!videoUrl })
+    if (videoType !== "mp4" || !isMovieStarted || isMovieEnded) {
+      console.log("[v0] MP4 video not needed:", {
+        videoType,
+        isMovieStarted,
+        isMovieEnded,
+        hasUrl: !!videoUrl,
+      })
       return
     }
+
+    const video = videoRef.current
+    if (!video || !videoUrl) return
 
     console.log("[v0] Setting up in-room MP4 video:", videoUrl)
+    video.src = videoUrl
+    video.crossOrigin = "anonymous"
+    video.playsInline = true
+    video.muted = false
+    video.volume = 1
+    video.type = "video/mp4"
 
-    // Wait for video element to be available
-    const setupVideo = () => {
-      const video = videoRef.current
-      if (!video) {
-        console.log("[v0] Video ref not yet available, retrying...")
-        return false
+    const handleLoadedMetadata = () => {
+      console.log("[v0] In-room MP4 loadedmetadata, duration:", video.duration)
+      const syncTime = calculateSyncPosition(activeScheduleStart, video.duration)
+      console.log("[v0] Syncing to position:", syncTime, "seconds (duration:", video.duration, ")")
+      if (syncTime >= 0 && video.duration && syncTime < video.duration) {
+        video.currentTime = syncTime
       }
+    }
 
-      console.log("[v0] Video element found, configuring...")
+    const handleCanPlay = () => {
+      console.log("[v0] In-room MP4 canplay")
+      const syncTime = calculateSyncPosition(activeScheduleStart, video.duration)
+      if (syncTime >= 0 && video.duration && syncTime < video.duration) {
+        video.currentTime = syncTime
+      }
+      video.play().catch((err) => console.error("[v0] Play error:", err))
+    }
 
-      video.crossOrigin = "anonymous"
-      video.playsInline = true
-      video.muted = false
+    const handlePlay = () => {
+      console.log("[v0] In-room MP4 playing")
+    }
 
-      // Set source with proper type hint
-      video.src = videoUrl
-      video.type = "video/mp4"
+    const handleError = (e: Event) => {
+      console.error("[v0] In-room MP4 error:", e)
+      // Retry with cache buster
+      setTimeout(() => {
+        const cacheBuster = `?t=${Date.now()}`
+        video.src = videoUrl + cacheBuster
+        video.load()
+      }, 2000)
+    }
 
-      const handleLoadedMetadata = () => {
-        console.log("[v0] In-room MP4 loadedmetadata")
-        const syncTime = calculateSyncPosition(activeScheduleStart)
-        console.log("[v0] Syncing to position:", syncTime, "seconds")
-        if (syncTime > 0 && video.duration && syncTime < video.duration) {
+    video.addEventListener("loadedmetadata", handleLoadedMetadata)
+    video.addEventListener("canplay", handleCanPlay)
+    video.addEventListener("play", handlePlay)
+    video.addEventListener("error", handleError)
+
+    console.log("[v0] Video element found, configuring...")
+    video.load()
+
+    // Force play after 1 second
+    setTimeout(() => {
+      if (video.paused) {
+        const syncTime = calculateSyncPosition(activeScheduleStart, video.duration)
+        if (syncTime >= 0 && video.duration && syncTime < video.duration) {
           video.currentTime = syncTime
         }
+        video.play().catch(console.error)
       }
+    }, 1000)
 
-      const handleCanPlay = () => {
-        console.log("[v0] In-room MP4 canplay")
-        video.play().catch((err) => {
-          console.log("[v0] In-room MP4 play error:", err.message)
-        })
-      }
-
-      const handlePlaying = () => {
-        console.log("[v0] In-room MP4 playing")
-      }
-
-      const handleError = (e: Event) => {
-        const target = e.target as HTMLVideoElement
-        const error = target.error
-        console.log("[v0] Video error:", error ? `${error.code}: ${error.message}` : "Unknown error")
-
-        if (error && error.code === 4) {
-          console.log("[v0] Format error detected, trying with cache buster...")
-          const cacheBuster = `?cb=${Date.now()}`
-          if (!videoUrl.includes("?cb=")) {
-            video.src = videoUrl + cacheBuster
-            video.load()
-          }
-        }
-      }
-
-      video.addEventListener("loadedmetadata", handleLoadedMetadata)
-      video.addEventListener("canplay", handleCanPlay)
-      video.addEventListener("playing", handlePlaying)
-      video.addEventListener("error", handleError)
-
-      video.load()
-
-      // Force play after 1 second
-      setTimeout(() => {
-        if (video.paused) {
-          const syncTime = calculateSyncPosition(activeScheduleStart)
-          if (syncTime > 0 && video.duration && syncTime < video.duration) {
-            video.currentTime = syncTime
-          }
-          video.play().catch(console.error)
-        }
-      }, 1000)
-
-      return () => {
-        video.removeEventListener("loadedmetadata", handleLoadedMetadata)
-        video.removeEventListener("canplay", handleCanPlay)
-        video.removeEventListener("playing", handlePlaying)
-        video.removeEventListener("error", handleError)
-      }
+    return () => {
+      video.removeEventListener("loadedmetadata", handleLoadedMetadata)
+      video.removeEventListener("canplay", handleCanPlay)
+      video.removeEventListener("play", handlePlay)
+      video.removeEventListener("error", handleError)
     }
-
-    const timer = setTimeout(setupVideo, 100)
-    return () => clearTimeout(timer)
-  }, [videoType, videoUrl, isMovieStarted, isMovieEnded, activeScheduleStart])
+  }, [videoType, isMovieStarted, isMovieEnded, videoUrl, activeScheduleStart])
 
   useEffect(() => {
-    if (videoType !== "mp4" || !isMovieStarted || isMovieEnded) {
-      return
-    }
+    if (videoType !== "mp4" || !activeScheduleStart) return
 
     const syncInterval = setInterval(() => {
       const video = videoRef.current
-      if (video && !video.paused && activeScheduleStart) {
-        const expectedTime = calculateSyncPosition(activeScheduleStart)
+      if (video && !video.paused && activeScheduleStart && video.duration) {
+        const expectedTime = calculateSyncPosition(activeScheduleStart, video.duration)
         const drift = Math.abs(video.currentTime - expectedTime)
 
         if (drift > 3) {
-          console.log("[v0] MP4 sync drift detected:", drift, "seconds. Correcting...")
+          console.log("[v0] MP4 sync drift detected:", drift, "seconds. Correcting to:", expectedTime)
           video.currentTime = expectedTime
         }
 
