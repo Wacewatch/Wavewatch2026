@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, useEffect, useRef, useMemo } from "react"
-import { useFrame } from "@react-three/fiber"
 import { Html } from "@react-three/drei"
-import * as THREE from "three"
+import { HLSVideoScreen } from "../../hls-video-screen"
+import { useState, useEffect, useRef, useMemo } from "react"
 
 interface CinemaRoom {
   id: string
@@ -89,216 +88,6 @@ function calculateSyncPosition(scheduleStart: string): number {
   return Math.max(0, elapsedSeconds)
 }
 
-function VideoScreen({
-  url,
-  width = 16,
-  height = 9,
-  position = [0, 0, 0] as [number, number, number],
-  muted = false,
-  scheduleStart,
-}: {
-  url: string
-  width?: number
-  height?: number
-  position?: [number, number, number]
-  muted?: boolean
-  scheduleStart?: string
-}) {
-  const meshRef = useRef<THREE.Mesh>(null)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [videoTexture, setVideoTexture] = useState<THREE.VideoTexture | null>(null)
-  const [isPlaying, setIsPlaying] = useState(false)
-
-  useEffect(() => {
-    // Créer l'élément vidéo
-    const video = document.createElement("video")
-    video.src = url
-    video.crossOrigin = "anonymous"
-    video.loop = false
-    video.muted = muted
-    video.playsInline = true
-    video.setAttribute("playsinline", "true")
-    video.setAttribute("webkit-playsinline", "true")
-
-    videoRef.current = video
-
-    // Créer la texture vidéo
-    const texture = new THREE.VideoTexture(video)
-    texture.minFilter = THREE.LinearFilter
-    texture.magFilter = THREE.LinearFilter
-    texture.format = THREE.RGBAFormat
-    texture.colorSpace = THREE.SRGBColorSpace
-    setVideoTexture(texture)
-
-    // Calculer la position de synchronisation
-    const syncToPosition = () => {
-      if (scheduleStart) {
-        const startDate = new Date(scheduleStart)
-        const now = new Date()
-        const elapsedSeconds = Math.floor((now.getTime() - startDate.getTime()) / 1000)
-        if (elapsedSeconds > 0 && video.duration > elapsedSeconds) {
-          console.log(`[v0] VideoScreen syncing to ${elapsedSeconds}s`)
-          video.currentTime = elapsedSeconds
-        }
-      }
-    }
-
-    video.onloadedmetadata = () => {
-      syncToPosition()
-      video
-        .play()
-        .then(() => {
-          setIsPlaying(true)
-        })
-        .catch((e) => {
-          console.log("[v0] Autoplay blocked, waiting for user interaction")
-        })
-    }
-
-    video.oncanplay = () => {
-      if (!isPlaying) {
-        video.play().catch(() => {})
-      }
-    }
-
-    // Resync périodique
-    const syncInterval = setInterval(() => {
-      if (video && scheduleStart && video.duration > 0) {
-        const startDate = new Date(scheduleStart)
-        const now = new Date()
-        const expectedPosition = Math.floor((now.getTime() - startDate.getTime()) / 1000)
-        const drift = Math.abs(expectedPosition - video.currentTime)
-        if (drift > 5 && expectedPosition < video.duration) {
-          console.log(`[v0] VideoScreen drift ${drift}s, resyncing to ${expectedPosition}s`)
-          video.currentTime = expectedPosition
-        }
-      }
-    }, 10000)
-
-    return () => {
-      clearInterval(syncInterval)
-      video.pause()
-      video.src = ""
-      video.load()
-      texture.dispose()
-    }
-  }, [url, scheduleStart])
-
-  // Mettre à jour le mute
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.muted = muted
-    }
-  }, [muted])
-
-  // Mettre à jour la texture à chaque frame
-  useFrame(() => {
-    if (videoTexture && videoRef.current && !videoRef.current.paused) {
-      videoTexture.needsUpdate = true
-    }
-  })
-
-  return (
-    <mesh ref={meshRef} position={position}>
-      <planeGeometry args={[width, height]} />
-      {videoTexture ? (
-        <meshBasicMaterial map={videoTexture} side={THREE.FrontSide} toneMapped={false} />
-      ) : (
-        <meshBasicMaterial color="#000000" />
-      )}
-    </mesh>
-  )
-}
-
-function HLSVideoScreen3D({
-  url,
-  width = 16,
-  height = 9,
-  position = [0, 0, 0] as [number, number, number],
-  muted = false,
-  scheduleStart,
-}: {
-  url: string
-  width?: number
-  height?: number
-  position?: [number, number, number]
-  muted?: boolean
-  scheduleStart?: string
-}) {
-  const meshRef = useRef<THREE.Mesh>(null)
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [videoTexture, setVideoTexture] = useState<THREE.VideoTexture | null>(null)
-  const hlsRef = useRef<any>(null)
-
-  useEffect(() => {
-    const video = document.createElement("video")
-    video.crossOrigin = "anonymous"
-    video.loop = false
-    video.muted = muted
-    video.playsInline = true
-
-    videoRef.current = video
-
-    const texture = new THREE.VideoTexture(video)
-    texture.minFilter = THREE.LinearFilter
-    texture.magFilter = THREE.LinearFilter
-    texture.format = THREE.RGBAFormat
-    texture.colorSpace = THREE.SRGBColorSpace
-    setVideoTexture(texture)
-
-    // Charger HLS dynamiquement
-    import("hls.js").then(({ default: Hls }) => {
-      if (Hls.isSupported()) {
-        const hls = new Hls({
-          enableWorker: true,
-          lowLatencyMode: true,
-        })
-        hlsRef.current = hls
-        hls.loadSource(url)
-        hls.attachMedia(video)
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          video.play().catch(() => {})
-        })
-      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-        video.src = url
-        video.play().catch(() => {})
-      }
-    })
-
-    return () => {
-      if (hlsRef.current) {
-        hlsRef.current.destroy()
-      }
-      video.pause()
-      video.src = ""
-      texture.dispose()
-    }
-  }, [url])
-
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.muted = muted
-    }
-  }, [muted])
-
-  useFrame(() => {
-    if (videoTexture && videoRef.current && !videoRef.current.paused) {
-      videoTexture.needsUpdate = true
-    }
-  })
-
-  return (
-    <mesh ref={meshRef} position={position}>
-      <planeGeometry args={[width, height]} />
-      {videoTexture ? (
-        <meshBasicMaterial map={videoTexture} side={THREE.FrontSide} toneMapped={false} />
-      ) : (
-        <meshBasicMaterial color="#000000" />
-      )}
-    </mesh>
-  )
-}
-
 export function CinemaInterior({
   currentCinemaRoom,
   cinemaRooms,
@@ -311,6 +100,9 @@ export function CinemaInterior({
   const room = cinemaRooms.find((r) => r.id === currentCinemaRoom.id) || currentCinemaRoom
   const isMovieStarted = room?.schedule_start && new Date(room.schedule_start).getTime() < Date.now()
   const isMovieEnded = room?.schedule_end && new Date(room.schedule_end).getTime() < Date.now()
+
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [videoStartPosition, setVideoStartPosition] = useState(0)
 
   const themeColors = useMemo(() => getThemeColors(room?.theme), [room?.theme])
 
@@ -349,17 +141,39 @@ export function CinemaInterior({
     return defaultSeats
   }, [cinemaSeats, room?.capacity])
 
+  useEffect(() => {
+    if (room?.schedule_start && isMovieStarted && !isMovieEnded) {
+      const syncPosition = calculateSyncPosition(room.schedule_start)
+      setVideoStartPosition(syncPosition)
+
+      const videoSyncInterval = setInterval(() => {
+        if (videoRef.current && room.schedule_start) {
+          const expectedPosition = calculateSyncPosition(room.schedule_start)
+          const currentPosition = videoRef.current.currentTime
+          const drift = Math.abs(expectedPosition - currentPosition)
+
+          if (drift > 5) {
+            console.log(`[v0] Syncing video: drift ${drift}s, seeking to ${expectedPosition}s`)
+            videoRef.current.currentTime = expectedPosition
+          }
+        }
+      }, 10000)
+
+      return () => {
+        clearInterval(videoSyncInterval)
+      }
+    }
+  }, [room?.schedule_start, isMovieStarted, isMovieEnded])
+
   const videoType = room?.embed_url ? getVideoType(room.embed_url) : "unknown"
 
   return (
     <>
-      {/* Sol */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <planeGeometry args={[40, 50]} />
         <meshStandardMaterial color={themeColors.floor} />
       </mesh>
 
-      {/* Murs */}
       <mesh position={[0, 4, 25]}>
         <boxGeometry args={[40, 8, 0.5]} />
         <meshStandardMaterial color={themeColors.wall} />
@@ -377,24 +191,20 @@ export function CinemaInterior({
         <meshStandardMaterial color={themeColors.wall} />
       </mesh>
 
-      {/* Fond noir derrière l'écran */}
-      <mesh position={[0, 4, -18.5]}>
+      <mesh position={[0, 4, -18]}>
         <boxGeometry args={[18, 10, 0.2]} />
         <meshStandardMaterial color="#000000" />
       </mesh>
 
-      {/* Mur invisible pour empêcher de passer devant l'écran */}
-      <mesh position={[0, 2, -2]}>
+      <mesh position={[0, 2, -2]} visible={false}>
         <boxGeometry args={[40, 4, 0.1]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
 
-      {/* Écran de cinéma - maintenant un vrai objet 3D */}
       {room && (
-        <>
-          {/* Affichages avant le début du film */}
+        <group position={[0, 4, -17.5]}>
           {!isMovieStarted && (
-            <Html position={[0, 4, -17]} center>
+            <Html position={[0, 0, 0.5]} center zIndexRange={[100, 0]}>
               <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
                 <h2 className="text-3xl font-bold mb-2">{room.movie_title || room.name || "Salle de cinéma"}</h2>
                 {room.schedule_start && (
@@ -418,9 +228,8 @@ export function CinemaInterior({
             </Html>
           )}
 
-          {/* Affichage après la fin du film */}
           {isMovieEnded && (
-            <Html position={[0, 4, -17]} center>
+            <Html position={[0, 0, 0.5]} center zIndexRange={[100, 0]}>
               <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
                 <h2 className="text-2xl font-bold mb-2">Séance terminée</h2>
                 <p className="text-gray-300">La projection de "{room.movie_title}" est terminée.</p>
@@ -429,9 +238,8 @@ export function CinemaInterior({
             </Html>
           )}
 
-          {/* Aucune séance programmée */}
           {!room.embed_url && !room.movie_title && (
-            <Html position={[0, 4, -17]} center>
+            <Html position={[0, 0, 0.5]} center zIndexRange={[100, 0]}>
               <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
                 <h2 className="text-2xl font-bold mb-2">{room.name || `Salle ${room.room_number}`}</h2>
                 <p className="text-gray-300">Aucune séance programmée</p>
@@ -443,29 +251,51 @@ export function CinemaInterior({
           {isMovieStarted && !isMovieEnded && room.embed_url && !showMovieFullscreen && (
             <>
               {videoType === "mp4" && (
-                <VideoScreen
-                  url={room.embed_url}
-                  width={16}
-                  height={9}
-                  position={[0, 4, -17.5]}
-                  muted={isCinemaMuted}
-                  scheduleStart={room.schedule_start}
-                />
+                <Html transform style={{ width: "1400px", height: "780px" }} position={[0, 0, 0.3]}>
+                  <div className="relative w-full h-full bg-black rounded overflow-hidden">
+                    <video
+                      ref={videoRef}
+                      src={room.embed_url}
+                      className="w-full h-full object-contain"
+                      autoPlay
+                      muted={isCinemaMuted}
+                      playsInline
+                      controls={false}
+                      controlsList="nodownload nofullscreen noremoteplayback"
+                      disablePictureInPicture
+                      onLoadedMetadata={(e) => {
+                        const video = e.currentTarget
+                        const syncTime = room.schedule_start ? calculateSyncPosition(room.schedule_start) : 0
+                        console.log(`[v0] Video loaded, syncing to ${syncTime}s from schedule_start`)
+                        if (syncTime > 0 && video.duration > syncTime) {
+                          video.currentTime = syncTime
+                        }
+                        video.play().catch(() => {})
+                      }}
+                      onCanPlay={(e) => {
+                        e.currentTarget.play().catch(() => {})
+                      }}
+                      style={{ pointerEvents: "none" }}
+                    />
+                    <div className="absolute inset-0 bg-transparent" style={{ pointerEvents: "all" }} />
+                  </div>
+                </Html>
               )}
 
               {videoType === "m3u8" && (
-                <HLSVideoScreen3D
-                  url={room.embed_url}
-                  width={16}
-                  height={9}
-                  position={[0, 4, -17.5]}
+                <HLSVideoScreen
+                  key={`hls-embed-${room.id}`}
+                  src={room.embed_url}
+                  width={14}
+                  height={8}
+                  position={[0, 0, 0.3]}
+                  autoplay={true}
                   muted={isCinemaMuted}
-                  scheduleStart={room.schedule_start}
                 />
               )}
 
-              {videoType === "iframe" && (
-                <Html transform position={[0, 4, -17.5]} style={{ width: "1400px", height: "787px" }} occlude>
+              {videoType === "iframe" && room.embed_url && (
+                <Html transform style={{ width: "1400px", height: "780px" }} position={[0, 0, 0.3]}>
                   <div className="relative w-full h-full">
                     <iframe
                       src={room.embed_url}
@@ -485,10 +315,9 @@ export function CinemaInterior({
               )}
             </>
           )}
-        </>
+        </group>
       )}
 
-      {/* Sièges */}
       {displaySeats.map((seat) => {
         const seatId = seat.row_number * 100 + seat.seat_number
         const isMySeat = mySeat === seatId
@@ -500,22 +329,18 @@ export function CinemaInterior({
 
         return (
           <group key={seat.id} position={[x, y, z]}>
-            {/* Assise */}
             <mesh castShadow position={[0, 0, 0]}>
               <boxGeometry args={[1, 0.8, 0.9]} />
               <meshStandardMaterial color={seatColor} />
             </mesh>
-            {/* Dossier - orienté vers l'écran (Z négatif) */}
-            <mesh castShadow position={[0, 0.6, -0.35]}>
+            <mesh castShadow position={[0, 0.6, 0.35]}>
               <boxGeometry args={[1, 0.8, 0.2]} />
               <meshStandardMaterial color={seatColor} />
             </mesh>
-            {/* Accoudoir gauche */}
             <mesh castShadow position={[-0.45, 0.2, 0]}>
               <boxGeometry args={[0.1, 0.3, 0.7]} />
               <meshStandardMaterial color={seatColor} />
             </mesh>
-            {/* Accoudoir droit */}
             <mesh castShadow position={[0.45, 0.2, 0]}>
               <boxGeometry args={[0.1, 0.3, 0.7]} />
               <meshStandardMaterial color={seatColor} />
