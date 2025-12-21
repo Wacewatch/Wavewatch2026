@@ -91,6 +91,7 @@ export function MovieFullscreenModal({ movieTitle, embedUrl, onClose, scheduleSt
 
     const video = videoRef.current
 
+    // Attendre que la vidéo soit prête
     const handleCanPlay = () => {
       // Sync au temps de la séance
       if (scheduleStart) {

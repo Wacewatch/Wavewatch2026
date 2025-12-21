@@ -143,9 +143,7 @@ function WaitingScreen3D({
   }, [])
 
   useEffect(() => {
-    if (!isClient) {
-      return
-    }
+    if (!isClient) return
 
     if (!posterUrl || typeof posterUrl !== "string") {
       setPosterLoaded(true)
@@ -178,12 +176,6 @@ function WaitingScreen3D({
     texture.minFilter = THREE.LinearFilter
     texture.magFilter = THREE.LinearFilter
     textureRef.current = texture
-
-    const ctx = canvas.getContext("2d")
-    if (ctx) {
-      ctx.fillStyle = "#111111"
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-    }
 
     if (meshRef.current) {
       const material = meshRef.current.material as THREE.MeshBasicMaterial
@@ -469,13 +461,6 @@ export function CinemaInterior({
 
   const videoType = activeEmbedUrl ? getVideoType(activeEmbedUrl) : "unknown"
 
-  const mp4StartTime = useMemo(() => {
-    if (activeScheduleStart && isMovieStarted && !isMovieEnded) {
-      return calculateSyncPosition(activeScheduleStart)
-    }
-    return 0
-  }, [activeScheduleStart, isMovieStarted, isMovieEnded])
-
   const videoRef = useRef<HTMLVideoElement>(null)
 
   useEffect(() => {
@@ -483,9 +468,12 @@ export function CinemaInterior({
 
     const video = videoRef.current
 
-    // Définir le temps de départ
-    if (mp4StartTime > 0) {
-      video.currentTime = mp4StartTime
+    // Sync au temps de la séance
+    if (activeScheduleStart) {
+      const syncTime = calculateSyncPosition(activeScheduleStart)
+      if (syncTime > 0) {
+        video.currentTime = syncTime
+      }
     }
 
     // Tenter de lancer la lecture
@@ -506,7 +494,7 @@ export function CinemaInterior({
     }, 10000)
 
     return () => clearInterval(syncInterval)
-  }, [videoType, mp4StartTime, isMovieStarted, isMovieEnded, activeScheduleStart])
+  }, [videoType, isMovieStarted, isMovieEnded, activeScheduleStart])
 
   return (
     <>
@@ -564,7 +552,7 @@ export function CinemaInterior({
           {/* Écran aucune séance */}
           {!hasSession && <NoSessionScreen3D roomName={room.name} roomNumber={room.room_number} />}
 
-          {/* Vidéo en cours - MP4/PHP simplifié */}
+          {/* Vidéo en cours - MP4/PHP simple comme v105 */}
           {isMovieStarted && !isMovieEnded && activeEmbedUrl && !showMovieFullscreen && videoType === "mp4" && (
             <Html
               transform
@@ -595,7 +583,7 @@ export function CinemaInterior({
             </Html>
           )}
 
-          {/* Vidéo HLS/M3U8 - ne pas toucher */}
+          {/* Vidéo HLS/M3U8 - NE PAS TOUCHER */}
           {isMovieStarted && !isMovieEnded && activeEmbedUrl && !showMovieFullscreen && videoType === "m3u8" && (
             <HLSVideoScreen
               key={`hls-embed-${room.id}`}
