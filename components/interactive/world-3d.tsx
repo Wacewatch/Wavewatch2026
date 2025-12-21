@@ -147,6 +147,9 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   const [isCinemaMuted, setIsCinemaMuted] = useState(true) // Muted par défaut pour éviter le son automatique
   const [stadiumSeat, setStadiumSeat] = useState<{ row: number; side: string } | null>(null) // Siège dans le stade
   const [showMenu, setShowMenu] = useState(false) // Added this state
+  const [cinemaSessions, setCinemaSessions] = useState<any[]>([])
+  const [isCinemaInteriorActive, setIsCinemaInteriorActive] = useState(false) // State to control CinemaInterior rendering
+  const [showVoiceChat, setShowVoiceChat] = useState(true) // Added this state
 
   const [currentRoom, setCurrentRoom] = useState<string | null>(null)
   const [nearbyBuilding, setNearbyBuilding] = useState<{ name: string; type: string; emoji: string } | null>(null)
@@ -537,10 +540,60 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   }, [currentCinemaRoom])
 
   useEffect(() => {
-    if (!currentCinemaRoom || currentCinemaRoom === "world") return
+    if (!supabase) return
+
+    const loadCinemaSessions = async () => {
+      const { data, error } = await supabase
+        .from("interactive_cinema_sessions")
+        .select("*")
+        .order("schedule_start", { ascending: true })
+
+      if (error) {
+        console.error("[v0] Error loading cinema sessions:", error)
+        return
+      }
+
+      setCinemaSessions(data || [])
+    }
+
+    loadCinemaSessions()
+
+    // Subscribe to realtime updates
+    const channel = supabase
+      .channel("cinema_sessions_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "interactive_cinema_sessions",
+        },
+        () => {
+          loadCinemaSessions()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      // Unsubscribe from the channel when the component unmounts
+      supabase.removeChannel(channel)
+    }
+  }, [supabase]) // Added supabase as dependency
+
+  useEffect(() => {
+    if (!currentCinemaRoom || currentRoom === "stadium" || currentRoom === "arcade" || currentRoom === "disco") {
+      setIsCinemaInteriorActive(false) // Hide CinemaInterior if not in cinema
+      return
+    }
 
     const room = cinemaRooms.find((r) => r.id === currentCinemaRoom.id) // Use currentCinemaRoom directly
-    if (!room || !room.schedule_start) return
+    if (!room || !room.schedule_start) {
+      setIsCinemaInteriorActive(false)
+      return
+    }
+
+    // Set active state only when we are sure we want to render CinemaInterior
+    setIsCinemaInteriorActive(true)
 
     const interval = setInterval(() => {
       const now = new Date().getTime()
@@ -557,8 +610,12 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       }
     }, 5000)
 
-    return () => clearInterval(interval)
-  }, [currentCinemaRoom, cinemaRooms]) // Added currentCinemaRoom to dependencies
+    return () => {
+      clearInterval(interval)
+      // Optionally reset countdown or other state when leaving the effect
+      // setCountdown("")
+    }
+  }, [currentCinemaRoom, cinemaRooms, currentRoom]) // Added currentCinemaRoom and currentRoom to dependencies
 
   const handleFullscreen = async () => {
     try {
@@ -1159,10 +1216,11 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           <StadiumInterior stadium={stadium} stadiumSeat={stadiumSeat} isStadiumMuted={isStadiumMuted} />
         ) : currentRoom === "disco" ? (
           <DiscoInterior isDiscoMuted={isDiscoMuted} graphicsQuality={graphicsQuality} />
-        ) : currentCinemaRoom ? (
+        ) : currentCinemaRoom && isCinemaInteriorActive ? (
           <CinemaInterior
             currentCinemaRoom={currentCinemaRoom}
             cinemaRooms={cinemaRooms}
+            cinemaSessions={cinemaSessions}
             cinemaSeats={cinemaSeats}
             mySeat={mySeat}
             showMovieFullscreen={showMovieFullscreen}
@@ -1411,13 +1469,15 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       />
 
       {/* Voice Chat Panel */}
-      {worldSettings.voiceChatEnabled && (
-        <div className="fixed bottom-4 left-4 z-50">
+      {showVoiceChat && (
+        <div className="fixed inset-0 pointer-events-none z-40">
           <VoiceChatPanel
             isVoiceConnected={isVoiceConnected}
             isMicMuted={isMicMuted}
             isSpeaking={isSpeaking}
             micPermissionDenied={micPermissionDenied}
+            currentRoom={currentRoom}
+            currentCinemaRoom={currentCinemaRoom}
             voicePeers={voicePeers}
             onRequestMicAccess={requestMicAccess}
             onToggleMic={toggleMic}
@@ -1551,6 +1611,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         <CinemaModal
           cinemaRooms={cinemaRooms}
           cinemaSeats={cinemaSeats}
+          cinemaSessions={cinemaSessions}
           onEnterRoom={handleEnterCinemaRoom}
           onClose={() => setShowCinema(false)}
         />

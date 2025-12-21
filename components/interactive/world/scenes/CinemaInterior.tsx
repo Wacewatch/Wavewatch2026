@@ -10,11 +10,6 @@ interface CinemaRoom {
   name?: string
   capacity?: number
   theme?: string
-  movie_title: string
-  movie_poster?: string
-  embed_url?: string
-  schedule_start?: string
-  schedule_end?: string
 }
 
 interface CinemaSeat {
@@ -24,9 +19,22 @@ interface CinemaSeat {
   user_id: string | null
 }
 
+interface CinemaSession {
+  id: string
+  room_id: string
+  movie_title: string
+  embed_url: string
+  schedule_start: string
+  schedule_end: string
+  movie_poster: string | null
+  movie_tmdb_id: number | null
+  is_active: boolean
+}
+
 interface CinemaInteriorProps {
   currentCinemaRoom: CinemaRoom
   cinemaRooms: CinemaRoom[]
+  cinemaSessions: CinemaSession[]
   cinemaSeats: CinemaSeat[]
   mySeat: number | null
   showMovieFullscreen: boolean
@@ -91,6 +99,7 @@ function calculateSyncPosition(scheduleStart: string): number {
 export function CinemaInterior({
   currentCinemaRoom,
   cinemaRooms,
+  cinemaSessions = [],
   cinemaSeats,
   mySeat,
   showMovieFullscreen,
@@ -98,8 +107,54 @@ export function CinemaInterior({
   countdown,
 }: CinemaInteriorProps) {
   const room = cinemaRooms.find((r) => r.id === currentCinemaRoom.id) || currentCinemaRoom
-  const isMovieStarted = room?.schedule_start && new Date(room.schedule_start).getTime() < Date.now()
-  const isMovieEnded = room?.schedule_end && new Date(room.schedule_end).getTime() < Date.now()
+
+  console.log("[v0] CinemaInterior - Room ID:", room.id)
+  console.log("[v0] CinemaInterior - Total sessions:", cinemaSessions.length)
+
+  const roomSessions = (cinemaSessions || [])
+    .filter((s) => {
+      const matches = s.room_id === room.id && s.is_active
+      console.log(`[v0] Session ${s.id} - room_id: ${s.room_id}, matches: ${matches}`)
+      return matches
+    })
+    .sort((a, b) => new Date(a.schedule_start).getTime() - new Date(b.schedule_start).getTime())
+
+  console.log("[v0] CinemaInterior - Room sessions:", roomSessions.length)
+
+  const now = new Date()
+  console.log("[v0] Current time (now):", now.toISOString())
+
+  roomSessions.forEach((s, idx) => {
+    const start = new Date(s.schedule_start)
+    const end = new Date(s.schedule_end)
+    console.log(`[v0] Session ${idx + 1} (${s.movie_title}):`)
+    console.log(`  - start: ${start.toISOString()} (${start.getTime()})`)
+    console.log(`  - end: ${end.toISOString()} (${end.getTime()})`)
+    console.log(`  - now: ${now.toISOString()} (${now.getTime()})`)
+    console.log(`  - is after start: ${start <= now}`)
+    console.log(`  - is before end: ${end > now}`)
+    console.log(`  - is current: ${start <= now && end > now}`)
+  })
+
+  const currentSession =
+    roomSessions.find((s) => {
+      const start = new Date(s.schedule_start)
+      const end = new Date(s.schedule_end)
+      const isCurrent = start <= now && end > now
+      return isCurrent
+    }) || roomSessions.find((s) => new Date(s.schedule_start) > now)
+
+  console.log("[v0] CinemaInterior - Current session:", currentSession ? currentSession.movie_title : "none")
+
+  const nextSession = roomSessions.find((s) => new Date(s.schedule_start) > now)
+
+  const isMovieStarted = currentSession && new Date(currentSession.schedule_start).getTime() < Date.now()
+  const isMovieEnded = currentSession && new Date(currentSession.schedule_end).getTime() < Date.now()
+  const videoUrl = currentSession?.embed_url
+  const movieTitle = currentSession?.movie_title || room.name
+  const moviePoster = currentSession?.movie_poster
+  const scheduleStart = currentSession?.schedule_start
+  const scheduleEnd = currentSession?.schedule_end
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoStartPosition, setVideoStartPosition] = useState(0)
@@ -142,13 +197,13 @@ export function CinemaInterior({
   }, [cinemaSeats, room?.capacity])
 
   useEffect(() => {
-    if (room?.schedule_start && isMovieStarted && !isMovieEnded) {
-      const syncPosition = calculateSyncPosition(room.schedule_start)
+    if (scheduleStart && isMovieStarted && !isMovieEnded) {
+      const syncPosition = calculateSyncPosition(scheduleStart)
       setVideoStartPosition(syncPosition)
 
       const videoSyncInterval = setInterval(() => {
-        if (videoRef.current && room.schedule_start) {
-          const expectedPosition = calculateSyncPosition(room.schedule_start)
+        if (videoRef.current && scheduleStart) {
+          const expectedPosition = calculateSyncPosition(scheduleStart)
           const currentPosition = videoRef.current.currentTime
           const drift = Math.abs(expectedPosition - currentPosition)
 
@@ -157,15 +212,28 @@ export function CinemaInterior({
             videoRef.current.currentTime = expectedPosition
           }
         }
-      }, 10000)
+      }, 5000)
 
       return () => {
         clearInterval(videoSyncInterval)
       }
     }
-  }, [room?.schedule_start, isMovieStarted, isMovieEnded])
+  }, [scheduleStart, isMovieStarted, isMovieEnded])
 
-  const videoType = room?.embed_url ? getVideoType(room.embed_url) : "unknown"
+  const videoType = videoUrl ? getVideoType(videoUrl) : "unknown"
+
+  const getTimeUntilNextSession = () => {
+    if (!nextSession) return null
+    const nextStart = new Date(nextSession.schedule_start)
+    const diffMs = nextStart.getTime() - now.getTime()
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60))
+
+    if (diffHours > 0) {
+      return `${diffHours}h ${diffMins}min`
+    }
+    return `${diffMins}min`
+  }
 
   return (
     <>
@@ -206,20 +274,16 @@ export function CinemaInterior({
           {!isMovieStarted && (
             <Html position={[0, 0, 0.5]} center zIndexRange={[100, 0]}>
               <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
-                <h2 className="text-3xl font-bold mb-2">{room.movie_title || room.name || "Salle de cinéma"}</h2>
-                {room.schedule_start && (
+                <h2 className="text-3xl font-bold mb-2">{movieTitle || "Salle de cinéma"}</h2>
+                {scheduleStart && (
                   <p className="text-lg text-gray-300 mb-4">
                     Début dans: <span className="text-yellow-400 font-bold">{countdown}</span>
                   </p>
                 )}
-                {room.movie_poster && (
+                {moviePoster && (
                   <img
-                    src={
-                      room.movie_poster.startsWith("http")
-                        ? room.movie_poster
-                        : `https://image.tmdb.org/t/p/w500${room.movie_poster}`
-                    }
-                    alt={room.movie_title}
+                    src={moviePoster || "/placeholder.svg"}
+                    alt={movieTitle}
                     className="w-40 h-60 object-cover rounded mx-auto"
                   />
                 )}
@@ -231,14 +295,39 @@ export function CinemaInterior({
           {isMovieEnded && (
             <Html position={[0, 0, 0.5]} center zIndexRange={[100, 0]}>
               <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
-                <h2 className="text-2xl font-bold mb-2">Séance terminée</h2>
-                <p className="text-gray-300">La projection de "{room.movie_title}" est terminée.</p>
-                <p className="text-sm text-gray-400 mt-2">Merci d'avoir participé à cette Watch Party!</p>
+                {nextSession ? (
+                  <>
+                    <h2 className="text-2xl font-bold mb-2">Prochaine séance</h2>
+                    <p className="text-gray-300 mb-4">{nextSession.movie_title}</p>
+                    {nextSession.movie_poster && (
+                      <img
+                        src={nextSession.movie_poster || "/placeholder.svg"}
+                        alt={nextSession.movie_title}
+                        className="w-40 h-60 object-cover rounded mx-auto mb-4"
+                      />
+                    )}
+                    <p className="text-lg text-yellow-400 font-bold">Début dans {getTimeUntilNextSession()}</p>
+                    <p className="text-sm text-gray-400 mt-2">
+                      {new Date(nextSession.schedule_start).toLocaleString("fr-FR", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h2 className="text-2xl font-bold mb-2">Séance terminée</h2>
+                    <p className="text-gray-300">Aucune prochaine séance programmée.</p>
+                    <p className="text-sm text-gray-400 mt-2">Revenez plus tard!</p>
+                  </>
+                )}
               </div>
             </Html>
           )}
 
-          {!room.embed_url && !room.movie_title && (
+          {!videoUrl && !currentSession && (
             <Html position={[0, 0, 0.5]} center zIndexRange={[100, 0]}>
               <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
                 <h2 className="text-2xl font-bold mb-2">{room.name || `Salle ${room.room_number}`}</h2>
@@ -248,14 +337,14 @@ export function CinemaInterior({
             </Html>
           )}
 
-          {isMovieStarted && !isMovieEnded && room.embed_url && !showMovieFullscreen && (
+          {isMovieStarted && !isMovieEnded && videoUrl && !showMovieFullscreen && (
             <>
               {videoType === "mp4" && (
                 <Html transform style={{ width: "1400px", height: "780px" }} position={[0, 0, 0.3]}>
                   <div className="relative w-full h-full bg-black rounded overflow-hidden">
                     <video
                       ref={videoRef}
-                      src={room.embed_url}
+                      src={videoUrl}
                       className="w-full h-full object-contain"
                       autoPlay
                       muted={isCinemaMuted}
@@ -265,8 +354,8 @@ export function CinemaInterior({
                       disablePictureInPicture
                       onLoadedMetadata={(e) => {
                         const video = e.currentTarget
-                        const syncTime = room.schedule_start ? calculateSyncPosition(room.schedule_start) : 0
-                        console.log(`[v0] Video loaded, syncing to ${syncTime}s from schedule_start`)
+                        const syncTime = scheduleStart ? calculateSyncPosition(scheduleStart) : 0
+                        console.log(`[v0] Video loaded, syncing to ${syncTime}s from session schedule_start`)
                         if (syncTime > 0 && video.duration > syncTime) {
                           video.currentTime = syncTime
                         }
@@ -284,21 +373,22 @@ export function CinemaInterior({
 
               {videoType === "m3u8" && (
                 <HLSVideoScreen
-                  key={`hls-embed-${room.id}`}
-                  src={room.embed_url}
+                  key={`hls-embed-${room.id}-${currentSession?.id}`}
+                  src={videoUrl}
                   width={14}
                   height={8}
                   position={[0, 0, 0.3]}
                   autoplay={true}
                   muted={isCinemaMuted}
+                  scheduleStart={scheduleStart}
                 />
               )}
 
-              {videoType === "iframe" && room.embed_url && (
+              {videoType === "iframe" && videoUrl && (
                 <Html transform style={{ width: "1400px", height: "780px" }} position={[0, 0, 0.3]}>
                   <div className="relative w-full h-full">
                     <iframe
-                      src={room.embed_url}
+                      src={videoUrl}
                       className="w-full h-full rounded"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen={false}

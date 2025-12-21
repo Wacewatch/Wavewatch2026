@@ -1,12 +1,17 @@
 "use client"
 
-import { Mic, MicOff, Volume2, Phone, PhoneOff } from "lucide-react"
+import type React from "react"
+
+import { Mic, MicOff, Volume2, Phone, PhoneOff, GripVertical } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
 
 interface VoiceChatPanelProps {
   isVoiceConnected: boolean
   isMicMuted: boolean
   isSpeaking: boolean
   micPermissionDenied: boolean
+  currentRoom?: string | null
+  currentCinemaRoom?: { id: string; name?: string; room_number?: number } | null
   voicePeers: Array<{
     odIUser: string
     username: string
@@ -23,16 +28,85 @@ export function VoiceChatPanel({
   isMicMuted,
   isSpeaking,
   micPermissionDenied,
+  currentRoom,
+  currentCinemaRoom,
   voicePeers,
   onRequestMicAccess,
   onToggleMic,
   onDisconnect,
 }: VoiceChatPanelProps) {
+  const [position, setPosition] = useState({ x: 20, y: window.innerHeight - 200 })
+  const [isDragging, setIsDragging] = useState(false)
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
+  const panelRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        setPosition({
+          x: e.clientX - dragOffset.x,
+          y: e.clientY - dragOffset.y,
+        })
+      }
+    }
+
+    const handleMouseUp = () => {
+      setIsDragging(false)
+    }
+
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove)
+      document.addEventListener("mouseup", handleMouseUp)
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove)
+      document.removeEventListener("mouseup", handleMouseUp)
+    }
+  }, [isDragging, dragOffset])
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (panelRef.current) {
+      const rect = panelRef.current.getBoundingClientRect()
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      })
+      setIsDragging(true)
+    }
+  }
+
+  const getRoomDisplayName = () => {
+    if (!currentRoom) return "Monde"
+
+    // If in a cinema room, show the specific cinema room name
+    if (currentRoom.startsWith("cinema_") && currentCinemaRoom) {
+      return currentCinemaRoom.name || `Salle ${currentCinemaRoom.room_number || "Cinéma"}`
+    }
+
+    if (currentRoom.startsWith("arcade_")) return `Salle Arcade`
+    return currentRoom
+  }
+
   return (
-    <div className="bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700">
-      <div className="flex items-center gap-2 mb-2">
+    <div
+      ref={panelRef}
+      className="fixed bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 cursor-move select-none z-50"
+      style={{
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        minWidth: "200px",
+      }}
+    >
+      <div className="flex items-center gap-2 mb-2 cursor-grab active:cursor-grabbing" onMouseDown={handleMouseDown}>
+        <GripVertical className="w-4 h-4 text-gray-500" />
         <Volume2 className="w-4 h-4 text-green-400" />
         <span className="text-sm font-medium text-white">Chat Vocal</span>
+      </div>
+
+      <div className="text-xs text-gray-400 mb-2 flex items-center gap-1">
+        <span className="inline-block w-2 h-2 rounded-full bg-blue-400"></span>
+        {getRoomDisplayName()}
       </div>
 
       {micPermissionDenied ? (

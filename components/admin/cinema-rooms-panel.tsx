@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { createClient } from "@/lib/supabase/client"
-import { Plus, Save, Film, ImageIcon, Trash2 } from "lucide-react"
+import { Plus, Save, Film, ImageIcon, Trash2, ChevronDown, ChevronUp } from "lucide-react"
 
 interface CinemaRoom {
   id: string
@@ -13,14 +13,20 @@ interface CinemaRoom {
   name: string
   capacity: number
   theme: string
-  movie_title: string
-  movie_tmdb_id: number | null
-  movie_poster: string | null
-  embed_url: string | null
-  schedule_start: string | null
-  schedule_end: string | null
   access_level: string
   is_open: boolean
+}
+
+interface CinemaSession {
+  id: string
+  room_id: string
+  movie_title: string
+  embed_url: string
+  schedule_start: string
+  schedule_end: string
+  movie_poster: string | null
+  movie_tmdb_id: number | null
+  is_active: boolean
 }
 
 async function generateSeatsForRoom(supabase: any, roomId: string, capacity: number) {
@@ -65,15 +71,121 @@ async function updateSeatsForRoom(supabase: any, roomId: string, newCapacity: nu
   return await generateSeatsForRoom(supabase, roomId, newCapacity)
 }
 
-export function CinemaRoomsPanel({ rooms }: { rooms: any[] }) {
+export function CinemaRoomsPanel({ rooms, sessions }: { rooms: any[]; sessions: any[] }) {
   const [cinemaRooms, setCinemaRooms] = useState<CinemaRoom[]>(rooms)
+  const [cinemaSessions, setCinemaSessions] = useState<CinemaSession[]>(sessions)
+  const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set())
   const [isSaving, setIsSaving] = useState<string | null>(null)
   const { toast } = useToast()
   const supabase = createClient()
 
+  const toggleRoomSessions = (roomId: string) => {
+    setExpandedRooms((prev) => {
+      const newSet = new Set(prev)
+      if (newSet.has(roomId)) {
+        newSet.delete(roomId)
+      } else {
+        newSet.add(roomId)
+      }
+      return newSet
+    })
+  }
+
+  const handleCreateSession = async (roomId: string) => {
+    const now = new Date()
+    const defaultStart = new Date(now.getTime() + 3600000) // +1 hour
+    const defaultEnd = new Date(defaultStart.getTime() + 7200000) // +2 hours
+
+    const { data, error } = await supabase
+      .from("interactive_cinema_sessions")
+      .insert({
+        room_id: roomId,
+        movie_title: "",
+        embed_url: "",
+        schedule_start: defaultStart.toISOString(),
+        schedule_end: defaultEnd.toISOString(),
+        is_active: true,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error("Error creating session:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de créer la séance",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setCinemaSessions([...cinemaSessions, data])
+    toast({
+      title: "Séance créée",
+      description: "Nouvelle séance ajoutée à la salle",
+    })
+  }
+
+  const handleUpdateSession = async (session: CinemaSession) => {
+    setIsSaving(session.id)
+
+    const { error } = await supabase
+      .from("interactive_cinema_sessions")
+      .update({
+        movie_title: session.movie_title,
+        embed_url: session.embed_url,
+        schedule_start: new Date(session.schedule_start).toISOString(),
+        schedule_end: new Date(session.schedule_end).toISOString(),
+        movie_poster: session.movie_poster,
+        movie_tmdb_id: session.movie_tmdb_id,
+        is_active: session.is_active,
+      })
+      .eq("id", session.id)
+
+    if (error) {
+      console.error("Error updating session:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de mettre à jour la séance",
+        variant: "destructive",
+      })
+      setIsSaving(null)
+      return
+    }
+
+    toast({
+      title: "Séance mise à jour",
+      description: "Les informations de la séance ont été sauvegardées",
+    })
+    setIsSaving(null)
+  }
+
+  const handleDeleteSession = async (sessionId: string, movieTitle: string) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer la séance "${movieTitle}" ?`)) {
+      return
+    }
+
+    const { error } = await supabase.from("interactive_cinema_sessions").delete().eq("id", sessionId)
+
+    if (error) {
+      console.error("Error deleting session:", error)
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer la séance",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setCinemaSessions(cinemaSessions.filter((s) => s.id !== sessionId))
+    toast({
+      title: "Séance supprimée",
+      description: `La séance "${movieTitle}" a été supprimée`,
+    })
+  }
+
   const handleCreateRoom = async () => {
     const newRoomNumber = cinemaRooms.length > 0 ? Math.max(...cinemaRooms.map((r) => r.room_number)) + 1 : 1
-
     const defaultCapacity = 30
 
     const { data, error } = await supabase
@@ -83,7 +195,6 @@ export function CinemaRoomsPanel({ rooms }: { rooms: any[] }) {
         name: `Salle ${newRoomNumber}`,
         capacity: defaultCapacity,
         theme: "default",
-        movie_title: "",
         access_level: "public",
         is_open: true,
       })
@@ -100,7 +211,6 @@ export function CinemaRoomsPanel({ rooms }: { rooms: any[] }) {
       return
     }
 
-    // Generate seats for the new room
     const seatsCreated = await generateSeatsForRoom(supabase, data.id, defaultCapacity)
 
     if (!seatsCreated) {
@@ -132,12 +242,6 @@ export function CinemaRoomsPanel({ rooms }: { rooms: any[] }) {
         name: room.name,
         capacity: room.capacity,
         theme: room.theme,
-        movie_title: room.movie_title,
-        movie_tmdb_id: room.movie_tmdb_id,
-        movie_poster: room.movie_poster,
-        embed_url: room.embed_url,
-        schedule_start: room.schedule_start ? new Date(room.schedule_start).toISOString() : null,
-        schedule_end: room.schedule_end ? new Date(room.schedule_end).toISOString() : null,
         access_level: room.access_level,
         is_open: room.is_open,
       })
@@ -184,10 +288,9 @@ export function CinemaRoomsPanel({ rooms }: { rooms: any[] }) {
       return
     }
 
-    // Delete seats first
     await supabase.from("interactive_cinema_seats").delete().eq("room_id", roomId)
+    await supabase.from("interactive_cinema_sessions").delete().eq("room_id", roomId)
 
-    // Then delete room
     const { error } = await supabase.from("interactive_cinema_rooms").delete().eq("id", roomId)
 
     if (error) {
@@ -201,6 +304,7 @@ export function CinemaRoomsPanel({ rooms }: { rooms: any[] }) {
     }
 
     setCinemaRooms(cinemaRooms.filter((r) => r.id !== roomId))
+    setCinemaSessions(cinemaSessions.filter((s) => s.room_id !== roomId))
     toast({
       title: "Salle supprimée",
       description: `La salle ${roomName} a été supprimée`,
@@ -221,234 +325,339 @@ export function CinemaRoomsPanel({ rooms }: { rooms: any[] }) {
       </div>
 
       <div className="space-y-4">
-        {cinemaRooms.map((room) => (
-          <div key={room.id} className="p-4 bg-gray-700 rounded-lg border border-gray-600">
-            <div className="flex gap-4">
-              {/* Aperçu de l'affiche */}
-              <div className="flex-shrink-0">
-                {room.movie_poster ? (
-                  <img
-                    src={room.movie_poster || "/placeholder.svg"}
-                    alt={room.movie_title || "Affiche"}
-                    className="w-24 h-36 object-cover rounded-lg border border-gray-600"
-                    onError={(e) => {
-                      ;(e.target as HTMLImageElement).style.display = "none"
-                    }}
-                  />
-                ) : (
-                  <div className="w-24 h-36 bg-gray-600 rounded-lg border border-gray-500 flex items-center justify-center">
-                    <ImageIcon className="w-8 h-8 text-gray-400" />
-                  </div>
-                )}
-              </div>
+        {cinemaRooms.map((room) => {
+          const roomSessions = cinemaSessions.filter((s) => s.room_id === room.id)
+          const isExpanded = expandedRooms.has(room.id)
+          const latestSession = roomSessions.sort(
+            (a, b) => new Date(b.schedule_start).getTime() - new Date(a.schedule_start).getTime(),
+          )[0]
 
-              {/* Formulaire */}
-              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">Numéro de Salle</label>
-                  <Input
-                    type="number"
-                    value={room.room_number}
-                    onChange={(e) => {
-                      setCinemaRooms(
-                        cinemaRooms.map((r) =>
-                          r.id === room.id ? { ...r, room_number: Number.parseInt(e.target.value) } : r,
-                        ),
-                      )
-                    }}
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">Nom de la Salle</label>
-                  <Input
-                    value={room.name}
-                    onChange={(e) => {
-                      setCinemaRooms(cinemaRooms.map((r) => (r.id === room.id ? { ...r, name: e.target.value } : r)))
-                    }}
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">Capacité (sièges)</label>
-                  <Input
-                    type="number"
-                    value={room.capacity}
-                    onChange={(e) => {
-                      setCinemaRooms(
-                        cinemaRooms.map((r) =>
-                          r.id === room.id ? { ...r, capacity: Number.parseInt(e.target.value) } : r,
-                        ),
-                      )
-                    }}
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                  {originalCapacities[room.id] !== room.capacity && (
-                    <p className="text-xs text-yellow-400">⚠️ Les sièges seront régénérés à la sauvegarde</p>
+          return (
+            <div key={room.id} className="p-4 bg-gray-700 rounded-lg border border-gray-600">
+              <div className="flex gap-4">
+                <div className="flex-shrink-0">
+                  {latestSession?.movie_poster ? (
+                    <img
+                      src={latestSession.movie_poster || "/placeholder.svg"}
+                      alt={latestSession.movie_title || "Affiche"}
+                      className="w-24 h-36 object-cover rounded-lg border border-gray-600"
+                      onError={(e) => {
+                        ;(e.target as HTMLImageElement).style.display = "none"
+                      }}
+                    />
+                  ) : (
+                    <div className="w-24 h-36 bg-gray-600 rounded-lg border border-gray-500 flex items-center justify-center">
+                      <ImageIcon className="w-8 h-8 text-gray-400" />
+                    </div>
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">Thème</label>
-                  <select
-                    value={room.theme}
-                    onChange={(e) => {
-                      setCinemaRooms(cinemaRooms.map((r) => (r.id === room.id ? { ...r, theme: e.target.value } : r)))
-                    }}
-                    className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-                  >
-                    <option value="default">Par défaut</option>
-                    <option value="luxury">Luxe</option>
-                    <option value="retro">Rétro</option>
-                    <option value="modern">Moderne</option>
-                  </select>
-                </div>
+                <div className="flex-1 space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-300">Numéro de Salle</label>
+                      <Input
+                        type="number"
+                        value={room.room_number}
+                        onChange={(e) => {
+                          setCinemaRooms(
+                            cinemaRooms.map((r) =>
+                              r.id === room.id ? { ...r, room_number: Number.parseInt(e.target.value) } : r,
+                            ),
+                          )
+                        }}
+                        className="bg-gray-600 border-gray-500 text-white"
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">Titre du Film</label>
-                  <Input
-                    value={room.movie_title || ""}
-                    onChange={(e) => {
-                      setCinemaRooms(
-                        cinemaRooms.map((r) => (r.id === room.id ? { ...r, movie_title: e.target.value } : r)),
-                      )
-                    }}
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-300">Nom de la Salle</label>
+                      <Input
+                        value={room.name}
+                        onChange={(e) => {
+                          setCinemaRooms(
+                            cinemaRooms.map((r) => (r.id === room.id ? { ...r, name: e.target.value } : r)),
+                          )
+                        }}
+                        className="bg-gray-600 border-gray-500 text-white"
+                      />
+                    </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">ID TMDB du Film</label>
-                  <Input
-                    type="number"
-                    value={room.movie_tmdb_id || ""}
-                    onChange={(e) => {
-                      setCinemaRooms(
-                        cinemaRooms.map((r) =>
-                          r.id === room.id ? { ...r, movie_tmdb_id: Number.parseInt(e.target.value) || null } : r,
-                        ),
-                      )
-                    }}
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-300">Capacité (sièges)</label>
+                      <Input
+                        type="number"
+                        value={room.capacity}
+                        onChange={(e) => {
+                          setCinemaRooms(
+                            cinemaRooms.map((r) =>
+                              r.id === room.id ? { ...r, capacity: Number.parseInt(e.target.value) } : r,
+                            ),
+                          )
+                        }}
+                        className="bg-gray-600 border-gray-500 text-white"
+                      />
+                      {originalCapacities[room.id] !== room.capacity && (
+                        <p className="text-xs text-yellow-400">⚠️ Les sièges seront régénérés à la sauvegarde</p>
+                      )}
+                    </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">URL Affiche</label>
-                  <Input
-                    value={room.movie_poster || ""}
-                    onChange={(e) => {
-                      setCinemaRooms(
-                        cinemaRooms.map((r) => (r.id === room.id ? { ...r, movie_poster: e.target.value } : r)),
-                      )
-                    }}
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-300">Thème</label>
+                      <select
+                        value={room.theme}
+                        onChange={(e) => {
+                          setCinemaRooms(
+                            cinemaRooms.map((r) => (r.id === room.id ? { ...r, theme: e.target.value } : r)),
+                          )
+                        }}
+                        className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                      >
+                        <option value="default">Par défaut</option>
+                        <option value="luxury">Luxe</option>
+                        <option value="retro">Rétro</option>
+                        <option value="modern">Moderne</option>
+                      </select>
+                    </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">URL Video (MP4/M3U8/Embed)</label>
-                  <Input
-                    value={room.embed_url || ""}
-                    onChange={(e) => {
-                      setCinemaRooms(
-                        cinemaRooms.map((r) => (r.id === room.id ? { ...r, embed_url: e.target.value } : r)),
-                      )
-                    }}
-                    placeholder="https://example.com/movie.mp4 ou .m3u8"
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                  <p className="text-xs text-gray-400">Formats: MP4, M3U8/HLS, YouTube, Vimeo</p>
-                </div>
+                    <div className="space-y-2">
+                      <label className="text-sm text-gray-300">Niveau d'Accès</label>
+                      <select
+                        value={room.access_level}
+                        onChange={(e) => {
+                          setCinemaRooms(
+                            cinemaRooms.map((r) => (r.id === room.id ? { ...r, access_level: e.target.value } : r)),
+                          )
+                        }}
+                        className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
+                      >
+                        <option value="public">Public</option>
+                        <option value="vip">VIP</option>
+                        <option value="vip_plus">VIP+</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">Heure de Début</label>
-                  <Input
-                    type="datetime-local"
-                    value={room.schedule_start ? new Date(room.schedule_start).toISOString().slice(0, 16) : ""}
-                    onChange={(e) => {
-                      setCinemaRooms(
-                        cinemaRooms.map((r) => (r.id === room.id ? { ...r, schedule_start: e.target.value } : r)),
-                      )
-                    }}
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                </div>
+                    <div className="space-y-2 flex items-center">
+                      <label className="flex items-center gap-2 text-sm text-gray-300">
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          checked={room.is_open}
+                          onChange={(e) => {
+                            setCinemaRooms(
+                              cinemaRooms.map((r) => (r.id === room.id ? { ...r, is_open: e.target.checked } : r)),
+                            )
+                          }}
+                        />
+                        Salle Ouverte
+                      </label>
+                    </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">Heure de Fin</label>
-                  <Input
-                    type="datetime-local"
-                    value={room.schedule_end ? new Date(room.schedule_end).toISOString().slice(0, 16) : ""}
-                    onChange={(e) => {
-                      setCinemaRooms(
-                        cinemaRooms.map((r) => (r.id === room.id ? { ...r, schedule_end: e.target.value } : r)),
-                      )
-                    }}
-                    className="bg-gray-600 border-gray-500 text-white"
-                  />
-                </div>
+                    <div className="lg:col-span-3 flex justify-end gap-2">
+                      <Button
+                        onClick={() => handleDeleteRoom(room.id, room.name)}
+                        size="sm"
+                        variant="destructive"
+                        className="bg-red-600 hover:bg-red-700"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Supprimer
+                      </Button>
+                      <Button
+                        onClick={() => handleUpdateRoom(room)}
+                        size="sm"
+                        className="bg-green-600 hover:bg-green-700"
+                        disabled={isSaving === room.id}
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        {isSaving === room.id ? "Sauvegarde..." : "Sauvegarder"}
+                      </Button>
+                    </div>
+                  </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-300">Niveau d'Accès</label>
-                  <select
-                    value={room.access_level}
-                    onChange={(e) => {
-                      setCinemaRooms(
-                        cinemaRooms.map((r) => (r.id === room.id ? { ...r, access_level: e.target.value } : r)),
-                      )
-                    }}
-                    className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-                  >
-                    <option value="public">Public</option>
-                    <option value="vip">VIP</option>
-                    <option value="vip_plus">VIP+</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                </div>
+                  <div className="border-t border-gray-600 pt-4">
+                    <button
+                      onClick={() => toggleRoomSessions(room.id)}
+                      className="flex items-center justify-between w-full text-left text-gray-300 hover:text-white transition-colors"
+                    >
+                      <span className="flex items-center gap-2 text-sm font-medium">
+                        <Film className="w-4 h-4" />
+                        Séances programmées ({roomSessions.length})
+                      </span>
+                      {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </button>
 
-                <div className="space-y-2 flex items-center">
-                  <label className="flex items-center gap-2 text-sm text-gray-300">
-                    <input
-                      type="checkbox"
-                      className="rounded"
-                      checked={room.is_open}
-                      onChange={(e) => {
-                        setCinemaRooms(
-                          cinemaRooms.map((r) => (r.id === room.id ? { ...r, is_open: e.target.checked } : r)),
-                        )
-                      }}
-                    />
-                    Salle Ouverte
-                  </label>
-                </div>
+                    {isExpanded && (
+                      <div className="mt-4 space-y-4">
+                        {roomSessions.map((session) => (
+                          <div key={session.id} className="p-4 bg-gray-600 rounded-lg border border-gray-500">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-sm text-gray-300">Titre du Film</label>
+                                <Input
+                                  value={session.movie_title}
+                                  onChange={(e) => {
+                                    setCinemaSessions(
+                                      cinemaSessions.map((s) =>
+                                        s.id === session.id ? { ...s, movie_title: e.target.value } : s,
+                                      ),
+                                    )
+                                  }}
+                                  className="bg-gray-500 border-gray-400 text-white"
+                                  placeholder="F1 le Film (2025)"
+                                />
+                              </div>
 
-                <div className="lg:col-span-3 flex justify-end gap-2">
-                  <Button
-                    onClick={() => handleDeleteRoom(room.id, room.name)}
-                    size="sm"
-                    variant="destructive"
-                    className="bg-red-600 hover:bg-red-700"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Supprimer
-                  </Button>
-                  <Button
-                    onClick={() => handleUpdateRoom(room)}
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-700"
-                    disabled={isSaving === room.id}
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    {isSaving === room.id ? "Sauvegarde..." : "Sauvegarder"}
-                  </Button>
+                              <div className="space-y-2">
+                                <label className="text-sm text-gray-300">URL Video</label>
+                                <Input
+                                  value={session.embed_url}
+                                  onChange={(e) => {
+                                    setCinemaSessions(
+                                      cinemaSessions.map((s) =>
+                                        s.id === session.id ? { ...s, embed_url: e.target.value } : s,
+                                      ),
+                                    )
+                                  }}
+                                  className="bg-gray-500 border-gray-400 text-white"
+                                  placeholder="https://apis.wavewatch.xyz/videocinema.php"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="text-sm text-gray-300">Début</label>
+                                <Input
+                                  type="datetime-local"
+                                  value={
+                                    session.schedule_start
+                                      ? new Date(session.schedule_start).toISOString().slice(0, 16)
+                                      : ""
+                                  }
+                                  onChange={(e) => {
+                                    setCinemaSessions(
+                                      cinemaSessions.map((s) =>
+                                        s.id === session.id ? { ...s, schedule_start: e.target.value } : s,
+                                      ),
+                                    )
+                                  }}
+                                  className="bg-gray-500 border-gray-400 text-white"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="text-sm text-gray-300">Fin</label>
+                                <Input
+                                  type="datetime-local"
+                                  value={
+                                    session.schedule_end
+                                      ? new Date(session.schedule_end).toISOString().slice(0, 16)
+                                      : ""
+                                  }
+                                  onChange={(e) => {
+                                    setCinemaSessions(
+                                      cinemaSessions.map((s) =>
+                                        s.id === session.id ? { ...s, schedule_end: e.target.value } : s,
+                                      ),
+                                    )
+                                  }}
+                                  className="bg-gray-500 border-gray-400 text-white"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="text-sm text-gray-300">URL Affiche</label>
+                                <Input
+                                  value={session.movie_poster || ""}
+                                  onChange={(e) => {
+                                    setCinemaSessions(
+                                      cinemaSessions.map((s) =>
+                                        s.id === session.id ? { ...s, movie_poster: e.target.value } : s,
+                                      ),
+                                    )
+                                  }}
+                                  className="bg-gray-500 border-gray-400 text-white"
+                                  placeholder="https://fr.web.img6.acsta.net/..."
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="text-sm text-gray-300">ID TMDB</label>
+                                <Input
+                                  type="number"
+                                  value={session.movie_tmdb_id || ""}
+                                  onChange={(e) => {
+                                    setCinemaSessions(
+                                      cinemaSessions.map((s) =>
+                                        s.id === session.id
+                                          ? { ...s, movie_tmdb_id: Number.parseInt(e.target.value) || null }
+                                          : s,
+                                      ),
+                                    )
+                                  }}
+                                  className="bg-gray-500 border-gray-400 text-white"
+                                  placeholder="1"
+                                />
+                              </div>
+
+                              <div className="space-y-2 flex items-center">
+                                <label className="flex items-center gap-2 text-sm text-gray-300">
+                                  <input
+                                    type="checkbox"
+                                    className="rounded"
+                                    checked={session.is_active}
+                                    onChange={(e) => {
+                                      setCinemaSessions(
+                                        cinemaSessions.map((s) =>
+                                          s.id === session.id ? { ...s, is_active: e.target.checked } : s,
+                                        ),
+                                      )
+                                    }}
+                                  />
+                                  Active
+                                </label>
+                              </div>
+
+                              <div className="md:col-span-2 flex justify-end gap-2">
+                                <Button
+                                  onClick={() => handleDeleteSession(session.id, session.movie_title)}
+                                  size="sm"
+                                  variant="destructive"
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Supprimer
+                                </Button>
+                                <Button
+                                  onClick={() => handleUpdateSession(session)}
+                                  size="sm"
+                                  className="bg-blue-600 hover:bg-blue-700"
+                                  disabled={isSaving === session.id}
+                                >
+                                  <Save className="w-4 h-4 mr-2" />
+                                  {isSaving === session.id ? "Sauvegarde..." : "Sauver"}
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        <Button
+                          onClick={() => handleCreateSession(room.id)}
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700 w-full"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Ajouter une Séance
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
 
         {cinemaRooms.length === 0 && (
           <div className="text-center text-gray-400 py-8">

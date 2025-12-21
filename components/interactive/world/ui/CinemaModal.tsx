@@ -1,17 +1,26 @@
 "use client"
 
-import { Film, X, Users, Sparkles } from "lucide-react"
+import { Film, X, Users, Sparkles, Clock } from "lucide-react"
+import { useEffect } from "react"
 
 interface CinemaRoom {
   id: string
   room_number: number
-  movie_title: string | null
-  movie_poster: string | null
+  name: string
   theme: string
   capacity: number
   is_open: boolean
-  schedule_start: string | null
-  schedule_end: string | null
+}
+
+interface CinemaSession {
+  id: string
+  room_id: string
+  movie_title: string
+  movie_poster: string | null
+  embed_url: string
+  schedule_start: string
+  schedule_end: string
+  is_active: boolean
 }
 
 interface CinemaSeat {
@@ -21,17 +30,98 @@ interface CinemaSeat {
 
 interface CinemaModalProps {
   cinemaRooms: CinemaRoom[]
+  cinemaSessions: CinemaSession[]
   cinemaSeats: CinemaSeat[]
   onEnterRoom: (room: CinemaRoom) => void
   onClose: () => void
 }
 
-export function CinemaModal({
-  cinemaRooms,
-  cinemaSeats,
-  onEnterRoom,
-  onClose,
-}: CinemaModalProps) {
+export function CinemaModal({ cinemaRooms, cinemaSessions, cinemaSeats, onEnterRoom, onClose }: CinemaModalProps) {
+  const sessions = cinemaSessions || []
+
+  useEffect(() => {
+    console.log("[v0] CinemaModal - Total sessions:", sessions.length)
+    sessions.forEach((s) => {
+      console.log("[v0] Session:", {
+        room_id: s.room_id,
+        title: s.movie_title,
+        start: s.schedule_start,
+        end: s.schedule_end,
+        is_active: s.is_active,
+      })
+    })
+  }, [sessions])
+
+  const getRoomSessions = (roomId: string) => {
+    const roomSessions = sessions.filter((s) => s.room_id === roomId && s.is_active)
+    console.log(`[v0] getRoomSessions for ${roomId}:`, roomSessions.length, "sessions")
+    return roomSessions.sort((a, b) => new Date(a.schedule_start).getTime() - new Date(b.schedule_start).getTime())
+  }
+
+  const getCurrentSession = (roomId: string) => {
+    const now = new Date()
+    const sessions = getRoomSessions(roomId)
+
+    console.log(`[v0] getCurrentSession - now: ${now.toISOString()}`)
+    sessions.forEach((s) => {
+      const start = new Date(s.schedule_start)
+      const end = new Date(s.schedule_end)
+      console.log(`[v0]   Session "${s.movie_title}":`)
+      console.log(`[v0]     start: ${start.toISOString()}`)
+      console.log(`[v0]     end: ${end.toISOString()}`)
+      console.log(`[v0]     isCurrent: ${start <= now && end > now}`)
+      console.log(`[v0]     isFuture: ${start > now}`)
+    })
+
+    const current = sessions.find((s) => new Date(s.schedule_start) <= now && new Date(s.schedule_end) > now)
+    const next = sessions.find((s) => new Date(s.schedule_start) > now)
+    console.log(
+      `[v0] getCurrentSession for ${roomId}:`,
+      current ? `current: ${current.movie_title}` : next ? `next: ${next.movie_title}` : "none",
+    )
+    return current || next
+  }
+
+  const getLastOrCurrentSession = (roomId: string) => {
+    const roomSessions = getRoomSessions(roomId)
+    if (roomSessions.length === 0) return null
+
+    const now = new Date()
+    const currentOrFuture = roomSessions.find((s) => new Date(s.schedule_end) > now)
+    return currentOrFuture || roomSessions[roomSessions.length - 1]
+  }
+
+  const getSessionTimeDisplay = (session: CinemaSession) => {
+    const now = new Date()
+    const start = new Date(session.schedule_start)
+    const end = new Date(session.schedule_end)
+
+    if (start <= now && end > now) {
+      // Session in progress
+      const elapsedMs = now.getTime() - start.getTime()
+      const elapsedMins = Math.floor(elapsedMs / (1000 * 60))
+      const elapsedHours = Math.floor(elapsedMins / 60)
+      const mins = elapsedMins % 60
+
+      if (elapsedHours > 0) {
+        return `En cours depuis ${elapsedHours}h ${mins}min`
+      }
+      return `En cours depuis ${mins}min`
+    } else if (start > now) {
+      // Future session
+      const diffMs = start.getTime() - now.getTime()
+      const diffMins = Math.floor(diffMs / (1000 * 60))
+      const diffHours = Math.floor(diffMins / 60)
+      const mins = diffMins % 60
+
+      if (diffHours > 0) {
+        return `Dans ${diffHours}h ${mins}min`
+      }
+      return `Dans ${mins}min`
+    }
+    return null
+  }
+
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 rounded-2xl p-6 md:p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border-2 border-purple-400/30">
@@ -56,6 +146,14 @@ export function CinemaModal({
               const currentOccupancy = cinemaSeats.filter((s) => s.cinema_room_id === room.id && s.user_id).length
               const isFull = currentOccupancy >= room.capacity
               const isOpen = room.is_open
+              const currentSession = getCurrentSession(room.id)
+              const displaySession = getLastOrCurrentSession(room.id)
+              const roomSessions = getRoomSessions(room.id)
+              const now = new Date()
+              const isSessionActive =
+                currentSession &&
+                new Date(currentSession.schedule_start) <= now &&
+                new Date(currentSession.schedule_end) > now
 
               return (
                 <div
@@ -67,14 +165,13 @@ export function CinemaModal({
                   }`}
                 >
                   <div className="flex items-start gap-4 mb-3">
-                    {/* Affiche du film */}
-                    {room.movie_poster ? (
+                    {displaySession?.movie_poster ? (
                       <img
-                        src={room.movie_poster}
-                        alt={room.movie_title || "Affiche"}
+                        src={displaySession.movie_poster || "/placeholder.svg"}
+                        alt={displaySession.movie_title || "Affiche"}
                         className="w-20 h-28 object-cover rounded-lg border border-purple-400/30 flex-shrink-0"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none'
+                          ;(e.target as HTMLImageElement).style.display = "none"
                         }}
                       />
                     ) : (
@@ -85,7 +182,7 @@ export function CinemaModal({
 
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg font-bold text-white">Salle {room.room_number}</span>
+                        <span className="text-lg font-bold text-white">{room.name || `Salle ${room.room_number}`}</span>
                         {isFull && (
                           <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
                             Complète
@@ -96,8 +193,15 @@ export function CinemaModal({
                             Fermée
                           </span>
                         )}
+                        {isSessionActive && (
+                          <span className="bg-green-500 text-white text-xs px-2 py-1 rounded-full font-medium animate-pulse">
+                            En cours
+                          </span>
+                        )}
                       </div>
-                      <h3 className="text-white font-semibold text-sm mb-1">{room.movie_title || "Aucun film"}</h3>
+                      <h3 className="text-white font-semibold text-sm mb-1">
+                        {displaySession?.movie_title || "Aucune séance"}
+                      </h3>
                       <div className="flex items-center gap-2 text-xs text-purple-300">
                         <Sparkles className="w-3 h-3" />
                         <span>{room.theme}</span>
@@ -105,47 +209,57 @@ export function CinemaModal({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between text-sm mb-4">
+                  <div className="flex items-center justify-between text-sm mb-3">
                     <div className="flex items-center gap-2 text-white">
                       <Users className="w-4 h-4" />
                       <span>
                         {currentOccupancy}/{room.capacity}
                       </span>
                     </div>
-                    {(room.schedule_start || room.schedule_end) && (
-                      <div className="text-purple-300 text-xs">
-                        {room.schedule_start && (
-                          <>
-                            {new Date(room.schedule_start).toLocaleDateString("fr-FR", {
-                              weekday: "short",
-                              day: "numeric",
-                              month: "short",
-                            })}{" "}
-                            à{" "}
-                            {new Date(room.schedule_start).toLocaleTimeString("fr-FR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </>
-                        )}
-                        {room.schedule_start && room.schedule_end && " → "}
-                        {room.schedule_end && (
-                          <>
-                            {new Date(room.schedule_end).toLocaleDateString("fr-FR", {
-                              weekday: "short",
-                              day: "numeric",
-                              month: "short",
-                            })}{" "}
-                            à{" "}
-                            {new Date(room.schedule_end).toLocaleTimeString("fr-FR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </>
-                        )}
-                      </div>
-                    )}
                   </div>
+
+                  {roomSessions.length > 0 && (
+                    <div className="mb-3 space-y-1">
+                      <div className="text-xs text-purple-300 font-semibold mb-1 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        Séances programmées ({roomSessions.length})
+                      </div>
+                      {roomSessions.slice(0, 3).map((session) => {
+                        const timeDisplay = getSessionTimeDisplay(session)
+
+                        return (
+                          <div key={session.id} className="text-xs space-y-0.5">
+                            <div className="text-purple-200">
+                              {new Date(session.schedule_start).toLocaleDateString("fr-FR", {
+                                day: "2-digit",
+                                month: "2-digit",
+                              })}{" "}
+                              à{" "}
+                              {new Date(session.schedule_start).toLocaleTimeString("fr-FR", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </div>
+                            {timeDisplay && (
+                              <div
+                                className={`font-semibold ${
+                                  timeDisplay.startsWith("En cours") ? "text-green-400" : "text-yellow-300"
+                                }`}
+                              >
+                                {timeDisplay}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                      {roomSessions.length > 3 && (
+                        <div className="text-xs text-purple-300 italic">
+                          +{roomSessions.length - 3} autre{roomSessions.length - 3 > 1 ? "s" : ""} séance
+                          {roomSessions.length - 3 > 1 ? "s" : ""}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <button
                     onClick={() => {
