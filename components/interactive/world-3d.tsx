@@ -204,6 +204,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     isSpeaking,
     voicePeers,
     micPermissionDenied,
+    micErrorMessage,
     requestMicAccess,
     toggleMic,
     disconnect,
@@ -1475,6 +1476,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           isMicMuted={isMicMuted}
           isSpeaking={isSpeaking}
           micPermissionDenied={micPermissionDenied}
+          micErrorMessage={micErrorMessage}
           currentRoom={currentRoom}
           currentCinemaRoom={currentCinemaRoom}
           voicePeers={voicePeers}

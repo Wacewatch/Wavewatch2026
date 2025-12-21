@@ -22,6 +22,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voicePeers, setVoicePeers] = useState<VoicePeer[]>([])
   const [micPermissionDenied, setMicPermissionDenied] = useState(false)
+  const [micErrorMessage, setMicErrorMessage] = useState<string | null>(null)
 
   const localStreamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
@@ -37,6 +38,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
 
     if (!voiceChatEnabled) {
       console.log("[v0] [VoiceChat] Voice chat is disabled in world settings")
+      setMicErrorMessage("Le chat vocal est désactivé dans les paramètres du monde")
       return false
     }
 
@@ -68,11 +70,35 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
 
       setIsVoiceConnected(true)
       setMicPermissionDenied(false)
+      setMicErrorMessage(null)
       console.log("[v0] [VoiceChat] Voice chat connected successfully")
       return true
     } catch (error) {
       console.error("[v0] [VoiceChat] Error accessing microphone:", error)
       setMicPermissionDenied(true)
+
+      if (error instanceof Error) {
+        if (error.name === "NotAllowedError" || error.name === "PermissionDeniedError") {
+          setMicErrorMessage(
+            "Accès au microphone refusé. Cliquez sur l'icône de verrouillage dans la barre d'adresse et autorisez le microphone.",
+          )
+        } else if (error.name === "NotFoundError") {
+          setMicErrorMessage("Aucun microphone détecté. Vérifiez que votre microphone est branché.")
+        } else if (error.name === "NotReadableError") {
+          setMicErrorMessage("Impossible d'accéder au microphone. Il est peut-être utilisé par une autre application.")
+        } else if (error.name === "OverconstrainedError") {
+          setMicErrorMessage("Configuration du microphone non supportée.")
+        } else if (error.name === "NotSupportedError") {
+          setMicErrorMessage(
+            "Votre navigateur ne supporte pas l'accès au microphone. Utilisez HTTPS ou un navigateur récent.",
+          )
+        } else {
+          setMicErrorMessage(`Erreur microphone: ${error.message}`)
+        }
+      } else {
+        setMicErrorMessage("Erreur inconnue lors de l'accès au microphone.")
+      }
+
       return false
     }
   }, [voiceChatEnabled, userId, currentRoom])
@@ -122,7 +148,6 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
       analyserRef.current.getByteFrequencyData(dataArray)
       const average = dataArray.reduce((a, b) => a + b) / dataArray.length
 
-      // Threshold for speaking detection
       setIsSpeaking(average > 30)
 
       animationFrameRef.current = requestAnimationFrame(checkSpeaking)
@@ -157,6 +182,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
     isSpeaking,
     voicePeers,
     micPermissionDenied,
+    micErrorMessage,
     requestMicAccess,
     toggleMic,
     disconnect,

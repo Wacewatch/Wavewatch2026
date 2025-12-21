@@ -7,6 +7,7 @@ interface VoiceChatPanelProps {
   isMicMuted: boolean
   isSpeaking: boolean
   micPermissionDenied: boolean
+  micErrorMessage?: string | null
   currentRoom?: string | null
   currentCinemaRoom?: { id: string; name?: string; room_number?: number } | null
   voicePeers: Array<{
@@ -25,6 +26,7 @@ export function VoiceChatPanel({
   isMicMuted,
   isSpeaking,
   micPermissionDenied,
+  micErrorMessage,
   currentRoom,
   currentCinemaRoom,
   voicePeers,
@@ -64,7 +66,11 @@ export function VoiceChatPanel({
         {getRoomDisplayName()}
       </div>
 
-      {micPermissionDenied ? (
+      {micPermissionDenied && micErrorMessage ? (
+        <div className="text-xs text-red-400 mb-2 p-2 bg-red-900/20 rounded border border-red-800">
+          {micErrorMessage}
+        </div>
+      ) : micPermissionDenied ? (
         <div className="text-xs text-red-400 mb-2">
           Accès au microphone refusé. Vérifiez les paramètres de votre navigateur.
         </div>
