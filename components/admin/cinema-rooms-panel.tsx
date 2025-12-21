@@ -532,29 +532,17 @@ export function CinemaRoomsPanel({ rooms, sessions }: { rooms: any[]; sessions: 
                                   type="datetime-local"
                                   value={
                                     session.schedule_start
-                                      ? (() => {
-                                          try {
-                                            const date = new Date(session.schedule_start)
-                                            if (isNaN(date.getTime())) return ""
-                                            return date.toISOString().slice(0, 16)
-                                          } catch {
-                                            return ""
-                                          }
-                                        })()
+                                      ? new Date(session.schedule_start).toISOString().slice(0, 16)
                                       : ""
                                   }
                                   onChange={(e) => {
-                                    const value = e.target.value
-                                    // Convert datetime-local value to ISO format for database
-                                    const isoValue = value ? new Date(value).toISOString() : value
                                     setCinemaSessions(
                                       cinemaSessions.map((s) =>
-                                        s.id === session.id ? { ...s, schedule_start: isoValue } : s,
+                                        s.id === session.id ? { ...s, schedule_start: e.target.value } : s,
                                       ),
                                     )
                                   }}
                                   className="bg-gray-500 border-gray-400 text-white"
-                                  placeholder="YYYY-MM-DDTHH:MM"
                                 />
                               </div>
 
@@ -564,29 +552,17 @@ export function CinemaRoomsPanel({ rooms, sessions }: { rooms: any[]; sessions: 
                                   type="datetime-local"
                                   value={
                                     session.schedule_end
-                                      ? (() => {
-                                          try {
-                                            const date = new Date(session.schedule_end)
-                                            if (isNaN(date.getTime())) return ""
-                                            return date.toISOString().slice(0, 16)
-                                          } catch {
-                                            return ""
-                                          }
-                                        })()
+                                      ? new Date(session.schedule_end).toISOString().slice(0, 16)
                                       : ""
                                   }
                                   onChange={(e) => {
-                                    const value = e.target.value
-                                    // Convert datetime-local value to ISO format for database
-                                    const isoValue = value ? new Date(value).toISOString() : value
                                     setCinemaSessions(
                                       cinemaSessions.map((s) =>
-                                        s.id === session.id ? { ...s, schedule_end: isoValue } : s,
+                                        s.id === session.id ? { ...s, schedule_end: e.target.value } : s,
                                       ),
                                     )
                                   }}
                                   className="bg-gray-500 border-gray-400 text-white"
-                                  placeholder="YYYY-MM-DDTHH:MM"
                                 />
                               </div>
 
