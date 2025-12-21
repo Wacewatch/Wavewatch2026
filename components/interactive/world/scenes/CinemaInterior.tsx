@@ -5,6 +5,7 @@ import { HLSVideoScreen } from "../../hls-video-screen"
 import { MP4VideoScreen } from "../../mp4-video-screen"
 import { useState, useEffect, useRef, useMemo } from "react"
 import * as THREE from "three"
+import { PHPVideoScreen } from "./PHPVideoScreen" // Added PHPVideoScreen import
 
 interface CinemaSession {
   id: string
@@ -75,16 +76,15 @@ function getThemeColors(theme?: string): { floor: string; wall: string; seatDefa
   }
 }
 
-function getVideoType(url: string): "mp4" | "m3u8" | "iframe" | "unknown" {
+function getVideoType(url: string): "mp4" | "m3u8" | "iframe" | "php" | "unknown" {
   if (!url) return "unknown"
   const lowerUrl = url.toLowerCase()
 
-  if (
-    lowerUrl.includes(".mp4") ||
-    lowerUrl.includes(".webm") ||
-    lowerUrl.includes(".ogg") ||
-    lowerUrl.includes(".php")
-  ) {
+  // PHP files are proxy streams - need special handling
+  if (lowerUrl.includes(".php")) {
+    return "php"
+  }
+  if (lowerUrl.includes(".mp4") || lowerUrl.includes(".webm") || lowerUrl.includes(".ogg")) {
     return "mp4"
   }
   if (lowerUrl.includes(".m3u8")) {
@@ -519,6 +519,18 @@ export function CinemaInterior({
 
           {isMovieStarted && !isMovieEnded && activeEmbedUrl && !showMovieFullscreen && (
             <>
+              {videoType === "php" && (
+                <PHPVideoScreen
+                  key={`php-${room.id}-${mp4StartTime}`}
+                  src={activeEmbedUrl}
+                  width={14}
+                  height={8}
+                  position={[0, 0, 0.3]}
+                  muted={isCinemaMuted}
+                  startTime={mp4StartTime}
+                />
+              )}
+
               {videoType === "mp4" && (
                 <MP4VideoScreen
                   key={`mp4-${room.id}-${mp4StartTime}`}
