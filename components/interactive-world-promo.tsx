@@ -1,10 +1,31 @@
+"use client"
+
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Film, Radius as Stadium, Users, Calendar, Clock, Sparkles } from "lucide-react"
+import { Film, Radius as Stadium, Users, Calendar, Clock, Sparkles, ChevronLeft, ChevronRight } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useState, useEffect } from "react"
 import { supabase } from "@/lib/supabase"
+
+type CinemaSession = {
+  id: string
+  movie_title: string
+  movie_poster: string
+  schedule_start: string
+  schedule_end: string
+  interactive_cinema_rooms?: {
+    name?: string
+    room_number?: number
+  }
+}
+
+type StadiumData = {
+  match_title?: string
+  schedule_start: string
+  schedule_end: string
+} | null
 
 async function getCinemaSessionsData() {
   try {
@@ -64,6 +85,20 @@ function isCurrentlyPlaying(startTime: string, endTime: string) {
   return now >= start && now <= end
 }
 
+function getTimeSinceStart(startTime: string) {
+  const now = new Date()
+  const start = new Date(startTime)
+  const diffMs = now.getTime() - start.getTime()
+
+  if (diffMs <= 0) return null
+
+  const diffMinutes = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMinutes / 60)
+
+  if (diffHours > 0) return `depuis ${diffHours}h ${diffMinutes % 60}min`
+  return `depuis ${diffMinutes}min`
+}
+
 function getTimeUntilStart(startTime: string) {
   const now = new Date()
   const start = new Date(startTime)
@@ -80,9 +115,115 @@ function getTimeUntilStart(startTime: string) {
   return `dans ${diffMinutes}min`
 }
 
-export async function InteractiveWorldPromo() {
-  const cinemaSessions = await getCinemaSessionsData()
-  const stadium = await getStadiumData()
+function CinemaSessionsCarousel({ sessions }: { sessions: CinemaSession[] }) {
+  const [currentPage, setCurrentPage] = useState(0)
+  const sessionsPerPage = 4
+  const totalPages = Math.ceil(sessions.length / sessionsPerPage)
+
+  const currentSessions = sessions.slice(currentPage * sessionsPerPage, (currentPage + 1) * sessionsPerPage)
+
+  return (
+    <div className="space-y-3">
+      {/* Sessions Grid - 4 per row in 2x2 grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {currentSessions.map((session) => {
+          const isPlaying = isCurrentlyPlaying(session.schedule_start, session.schedule_end)
+          const timeElapsed = isPlaying ? getTimeSinceStart(session.schedule_start) : null
+          const timeUntil = !isPlaying ? getTimeUntilStart(session.schedule_start) : null
+
+          return (
+            <div
+              key={session.id}
+              className="bg-black/40 rounded-lg p-3 border border-purple-500/20 hover:border-purple-500/50 transition-colors"
+            >
+              <div className="flex gap-3">
+                {session.movie_poster && (
+                  <div className="relative w-12 h-18 flex-shrink-0 rounded overflow-hidden">
+                    <Image
+                      src={session.movie_poster || "/placeholder.svg"}
+                      alt={session.movie_title}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-white text-sm line-clamp-1">{session.movie_title}</h4>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {session.interactive_cinema_rooms?.name || `Salle ${session.interactive_cinema_rooms?.room_number}`}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-300">
+                    <Clock className="w-3 h-3" />
+                    {formatTime(session.schedule_start)}
+                  </div>
+                  <div className="mt-2">
+                    {isPlaying ? (
+                      <Badge className="bg-red-600 text-white text-xs border-0 animate-pulse">
+                        EN COURS {timeElapsed && `· ${timeElapsed}`}
+                      </Badge>
+                    ) : timeUntil ? (
+                      <Badge className="bg-blue-600 text-white text-xs border-0">À VENIR · {timeUntil}</Badge>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Carousel Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+            disabled={currentPage === 0}
+            className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300 hover:bg-purple-500/20"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex gap-1.5">
+            {Array.from({ length: totalPages }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentPage(i)}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === currentPage ? "w-6 bg-purple-400" : "w-1.5 bg-gray-600"
+                }`}
+              />
+            ))}
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentPage((p) => Math.min(totalPages - 1, p + 1))}
+            disabled={currentPage === totalPages - 1}
+            className="h-8 w-8 p-0 text-purple-400 hover:text-purple-300 hover:bg-purple-500/20"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export function InteractiveWorldPromo({
+  cinemaSessions,
+  stadium,
+}: {
+  cinemaSessions: CinemaSession[]
+  stadium: StadiumData
+}) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
 
   return (
     <Card className="w-full bg-gradient-to-br from-purple-600/20 via-blue-600/10 to-gray-900 border-purple-500/30 overflow-hidden">
@@ -112,57 +253,7 @@ export async function InteractiveWorldPromo() {
               </div>
 
               {cinemaSessions.length > 0 ? (
-                <div className="space-y-3">
-                  {cinemaSessions.map((session: any) => {
-                    const isPlaying = isCurrentlyPlaying(session.schedule_start, session.schedule_end)
-                    const timeUntil = !isPlaying ? getTimeUntilStart(session.schedule_start) : null
-
-                    return (
-                      <div
-                        key={session.id}
-                        className="bg-black/40 rounded-lg p-3 border border-purple-500/20 hover:border-purple-500/50 transition-colors"
-                      >
-                        <div className="flex gap-3">
-                          {session.movie_poster && (
-                            <div className="relative w-16 h-24 flex-shrink-0 rounded overflow-hidden">
-                              <Image
-                                src={session.movie_poster || "/placeholder.svg"}
-                                alt={session.movie_title}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between gap-2">
-                              <h4 className="font-semibold text-white text-sm line-clamp-1">{session.movie_title}</h4>
-                              {isPlaying ? (
-                                <Badge className="bg-red-600 text-white text-xs border-0 animate-pulse">EN COURS</Badge>
-                              ) : timeUntil ? (
-                                <Badge className="bg-blue-600 text-white text-xs border-0">À VENIR</Badge>
-                              ) : null}
-                            </div>
-                            <p className="text-xs text-gray-400 mt-1">
-                              {session.interactive_cinema_rooms?.name ||
-                                `Salle ${session.interactive_cinema_rooms?.room_number}`}
-                            </p>
-                            <div className="flex items-center gap-3 mt-2 text-xs text-gray-300">
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {formatDate(session.schedule_start)}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {formatTime(session.schedule_start)}
-                              </div>
-                            </div>
-                            {timeUntil && <p className="text-xs text-blue-400 mt-1 font-medium">Démarre {timeUntil}</p>}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                <CinemaSessionsCarousel sessions={cinemaSessions} />
               ) : (
                 <div className="bg-black/40 rounded-lg p-4 border border-purple-500/20 text-center">
                   <p className="text-gray-400 text-sm">Aucune séance programmée pour le moment</p>
@@ -203,9 +294,9 @@ export async function InteractiveWorldPromo() {
                 <div className="bg-black/40 rounded-lg p-4 border border-blue-500/20 space-y-3">
                   <p className="text-gray-400 text-sm text-center">Aucun match programmé pour le moment</p>
                   <div className="bg-gradient-to-r from-blue-600/20 to-green-600/20 rounded p-3 border border-blue-500/30">
-                    <p className="text-xs text-gray-300 text-center">
-                      <span className="font-semibold text-blue-400">bEiN Sport</span> et{" "}
-                      <span className="font-semibold text-green-400">MGG FAST</span> en live disponibles
+                    <p className="text-sm text-gray-300 text-center">
+                      <span className="font-semibold text-blue-400">bEiN Sport</span> est en{" "}
+                      <span className="font-bold text-green-400">LIVE 24/24</span>
                     </p>
                   </div>
                 </div>
