@@ -1,6 +1,6 @@
 "use client"
 
-import { useFrame } from "@react-three/drei"
+import { useFrame } from "@react-three/fiber"
 import { HLSVideoScreen } from "../../hls-video-screen"
 import { MP4VideoScreen } from "../../mp4-video-screen"
 import { useState, useEffect, useRef, useMemo } from "react"
