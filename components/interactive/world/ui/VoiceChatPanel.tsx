@@ -51,7 +51,7 @@ export function VoiceChatPanel({
 
   return (
     <div
-      className="fixed bottom-4 left-4 bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 z-50"
+      className="fixed bottom-4 left-4 bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 z-50 pointer-events-auto"
       style={{ minWidth: "200px" }}
     >
       <div className="flex items-center gap-2 mb-2">

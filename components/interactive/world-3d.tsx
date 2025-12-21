@@ -1470,20 +1470,18 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
       {/* Voice Chat Panel */}
       {showVoiceChat && (
-        <div className="fixed inset-0 pointer-events-none z-40">
-          <VoiceChatPanel
-            isVoiceConnected={isVoiceConnected}
-            isMicMuted={isMicMuted}
-            isSpeaking={isSpeaking}
-            micPermissionDenied={micPermissionDenied}
-            currentRoom={currentRoom}
-            currentCinemaRoom={currentCinemaRoom}
-            voicePeers={voicePeers}
-            onRequestMicAccess={requestMicAccess}
-            onToggleMic={toggleMic}
-            onDisconnect={disconnect}
-          />
-        </div>
+        <VoiceChatPanel
+          isVoiceConnected={isVoiceConnected}
+          isMicMuted={isMicMuted}
+          isSpeaking={isSpeaking}
+          micPermissionDenied={micPermissionDenied}
+          currentRoom={currentRoom}
+          currentCinemaRoom={currentCinemaRoom}
+          voicePeers={voicePeers}
+          onRequestMicAccess={requestMicAccess}
+          onToggleMic={toggleMic}
+          onDisconnect={disconnect}
+        />
       )}
 
       {!isMobileMode && (
