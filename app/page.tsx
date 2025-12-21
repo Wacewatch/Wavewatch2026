@@ -13,6 +13,7 @@ import { SubscriptionOffer } from "@/components/subscription-offer"
 import { PublicPlaylistsRow } from "@/components/public-playlists-row"
 import { PopularCollections } from "@/components/popular-collections"
 import { supabase } from "@/lib/supabase"
+import { InteractiveWorldPromo } from "@/components/interactive-world-promo"
 
 export const dynamic = "force-dynamic"
 
@@ -121,6 +122,9 @@ export default async function HomePage() {
             <TrendingTVChannels />
           </Suspense>
         )}
+        <Suspense fallback={<LoadingSection />}>
+          <InteractiveWorldPromo />
+        </Suspense>
         <SportsStreamPromo />
         {modules.subscription_offer && <SubscriptionOffer />}
         {modules.random_content && (

@@ -159,7 +159,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   const [worldSettings, setWorldSettings] = useState({
     maxCapacity: 100,
     worldMode: "day" as "day" | "night" | "sunset" | "christmas",
-    voiceChatEnabled: false,
+    voiceChatEnabled: true, // Enable voice chat by default in interactive world
     playerInteractionsEnabled: true,
     showStatusBadges: true,
     enableChat: true,
@@ -208,6 +208,9 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     requestMicAccess,
     toggleMic,
     disconnect,
+    resetMicPermission, // Add new functions
+    setPeerVolume,
+    togglePeerMute,
   } = useVoiceChat({
     userId: userId, // Changed from visitorId to userId for consistency
     currentRoom,
@@ -1483,6 +1486,9 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           onRequestMicAccess={requestMicAccess}
           onToggleMic={toggleMic}
           onDisconnect={disconnect}
+          onResetPermission={resetMicPermission} // Pass new functions
+          onSetPeerVolume={setPeerVolume}
+          onTogglePeerMute={togglePeerMute}
         />
       )}
 

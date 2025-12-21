@@ -9,11 +9,12 @@ interface UseVoiceChatProps {
 }
 
 interface VoicePeer {
-  odIUser: string
+  userId: string
   username: string
   stream: MediaStream | null
   isMuted: boolean
   isSpeaking: boolean
+  volume: number // Add volume control for each peer
 }
 
 export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabled = false }: UseVoiceChatProps = {}) {
@@ -176,6 +177,22 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
     }
   }, [currentRoom, isVoiceConnected, disconnect])
 
+  const resetMicPermission = useCallback(() => {
+    console.log("[v0] [VoiceChat] Resetting microphone permission state")
+    setMicPermissionDenied(false)
+    setMicErrorMessage(null)
+  }, [])
+
+  const setPeerVolume = useCallback((peerId: string, volume: number) => {
+    setVoicePeers((peers) =>
+      peers.map((peer) => (peer.userId === peerId ? { ...peer, volume: Math.max(0, Math.min(1, volume)) } : peer)),
+    )
+  }, [])
+
+  const togglePeerMute = useCallback((peerId: string) => {
+    setVoicePeers((peers) => peers.map((peer) => (peer.userId === peerId ? { ...peer, isMuted: !peer.isMuted } : peer)))
+  }, [])
+
   return {
     isVoiceConnected,
     isMicMuted,
@@ -186,5 +203,8 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
     requestMicAccess,
     toggleMic,
     disconnect,
+    resetMicPermission,
+    setPeerVolume, // Export new functions
+    togglePeerMute,
   }
 }
