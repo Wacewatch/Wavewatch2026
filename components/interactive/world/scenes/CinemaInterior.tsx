@@ -4,304 +4,89 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useFrame } from "@react-three/fiber"
 import { Html } from "@react-three/drei"
 import * as THREE from "three"
-import type { CinemaRoom, CinemaSeat, CinemaInteriorProps } from "./types" // Assuming types are defined in a separate file
-import { generateSeatPosition, getThemeColors, getVideoType } from "./utils" // Assuming utils are defined in a separate file
 
-function WaitingScreen({
-  room,
-  countdown,
-  width = 16,
-  height = 9,
-  position = [0, 0, 0] as [number, number, number],
-}: {
-  room: CinemaRoom
+interface CinemaRoom {
+  id: string
+  room_number: number
+  name?: string
+  capacity?: number
+  theme?: string
+  movie_title: string
+  movie_poster?: string
+  embed_url?: string
+  schedule_start?: string
+  schedule_end?: string
+}
+
+interface CinemaSeat {
+  id: string
+  row_number: number
+  seat_number: number
+  user_id: string | null
+}
+
+interface CinemaInteriorProps {
+  currentCinemaRoom: CinemaRoom
+  cinemaRooms: CinemaRoom[]
+  cinemaSeats: CinemaSeat[]
+  mySeat: number | null
+  showMovieFullscreen: boolean
+  isCinemaMuted: boolean
   countdown: string
-  width?: number
-  height?: number
-  position?: [number, number, number]
-}) {
-  const meshRef = useRef<THREE.Mesh>(null)
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
-  const textureRef = useRef<THREE.CanvasTexture | null>(null)
-  const imageRef = useRef<HTMLImageElement | null>(null)
-  const [imageLoaded, setImageLoaded] = useState(false)
-
-  // Créer le canvas une seule fois
-  useEffect(() => {
-    const canvas = document.createElement("canvas")
-    canvas.width = 1920
-    canvas.height = 1080
-    canvasRef.current = canvas
-
-    const texture = new THREE.CanvasTexture(canvas)
-    texture.minFilter = THREE.LinearFilter
-    texture.magFilter = THREE.LinearFilter
-    textureRef.current = texture
-
-    // Charger l'image du poster
-    if (room.movie_poster) {
-      const img = new Image()
-      img.crossOrigin = "anonymous"
-      img.onload = () => {
-        imageRef.current = img
-        setImageLoaded(true)
-      }
-      img.onerror = () => {
-        setImageLoaded(true) // Continuer sans image
-      }
-      const posterUrl = room.movie_poster.startsWith("http")
-        ? room.movie_poster
-        : `https://image.tmdb.org/t/p/w500${room.movie_poster}`
-      img.src = posterUrl
-    } else {
-      setImageLoaded(true)
-    }
-
-    return () => {
-      texture.dispose()
-    }
-  }, [room.movie_poster])
-
-  // Redessiner le canvas à chaque frame pour mettre à jour le compte à rebours
-  useFrame(() => {
-    if (!canvasRef.current || !textureRef.current) return
-
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    // Fond noir
-    ctx.fillStyle = "#000000"
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    // Cadre décoratif
-    ctx.strokeStyle = "#333333"
-    ctx.lineWidth = 4
-    ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80)
-
-    // Titre du film
-    const title = room.movie_title || room.name || "Salle de cinéma"
-    ctx.fillStyle = "#ffffff"
-    ctx.font = "bold 72px Arial, sans-serif"
-    ctx.textAlign = "center"
-    ctx.textBaseline = "top"
-
-    // Gérer les titres longs
-    const maxWidth = canvas.width - 200
-    const words = title.split(" ")
-    const lines: string[] = []
-    let currentLine = ""
-
-    for (const word of words) {
-      const testLine = currentLine ? `${currentLine} ${word}` : word
-      const metrics = ctx.measureText(testLine)
-      if (metrics.width > maxWidth && currentLine) {
-        lines.push(currentLine)
-        currentLine = word
-      } else {
-        currentLine = testLine
-      }
-    }
-    if (currentLine) lines.push(currentLine)
-
-    let titleY = 100
-    for (const line of lines) {
-      ctx.fillText(line, canvas.width / 2, titleY)
-      titleY += 80
-    }
-
-    // Image du poster au centre
-    if (imageRef.current && imageLoaded) {
-      const img = imageRef.current
-      const posterWidth = 280
-      const posterHeight = 420
-      const posterX = (canvas.width - posterWidth) / 2
-      const posterY = titleY + 40
-
-      // Ombre du poster
-      ctx.fillStyle = "rgba(0, 0, 0, 0.5)"
-      ctx.fillRect(posterX + 8, posterY + 8, posterWidth, posterHeight)
-
-      // Poster
-      ctx.drawImage(img, posterX, posterY, posterWidth, posterHeight)
-
-      // Bordure du poster
-      ctx.strokeStyle = "#444444"
-      ctx.lineWidth = 2
-      ctx.strokeRect(posterX, posterY, posterWidth, posterHeight)
-    }
-
-    // Compte à rebours
-    const countdownY = imageLoaded && imageRef.current ? 700 : titleY + 100
-
-    ctx.fillStyle = "#aaaaaa"
-    ctx.font = "36px Arial, sans-serif"
-    ctx.fillText("Début dans:", canvas.width / 2, countdownY)
-
-    ctx.fillStyle = "#fbbf24" // Jaune
-    ctx.font = "bold 64px Arial, sans-serif"
-    ctx.fillText(countdown, canvas.width / 2, countdownY + 60)
-
-    // Message Watch Party
-    ctx.fillStyle = "#666666"
-    ctx.font = "28px Arial, sans-serif"
-    ctx.fillText("🎬 Watch Party - Le film démarrera automatiquement", canvas.width / 2, canvas.height - 100)
-
-    // Mettre à jour la texture
-    textureRef.current.needsUpdate = true
-
-    // Appliquer la texture au mesh
-    if (meshRef.current && meshRef.current.material) {
-      ;(meshRef.current.material as THREE.MeshBasicMaterial).map = textureRef.current
-    }
-  })
-
-  return (
-    <mesh ref={meshRef} position={position}>
-      <planeGeometry args={[width, height]} />
-      <meshBasicMaterial color="#000000" />
-    </mesh>
-  )
 }
 
-function EndedScreen({
-  room,
-  width = 16,
-  height = 9,
-  position = [0, 0, 0] as [number, number, number],
-}: {
-  room: CinemaRoom
-  width?: number
-  height?: number
-  position?: [number, number, number]
-}) {
-  const meshRef = useRef<THREE.Mesh>(null)
-  const textureRef = useRef<THREE.CanvasTexture | null>(null)
+function generateSeatPosition(rowNumber: number, seatNumber: number, totalSeatsPerRow = 10): [number, number, number] {
+  const rowSpacing = 2.5
+  const seatSpacing = 1.5
+  const startX = -((totalSeatsPerRow - 1) * seatSpacing) / 2
+  const firstRowZ = 2
 
-  useEffect(() => {
-    const canvas = document.createElement("canvas")
-    canvas.width = 1920
-    canvas.height = 1080
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+  const x = startX + (seatNumber - 1) * seatSpacing
+  const y = 0.4
+  const z = firstRowZ + (rowNumber - 1) * rowSpacing
 
-    // Fond noir
-    ctx.fillStyle = "#000000"
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-    // Cadre
-    ctx.strokeStyle = "#333333"
-    ctx.lineWidth = 4
-    ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80)
-
-    // Titre
-    ctx.fillStyle = "#ffffff"
-    ctx.font = "bold 64px Arial, sans-serif"
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
-    ctx.fillText("Séance terminée", canvas.width / 2, canvas.height / 2 - 80)
-
-    // Message
-    ctx.fillStyle = "#aaaaaa"
-    ctx.font = "36px Arial, sans-serif"
-    ctx.fillText(`La projection de "${room.movie_title}" est terminée.`, canvas.width / 2, canvas.height / 2 + 20)
-
-    // Remerciement
-    ctx.fillStyle = "#666666"
-    ctx.font = "28px Arial, sans-serif"
-    ctx.fillText("Merci d'avoir participé à cette Watch Party!", canvas.width / 2, canvas.height / 2 + 100)
-
-    const texture = new THREE.CanvasTexture(canvas)
-    texture.minFilter = THREE.LinearFilter
-    texture.magFilter = THREE.LinearFilter
-    textureRef.current = texture
-
-    if (meshRef.current) {
-      ;(meshRef.current.material as THREE.MeshBasicMaterial).map = texture
-      ;(meshRef.current.material as THREE.MeshBasicMaterial).needsUpdate = true
-    }
-
-    return () => {
-      texture.dispose()
-    }
-  }, [room.movie_title])
-
-  return (
-    <mesh ref={meshRef} position={position}>
-      <planeGeometry args={[width, height]} />
-      <meshBasicMaterial color="#000000" />
-    </mesh>
-  )
+  return [x, y, z]
 }
 
-function NoSessionScreen({
-  room,
-  width = 16,
-  height = 9,
-  position = [0, 0, 0] as [number, number, number],
-}: {
-  room: CinemaRoom
-  width?: number
-  height?: number
-  position?: [number, number, number]
-}) {
-  const meshRef = useRef<THREE.Mesh>(null)
-  const textureRef = useRef<THREE.CanvasTexture | null>(null)
+function getThemeColors(theme?: string): { floor: string; wall: string; seatDefault: string } {
+  switch (theme) {
+    case "luxury":
+      return { floor: "#1a1a2e", wall: "#16213e", seatDefault: "#c9a227" }
+    case "retro":
+      return { floor: "#3d0c02", wall: "#1a0f0a", seatDefault: "#8b4513" }
+    case "modern":
+      return { floor: "#0f0f0f", wall: "#1f1f1f", seatDefault: "#4a4a4a" }
+    default:
+      return { floor: "#2d1010", wall: "#1a0f0a", seatDefault: "#374151" }
+  }
+}
 
-  useEffect(() => {
-    const canvas = document.createElement("canvas")
-    canvas.width = 1920
-    canvas.height = 1080
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+function getVideoType(url: string): "mp4" | "m3u8" | "iframe" | "unknown" {
+  if (!url) return "unknown"
+  const lowerUrl = url.toLowerCase()
 
-    // Fond noir
-    ctx.fillStyle = "#000000"
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
+  if (
+    lowerUrl.includes(".mp4") ||
+    lowerUrl.includes(".webm") ||
+    lowerUrl.includes(".ogg") ||
+    lowerUrl.includes(".php")
+  ) {
+    return "mp4"
+  }
+  if (lowerUrl.includes(".m3u8")) {
+    return "m3u8"
+  }
+  if (lowerUrl.includes("youtube.com") || lowerUrl.includes("youtu.be") || lowerUrl.includes("vimeo.com")) {
+    return "iframe"
+  }
+  return "mp4"
+}
 
-    // Cadre
-    ctx.strokeStyle = "#333333"
-    ctx.lineWidth = 4
-    ctx.strokeRect(40, 40, canvas.width - 80, canvas.height - 80)
-
-    // Titre de la salle
-    ctx.fillStyle = "#ffffff"
-    ctx.font = "bold 64px Arial, sans-serif"
-    ctx.textAlign = "center"
-    ctx.textBaseline = "middle"
-    ctx.fillText(room.name || `Salle ${room.room_number}`, canvas.width / 2, canvas.height / 2 - 60)
-
-    // Message
-    ctx.fillStyle = "#aaaaaa"
-    ctx.font = "36px Arial, sans-serif"
-    ctx.fillText("Aucune séance programmée", canvas.width / 2, canvas.height / 2 + 20)
-
-    // Info
-    ctx.fillStyle = "#666666"
-    ctx.font = "28px Arial, sans-serif"
-    ctx.fillText("Revenez plus tard pour la prochaine Watch Party!", canvas.width / 2, canvas.height / 2 + 100)
-
-    const texture = new THREE.CanvasTexture(canvas)
-    texture.minFilter = THREE.LinearFilter
-    texture.magFilter = THREE.LinearFilter
-    textureRef.current = texture
-
-    if (meshRef.current) {
-      ;(meshRef.current.material as THREE.MeshBasicMaterial).map = texture
-      ;(meshRef.current.material as THREE.MeshBasicMaterial).needsUpdate = true
-    }
-
-    return () => {
-      texture.dispose()
-    }
-  }, [room.name, room.room_number])
-
-  return (
-    <mesh ref={meshRef} position={position}>
-      <planeGeometry args={[width, height]} />
-      <meshBasicMaterial color="#000000" />
-    </mesh>
-  )
+function calculateSyncPosition(scheduleStart: string): number {
+  const startDate = new Date(scheduleStart)
+  const now = new Date()
+  const elapsedSeconds = Math.floor((now.getTime() - startDate.getTime()) / 1000)
+  return Math.max(0, elapsedSeconds)
 }
 
 function VideoScreen({
@@ -883,14 +668,52 @@ export function CinemaInterior({
       {/* Écran de cinéma - maintenant un vrai objet 3D */}
       {room && (
         <>
+          {/* Affichages avant le début du film */}
           {!isMovieStarted && (
-            <WaitingScreen room={room} countdown={countdown} width={16} height={9} position={[0, 4, -17.5]} />
+            <Html position={[0, 4, -17]} center>
+              <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
+                <h2 className="text-3xl font-bold mb-2">{room.movie_title || room.name || "Salle de cinéma"}</h2>
+                {room.schedule_start && (
+                  <p className="text-lg text-gray-300 mb-4">
+                    Début dans: <span className="text-yellow-400 font-bold">{countdown}</span>
+                  </p>
+                )}
+                {room.movie_poster && (
+                  <img
+                    src={
+                      room.movie_poster.startsWith("http")
+                        ? room.movie_poster
+                        : `https://image.tmdb.org/t/p/w500${room.movie_poster}`
+                    }
+                    alt={room.movie_title}
+                    className="w-40 h-60 object-cover rounded mx-auto"
+                  />
+                )}
+                <p className="text-sm text-gray-400 mt-4">Watch Party - Le film démarrera automatiquement</p>
+              </div>
+            </Html>
           )}
 
-          {isMovieEnded && <EndedScreen room={room} width={16} height={9} position={[0, 4, -17.5]} />}
+          {/* Affichage après la fin du film */}
+          {isMovieEnded && (
+            <Html position={[0, 4, -17]} center>
+              <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
+                <h2 className="text-2xl font-bold mb-2">Séance terminée</h2>
+                <p className="text-gray-300">La projection de "{room.movie_title}" est terminée.</p>
+                <p className="text-sm text-gray-400 mt-2">Merci d'avoir participé à cette Watch Party!</p>
+              </div>
+            </Html>
+          )}
 
+          {/* Aucune séance programmée */}
           {!room.embed_url && !room.movie_title && (
-            <NoSessionScreen room={room} width={16} height={9} position={[0, 4, -17.5]} />
+            <Html position={[0, 4, -17]} center>
+              <div className="bg-black/80 p-6 rounded-lg text-white text-center backdrop-blur">
+                <h2 className="text-2xl font-bold mb-2">{room.name || `Salle ${room.room_number}`}</h2>
+                <p className="text-gray-300">Aucune séance programmée</p>
+                <p className="text-sm text-gray-400 mt-2">Revenez plus tard pour la prochaine Watch Party!</p>
+              </div>
+            </Html>
           )}
 
           {isMovieStarted && !isMovieEnded && room.embed_url && !showMovieFullscreen && (
