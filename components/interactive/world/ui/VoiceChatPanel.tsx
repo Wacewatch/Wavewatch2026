@@ -1,9 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { Mic, MicOff, Volume2, Phone, PhoneOff, GripVertical } from "lucide-react"
-import { useState, useRef, useEffect } from "react"
+import { Mic, MicOff, Volume2, Phone, PhoneOff } from "lucide-react"
 
 interface VoiceChatPanelProps {
   isVoiceConnected: boolean
@@ -35,47 +32,6 @@ export function VoiceChatPanel({
   onToggleMic,
   onDisconnect,
 }: VoiceChatPanelProps) {
-  const [position, setPosition] = useState({ x: 20, y: window.innerHeight - 200 })
-  const [isDragging, setIsDragging] = useState(false)
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
-  const panelRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isDragging) {
-        setPosition({
-          x: e.clientX - dragOffset.x,
-          y: e.clientY - dragOffset.y,
-        })
-      }
-    }
-
-    const handleMouseUp = () => {
-      setIsDragging(false)
-    }
-
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove)
-      document.addEventListener("mouseup", handleMouseUp)
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove)
-      document.removeEventListener("mouseup", handleMouseUp)
-    }
-  }, [isDragging, dragOffset])
-
-  const handleDragHandleMouseDown = (e: React.MouseEvent) => {
-    if (panelRef.current) {
-      const rect = panelRef.current.getBoundingClientRect()
-      setDragOffset({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      })
-      setIsDragging(true)
-    }
-  }
-
   const getRoomDisplayName = () => {
     if (!currentRoom) return "Monde"
 
@@ -95,19 +51,10 @@ export function VoiceChatPanel({
 
   return (
     <div
-      ref={panelRef}
-      className="fixed bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 z-50"
-      style={{
-        left: `${position.x}px`,
-        top: `${position.y}px`,
-        minWidth: "200px",
-      }}
+      className="fixed bottom-4 left-4 bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 z-50"
+      style={{ minWidth: "200px" }}
     >
-      <div
-        className="flex items-center gap-2 mb-2 cursor-grab active:cursor-grabbing select-none"
-        onMouseDown={handleDragHandleMouseDown}
-      >
-        <GripVertical className="w-4 h-4 text-gray-500" />
+      <div className="flex items-center gap-2 mb-2">
         <Volume2 className="w-4 h-4 text-green-400" />
         <span className="text-sm font-medium text-white">Chat Vocal</span>
       </div>
