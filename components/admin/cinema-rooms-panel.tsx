@@ -71,6 +71,56 @@ async function updateSeatsForRoom(supabase: any, roomId: string, newCapacity: nu
   return await generateSeatsForRoom(supabase, roomId, newCapacity)
 }
 
+function formatDateForInput(isoString: string): string {
+  if (!isoString) return ""
+  try {
+    const date = new Date(isoString)
+    const day = String(date.getDate()).padStart(2, "0")
+    const month = String(date.getMonth() + 1).padStart(2, "0")
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
+  } catch {
+    return ""
+  }
+}
+
+function formatTimeForInput(isoString: string): string {
+  if (!isoString) return ""
+  try {
+    const date = new Date(isoString)
+    const hours = String(date.getHours()).padStart(2, "0")
+    const minutes = String(date.getMinutes()).padStart(2, "0")
+    return `${hours}:${minutes}`
+  } catch {
+    return ""
+  }
+}
+
+function parseDateTime(dateStr: string, timeStr: string): string {
+  try {
+    // Parse date in format DD/MM/YYYY
+    const dateParts = dateStr.split("/")
+    if (dateParts.length !== 3) return new Date().toISOString()
+
+    const day = Number.parseInt(dateParts[0])
+    const month = Number.parseInt(dateParts[1]) - 1 // JS months are 0-indexed
+    const year = Number.parseInt(dateParts[2])
+
+    // Parse time in format HH:MM
+    const timeParts = timeStr.split(":")
+    if (timeParts.length !== 2) return new Date().toISOString()
+
+    const hours = Number.parseInt(timeParts[0])
+    const minutes = Number.parseInt(timeParts[1])
+
+    const date = new Date(year, month, day, hours, minutes)
+    return date.toISOString()
+  } catch (error) {
+    console.error("Error parsing date/time:", error)
+    return new Date().toISOString()
+  }
+}
+
 export function CinemaRoomsPanel({ rooms, sessions }: { rooms: any[]; sessions: any[] }) {
   const [cinemaRooms, setCinemaRooms] = useState<CinemaRoom[]>(rooms)
   const [cinemaSessions, setCinemaSessions] = useState<CinemaSession[]>(sessions)
@@ -527,42 +577,78 @@ export function CinemaRoomsPanel({ rooms, sessions }: { rooms: any[]; sessions: 
                               </div>
 
                               <div className="space-y-2">
-                                <label className="text-sm text-gray-300">Début</label>
+                                <label className="text-sm text-gray-300">Date de Début</label>
                                 <Input
-                                  type="datetime-local"
-                                  value={
-                                    session.schedule_start
-                                      ? new Date(session.schedule_start).toISOString().slice(0, 16)
-                                      : ""
-                                  }
+                                  value={formatDateForInput(session.schedule_start)}
                                   onChange={(e) => {
+                                    const dateStr = e.target.value
+                                    const timeStr = formatTimeForInput(session.schedule_start) || "00:00"
+                                    const newDateTime = parseDateTime(dateStr, timeStr)
                                     setCinemaSessions(
                                       cinemaSessions.map((s) =>
-                                        s.id === session.id ? { ...s, schedule_start: e.target.value } : s,
+                                        s.id === session.id ? { ...s, schedule_start: newDateTime } : s,
                                       ),
                                     )
                                   }}
                                   className="bg-gray-500 border-gray-400 text-white"
+                                  placeholder="12/25/2025"
                                 />
                               </div>
 
                               <div className="space-y-2">
-                                <label className="text-sm text-gray-300">Fin</label>
+                                <label className="text-sm text-gray-300">Heure de Début</label>
                                 <Input
-                                  type="datetime-local"
-                                  value={
-                                    session.schedule_end
-                                      ? new Date(session.schedule_end).toISOString().slice(0, 16)
-                                      : ""
-                                  }
+                                  value={formatTimeForInput(session.schedule_start)}
                                   onChange={(e) => {
+                                    const timeStr = e.target.value
+                                    const dateStr = formatDateForInput(session.schedule_start) || "01/01/2025"
+                                    const newDateTime = parseDateTime(dateStr, timeStr)
                                     setCinemaSessions(
                                       cinemaSessions.map((s) =>
-                                        s.id === session.id ? { ...s, schedule_end: e.target.value } : s,
+                                        s.id === session.id ? { ...s, schedule_start: newDateTime } : s,
                                       ),
                                     )
                                   }}
                                   className="bg-gray-500 border-gray-400 text-white"
+                                  placeholder="14:30"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="text-sm text-gray-300">Date de Fin</label>
+                                <Input
+                                  value={formatDateForInput(session.schedule_end)}
+                                  onChange={(e) => {
+                                    const dateStr = e.target.value
+                                    const timeStr = formatTimeForInput(session.schedule_end) || "00:00"
+                                    const newDateTime = parseDateTime(dateStr, timeStr)
+                                    setCinemaSessions(
+                                      cinemaSessions.map((s) =>
+                                        s.id === session.id ? { ...s, schedule_end: newDateTime } : s,
+                                      ),
+                                    )
+                                  }}
+                                  className="bg-gray-500 border-gray-400 text-white"
+                                  placeholder="12/25/2025"
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <label className="text-sm text-gray-300">Heure de Fin</label>
+                                <Input
+                                  value={formatTimeForInput(session.schedule_end)}
+                                  onChange={(e) => {
+                                    const timeStr = e.target.value
+                                    const dateStr = formatDateForInput(session.schedule_end) || "01/01/2025"
+                                    const newDateTime = parseDateTime(dateStr, timeStr)
+                                    setCinemaSessions(
+                                      cinemaSessions.map((s) =>
+                                        s.id === session.id ? { ...s, schedule_end: newDateTime } : s,
+                                      ),
+                                    )
+                                  }}
+                                  className="bg-gray-500 border-gray-400 text-white"
+                                  placeholder="16:30"
                                 />
                               </div>
 

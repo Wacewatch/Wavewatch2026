@@ -585,12 +585,34 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   }, [supabase]) // Added supabase as dependency
 
   useEffect(() => {
+    console.log("[v0] [World3D] Voice chat config:", {
+      voiceChatEnabled: worldSettings.voiceChatEnabled,
+      currentRoom,
+      userId: userProfile?.id || userId,
+    })
+  }, [worldSettings.voiceChatEnabled, currentRoom, userProfile?.id, userId])
+
+  useEffect(() => {
+    console.log("[v0] [World3D] Cinema interior check:", {
+      currentCinemaRoom: currentCinemaRoom?.id,
+      currentRoom,
+      roomsCount: cinemaRooms.length,
+    })
+
     if (!currentCinemaRoom || currentRoom === "stadium" || currentRoom === "arcade" || currentRoom === "disco") {
-      setIsCinemaInteriorActive(false) // Hide CinemaInterior if not in cinema
+      setIsCinemaInteriorActive(false)
       return
     }
 
     const room = cinemaRooms.find((r) => r.id === currentCinemaRoom.id) // Use currentCinemaRoom directly
+
+    console.log("[v0] [World3D] Found room for cinema interior:", {
+      found: !!room,
+      roomId: room?.id,
+      roomNumber: room?.room_number,
+      hasScheduleStart: !!room?.schedule_start,
+    })
+
     if (!room || !room.schedule_start) {
       setIsCinemaInteriorActive(false)
       return

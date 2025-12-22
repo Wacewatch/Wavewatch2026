@@ -2,7 +2,7 @@
 
 import { Html } from "@react-three/drei"
 import { HLSVideoScreen } from "../../hls-video-screen"
-import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef } from "react"
 
 interface CinemaRoom {
   id: string
@@ -98,16 +98,24 @@ function calculateSyncPosition(scheduleStart: string): number {
   return Math.max(0, elapsedSeconds)
 }
 
-export function CinemaInterior({
+export default function CinemaInterior({
   currentCinemaRoom,
   cinemaRooms,
-  cinemaSessions = [],
+  cinemaSessions,
   cinemaSeats,
   mySeat,
   showMovieFullscreen,
   isCinemaMuted,
   countdown,
 }: CinemaInteriorProps) {
+  console.log("[v0] [CinemaInterior] Rendering for room:", {
+    roomId: currentCinemaRoom?.id,
+    roomNumber: currentCinemaRoom?.room_number,
+    roomName: currentCinemaRoom?.name,
+    theme: currentCinemaRoom?.theme,
+    capacity: currentCinemaRoom?.capacity,
+  })
+
   const room = cinemaRooms.find((r) => r.id === currentCinemaRoom.id) || currentCinemaRoom
 
   console.log("[v0] CinemaInterior MOUNTED")
@@ -171,42 +179,26 @@ export function CinemaInterior({
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoStartPosition, setVideoStartPosition] = useState(0)
 
-  const themeColors = useMemo(() => getThemeColors(room?.theme), [room?.theme])
+  const themeColors = getThemeColors(room?.theme)
 
-  const seatsPerRow = useMemo(() => {
-    if (cinemaSeats.length > 0) {
-      const maxSeatInRow = Math.max(...cinemaSeats.map((s) => s.seat_number))
-      return Math.max(maxSeatInRow, 10)
-    }
-    return 10
-  }, [cinemaSeats])
+  console.log("[v0] [CinemaInterior] Theme colors:", {
+    theme: room?.theme,
+    colors: themeColors,
+  })
 
-  const displaySeats = useMemo(() => {
-    if (cinemaSeats.length > 0) {
-      return cinemaSeats
-    }
+  const seatsPerRow = Math.max(...cinemaSeats.map((s) => s.seat_number))
 
-    const capacity = room?.capacity || 30
-    const perRow = Math.min(10, Math.ceil(Math.sqrt(capacity)))
-    const totalRows = Math.ceil(capacity / perRow)
-    const defaultSeats: CinemaSeat[] = []
+  const generatedSeats = cinemaSeats.map((seat) => ({
+    id: seat.id,
+    row_number: seat.row_number,
+    seat_number: seat.seat_number,
+    user_id: seat.user_id,
+  }))
 
-    let seatCount = 0
-    for (let row = 1; row <= totalRows && seatCount < capacity; row++) {
-      const seatsInThisRow = Math.min(perRow, capacity - seatCount)
-      for (let seat = 1; seat <= seatsInThisRow; seat++) {
-        defaultSeats.push({
-          id: `default-${row}-${seat}`,
-          row_number: row,
-          seat_number: seat,
-          user_id: null,
-        })
-        seatCount++
-      }
-    }
-
-    return defaultSeats
-  }, [cinemaSeats, room?.capacity])
+  console.log("[v0] [CinemaInterior] Generated seats:", {
+    count: generatedSeats.length,
+    roomCapacity: room?.capacity,
+  })
 
   useEffect(() => {
     if (scheduleStart && isMovieStarted && !isMovieEnded) {
@@ -505,52 +497,59 @@ export function CinemaInterior({
       )}
 
       {/* Default theme decorations */}
-      {(!room?.theme || room?.theme === "default") && (
-        <>
-          {/* Classic cinema sconces */}
-          <mesh position={[-18, 5, -10]}>
-            <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
-            <meshStandardMaterial color="#8b7355" />
-          </mesh>
-          <pointLight position={[-17.5, 5, -10]} color="#ffaa00" intensity={0.5} distance={8} />
+      {!room?.theme ||
+        (room?.theme === "default" && (
+          <>
+            {/* Classic cinema sconces */}
+            <mesh position={[-18, 5, -10]}>
+              <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
+              <meshStandardMaterial color="#8b7355" />
+            </mesh>
+            <pointLight position={[-17.5, 5, -10]} color="#ffaa00" intensity={0.5} distance={8} />
 
-          <mesh position={[18, 5, -10]}>
-            <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
-            <meshStandardMaterial color="#8b7355" />
-          </mesh>
-          <pointLight position={[17.5, 5, -10]} color="#ffaa00" intensity={0.5} distance={8} />
+            <mesh position={[18, 5, -10]}>
+              <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
+              <meshStandardMaterial color="#8b7355" />
+            </mesh>
+            <pointLight position={[17.5, 5, -10]} color="#ffaa00" intensity={0.5} distance={8} />
 
-          <mesh position={[-18, 5, 10]}>
-            <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
-            <meshStandardMaterial color="#8b7355" />
-          </mesh>
-          <pointLight position={[-17.5, 5, 10]} color="#ffaa00" intensity={0.5} distance={8} />
+            <mesh position={[-18, 5, 10]}>
+              <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
+              <meshStandardMaterial color="#8b7355" />
+            </mesh>
+            <pointLight position={[-17.5, 5, 10]} color="#ffaa00" intensity={0.5} distance={8} />
 
-          <mesh position={[18, 5, 10]}>
-            <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
-            <meshStandardMaterial color="#8b7355" />
-          </mesh>
-          <pointLight position={[17.5, 5, 10]} color="#ffaa00" intensity={0.5} distance={8} />
+            <mesh position={[18, 5, 10]}>
+              <cylinderGeometry args={[0.2, 0.3, 0.5, 8]} />
+              <meshStandardMaterial color="#8b7355" />
+            </mesh>
+            <pointLight position={[17.5, 5, 10]} color="#ffaa00" intensity={0.5} distance={8} />
 
-          {/* Classic movie posters frames */}
-          <mesh position={[-18, 4, 0]}>
-            <boxGeometry args={[0.1, 2, 1.5]} />
-            <meshStandardMaterial color="#654321" />
-          </mesh>
+            {/* Classic movie posters frames */}
+            <mesh position={[-18, 4, 0]}>
+              <boxGeometry args={[0.1, 2, 1.5]} />
+              <meshStandardMaterial color="#654321" />
+            </mesh>
 
-          <mesh position={[18, 4, 0]}>
-            <boxGeometry args={[0.1, 2, 1.5]} />
-            <meshStandardMaterial color="#654321" />
-          </mesh>
+            <mesh position={[18, 4, 0]}>
+              <boxGeometry args={[0.1, 2, 1.5]} />
+              <meshStandardMaterial color="#654321" />
+            </mesh>
 
-          {/* Exit signs */}
-          <mesh position={[0, 6, 24]}>
-            <boxGeometry args={[1.5, 0.6, 0.2]} />
-            <meshBasicMaterial color="#00ff00" />
-          </mesh>
-          <pointLight position={[0, 6, 24]} color="#00ff00" intensity={0.4} distance={5} />
-        </>
-      )}
+            {/* Exit signs */}
+            <mesh position={[0, 6, 24]}>
+              <boxGeometry args={[1.5, 0.6, 0.2]} />
+              <meshBasicMaterial color="#00ff00" />
+            </mesh>
+            <pointLight position={[0, 6, 24]} color="#00ff00" intensity={0.4} distance={5} />
+          </>
+        ))}
+
+      {/* Ceiling */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 8, 0]}>
+        <planeGeometry args={[40, 50]} />
+        <meshStandardMaterial color="#0a0a0a" />
+      </mesh>
 
       {/* Back wall with screen */}
       <mesh position={[0, 4, 25]}>
@@ -575,7 +574,7 @@ export function CinemaInterior({
         <meshStandardMaterial color="#000000" />
       </mesh>
 
-      <mesh position={[0, 2, -2]} visible={false}>
+      <mesh position={[0, 4, -17.5]}>
         <boxGeometry args={[40, 4, 0.1]} />
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
@@ -719,36 +718,37 @@ export function CinemaInterior({
         </group>
       )}
 
-      {displaySeats.map((seat) => {
-        const seatId = seat.row_number * 100 + seat.seat_number
-        const isMySeat = mySeat === seatId
-        const isOccupied = !!seat.user_id
+      {generatedSeats.length > 0 &&
+        generatedSeats.map((seat) => {
+          const seatId = seat.row_number * 100 + seat.seat_number
+          const isMySeat = mySeat === seatId
+          const isOccupied = !!seat.user_id
 
-        const seatColor = isMySeat ? "#ef4444" : isOccupied ? "#f97316" : themeColors.seatDefault
+          const seatColor = isMySeat ? "#ef4444" : isOccupied ? "#f97316" : themeColors.seatDefault
 
-        const [x, y, z] = generateSeatPosition(seat.row_number, seat.seat_number, seatsPerRow)
+          const [x, y, z] = generateSeatPosition(seat.row_number, seat.seat_number, seatsPerRow)
 
-        return (
-          <group key={seat.id} position={[x, y, z]}>
-            <mesh castShadow position={[0, 0, 0]}>
-              <boxGeometry args={[1, 0.8, 0.9]} />
-              <meshStandardMaterial color={seatColor} />
-            </mesh>
-            <mesh castShadow position={[0, 0.6, 0.35]}>
-              <boxGeometry args={[1, 0.8, 0.2]} />
-              <meshStandardMaterial color={seatColor} />
-            </mesh>
-            <mesh castShadow position={[-0.45, 0.2, 0]}>
-              <boxGeometry args={[0.1, 0.3, 0.7]} />
-              <meshStandardMaterial color={seatColor} />
-            </mesh>
-            <mesh castShadow position={[0.45, 0.2, 0]}>
-              <boxGeometry args={[0.1, 0.3, 0.7]} />
-              <meshStandardMaterial color={seatColor} />
-            </mesh>
-          </group>
-        )
-      })}
+          return (
+            <group key={seat.id} position={[x, y, z]}>
+              <mesh castShadow position={[0, 0, 0]}>
+                <boxGeometry args={[1, 0.8, 0.9]} />
+                <meshStandardMaterial color={seatColor} />
+              </mesh>
+              <mesh castShadow position={[0, 0.6, 0.35]}>
+                <boxGeometry args={[1, 0.8, 0.2]} />
+                <meshStandardMaterial color={seatColor} />
+              </mesh>
+              <mesh castShadow position={[-0.45, 0.2, 0]}>
+                <boxGeometry args={[0.1, 0.3, 0.7]} />
+                <meshStandardMaterial color={seatColor} />
+              </mesh>
+              <mesh castShadow position={[0.45, 0.2, 0]}>
+                <boxGeometry args={[0.1, 0.3, 0.7]} />
+                <meshStandardMaterial color={seatColor} />
+              </mesh>
+            </group>
+          )
+        })}
     </>
   )
 }
