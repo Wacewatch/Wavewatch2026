@@ -547,10 +547,15 @@ export default function CinemaInterior({
           </>
         ))}
 
-      {/* Ceiling */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 8, 0]}>
-        <planeGeometry args={[40, 50]} />
-        <meshStandardMaterial color="#0a0a0a" />
+      {/* Side walls */}
+      <mesh rotation={[0, Math.PI / 2, 0]} position={[-20, 4, 0]}>
+        <planeGeometry args={[50, 8]} />
+        <meshStandardMaterial color={themeColors.wall} />
+      </mesh>
+
+      <mesh rotation={[0, -Math.PI / 2, 0]} position={[20, 4, 0]}>
+        <planeGeometry args={[50, 8]} />
+        <meshStandardMaterial color={themeColors.wall} />
       </mesh>
 
       {/* Back wall with screen */}
