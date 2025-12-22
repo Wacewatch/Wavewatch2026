@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useCallback, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 
@@ -125,11 +127,15 @@ export function useRoomNavigation({
 
     // Reset seats if coming from cinema/stadium (fixes teleport while seated bug)
     if (mySeat !== null && currentCinemaRoom) {
-      await supabase.from("interactive_cinema_seats").update({
-        user_id: null,
-        is_occupied: false,
-        occupied_at: null,
-      }).eq("room_id", currentCinemaRoom.id).eq("user_id", userId)
+      await supabase
+        .from("interactive_cinema_seats")
+        .update({
+          user_id: null,
+          is_occupied: false,
+          occupied_at: null,
+        })
+        .eq("room_id", currentCinemaRoom.id)
+        .eq("user_id", userId)
       setMySeat(null)
     }
     if (stadiumSeat !== null) {
@@ -171,7 +177,24 @@ export function useRoomNavigation({
       })
       .eq("user_id", userId)
       .then(() => {})
-  }, [userId, myPosition, mySeat, stadiumSeat, currentCinemaRoom, orbitControlsRef, isArcadeOpen, setMyPosition, setMyRotation, setMySeat, setStadiumSeat, setCurrentRoom, setCurrentCinemaRoom, setSavedMapPosition, setShowArcade, setShowArcadeClosedModal])
+  }, [
+    userId,
+    myPosition,
+    mySeat,
+    stadiumSeat,
+    currentCinemaRoom,
+    orbitControlsRef,
+    isArcadeOpen,
+    setMyPosition,
+    setMyRotation,
+    setMySeat,
+    setStadiumSeat,
+    setCurrentRoom,
+    setCurrentCinemaRoom,
+    setSavedMapPosition,
+    setShowArcade,
+    setShowArcadeClosedModal,
+  ])
 
   // Leave Arcade
   const handleLeaveArcade = useCallback(() => {
@@ -179,7 +202,7 @@ export function useRoomNavigation({
     const defaultRotation = 0 // Face buildings (like initial spawn)
     setMyPosition(savedMapPosition)
     setMyRotation(defaultRotation)
-    setCurrentRoom(null)
+    setCurrentRoom("main_world")
 
     // Reset camera behind player, facing buildings
     if (orbitControlsRef.current) {
@@ -203,75 +226,92 @@ export function useRoomNavigation({
   }, [userId, savedMapPosition, orbitControlsRef, setMyPosition, setMyRotation, setCurrentRoom])
 
   // Enter Cinema Room
-  const handleEnterCinemaRoom = useCallback(async (room: CinemaRoom) => {
-    // Check if cinema room is open in real-time from database
-    const { data: roomData } = await supabase
-      .from("interactive_cinema_rooms")
-      .select("is_open")
-      .eq("id", room.id)
-      .single()
+  const handleEnterCinemaRoom = useCallback(
+    async (room: CinemaRoom) => {
+      // Check if cinema room is open in real-time from database
+      const { data: roomData } = await supabase
+        .from("interactive_cinema_rooms")
+        .select("is_open")
+        .eq("id", room.id)
+        .single()
 
-    if (!roomData || roomData.is_open === false) {
+      if (!roomData || roomData.is_open === false) {
+        setShowCinema(false)
+        setShowCinemaClosedModal(true)
+        return
+      }
+
+      // Close cinema modal first
       setShowCinema(false)
-      setShowCinemaClosedModal(true)
-      return
-    }
 
-    // Close cinema modal first
-    setShowCinema(false)
+      // Clear old seat data immediately to prevent stale state
+      setCinemaSeats([])
+      setMySeat(null)
 
-    // Clear old seat data immediately to prevent stale state
-    setCinemaSeats([])
-    setMySeat(null)
+      // Reset stadium seat if coming from stadium
+      if (stadiumSeat !== null) {
+        setStadiumSeat(null)
+      }
 
-    // Reset stadium seat if coming from stadium
-    if (stadiumSeat !== null) {
-      setStadiumSeat(null)
-    }
+      // Save current map position before entering cinema
+      setSavedMapPosition({ x: myPosition.x, y: myPosition.y, z: myPosition.z })
 
-    // Save current map position before entering cinema
-    setSavedMapPosition({ x: myPosition.x, y: myPosition.y, z: myPosition.z })
+      // SET ROOM FIRST - This switches the rendering context BEFORE changing position
+      // This prevents the player from being briefly visible at the spawn position in the world
+      setCurrentRoom(`cinema_${room.id}`)
+      setCurrentCinemaRoom(room)
+      onEnterRoom?.(`cinema_${room.room_number}`)
 
-    // SET ROOM FIRST - This switches the rendering context BEFORE changing position
-    // This prevents the player from being briefly visible at the spawn position in the world
-    setCurrentRoom(`cinema_${room.id}`)
-    setCurrentCinemaRoom(room)
-    onEnterRoom?.(`cinema_${room.room_number}`)
+      // Spawn position in cinema (only visible inside cinema room now)
+      const cinemaSpawnPos = { x: 0, y: -0.35, z: 8 }
+      const cinemaRotation = Math.PI // Face the screen (screen is at negative Z)
+      setMyPosition(cinemaSpawnPos)
+      setMyRotation(cinemaRotation)
 
-    // Spawn position in cinema (only visible inside cinema room now)
-    const cinemaSpawnPos = { x: 0, y: -0.35, z: 8 }
-    const cinemaRotation = Math.PI // Face the screen (screen is at negative Z)
-    setMyPosition(cinemaSpawnPos)
-    setMyRotation(cinemaRotation)
+      // Position camera behind player, looking at the screen
+      if (orbitControlsRef.current) {
+        const controls = orbitControlsRef.current
+        controls.target.set(cinemaSpawnPos.x, cinemaSpawnPos.y + 1, cinemaSpawnPos.z)
+        // Camera behind player (positive Z) looking towards negative Z (screen)
+        controls.object.position.set(cinemaSpawnPos.x, cinemaSpawnPos.y + 8, cinemaSpawnPos.z + 15)
+        controls.update()
+      }
 
-    // Position camera behind player, looking at the screen
-    if (orbitControlsRef.current) {
-      const controls = orbitControlsRef.current
-      controls.target.set(cinemaSpawnPos.x, cinemaSpawnPos.y + 1, cinemaSpawnPos.z)
-      // Camera behind player (positive Z) looking towards negative Z (screen)
-      controls.object.position.set(cinemaSpawnPos.x, cinemaSpawnPos.y + 8, cinemaSpawnPos.z + 15)
-      controls.update()
-    }
+      // Release only MY seat if I had one in this room
+      await supabase
+        .from("interactive_cinema_seats")
+        .update({ user_id: null, is_occupied: false, occupied_at: null })
+        .eq("room_id", room.id)
+        .eq("user_id", userId)
 
-    // Release only MY seat if I had one in this room
-    await supabase
-      .from("interactive_cinema_seats")
-      .update({ user_id: null, is_occupied: false, occupied_at: null })
-      .eq("room_id", room.id)
-      .eq("user_id", userId)
-
-    // Update profile position in database
-    await supabase
-      .from("interactive_profiles")
-      .update({
-        current_room: `cinema_${room.id}`,
-        position_x: cinemaSpawnPos.x,
-        position_y: cinemaSpawnPos.y,
-        position_z: cinemaSpawnPos.z,
-        rotation: cinemaRotation,
-      })
-      .eq("user_id", userId)
-  }, [userId, myPosition, stadiumSeat, setMyPosition, setMyRotation, setMySeat, setStadiumSeat, setCurrentRoom, setCurrentCinemaRoom, setSavedMapPosition, setCinemaSeats, setShowCinema, setShowCinemaClosedModal])
+      // Update profile position in database
+      await supabase
+        .from("interactive_profiles")
+        .update({
+          current_room: `cinema_${room.id}`,
+          position_x: cinemaSpawnPos.x,
+          position_y: cinemaSpawnPos.y,
+          position_z: cinemaSpawnPos.z,
+          rotation: cinemaRotation,
+        })
+        .eq("user_id", userId)
+    },
+    [
+      userId,
+      myPosition,
+      stadiumSeat,
+      setMyPosition,
+      setMyRotation,
+      setMySeat,
+      setStadiumSeat,
+      setCurrentRoom,
+      setCurrentCinemaRoom,
+      setSavedMapPosition,
+      setCinemaSeats,
+      setShowCinema,
+      setShowCinemaClosedModal,
+    ],
+  )
 
   // Leave Cinema Room
   const handleLeaveRoom = useCallback(async () => {
@@ -279,11 +319,15 @@ export function useRoomNavigation({
       onLeaveRoom?.(`cinema_${currentCinemaRoom.room_number}`)
     }
     if (mySeat !== null && currentCinemaRoom) {
-      await supabase.from("interactive_cinema_seats").update({
-        user_id: null,
-        is_occupied: false,
-        occupied_at: null,
-      }).eq("room_id", currentCinemaRoom.id).eq("user_id", userId)
+      await supabase
+        .from("interactive_cinema_seats")
+        .update({
+          user_id: null,
+          is_occupied: false,
+          occupied_at: null,
+        })
+        .eq("room_id", currentCinemaRoom.id)
+        .eq("user_id", userId)
       setMySeat(null)
     }
 
@@ -291,7 +335,7 @@ export function useRoomNavigation({
     setCinemaSeats([])
 
     setCurrentCinemaRoom(null)
-    setCurrentRoom(null)
+    setCurrentRoom("main_world")
     setIsSeatsLocked(false)
     setCountdown("")
 
@@ -317,7 +361,21 @@ export function useRoomNavigation({
         rotation: defaultRotation,
       })
       .eq("user_id", userId)
-  }, [userId, mySeat, currentCinemaRoom, savedMapPosition, orbitControlsRef, setMyPosition, setMyRotation, setMySeat, setCurrentRoom, setCurrentCinemaRoom, setCinemaSeats, setIsSeatsLocked, setCountdown])
+  }, [
+    userId,
+    mySeat,
+    currentCinemaRoom,
+    savedMapPosition,
+    orbitControlsRef,
+    setMyPosition,
+    setMyRotation,
+    setMySeat,
+    setCurrentRoom,
+    setCurrentCinemaRoom,
+    setCinemaSeats,
+    setIsSeatsLocked,
+    setCountdown,
+  ])
 
   // Enter Stadium
   const handleEnterStadium = useCallback(async () => {
@@ -330,11 +388,15 @@ export function useRoomNavigation({
 
     // Reset cinema seat if coming from cinema
     if (mySeat !== null && currentCinemaRoom) {
-      await supabase.from("interactive_cinema_seats").update({
-        user_id: null,
-        is_occupied: false,
-        occupied_at: null,
-      }).eq("room_id", currentCinemaRoom.id).eq("user_id", userId)
+      await supabase
+        .from("interactive_cinema_seats")
+        .update({
+          user_id: null,
+          is_occupied: false,
+          occupied_at: null,
+        })
+        .eq("room_id", currentCinemaRoom.id)
+        .eq("user_id", userId)
       setMySeat(null)
     }
 
@@ -362,7 +424,20 @@ export function useRoomNavigation({
       })
       .eq("user_id", userId)
       .then(() => {})
-  }, [userId, myPosition, mySeat, currentCinemaRoom, isStadiumOpen, setMyPosition, setMySeat, setCurrentRoom, setCurrentCinemaRoom, setSavedMapPosition, setShowStadium, setShowStadiumClosedModal])
+  }, [
+    userId,
+    myPosition,
+    mySeat,
+    currentCinemaRoom,
+    isStadiumOpen,
+    setMyPosition,
+    setMySeat,
+    setCurrentRoom,
+    setCurrentCinemaRoom,
+    setSavedMapPosition,
+    setShowStadium,
+    setShowStadiumClosedModal,
+  ])
 
   // Leave Stadium
   const handleLeaveStadium = useCallback(() => {
@@ -371,7 +446,7 @@ export function useRoomNavigation({
     setStadiumSeat(null)
     setMyPosition(savedMapPosition)
     setMyRotation(defaultRotation)
-    setCurrentRoom(null)
+    setCurrentRoom("main_world")
 
     // Reset camera behind player, facing buildings
     if (orbitControlsRef.current) {
@@ -405,11 +480,15 @@ export function useRoomNavigation({
 
     // Reset seats if coming from cinema/stadium
     if (mySeat !== null && currentCinemaRoom) {
-      await supabase.from("interactive_cinema_seats").update({
-        user_id: null,
-        is_occupied: false,
-        occupied_at: null,
-      }).eq("room_id", currentCinemaRoom.id).eq("user_id", userId)
+      await supabase
+        .from("interactive_cinema_seats")
+        .update({
+          user_id: null,
+          is_occupied: false,
+          occupied_at: null,
+        })
+        .eq("room_id", currentCinemaRoom.id)
+        .eq("user_id", userId)
       setMySeat(null)
     }
     if (stadiumSeat !== null) {
@@ -451,7 +530,24 @@ export function useRoomNavigation({
       })
       .eq("user_id", userId)
       .then(() => {})
-  }, [userId, myPosition, mySeat, stadiumSeat, currentCinemaRoom, orbitControlsRef, isDiscoOpen, setMyPosition, setMyRotation, setMySeat, setStadiumSeat, setCurrentRoom, setCurrentCinemaRoom, setSavedMapPosition, setShowDisco, setShowDiscoClosedModal])
+  }, [
+    userId,
+    myPosition,
+    mySeat,
+    stadiumSeat,
+    currentCinemaRoom,
+    orbitControlsRef,
+    isDiscoOpen,
+    setMyPosition,
+    setMyRotation,
+    setMySeat,
+    setStadiumSeat,
+    setCurrentRoom,
+    setCurrentCinemaRoom,
+    setSavedMapPosition,
+    setShowDisco,
+    setShowDiscoClosedModal,
+  ])
 
   // Leave Disco
   const handleLeaveDisco = useCallback(() => {
@@ -459,7 +555,7 @@ export function useRoomNavigation({
     const defaultRotation = 0 // Face buildings (like initial spawn)
     setMyPosition(savedMapPosition)
     setMyRotation(defaultRotation)
-    setCurrentRoom(null)
+    setCurrentRoom("main_world")
 
     // Reset camera behind player, facing buildings
     if (orbitControlsRef.current) {
@@ -486,43 +582,41 @@ export function useRoomNavigation({
   useEffect(() => {
     // Subscribe to disco status changes
     const discoChannel = supabase
-      .channel('disco-status-ejection')
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'interactive_disco' },
-        (payload: any) => {
-          const isOpen = payload.new?.is_open !== false
-          setIsDiscoOpen(isOpen)
-          if (payload.new?.is_open === false && currentRoomRef.current === 'disco') {
-            // Eject user from disco
-            const pos = savedMapPositionRef.current
-            setMyPosition(pos)
-            setCurrentRoom(null)
-            setShowDiscoClosedModal(true)
-            // Update database
-            supabase
-              .from("interactive_profiles")
-              .update({
-                position_x: pos.x,
-                position_y: pos.y,
-                position_z: pos.z,
-                current_room: null,
-              })
-              .eq("user_id", userId)
-              .then(() => {})
-          }
+      .channel("disco-status-ejection")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "interactive_disco" }, (payload: any) => {
+        const isOpen = payload.new?.is_open !== false
+        setIsDiscoOpen(isOpen)
+        if (payload.new?.is_open === false && currentRoomRef.current === "disco") {
+          // Eject user from disco
+          const pos = savedMapPositionRef.current
+          setMyPosition(pos)
+          setCurrentRoom(null)
+          setShowDiscoClosedModal(true)
+          // Update database
+          supabase
+            .from("interactive_profiles")
+            .update({
+              position_x: pos.x,
+              position_y: pos.y,
+              position_z: pos.z,
+              current_room: null,
+            })
+            .eq("user_id", userId)
+            .then(() => {})
         }
-      )
+      })
       .subscribe()
 
     // Subscribe to arcade status changes
     const arcadeChannel = supabase
-      .channel('arcade-status-ejection')
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'interactive_arcade_settings' },
+      .channel("arcade-status-ejection")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "interactive_arcade_settings" },
         (payload: any) => {
           const isOpen = payload.new?.is_open !== false
           setIsArcadeOpen(isOpen)
-          if (payload.new?.is_open === false && currentRoomRef.current === 'arcade') {
+          if (payload.new?.is_open === false && currentRoomRef.current === "arcade") {
             // Eject user from arcade
             const pos = savedMapPositionRef.current
             setMyPosition(pos)
@@ -540,46 +634,45 @@ export function useRoomNavigation({
               .eq("user_id", userId)
               .then(() => {})
           }
-        }
+        },
       )
       .subscribe()
 
     // Subscribe to stadium status changes
     const stadiumChannel = supabase
-      .channel('stadium-status-ejection')
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'interactive_stadium' },
-        (payload: any) => {
-          const isOpen = payload.new?.is_open !== false
-          setIsStadiumOpen(isOpen)
-          if (payload.new?.is_open === false && currentRoomRef.current === 'stadium') {
-            // Eject user from stadium
-            const pos = savedMapPositionRef.current
-            setStadiumSeat(null)
-            setMyPosition(pos)
-            setCurrentRoom(null)
-            setShowStadiumClosedModal(true)
-            // Update database
-            supabase
-              .from("interactive_profiles")
-              .update({
-                position_x: pos.x,
-                position_y: pos.y,
-                position_z: pos.z,
-                current_room: null,
-              })
-              .eq("user_id", userId)
-              .then(() => {})
-          }
+      .channel("stadium-status-ejection")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "interactive_stadium" }, (payload: any) => {
+        const isOpen = payload.new?.is_open !== false
+        const roomId = payload.new?.id
+        // Check if user is in this specific cinema room
+        if (payload.new?.is_open === false && currentCinemaRoomRef.current?.id === roomId) {
+          // Eject user from stadium
+          const pos = savedMapPositionRef.current
+          setStadiumSeat(null)
+          setMyPosition(pos)
+          setCurrentRoom(null)
+          setShowStadiumClosedModal(true)
+          // Update database
+          supabase
+            .from("interactive_profiles")
+            .update({
+              position_x: pos.x,
+              position_y: pos.y,
+              position_z: pos.z,
+              current_room: null,
+            })
+            .eq("user_id", userId)
+            .then(() => {})
         }
-      )
+      })
       .subscribe()
 
     // Subscribe to cinema room status changes
     const cinemaChannel = supabase
-      .channel('cinema-status-ejection')
-      .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'interactive_cinema_rooms' },
+      .channel("cinema-status-ejection")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "interactive_cinema_rooms" },
         (payload: any) => {
           const isOpen = payload.new?.is_open !== false
           const roomId = payload.new?.id
@@ -605,7 +698,7 @@ export function useRoomNavigation({
               .eq("user_id", userId)
               .then(() => {})
           }
-        }
+        },
       )
       .subscribe()
 
@@ -615,7 +708,22 @@ export function useRoomNavigation({
       supabase.removeChannel(stadiumChannel)
       supabase.removeChannel(cinemaChannel)
     }
-  }, [userId, setMyPosition, setCurrentRoom, setMySeat, setStadiumSeat, setCurrentCinemaRoom, setCinemaSeats, setShowDiscoClosedModal, setShowArcadeClosedModal, setShowStadiumClosedModal, setShowCinemaClosedModal, setIsDiscoOpen, setIsArcadeOpen, setIsStadiumOpen])
+  }, [
+    userId,
+    setMyPosition,
+    setCurrentRoom,
+    setMySeat,
+    setStadiumSeat,
+    setCurrentCinemaRoom,
+    setCinemaSeats,
+    setShowDiscoClosedModal,
+    setShowArcadeClosedModal,
+    setShowStadiumClosedModal,
+    setShowCinemaClosedModal,
+    setIsDiscoOpen,
+    setIsArcadeOpen,
+    setIsStadiumOpen,
+  ])
 
   return {
     handleEnterArcade,

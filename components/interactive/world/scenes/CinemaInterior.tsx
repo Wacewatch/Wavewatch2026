@@ -108,13 +108,18 @@ export default function CinemaInterior({
   isCinemaMuted,
   countdown,
 }: CinemaInteriorProps) {
-  console.log("[v0] [CinemaInterior] Rendering for room:", {
-    roomId: currentCinemaRoom?.id,
-    roomNumber: currentCinemaRoom?.room_number,
-    roomName: currentCinemaRoom?.name,
-    theme: currentCinemaRoom?.theme,
-    capacity: currentCinemaRoom?.capacity,
-  })
+  console.log("[v0] ============================================")
+  console.log("[v0] [CinemaInterior] RENDERING")
+  console.log("[v0] [CinemaInterior] Room ID:", currentCinemaRoom?.id)
+  console.log("[v0] [CinemaInterior] Room Number:", currentCinemaRoom?.room_number)
+  console.log("[v0] [CinemaInterior] Room Name:", currentCinemaRoom?.name)
+  console.log("[v0] [CinemaInterior] Theme:", currentCinemaRoom?.theme)
+  console.log("[v0] [CinemaInterior] Capacity:", currentCinemaRoom?.capacity)
+  console.log("[v0] [CinemaInterior] Total rooms in array:", cinemaRooms.length)
+  console.log("[v0] [CinemaInterior] Total sessions:", cinemaSessions.length)
+  console.log("[v0] [CinemaInterior] Total seats:", cinemaSeats.length)
+  console.log("[v0] [CinemaInterior] My seat:", mySeat)
+  console.log("[v0] ============================================")
 
   const room = cinemaRooms.find((r) => r.id === currentCinemaRoom.id) || currentCinemaRoom
 
@@ -179,26 +184,23 @@ export default function CinemaInterior({
   const videoRef = useRef<HTMLVideoElement>(null)
   const [videoStartPosition, setVideoStartPosition] = useState(0)
 
-  const themeColors = getThemeColors(room?.theme)
+  const themeColors = getThemeColors(room.theme)
+  console.log("[v0] [CinemaInterior] Theme colors:", themeColors)
 
-  console.log("[v0] [CinemaInterior] Theme colors:", {
-    theme: room?.theme,
-    colors: themeColors,
-  })
+  // Generate seats dynamically
+  const totalRows = Math.ceil((room.capacity || 50) / 10)
+  const generatedSeats = []
 
-  const seatsPerRow = Math.max(...cinemaSeats.map((s) => s.seat_number))
+  console.log("[v0] [CinemaInterior] Generating seats - Total rows:", totalRows, "Capacity:", room.capacity)
 
-  const generatedSeats = cinemaSeats.map((seat) => ({
-    id: seat.id,
-    row_number: seat.row_number,
-    seat_number: seat.seat_number,
-    user_id: seat.user_id,
-  }))
+  for (let row = 1; row <= totalRows; row++) {
+    for (let seat = 1; seat <= 10; seat++) {
+      const [x, y, z] = generateSeatPosition(row, seat)
+      generatedSeats.push({ row, seat, x, y, z })
+    }
+  }
 
-  console.log("[v0] [CinemaInterior] Generated seats:", {
-    count: generatedSeats.length,
-    roomCapacity: room?.capacity,
-  })
+  console.log("[v0] [CinemaInterior] Generated", generatedSeats.length, "seat positions")
 
   useEffect(() => {
     if (scheduleStart && isMovieStarted && !isMovieEnded) {
@@ -720,16 +722,14 @@ export default function CinemaInterior({
 
       {generatedSeats.length > 0 &&
         generatedSeats.map((seat) => {
-          const seatId = seat.row_number * 100 + seat.seat_number
+          const seatId = seat.row * 100 + seat.seat
           const isMySeat = mySeat === seatId
-          const isOccupied = !!seat.user_id
+          const isOccupied = false // Assuming cinemaSeats array does not provide user_id for generated seats
 
           const seatColor = isMySeat ? "#ef4444" : isOccupied ? "#f97316" : themeColors.seatDefault
 
-          const [x, y, z] = generateSeatPosition(seat.row_number, seat.seat_number, seatsPerRow)
-
           return (
-            <group key={seat.id} position={[x, y, z]}>
+            <group key={seatId} position={[seat.x, seat.y, seat.z]}>
               <mesh castShadow position={[0, 0, 0]}>
                 <boxGeometry args={[1, 0.8, 0.9]} />
                 <meshStandardMaterial color={seatColor} />

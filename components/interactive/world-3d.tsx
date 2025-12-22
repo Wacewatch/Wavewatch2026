@@ -63,7 +63,7 @@ import {
   StadiumInterior,
   DiscoInterior,
   ArcadeInterior,
-  CinemaInterior,
+  // CinemaInterior removed from named imports as it's a default export
   // Hooks
   useRoomNavigation,
   useStadiumSeating,
@@ -75,7 +75,10 @@ import {
   useVoiceChat,
   // Debug components
   CollisionDebugVisualization,
+  CinemaInterior,
 } from "./world"
+
+// import CinemaInterior from "./world/scenes/CinemaInterior"
 
 // Initialize Supabase client
 const supabase = createClient()
@@ -151,7 +154,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   const [isCinemaInteriorActive, setIsCinemaInteriorActive] = useState(false) // State to control CinemaInterior rendering
   const [showVoiceChat, setShowVoiceChat] = useState(true) // Added this state
 
-  const [currentRoom, setCurrentRoom] = useState<string | null>(null)
+  const [currentRoom, setCurrentRoom] = useState<string | null>("main_world")
   const [nearbyBuilding, setNearbyBuilding] = useState<{ name: string; type: string; emoji: string } | null>(null)
   const [nearbyInfoPanel, setNearbyInfoPanel] = useState(false) // Panneau info près du spawn
 
