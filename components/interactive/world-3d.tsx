@@ -208,11 +208,11 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     requestMicAccess,
     toggleMic,
     disconnect,
-    resetMicPermission, // Add new functions
+    resetMicPermission,
     setPeerVolume,
     togglePeerMute,
   } = useVoiceChat({
-    userId: userId, // Changed from visitorId to userId for consistency
+    userId: userProfile?.id || userId,
     currentRoom,
     voiceChatEnabled: worldSettings.voiceChatEnabled,
   })

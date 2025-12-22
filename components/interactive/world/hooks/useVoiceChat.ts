@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import { createBrowserClient } from "@supabase/ssr"
 
 interface UseVoiceChatProps {
   userId?: string | null
@@ -29,6 +30,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animationFrameRef = useRef<number | null>(null)
+  const channelRef = useRef<ReturnType<ReturnType<typeof createBrowserClient>["channel"]> | null>(null)
 
   // Request microphone access
   const requestMicAccess = useCallback(async () => {
@@ -128,6 +130,11 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
       cancelAnimationFrame(animationFrameRef.current)
       animationFrameRef.current = null
     }
+    if (channelRef.current) {
+      console.log("[v0] [VoiceChat] Leaving voice channel:", currentRoom)
+      channelRef.current.unsubscribe()
+      channelRef.current = null
+    }
     setIsVoiceConnected(false)
     setIsMicMuted(true)
     setIsSpeaking(false)
@@ -162,6 +169,101 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
       }
     }
   }, [isMicMuted])
+
+  useEffect(() => {
+    if (!isVoiceConnected || !currentRoom || !userId) {
+      // Cleanup channel if disconnected
+      if (channelRef.current) {
+        console.log("[v0] [VoiceChat] Leaving voice channel:", currentRoom)
+        channelRef.current.unsubscribe()
+        channelRef.current = null
+      }
+      setVoicePeers([])
+      return
+    }
+
+    console.log("[v0] [VoiceChat] Setting up voice sync for room:", currentRoom)
+    console.log("[v0] [VoiceChat] Current userId:", userId)
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+
+    // Create a channel for this voice room
+    const voiceChannelName = `voice:${currentRoom}`
+    const channel = supabase.channel(voiceChannelName, {
+      config: {
+        presence: {
+          key: userId,
+        },
+      },
+    })
+
+    // Track presence of users in voice chat
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const presenceState = channel.presenceState()
+        console.log("[v0] [VoiceChat] Presence sync:", presenceState)
+
+        const peers: VoicePeer[] = []
+        Object.entries(presenceState).forEach(([key, value]) => {
+          const presence = (value as any[])[0]
+          if (presence.user_id !== userId) {
+            peers.push({
+              userId: presence.user_id,
+              username: presence.username || "Utilisateur",
+              stream: null, // Audio streaming will be added later with WebRTC
+              isMuted: presence.is_muted || false,
+              isSpeaking: presence.is_speaking || false,
+              volume: 1,
+            })
+          }
+        })
+
+        console.log("[v0] [VoiceChat] Updated peers list:", peers)
+        setVoicePeers(peers)
+      })
+      .on("presence", { event: "join" }, ({ key, newPresences }) => {
+        console.log("[v0] [VoiceChat] User joined voice:", newPresences)
+      })
+      .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
+        console.log("[v0] [VoiceChat] User left voice:", leftPresences)
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          console.log("[v0] [VoiceChat] Subscribed to voice channel:", voiceChannelName)
+          // Track our presence
+          await channel.track({
+            user_id: userId,
+            username: userId, // Will be updated with actual username
+            is_muted: isMicMuted,
+            is_speaking: isSpeaking,
+            online_at: new Date().toISOString(),
+          })
+          console.log("[v0] [VoiceChat] Presence tracked for user:", userId)
+        }
+      })
+
+    channelRef.current = channel
+
+    return () => {
+      console.log("[v0] [VoiceChat] Cleaning up voice channel")
+      channel.unsubscribe()
+    }
+  }, [isVoiceConnected, currentRoom, userId])
+
+  useEffect(() => {
+    if (channelRef.current && userId) {
+      channelRef.current.track({
+        user_id: userId,
+        username: userId,
+        is_muted: isMicMuted,
+        is_speaking: isSpeaking,
+        online_at: new Date().toISOString(),
+      })
+    }
+  }, [isMicMuted, isSpeaking, userId])
 
   // Cleanup on unmount
   useEffect(() => {
