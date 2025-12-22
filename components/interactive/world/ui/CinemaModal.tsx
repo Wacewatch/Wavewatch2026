@@ -40,6 +40,16 @@ export function CinemaModal({ cinemaRooms, cinemaSessions, cinemaSeats, onEnterR
   const sessions = cinemaSessions || []
 
   useEffect(() => {
+    console.log("[v0] CinemaModal - Total cinema rooms received:", cinemaRooms.length)
+    console.log(
+      "[v0] CinemaModal - Cinema rooms:",
+      cinemaRooms.map((r) => ({
+        id: r.id,
+        room_number: r.room_number,
+        name: r.name,
+        is_open: r.is_open,
+      })),
+    )
     console.log("[v0] CinemaModal - Total sessions received:", sessions.length)
     console.log("[v0] CinemaModal - Current time:", new Date().toISOString())
     sessions.forEach((s) => {
@@ -57,7 +67,7 @@ export function CinemaModal({ cinemaRooms, cinemaSessions, cinemaSeats, onEnterR
         isValid: start < end, // Check if dates are valid
       })
     })
-  }, [sessions])
+  }, [cinemaRooms, sessions])
 
   const getRoomSessions = (roomId: string) => {
     const roomSessions = sessions.filter((s) => {
