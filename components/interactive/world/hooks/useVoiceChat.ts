@@ -15,12 +15,12 @@ interface VoicePeer {
   stream: MediaStream | null
   isMuted: boolean
   isSpeaking: boolean
-  volume: number // Add volume control for each peer
+  volume: number
 }
 
 export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabled = false }: UseVoiceChatProps = {}) {
   const [isVoiceConnected, setIsVoiceConnected] = useState(false)
-  const [isMicMuted, setIsMicMuted] = useState(true) // Muted by default
+  const [isMicMuted, setIsMicMuted] = useState(true)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [voicePeers, setVoicePeers] = useState<VoicePeer[]>([])
   const [micPermissionDenied, setMicPermissionDenied] = useState(false)
@@ -31,10 +31,33 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const channelRef = useRef<ReturnType<ReturnType<typeof createBrowserClient>["channel"]> | null>(null)
+  const usernameRef = useRef<string>("")
 
-  // Request microphone access
+  useEffect(() => {
+    if (!userId) return
+
+    const loadUsername = async () => {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      )
+
+      const { data, error } = await supabase.from("user_profiles").select("username").eq("user_id", userId).single()
+
+      if (data && !error) {
+        usernameRef.current = data.username || `User ${userId.slice(0, 8)}`
+        console.log("[v0] [VoiceChat] Loaded username:", usernameRef.current)
+      } else {
+        usernameRef.current = `User ${userId.slice(0, 8)}`
+        console.log("[v0] [VoiceChat] Failed to load username, using fallback:", usernameRef.current)
+      }
+    }
+
+    loadUsername()
+  }, [userId])
+
   const requestMicAccess = useCallback(async () => {
-    console.log("[v0] [VoiceChat] requestMicAccess called")
+    console.log("[v0] [VoiceChat] ==> requestMicAccess called")
     console.log("[v0] [VoiceChat] voiceChatEnabled:", voiceChatEnabled)
     console.log("[v0] [VoiceChat] userId:", userId)
     console.log("[v0] [VoiceChat] currentRoom:", currentRoom)
@@ -42,6 +65,18 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
     if (!voiceChatEnabled) {
       console.log("[v0] [VoiceChat] Voice chat is disabled in world settings")
       setMicErrorMessage("Le chat vocal est désactivé dans les paramètres du monde")
+      return false
+    }
+
+    if (!userId) {
+      console.log("[v0] [VoiceChat] No userId provided")
+      setMicErrorMessage("Erreur: ID utilisateur manquant")
+      return false
+    }
+
+    if (!currentRoom) {
+      console.log("[v0] [VoiceChat] No currentRoom provided")
+      setMicErrorMessage("Erreur: Aucune salle sélectionnée")
       return false
     }
 
@@ -56,7 +91,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
         video: false,
       })
 
-      console.log("[v0] [VoiceChat] Microphone access granted")
+      console.log("[v0] [VoiceChat] ✓ Microphone access granted")
       localStreamRef.current = stream
 
       // Set up audio analysis for speaking detection
@@ -74,10 +109,10 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
       setIsVoiceConnected(true)
       setMicPermissionDenied(false)
       setMicErrorMessage(null)
-      console.log("[v0] [VoiceChat] Voice chat connected successfully")
+      console.log("[v0] [VoiceChat] ✓ Voice chat connected successfully")
       return true
     } catch (error) {
-      console.error("[v0] [VoiceChat] Error accessing microphone:", error)
+      console.error("[v0] [VoiceChat] ✗ Error accessing microphone:", error)
       setMicPermissionDenied(true)
 
       if (error instanceof Error) {
@@ -106,7 +141,6 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
     }
   }, [voiceChatEnabled, userId, currentRoom])
 
-  // Toggle microphone mute
   const toggleMic = useCallback(() => {
     if (!localStreamRef.current) return
 
@@ -115,9 +149,11 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
       track.enabled = !newMutedState
     })
     setIsMicMuted(newMutedState)
+    console.log("[v0] [VoiceChat] Mic toggled. Muted:", newMutedState)
   }, [isMicMuted])
 
   const disconnect = useCallback(() => {
+    console.log("[v0] [VoiceChat] Disconnecting voice chat...")
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach((track) => track.stop())
       localStreamRef.current = null
@@ -131,7 +167,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
       animationFrameRef.current = null
     }
     if (channelRef.current) {
-      console.log("[v0] [VoiceChat] Leaving voice channel:", currentRoom)
+      console.log("[v0] [VoiceChat] Leaving voice channel")
       channelRef.current.unsubscribe()
       channelRef.current = null
     }
@@ -139,6 +175,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
     setIsMicMuted(true)
     setIsSpeaking(false)
     setVoicePeers([])
+    console.log("[v0] [VoiceChat] ✓ Disconnected")
   }, [])
 
   // Detect speaking
@@ -172,9 +209,8 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
 
   useEffect(() => {
     if (!isVoiceConnected || !currentRoom || !userId) {
-      // Cleanup channel if disconnected
       if (channelRef.current) {
-        console.log("[v0] [VoiceChat] Leaving voice channel:", currentRoom)
+        console.log("[v0] [VoiceChat] Leaving voice channel (conditions not met)")
         channelRef.current.unsubscribe()
         channelRef.current = null
       }
@@ -182,16 +218,19 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
       return
     }
 
-    console.log("[v0] [VoiceChat] Setting up voice sync for room:", currentRoom)
-    console.log("[v0] [VoiceChat] Current userId:", userId)
+    console.log("[v0] [VoiceChat] ===== SETTING UP VOICE SYNC =====")
+    console.log("[v0] [VoiceChat] Room:", currentRoom)
+    console.log("[v0] [VoiceChat] User ID:", userId)
+    console.log("[v0] [VoiceChat] Username:", usernameRef.current)
 
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
 
-    // Create a channel for this voice room
-    const voiceChannelName = `voice:${currentRoom}`
+    const voiceChannelName = `voice_room:${currentRoom}`
+    console.log("[v0] [VoiceChat] Creating channel:", voiceChannelName)
+
     const channel = supabase.channel(voiceChannelName, {
       config: {
         presence: {
@@ -200,48 +239,64 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
       },
     })
 
-    // Track presence of users in voice chat
     channel
       .on("presence", { event: "sync" }, () => {
         const presenceState = channel.presenceState()
-        console.log("[v0] [VoiceChat] Presence sync:", presenceState)
+        console.log("[v0] [VoiceChat] ===== PRESENCE SYNC =====")
+        console.log("[v0] [VoiceChat] Presence state:", JSON.stringify(presenceState, null, 2))
 
         const peers: VoicePeer[] = []
         Object.entries(presenceState).forEach(([key, value]) => {
-          const presence = (value as any[])[0]
-          if (presence.user_id !== userId) {
-            peers.push({
-              userId: presence.user_id,
-              username: presence.username || "Utilisateur",
-              stream: null, // Audio streaming will be added later with WebRTC
-              isMuted: presence.is_muted || false,
-              isSpeaking: presence.is_speaking || false,
-              volume: 1,
-            })
-          }
+          const presences = value as any[]
+          presences.forEach((presence) => {
+            console.log("[v0] [VoiceChat] Processing presence:", presence)
+            if (presence.user_id !== userId) {
+              peers.push({
+                userId: presence.user_id,
+                username: presence.username || `User ${presence.user_id.slice(0, 8)}`,
+                stream: null,
+                isMuted: presence.is_muted || false,
+                isSpeaking: presence.is_speaking || false,
+                volume: 1,
+              })
+              console.log("[v0] [VoiceChat] Added peer:", presence.username)
+            }
+          })
         })
 
-        console.log("[v0] [VoiceChat] Updated peers list:", peers)
+        console.log("[v0] [VoiceChat] Total peers in voice:", peers.length)
         setVoicePeers(peers)
       })
       .on("presence", { event: "join" }, ({ key, newPresences }) => {
-        console.log("[v0] [VoiceChat] User joined voice:", newPresences)
+        console.log("[v0] [VoiceChat] ===== USER JOINED VOICE =====")
+        console.log("[v0] [VoiceChat] Key:", key)
+        console.log("[v0] [VoiceChat] New presences:", newPresences)
       })
       .on("presence", { event: "leave" }, ({ key, leftPresences }) => {
-        console.log("[v0] [VoiceChat] User left voice:", leftPresences)
+        console.log("[v0] [VoiceChat] ===== USER LEFT VOICE =====")
+        console.log("[v0] [VoiceChat] Key:", key)
+        console.log("[v0] [VoiceChat] Left presences:", leftPresences)
       })
       .subscribe(async (status) => {
+        console.log("[v0] [VoiceChat] Channel subscription status:", status)
         if (status === "SUBSCRIBED") {
-          console.log("[v0] [VoiceChat] Subscribed to voice channel:", voiceChannelName)
-          // Track our presence
-          await channel.track({
+          console.log("[v0] [VoiceChat] ✓ Subscribed to voice channel:", voiceChannelName)
+          const presenceData = {
             user_id: userId,
-            username: userId, // Will be updated with actual username
+            username: usernameRef.current || `User ${userId.slice(0, 8)}`,
             is_muted: isMicMuted,
             is_speaking: isSpeaking,
             online_at: new Date().toISOString(),
-          })
-          console.log("[v0] [VoiceChat] Presence tracked for user:", userId)
+          }
+          console.log("[v0] [VoiceChat] Tracking presence:", presenceData)
+          const trackResult = await channel.track(presenceData)
+          console.log("[v0] [VoiceChat] Track result:", trackResult)
+        } else if (status === "CHANNEL_ERROR") {
+          console.error("[v0] [VoiceChat] ✗ Channel error")
+        } else if (status === "TIMED_OUT") {
+          console.error("[v0] [VoiceChat] ✗ Channel timed out")
+        } else if (status === "CLOSED") {
+          console.log("[v0] [VoiceChat] Channel closed")
         }
       })
 
@@ -254,25 +309,25 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
   }, [isVoiceConnected, currentRoom, userId])
 
   useEffect(() => {
-    if (channelRef.current && userId) {
-      channelRef.current.track({
+    if (channelRef.current && userId && usernameRef.current) {
+      const presenceData = {
         user_id: userId,
-        username: userId,
+        username: usernameRef.current,
         is_muted: isMicMuted,
         is_speaking: isSpeaking,
         online_at: new Date().toISOString(),
-      })
+      }
+      console.log("[v0] [VoiceChat] Updating presence:", presenceData)
+      channelRef.current.track(presenceData)
     }
   }, [isMicMuted, isSpeaking, userId])
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       disconnect()
     }
   }, [disconnect])
 
-  // Disconnect voice when leaving room
   useEffect(() => {
     if (!currentRoom && isVoiceConnected) {
       disconnect()
@@ -306,7 +361,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
     toggleMic,
     disconnect,
     resetMicPermission,
-    setPeerVolume, // Export new functions
+    setPeerVolume,
     togglePeerMute,
   }
 }
