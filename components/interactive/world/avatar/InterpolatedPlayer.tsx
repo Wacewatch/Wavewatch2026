@@ -1,6 +1,6 @@
 "use client"
 
-import * as THREE from "three"
+import type * as THREE from "three"
 import { useFrame } from "@react-three/fiber"
 import { Html } from "@react-three/drei"
 import { useRef, useState, useEffect } from "react"
@@ -72,8 +72,8 @@ export function InterpolatedPlayer({
     // Calculer la distance entre la position actuelle et la nouvelle
     const distance = Math.sqrt(
       Math.pow(newX - currentPos.current.x, 2) +
-      Math.pow(newY - currentPos.current.y, 2) +
-      Math.pow(newZ - currentPos.current.z, 2)
+        Math.pow(newY - currentPos.current.y, 2) +
+        Math.pow(newZ - currentPos.current.z, 2),
     )
 
     // Si la distance est grande (téléportation: s'asseoir/se lever), appliquer directement sans interpolation
@@ -129,11 +129,7 @@ export function InterpolatedPlayer({
     const jumpHeight = isJumping ? Math.sin(jumpOffset.current) * 0.8 : 0
 
     // Appliquer la position interpolée au groupe + offset de saut
-    groupRef.current.position.set(
-      currentPos.current.x,
-      currentPos.current.y + jumpHeight,
-      currentPos.current.z
-    )
+    groupRef.current.position.set(currentPos.current.x, currentPos.current.y + jumpHeight, currentPos.current.z)
 
     // Appliquer la rotation interpolée au groupe avatar
     if (avatarGroupRef.current) {
@@ -142,8 +138,7 @@ export function InterpolatedPlayer({
 
     // Détecter si le joueur est en mouvement (pour l'animation)
     const distanceToTarget = Math.sqrt(
-      Math.pow(targetPos.current.x - currentPos.current.x, 2) +
-      Math.pow(targetPos.current.z - currentPos.current.z, 2)
+      Math.pow(targetPos.current.x - currentPos.current.x, 2) + Math.pow(targetPos.current.z - currentPos.current.z, 2),
     )
     const newIsMoving = distanceToTarget > 0.05
     if (newIsMoving !== isMoving) {
@@ -159,12 +154,7 @@ export function InterpolatedPlayer({
         <RealisticAvatar position={[0, 0, 0]} avatarStyle={avatarStyle} isMoving={isMoving} isDancing={isDancing} />
       </group>
 
-      <Html
-        position={[0, 2.6, 0]}
-        center
-        distanceFactor={10}
-        zIndexRange={[0, 0]}
-      >
+      <Html position={[0, 2.6, 0]} center distanceFactor={10} zIndexRange={[0, 0]}>
         <div className="flex flex-col items-center gap-1 pointer-events-none">
           <div className="flex items-center gap-1 bg-black/80 px-3 py-1 rounded-full backdrop-blur-sm whitespace-nowrap">
             <span className="text-white text-xs font-medium whitespace-nowrap">
@@ -181,13 +171,16 @@ export function InterpolatedPlayer({
                 )}
               </>
             )}
+            {/* Level badge with gradient */}
+            <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white">
+              Lvl {player.user_xp?.level || 1}
+            </span>
           </div>
-          {playerChatBubbles[player.user_id] &&
-            Date.now() - playerChatBubbles[player.user_id].timestamp < 5000 && (
-              <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
-                {playerChatBubbles[player.user_id].message}
-              </div>
-            )}
+          {playerChatBubbles[player.user_id] && Date.now() - playerChatBubbles[player.user_id].timestamp < 5000 && (
+            <div className="bg-white text-black text-xs px-3 py-1 rounded-lg max-w-[200px] break-words shadow-lg">
+              {playerChatBubbles[player.user_id].message}
+            </div>
+          )}
           {playerAction && playerAction.action === "emoji" && (
             <div className="text-4xl animate-bounce">{playerAction.emoji}</div>
           )}

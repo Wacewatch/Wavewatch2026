@@ -60,6 +60,7 @@ export {
   MovieFullscreenModal,
   WorldLoadingScreen,
   VoiceChatPanel,
+  QuestsModal, // Added QuestsModal export
 } from "./ui"
 
 // Building components

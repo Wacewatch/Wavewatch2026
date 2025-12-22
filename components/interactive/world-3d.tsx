@@ -52,6 +52,7 @@ import {
   MovieFullscreenModal,
   WorldLoadingScreen,
   VoiceChatPanel,
+  QuestsModal, // Added QuestsModal import
   // Building Components
   DiscoBuilding,
   CinemaBuilding,
@@ -123,6 +124,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     return true
   })
   const [showAvatarCustomizer, setShowAvatarCustomizer] = useState(false)
+  const [showQuests, setShowQuests] = useState(false) // Added showQuests state
   const [showCinema, setShowCinema] = useState(false) // State for cinema modal
   const [currentCinemaRoom, setCurrentCinemaRoom] = useState<any>(null)
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -313,7 +315,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   })
 
   // Player movement hook - handles keyboard, joystick, collisions
-  const { handleJoystickMove, handleCameraRotate: hookHandleCameraRotate } = usePlayerMovement({
+  const { handleCameraRotate: hookHandleCameraRotate, handleJoystickMove } = usePlayerMovement({
     userId,
     currentRoom,
     povMode,
@@ -854,7 +856,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   // Gestion des touches F ou Enter pour entrer dans les bâtiments ou ouvrir la map
   useEffect(() => {
     const handleInteractKey = (e: KeyboardEvent) => {
-      // Handling interact key (F or Enter) for entering buildings
+      // Handling interact key (E or Enter) for entering buildings
       if ((e.key === "e" || e.key === "E") && currentRoom === "cinema" && !showChatInput) {
         if (mySeat !== null) {
           // Se lever
@@ -1364,6 +1366,10 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
                 setShowAvatarCustomizer(true)
                 setShowMenu(false)
               }}
+              onOpenQuests={() => {
+                setShowQuests(true)
+                setShowMenu(false)
+              }}
               onOpenChat={() => {
                 setShowChat(true)
                 setShowMenu(false)
@@ -1451,6 +1457,8 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           onClose={() => setShowAvatarCustomizer(false)}
         />
       )}
+
+      {showQuests && <QuestsModal onClose={() => setShowQuests(false)} userId={userId} />}
 
       {/* Boutons d'actions - positionnés différemment selon le mode mobile */}
       <ActionButtons

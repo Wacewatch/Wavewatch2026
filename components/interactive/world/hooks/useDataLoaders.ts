@@ -92,6 +92,15 @@ export function useDataLoaders({ userId }: UseDataLoadersProps): UseDataLoadersR
             console.error("[DataLoaders] Error loading user profiles:", userProfilesError)
           }
 
+          const { data: userXp, error: userXpError } = await supabase
+            .from("interactive_user_xp")
+            .select("user_id, level, xp, total_xp")
+            .in("user_id", userIds)
+
+          if (userXpError) {
+            console.error("[DataLoaders] Error loading user XP:", userXpError)
+          }
+
           const mergedData = profiles.map((profile) => ({
             ...profile,
             user_profiles: userProfiles?.find((up) => up?.id === profile.user_id) || {
@@ -99,6 +108,11 @@ export function useDataLoaders({ userId }: UseDataLoadersProps): UseDataLoadersR
               is_admin: false,
               is_vip: false,
               is_vip_plus: false,
+            },
+            user_xp: userXp?.find((xp) => xp?.user_id === profile.user_id) || {
+              level: 1,
+              xp: 0,
+              total_xp: 0,
             },
           }))
 
