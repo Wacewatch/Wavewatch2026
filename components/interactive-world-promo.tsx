@@ -85,6 +85,12 @@ function isCurrentlyPlaying(startTime: string, endTime: string) {
   return now >= start && now <= end
 }
 
+function isFinished(endTime: string) {
+  const now = new Date()
+  const end = new Date(endTime)
+  return now > end
+}
+
 function getTimeSinceStart(startTime: string) {
   const now = new Date()
   const start = new Date(startTime)
@@ -128,13 +134,14 @@ function CinemaSessionsCarousel({ sessions }: { sessions: CinemaSession[] }) {
       <div className="grid grid-cols-2 gap-3">
         {currentSessions.map((session) => {
           const isPlaying = isCurrentlyPlaying(session.schedule_start, session.schedule_end)
+          const finished = isFinished(session.schedule_end)
           const timeElapsed = isPlaying ? getTimeSinceStart(session.schedule_start) : null
-          const timeUntil = !isPlaying ? getTimeUntilStart(session.schedule_start) : null
+          const timeUntil = !isPlaying && !finished ? getTimeUntilStart(session.schedule_start) : null
 
           return (
             <div
               key={session.id}
-              className="bg-black/40 rounded-lg p-3 border border-purple-500/20 hover:border-purple-500/50 transition-colors"
+              className={`bg-black/40 rounded-lg p-3 border border-purple-500/20 hover:border-purple-500/50 transition-colors ${finished ? "opacity-50" : ""}`}
             >
               <div className="flex gap-3">
                 {session.movie_poster && (
@@ -153,11 +160,17 @@ function CinemaSessionsCarousel({ sessions }: { sessions: CinemaSession[] }) {
                     {session.interactive_cinema_rooms?.name || `Salle ${session.interactive_cinema_rooms?.room_number}`}
                   </p>
                   <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-300">
+                    <Calendar className="w-3 h-3" />
+                    {formatDate(session.schedule_start)}
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5 text-xs text-gray-300">
                     <Clock className="w-3 h-3" />
                     {formatTime(session.schedule_start)}
                   </div>
                   <div className="mt-2">
-                    {isPlaying ? (
+                    {finished ? (
+                      <Badge className="bg-gray-600 text-white text-xs border-0">TERMINÉ</Badge>
+                    ) : isPlaying ? (
                       <Badge className="bg-red-600 text-white text-xs border-0 animate-pulse">
                         EN COURS {timeElapsed && `· ${timeElapsed}`}
                       </Badge>

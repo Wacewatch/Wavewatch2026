@@ -16,6 +16,7 @@ import { AddToListSelector } from "@/components/add-to-list-selector"
 import { Star, Calendar, Clock, Check, Play, Download, Youtube, ThumbsUp, ThumbsDown, Film, User } from "lucide-react"
 import { WatchProviders } from "@/components/watch-providers"
 import { useMobile } from "@/hooks/use-mobile"
+import { useUserPreferences } from "@/hooks/use-user-preferences"
 
 interface MovieDetailsProps {
   movie: any
@@ -34,9 +35,11 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
   const [userRating, setUserRating] = useState<"like" | "dislike" | null>(null)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const [certification, setCertification] = useState<string | null>(null)
+  const [logoImage, setLogoImage] = useState<string | null>(null)
   const { user } = useAuth()
   const { toast } = useToast()
   const isMobile = useMobile()
+  const { preferences } = useUserPreferences()
 
   // Get director from credits
   const director = credits?.crew?.find((person: any) => person.job === "Director")
@@ -106,6 +109,31 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
     }
 
     fetchCertification()
+  }, [movie.id])
+
+  useEffect(() => {
+    async function fetchLogoImage() {
+      try {
+        const response = await fetch(
+          `https://api.themoviedb.org/3/movie/${movie.id}/images?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&include_image_language=fr,en,null`,
+        )
+        const data = await response.json()
+
+        // Get the first logo from fr, en, or null language
+        const logo =
+          data.logos?.find((img: any) => img.iso_639_1 === "fr") ||
+          data.logos?.find((img: any) => img.iso_639_1 === "en") ||
+          data.logos?.[0]
+
+        if (logo?.file_path) {
+          setLogoImage(`https://image.tmdb.org/t/p/original${logo.file_path}`)
+        }
+      } catch (error) {
+        console.error("Error fetching logo:", error)
+      }
+    }
+
+    fetchLogoImage()
   }, [movie.id])
 
   const posterUrl = movie.poster_path
@@ -321,7 +349,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
   return (
     <div className="min-h-screen bg-black no-horizontal-scroll">
       {/* Hero Section */}
-      <div className="relative h-[50vh] md:h-[60vh] lg:h-[70vh] overflow-hidden">
+      <div className="relative h-[40vh] md:h-[45vh] lg:h-[50vh] overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${backdropUrl})` }}
@@ -333,7 +361,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
       </div>
 
       {/* Content */}
-      <div className="container mx-auto px-4 -mt-20 md:-mt-32 lg:-mt-40 mobile-hero-spacing relative z-10">
+      <div className="container mx-auto px-4 -mt-16 md:-mt-24 lg:-mt-32 mobile-hero-spacing relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8 mobile-grid">
           {/* Poster */}
           <div className="lg:col-span-1">
@@ -351,9 +379,19 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
           <div className="lg:col-span-3 space-y-8">
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <h1 className="text-xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left">
-                  {movie.title}
-                </h1>
+                {logoImage ? (
+                  <div className="flex justify-center md:justify-start">
+                    <img
+                      src={logoImage || "/placeholder.svg"}
+                      alt={movie.title}
+                      className="h-16 md:h-20 lg:h-24 w-auto max-w-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <h1 className="text-xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left">
+                    {movie.title}
+                  </h1>
+                )}
               </div>
 
               {/* Info Bar */}
@@ -493,7 +531,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
                 <Button
                   size="lg"
                   variant="outline"
-                  className={`border-yellow-600 text-yellow-400 hover:bg-yellow-900/20 w-full sm:w-auto ${
+                  className={`border-yellow-600 text-yellow-400 hover:bg-yellow-900/20 w-full sm:w-auto bg-transparent ${
                     isFavorite ? "bg-yellow-900/20" : ""
                   }`}
                   onClick={handleAddToFavorites}
@@ -506,7 +544,7 @@ export function MovieDetails({ movie, credits }: MovieDetailsProps) {
                 <Button
                   size="lg"
                   variant="outline"
-                  className={`border-green-600 text-green-400 hover:bg-green-900/20 w-full sm:w-auto ${
+                  className={`border-green-600 text-green-400 hover:bg-green-900/20 w-full sm:w-auto bg-transparent ${
                     isWatched ? "bg-green-900/20" : ""
                   }`}
                   onClick={handleMarkAsWatched}

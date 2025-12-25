@@ -16,7 +16,31 @@ export function Hero() {
       if (!response.ok) throw new Error("Failed to fetch")
       const trending = await response.json()
       if (trending.results && trending.results.length > 0) {
-        setFeaturedMovies(trending.results.slice(0, 5))
+        const moviesWithLogos = await Promise.all(
+          trending.results.slice(0, 5).map(async (movie: any) => {
+            try {
+              // Fetch movie images directly from TMDB API with timeout
+              const controller = new AbortController()
+              const timeoutId = setTimeout(() => controller.abort(), 3000) // 3 second timeout
+
+              const imagesResponse = await fetch(
+                `https://api.themoviedb.org/3/movie/${movie.id}/images?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}`,
+                { signal: controller.signal },
+              )
+              clearTimeout(timeoutId)
+
+              if (imagesResponse.ok) {
+                const images = await imagesResponse.json()
+                return { ...movie, images }
+              }
+            } catch (error) {
+              // Silently fail for individual movies - they'll just show text title
+              console.log(`[v0] Skipping logo for movie ${movie.id}`)
+            }
+            return movie
+          }),
+        )
+        setFeaturedMovies(moviesWithLogos)
       }
     } catch (error) {
       console.error("Error fetching featured movies:", error)
@@ -43,7 +67,37 @@ export function Hero() {
     return null
   }
 
+  const getLogoUrl = () => {
+    if (!featuredMovie.images?.logos) return null
+
+    // Prioritize French logos, then English, then any available
+    const frenchLogo = featuredMovie.images.logos.find((logo: any) => logo.iso_639_1 === "fr")
+    const englishLogo = featuredMovie.images.logos.find((logo: any) => logo.iso_639_1 === "en")
+    const anyLogo = featuredMovie.images.logos[0]
+
+    const selectedLogo = frenchLogo || englishLogo || anyLogo
+    return selectedLogo ? `https://image.tmdb.org/t/p/original${selectedLogo.file_path}` : null
+  }
+
+  const logoUrl = getLogoUrl()
+
   const getStylizedTitle = (title: string) => {
+    if (logoUrl) {
+      return (
+        <div className="flex justify-center">
+          <img
+            src={logoUrl || "/placeholder.svg"}
+            alt={title}
+            className="h-16 md:h-32 lg:h-40 w-auto object-contain"
+            style={{
+              filter: "drop-shadow(0 0 20px rgba(0,0,0,0.9)) drop-shadow(0 0 40px rgba(0,0,0,0.7))",
+              maxWidth: "90%",
+            }}
+          />
+        </div>
+      )
+    }
+
     return (
       <h1
         className="text-2xl md:text-6xl lg:text-7xl font-bold text-white leading-tight text-center"

@@ -260,6 +260,30 @@ export function Navigation() {
                     </Badge>
                   </Link>
                 </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="https://apis.wavewatch.xyz/cinematch.php"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                    className="flex items-center justify-between"
+                  >
+                    CineMatch
+                    <Badge className="ml-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs">⭐HOT</Badge>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
+                    href="https://apis.wavewatch.xyz/cinequiz.php"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                    className="flex items-center justify-between"
+                  >
+                    CineQuiz
+                    <Badge className="ml-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs">⭐NEW</Badge>
+                  </Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -369,7 +393,9 @@ export function Navigation() {
                             <span className="text-sm" style={{ color: "hsl(var(--nav-text))" }}>
                               {t.name}
                             </span>
-                            {isLocked && <Crown className="w-3 h-3 absolute top-1 right-1 text-yellow-400" />}
+                            {isLocked && (
+                              <Crown className="w-3 h-3 absolute top-1 right-1 text-yellow-400 drop-shadow-glow" />
+                            )}
                           </button>
                         )
                       })}
@@ -429,6 +455,11 @@ export function Navigation() {
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard" style={{ color: "hsl(var(--nav-text))" }}>
                       Tableau de bord
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/favorites" style={{ color: "hsl(var(--nav-text))" }}>
+                      Mes favoris
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
@@ -596,6 +627,11 @@ export function Navigation() {
                   <Button asChild variant="ghost" className="justify-start" style={{ color: "hsl(var(--nav-text))" }}>
                     <Link href="/dashboard" onClick={() => setIsMenuOpen(false)}>
                       Tableau de bord
+                    </Link>
+                  </Button>
+                  <Button asChild variant="ghost" className="justify-start" style={{ color: "hsl(var(--nav-text))" }}>
+                    <Link href="/favorites" onClick={() => setIsMenuOpen(false)}>
+                      Mes favoris
                     </Link>
                   </Button>
                   <Button asChild variant="ghost" className="justify-start" style={{ color: "hsl(var(--nav-text))" }}>
@@ -831,6 +867,40 @@ export function Navigation() {
                       <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
                         ⭐​​NEW
                       </Badge>
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                  >
+                    <Link
+                      href="https://apis.wavewatch.xyz/cinematch.php"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center justify-between"
+                    >
+                      Cinematch
+                      <Badge className="ml-2 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs">HOT</Badge>
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                  >
+                    <Link
+                      href="https://apis.wavewatch.xyz/cinequiz.php"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center justify-between"
+                    >
+                      CineQuiz
+                      <Badge className="ml-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs">NEW</Badge>
                     </Link>
                   </Button>
                 </div>

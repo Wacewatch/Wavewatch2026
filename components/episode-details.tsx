@@ -44,11 +44,11 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
   const [isFavorite, setIsFavorite] = useState(false)
   const [userRating, setUserRating] = useState<"like" | "dislike" | null>(null)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
+  const [showLogoImage, setShowLogoImage] = useState<string | null>(null)
   const { user } = useAuth()
   const { toast } = useToast()
   const { preferences } = useUserPreferences()
 
-  // Valeurs par défaut pour éviter les erreurs
   const episodeName = episode?.name || "Épisode sans titre"
   const episodeOverview = episode?.overview || "Aucun synopsis disponible pour cet épisode."
   const episodeNumber = episode?.episode_number || 1
@@ -57,7 +57,6 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
   const runtime = episode?.runtime || null
   const stillPath = episode?.still_path || null
 
-  // Simuler les votes totaux basés sur l'ID
   const getTotalVotes = (showId: number, season: number, episode: number, type: "like" | "dislike") => {
     const seed = (showId * 1000 + season * 100 + episode) * (type === "like" ? 7 : 11)
     return Math.floor((seed % 500) + 20)
@@ -66,7 +65,6 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
   const totalLikes = getTotalVotes(showId, seasonNumber, episodeNumber, "like")
   const totalDislikes = getTotalVotes(showId, seasonNumber, episodeNumber, "dislike")
 
-  // Vérifier les états au chargement
   useEffect(() => {
     const episodeId = `${showId}-${seasonNumber}-${episodeNumber}`
     setIsInWishlist(WatchTracker.isInWishlist("episode", episodeId))
@@ -74,6 +72,30 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
     setIsFavorite(WatchTracker.isFavorite("episode", episodeId))
     setUserRating(WatchTracker.getRating("episode", episodeId))
   }, [showId, seasonNumber, episodeNumber])
+
+  useEffect(() => {
+    async function fetchShowLogoImage() {
+      try {
+        const response = await fetch(
+          `https://api.themoviedb.org/3/tv/${showId}/images?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&include_image_language=fr,en,null`,
+        )
+        const data = await response.json()
+
+        const logo =
+          data.logos?.find((img: any) => img.iso_639_1 === "fr") ||
+          data.logos?.find((img: any) => img.iso_639_1 === "en") ||
+          data.logos?.[0]
+
+        if (logo?.file_path) {
+          setShowLogoImage(`https://image.tmdb.org/t/p/original${logo.file_path}`)
+        }
+      } catch (error) {
+        console.error("Error fetching show logo:", error)
+      }
+    }
+
+    fetchShowLogoImage()
+  }, [showId])
 
   const backdropUrl = stillPath
     ? `https://image.tmdb.org/t/p/original${stillPath}`
@@ -93,7 +115,6 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
       runtime: runtime || 45,
     })
 
-    // Always mark as watched when clicking "Regarder"
     WatchTracker.markAsWatched("episode", episodeId, episodeName, runtime || 45, {
       showName: showData?.name,
       season: seasonNumber,
@@ -109,10 +130,8 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
       description: `${episodeName} a été ajouté à votre historique.`,
     })
 
-    // Force update of statistics
     window.dispatchEvent(new Event("watchlist-updated"))
 
-    // Open the streaming modal
     setShowStreamingModal(true)
   }
 
@@ -127,7 +146,6 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
   }
 
   const getTrailerEmbedUrl = async () => {
-    // Fallback vers une recherche générique pour les épisodes
     const trailerQuery = encodeURIComponent(`${showData?.name} season ${seasonNumber} episode ${episodeNumber} trailer`)
     return `https://www.youtube.com/embed?listType=search&list=${trailerQuery}&autoplay=1`
   }
@@ -241,8 +259,7 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
 
   return (
     <div className="min-h-screen bg-black no-horizontal-scroll">
-      {/* Hero Section */}
-      <div className="relative h-[50vh] md:h-[60vh] lg:h-[70vh] overflow-hidden">
+      <div className="relative h-[35vh] md:h-[40vh] lg:h-[45vh] overflow-hidden">
         <div
           className={`absolute inset-0 bg-cover bg-center bg-no-repeat ${preferences.hideSpoilers ? "blur-xl" : ""}`}
           style={{ backgroundImage: `url(${backdropUrl})` }}
@@ -253,10 +270,8 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
         </div>
       </div>
 
-      {/* Content */}
-      <div className="container mx-auto px-4 -mt-20 md:-mt-32 lg:-mt-40 relative z-10 mobile-hero-spacing">
-        {/* Navigation */}
-        <div className="mb-6">
+      <div className="container mx-auto px-4 -mt-12 md:-mt-16 lg:-mt-20 relative z-10">
+        <div className="mb-4">
           <Button asChild variant="ghost" className="text-white hover:text-blue-300">
             <Link href={backUrl}>
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -265,11 +280,11 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8 mobile-grid">
-          {/* Still Image */}
-          <div className="lg:col-span-1">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+          {/* Poster - centered on mobile, left on desktop */}
+          <div className="flex justify-center lg:justify-start lg:flex-shrink-0">
             <div
-              className={`relative aspect-[2/3] w-full max-w-[200px] mx-auto lg:max-w-none rounded-lg overflow-hidden ${preferences.hideSpoilers ? "blur-md" : ""}`}
+              className={`relative aspect-[2/3] w-48 md:w-56 lg:w-64 rounded-lg overflow-hidden ${preferences.hideSpoilers ? "blur-md" : ""}`}
             >
               <Image
                 src={
@@ -279,7 +294,6 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
                 fill
                 className="object-cover"
               />
-              {/* Spoiler overlay when anti-spoiler mode is enabled */}
               {preferences.hideSpoilers && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm">
                   <p className="text-white text-center px-4">Mode anti-spoiler activé</p>
@@ -288,45 +302,47 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
             </div>
           </div>
 
-          {/* Details */}
-          <div className="lg:col-span-3 space-y-8">
-            <div className="space-y-6">
-              <div className="space-y-2">
+          {/* Content */}
+          <div className="flex-1 space-y-6">
+            <div className="space-y-4">
+              <div className="space-y-2 text-center lg:text-left">
                 <Badge variant="secondary" className="bg-gray-800 text-gray-300 border-gray-700">
                   {isAnime ? "Animé" : "Série"} • Saison {seasonNumber} • Épisode {episodeNumber}
                 </Badge>
-                <h1 className="text-xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left">
-                  {episodeName}
-                </h1>
-                {showData?.name && (
-                  <Link
-                    href={showUrl}
-                    className="text-lg md:text-xl text-blue-400 hover:text-blue-300 block text-center md:text-left"
-                  >
-                    {showData.name}
-                  </Link>
-                )}
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white leading-tight">{episodeName}</h1>
+                {showData?.name &&
+                  (showLogoImage ? (
+                    <Link href={showUrl} className="block">
+                      <img
+                        src={showLogoImage || "/placeholder.svg"}
+                        alt={showData.name}
+                        className="h-8 md:h-10 w-auto max-w-full object-contain mx-auto lg:mx-0 hover:opacity-80 transition-opacity"
+                      />
+                    </Link>
+                  ) : (
+                    <Link href={showUrl} className="text-base md:text-lg text-blue-400 hover:text-blue-300 block">
+                      {showData.name}
+                    </Link>
+                  ))}
               </div>
 
-              {/* Info Bar */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6 text-gray-300">
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 md:gap-4 text-sm md:text-base text-gray-300">
                 {voteAverage > 0 && (
                   <div className="flex items-center gap-2">
-                    <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                    <span className="text-lg font-medium">{voteAverage.toFixed(1)}/10</span>
+                    <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                    <span className="font-medium">{voteAverage.toFixed(1)}/10</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
+                  <Calendar className="w-4 h-4" />
                   <span>{formatDate(airDate)}</span>
                 </div>
                 {runtime && (
                   <div className="flex items-center gap-2">
-                    <Clock className="w-5 h-5" />
+                    <Clock className="w-4 h-4" />
                     <span>{runtime} min</span>
                   </div>
                 )}
-                {/* Votes compacts */}
                 <div className="flex items-center gap-2 bg-gray-800/50 rounded-lg px-3 py-1">
                   <Button
                     variant="ghost"
@@ -340,9 +356,7 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
                   >
                     <ThumbsUp className={`w-4 h-4 ${userRating === "like" ? "fill-current" : ""}`} />
                   </Button>
-                  <span className="text-green-500 text-sm font-medium">
-                    {totalLikes + (userRating === "like" ? 1 : 0)}
-                  </span>
+                  <span className="text-green-500 font-medium">{totalLikes + (userRating === "like" ? 1 : 0)}</span>
                   <div className="w-px h-4 bg-gray-600 mx-1" />
                   <Button
                     variant="ghost"
@@ -354,125 +368,127 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
                   >
                     <ThumbsDown className={`w-4 h-4 ${userRating === "dislike" ? "fill-current" : ""}`} />
                   </Button>
-                  <span className="text-red-500 text-sm font-medium">
-                    {totalDislikes + (userRating === "dislike" ? 1 : 0)}
-                  </span>
+                  <span className="text-red-500 font-medium">{totalDislikes + (userRating === "dislike" ? 1 : 0)}</span>
                 </div>
               </div>
 
-              {/* Synopsis */}
               <div className={preferences.hideSpoilers ? "blur-md select-none" : ""}>
-                <p className="text-base md:text-xl text-gray-200 leading-relaxed text-center md:text-left">
+                <p className="text-sm md:text-base text-gray-200 leading-relaxed text-center lg:text-left">
                   {episodeOverview}
                 </p>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 mobile-slider">
-                <div className="flex gap-2">
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
                   {episodeNumber > 1 && (
                     <Button
                       asChild
-                      size="lg"
+                      size="sm"
                       variant="outline"
-                      className="border-gray-600 text-gray-300 hover:bg-gray-800 px-4 py-3 bg-transparent"
+                      className="border-gray-600 text-gray-300 hover:bg-gray-800 bg-transparent text-xs md:text-sm"
                     >
                       <Link
                         href={`${isAnime ? `/anime/${showId}` : `/tv-shows/${showId}`}/season/${seasonNumber}/episode/${episodeNumber - 1}`}
                       >
-                        ← Épisode {episodeNumber - 1}
+                        ← Ép. {episodeNumber - 1}
                       </Link>
                     </Button>
                   )}
                   <Button
                     asChild
-                    size="lg"
+                    size="sm"
                     variant="outline"
-                    className="border-gray-600 text-gray-300 hover:bg-gray-800 px-4 py-3 bg-transparent"
+                    className="border-gray-600 text-gray-300 hover:bg-gray-800 bg-transparent text-xs md:text-sm"
                   >
                     <Link
                       href={`${isAnime ? `/anime/${showId}` : `/tv-shows/${showId}`}/season/${seasonNumber}/episode/${episodeNumber + 1}`}
                     >
-                      Épisode {episodeNumber + 1} →
+                      Ép. {episodeNumber + 1} →
                     </Link>
                   </Button>
                 </div>
 
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-red-600 text-red-400 hover:bg-red-900/20 px-8 py-3 bg-transparent"
-                  onClick={handleWatch}
-                >
-                  <Play className="w-5 h-5 mr-2" />
-                  Regarder
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-blue-600 text-blue-400 hover:bg-blue-900/20 px-8 py-3 bg-transparent"
-                  onClick={handleDownload}
-                >
-                  <Download className="w-5 h-5 mr-2" />
-                  Télécharger
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-orange-600 text-orange-400 hover:bg-orange-900/20 px-8 py-3 bg-transparent"
-                  onClick={handleWatchTrailer}
-                >
-                  <Youtube className="w-5 h-5 mr-2" />
-                  Bande-annonce
-                </Button>
-                <AddToListSelector
-                  content={{
-                    id: showId,
-                    name: episodeName,
-                    poster_path: stillPath,
-                    vote_average: voteAverage,
-                    first_air_date: airDate,
-                  }}
-                  contentType="tv"
-                  className="px-6 py-3"
-                />
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className={`border-yellow-600 text-yellow-400 hover:bg-yellow-900/20 px-6 py-3 ${
-                    isFavorite ? "bg-yellow-900/20" : ""
-                  }`}
-                  onClick={handleAddToFavorites}
-                >
-                  <Star className={`w-5 h-5 mr-2 ${isFavorite ? "fill-yellow-500 text-yellow-500" : ""}`} />
-                  {isFavorite ? "Favori" : "Favoris"}
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className={`border-green-600 text-green-400 hover:bg-green-900/20 px-6 py-3 ${
-                    isWatched ? "bg-green-900/20" : ""
-                  }`}
-                  onClick={handleMarkAsWatched}
-                >
-                  <Check className={`w-5 h-5 mr-2 ${isWatched ? "text-green-500" : ""}`} />
-                  {isWatched ? "Vu" : "Marquer vu"}
-                </Button>
+                <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-red-600 text-red-400 hover:bg-red-900/20 bg-transparent text-xs md:text-sm flex-1 sm:flex-none"
+                    onClick={handleWatch}
+                  >
+                    <Play className="w-4 h-4 mr-1" />
+                    Regarder
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-blue-600 text-blue-400 hover:bg-blue-900/20 bg-transparent text-xs md:text-sm flex-1 sm:flex-none"
+                    onClick={handleDownload}
+                  >
+                    <Download className="w-4 h-4 mr-1" />
+                    Télécharger
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-orange-600 text-orange-400 hover:bg-orange-900/20 bg-transparent text-xs md:text-sm flex-1 sm:flex-none"
+                    onClick={handleWatchTrailer}
+                  >
+                    <Youtube className="w-4 h-4 mr-1" />
+                    Bande-annonce
+                  </Button>
+                </div>
+
+                <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
+                  <AddToListSelector
+                    content={{
+                      id: showId,
+                      name: episodeName,
+                      poster_path: stillPath,
+                      vote_average: voteAverage,
+                      first_air_date: airDate,
+                    }}
+                    contentType="tv"
+                    className="text-xs md:text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={`border-yellow-600 text-yellow-400 hover:bg-yellow-900/20 text-xs md:text-sm ${
+                      isFavorite ? "bg-yellow-900/20" : ""
+                    }`}
+                    onClick={handleAddToFavorites}
+                  >
+                    <Star className={`w-4 h-4 mr-1 ${isFavorite ? "fill-yellow-500 text-yellow-500" : ""}`} />
+                    Favoris
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={`border-green-600 text-green-400 hover:bg-green-900/20 text-xs md:text-sm ${
+                      isWatched ? "bg-green-900/20" : ""
+                    }`}
+                    onClick={handleMarkAsWatched}
+                  >
+                    <Check className={`w-4 h-4 mr-1 ${isWatched ? "text-green-500" : ""}`} />
+                    Marquer vu
+                  </Button>
+                </div>
               </div>
 
-              {/* Navigation Links */}
-              <div className="flex gap-4 pt-4">
+              <div className="flex flex-wrap gap-2 pt-2 justify-center lg:justify-start">
                 <Button
                   asChild
+                  size="sm"
                   variant="outline"
-                  className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+                  className="border-gray-600 text-white hover:bg-gray-800 bg-transparent text-xs md:text-sm"
                 >
-                  <Link href={backUrl}>Voir tous les épisodes</Link>
+                  <Link href={backUrl}>Tous les épisodes</Link>
                 </Button>
                 <Button
                   asChild
+                  size="sm"
                   variant="outline"
-                  className="border-gray-600 text-white hover:bg-gray-800 bg-transparent"
+                  className="border-gray-600 text-white hover:bg-gray-800 bg-transparent text-xs md:text-sm"
                 >
                   <Link href={showUrl}>Retour à la série</Link>
                 </Button>
@@ -482,7 +498,6 @@ export function EpisodeDetails({ episode, showId, seasonNumber, showData, isAnim
         </div>
       </div>
 
-      {/* Modals */}
       <IframeModal
         isOpen={showStreamingModal}
         onClose={() => setShowStreamingModal(false)}

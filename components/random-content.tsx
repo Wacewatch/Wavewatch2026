@@ -9,6 +9,7 @@ import { getTrendingMovies, getTrendingTVShows, getTrendingAnime } from "@/lib/t
 import { useRouter } from "next/navigation"
 import { useMobile } from "@/hooks/use-mobile"
 import { getAIRecommendation } from "@/lib/ai-recommendation"
+import Link from "next/link"
 
 export function RandomContent() {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -320,6 +321,17 @@ export function RandomContent() {
                 })}
               </div>
               <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-gradient-to-r from-pink-600 to-red-600 hover:from-pink-700 hover:to-red-700 text-white px-8 py-3 text-base md:text-lg shadow-lg relative overflow-hidden group"
+                >
+                  <Link href="https://apis.wavewatch.xyz/cinematch.php" target="_blank">
+                    <Film className="h-5 w-5 mr-2" />
+                    CineMatch
+                    <Badge className="ml-2 bg-yellow-500 text-black text-[10px] px-1.5 py-0.5">HOT</Badge>
+                  </Link>
+                </Button>
                 <Button
                   onClick={handleAIRecommendation}
                   disabled={isAILoading}

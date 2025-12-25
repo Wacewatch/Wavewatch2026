@@ -22,10 +22,16 @@ async function getCinemaSessionsData() {
 
       const aIsPlaying = nowTime >= aStart && nowTime <= aEnd
       const bIsPlaying = nowTime >= bStart && nowTime <= bEnd
+      const aIsFinished = nowTime > aEnd
+      const bIsFinished = nowTime > bEnd
 
       // EN COURS sessions first
       if (aIsPlaying && !bIsPlaying) return -1
       if (!aIsPlaying && bIsPlaying) return 1
+
+      // Finished sessions last
+      if (aIsFinished && !bIsFinished) return 1
+      if (!aIsFinished && bIsFinished) return -1
 
       // Then sort by start time
       return aStart - bStart

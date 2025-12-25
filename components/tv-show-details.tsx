@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -37,11 +37,10 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
   const [userRating, setUserRating] = useState<"like" | "dislike" | null>(null)
   const [trailerUrl, setTrailerUrl] = useState<string | null>(null)
   const [certification, setCertification] = useState<string | null>(null)
+  const [logoImage, setLogoImage] = useState<string | null>(null)
   const { user } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
-  const [scrollPosition, setScrollPosition] = useState(0)
-  const similarShowsRef = useRef<HTMLDivElement>(null)
   const { preferences } = useUserPreferences()
 
   // Simuler les votes totaux basés sur l'ID
@@ -101,6 +100,31 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
     }
 
     fetchCertification()
+  }, [show.id])
+
+  useEffect(() => {
+    async function fetchLogoImage() {
+      try {
+        const response = await fetch(
+          `https://api.themoviedb.org/3/tv/${show.id}/images?api_key=${process.env.NEXT_PUBLIC_TMDB_API_KEY}&include_image_language=fr,en,null`,
+        )
+        const data = await response.json()
+
+        // Get the first logo from fr, en, or null language
+        const logo =
+          data.logos?.find((img: any) => img.iso_639_1 === "fr") ||
+          data.logos?.find((img: any) => img.iso_639_1 === "en") ||
+          data.logos?.[0]
+
+        if (logo?.file_path) {
+          setLogoImage(`https://image.tmdb.org/t/p/original${logo.file_path}`)
+        }
+      } catch (error) {
+        console.error("Error fetching logo:", error)
+      }
+    }
+
+    fetchLogoImage()
   }, [show.id])
 
   const posterUrl = show.poster_path
@@ -428,26 +452,6 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
     return `https://www.youtube.com/embed?listType=search&list=${trailerQuery}&autoplay=1`
   }
 
-  const scrollLeft = () => {
-    if (similarShowsRef.current) {
-      similarShowsRef.current.scrollBy({
-        left: -500,
-        behavior: "smooth",
-      })
-      setScrollPosition(similarShowsRef.current.scrollLeft - 500)
-    }
-  }
-
-  const scrollRight = () => {
-    if (similarShowsRef.current) {
-      similarShowsRef.current.scrollBy({
-        left: 500,
-        behavior: "smooth",
-      })
-      setScrollPosition(similarShowsRef.current.scrollLeft + 500)
-    }
-  }
-
   const getShowStatus = () => {
     const today = new Date()
     const firstAirDate = show.first_air_date ? new Date(show.first_air_date) : null
@@ -477,7 +481,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
   return (
     <div className="min-h-screen bg-black no-horizontal-scroll">
       {/* Hero Section */}
-      <div className="relative h-[50vh] md:h-[60vh] lg:h-[70vh] overflow-hidden">
+      <div className="relative h-[40vh] md:h-[45vh] lg:h-[50vh] overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url(${backdropUrl})` }}
@@ -489,7 +493,7 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
       </div>
 
       {/* Content */}
-      <div className="container mx-auto px-4 -mt-20 md:-mt-32 lg:-mt-40 mobile-hero-spacing relative z-10">
+      <div className="container mx-auto px-4 -mt-16 md:-mt-24 lg:-mt-32 mobile-hero-spacing relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8 mobile-grid">
           {/* Poster */}
           <div className="lg:col-span-1">
@@ -501,9 +505,19 @@ export function TVShowDetails({ show, credits, isAnime = false }: TVShowDetailsP
           {/* Details */}
           <div className="lg:col-span-3 space-y-8">
             <div className="space-y-6">
-              <h1 className="text-xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left">
-                {show.name}
-              </h1>
+              {logoImage ? (
+                <div className="flex justify-center md:justify-start">
+                  <img
+                    src={logoImage || "/placeholder.svg"}
+                    alt={show.name}
+                    className="h-16 md:h-20 lg:h-24 w-auto max-w-full object-contain"
+                  />
+                </div>
+              ) : (
+                <h1 className="text-xl md:text-3xl lg:text-5xl font-bold text-white leading-tight text-center md:text-left">
+                  {show.name}
+                </h1>
+              )}
 
               {/* Info Bar */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6 text-gray-300">

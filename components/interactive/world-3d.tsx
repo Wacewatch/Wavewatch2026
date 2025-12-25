@@ -156,6 +156,8 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   const [isCinemaInteriorActive, setIsCinemaInteriorActive] = useState(false) // State to control CinemaInterior rendering
   const [showVoiceChat, setShowVoiceChat] = useState(true) // Added this state
 
+  const [myLevel, setMyLevel] = useState<number>(1)
+
   const [currentRoom, setCurrentRoom] = useState<string | null>("main_world")
   const [nearbyBuilding, setNearbyBuilding] = useState<{ name: string; type: string; emoji: string } | null>(null)
   const [nearbyInfoPanel, setNearbyInfoPanel] = useState(false) // Panneau info près du spawn
@@ -1013,6 +1015,41 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   }
 
   useEffect(() => {
+    const loadMyLevel = async () => {
+      const { data } = await supabase.from("interactive_user_xp").select("level").eq("user_id", userId).single()
+
+      if (data?.level) {
+        setMyLevel(data.level)
+      }
+    }
+
+    loadMyLevel()
+
+    // Subscribe to XP updates
+    const channel = supabase
+      .channel("my_xp")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "interactive_user_xp",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload: any) => {
+          if (payload.new?.level) {
+            setMyLevel(payload.new.level)
+          }
+        },
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [userId])
+
+  useEffect(() => {
     if (!userId) return
 
     const loadMyProfile = async () => {
@@ -1305,6 +1342,11 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
                     <span className="text-white text-xs font-medium whitespace-nowrap">
                       {myProfile?.username || userProfile.username || "Vous"}
                     </span>
+                    {myLevel > 0 && (
+                      <span className="text-xs font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white px-2 py-0.5 rounded-full">
+                        Lvl {myLevel}
+                      </span>
+                    )}
                     {/* Le joueur voit toujours son propre badge (indépendamment du réglage admin) */}
                     {userProfile.is_admin && <Shield className="w-3 h-3 text-red-500" />}
                     {userProfile.is_vip_plus && !userProfile.is_admin && <Crown className="w-3 h-3 text-purple-400" />}
