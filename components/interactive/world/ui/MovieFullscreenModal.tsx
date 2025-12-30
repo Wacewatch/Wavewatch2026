@@ -2,6 +2,7 @@
 
 import { EyeOff } from "lucide-react"
 import { useEffect, useRef } from "react"
+import Hls from "hls.js"
 
 interface MovieFullscreenModalProps {
   movieTitle: string
@@ -36,8 +37,56 @@ function getVideoType(url: string): "mp4" | "m3u8" | "iframe" {
 
 export function MovieFullscreenModal({ movieTitle, embedUrl, onClose, scheduleStart }: MovieFullscreenModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const hlsRef = useRef<Hls | null>(null)
   const videoType = getVideoType(embedUrl)
 
+  // Initialiser HLS pour les flux m3u8
+  useEffect(() => {
+    if (videoType === "m3u8" && videoRef.current) {
+      const video = videoRef.current
+
+      if (Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+        })
+        hlsRef.current = hls
+        hls.loadSource(embedUrl)
+        hls.attachMedia(video)
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          // Synchroniser avec le schedule_start si disponible
+          if (scheduleStart) {
+            const syncTime = calculateSyncPosition(scheduleStart)
+            if (syncTime > 0) {
+              video.currentTime = syncTime
+            }
+          }
+          video.play().catch(() => {})
+        })
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // Safari natif HLS
+        video.src = embedUrl
+        video.addEventListener("loadedmetadata", () => {
+          if (scheduleStart) {
+            const syncTime = calculateSyncPosition(scheduleStart)
+            if (syncTime > 0) {
+              video.currentTime = syncTime
+            }
+          }
+          video.play().catch(() => {})
+        })
+      }
+
+      return () => {
+        if (hlsRef.current) {
+          hlsRef.current.destroy()
+          hlsRef.current = null
+        }
+      }
+    }
+  }, [videoType, embedUrl, scheduleStart])
+
+  // Sync interval pour mp4
   useEffect(() => {
     if (videoType === "mp4" && scheduleStart && videoRef.current) {
       const syncInterval = setInterval(() => {
@@ -89,6 +138,17 @@ export function MovieFullscreenModal({ movieTitle, embedUrl, onClose, scheduleSt
               }
               video.play().catch(() => {})
             }}
+            style={{ pointerEvents: "none" }}
+          />
+        ) : videoType === "m3u8" ? (
+          <video
+            ref={videoRef}
+            className="w-full h-full object-contain bg-black"
+            autoPlay
+            playsInline
+            controls={false}
+            controlsList="nodownload nofullscreen noremoteplayback"
+            disablePictureInPicture
             style={{ pointerEvents: "none" }}
           />
         ) : (

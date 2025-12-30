@@ -493,6 +493,23 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     [graphicsQuality],
   )
 
+  // Calculer la session active de la salle de cinéma courante
+  const currentCinemaSession = useMemo(() => {
+    if (!currentCinemaRoom || !cinemaSessions || cinemaSessions.length === 0) return null
+
+    const now = new Date()
+    const roomSessions = cinemaSessions
+      .filter((s) => s.room_id === currentCinemaRoom.id && s.is_active)
+      .sort((a, b) => new Date(a.schedule_start).getTime() - new Date(b.schedule_start).getTime())
+
+    // Trouver la session en cours ou la prochaine
+    return roomSessions.find((s) => {
+      const start = new Date(s.schedule_start)
+      const end = new Date(s.schedule_end)
+      return start <= now && end > now
+    }) || roomSessions.find((s) => new Date(s.schedule_start) > now) || null
+  }, [currentCinemaRoom, cinemaSessions])
+
   // checkCollision is now provided by usePlayerMovement hook
 
   useEffect(() => {
@@ -620,13 +637,18 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       hasScheduleStart: !!room?.schedule_start,
     })
 
-    if (!room || !room.schedule_start) {
+    if (!room) {
       setIsCinemaInteriorActive(false)
       return
     }
 
-    // Set active state only when we are sure we want to render CinemaInterior
+    // Set active state - CinemaInterior can handle rooms without scheduled sessions
     setIsCinemaInteriorActive(true)
+
+    // Only start countdown timer if there's a schedule_start
+    if (!room.schedule_start) {
+      return
+    }
 
     const interval = setInterval(() => {
       const now = new Date().getTime()
@@ -645,8 +667,6 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
     return () => {
       clearInterval(interval)
-      // Optionally reset countdown or other state when leaving the effect
-      // setCountdown("")
     }
   }, [currentCinemaRoom, cinemaRooms, currentRoom]) // Added currentCinemaRoom and currentRoom to dependencies
 
@@ -1459,7 +1479,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         </button>
       )}
 
-      {mySeat !== null && currentCinemaRoom?.embed_url && !showMovieFullscreen && (
+      {mySeat !== null && currentCinemaSession?.embed_url && !showMovieFullscreen && (
         <button
           onClick={() => setShowMovieFullscreen(true)}
           className="absolute bottom-24 right-36 z-10 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 shadow-lg flex items-center gap-2"
@@ -1469,12 +1489,12 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         </button>
       )}
 
-      {showMovieFullscreen && currentCinemaRoom?.embed_url && (
+      {showMovieFullscreen && currentCinemaSession?.embed_url && (
         <MovieFullscreenModal
-          movieTitle={currentCinemaRoom.movie_title}
-          embedUrl={currentCinemaRoom.embed_url}
+          movieTitle={currentCinemaSession.movie_title}
+          embedUrl={currentCinemaSession.embed_url}
           onClose={() => setShowMovieFullscreen(false)}
-          scheduleStart={currentCinemaRoom.schedule_start}
+          scheduleStart={currentCinemaSession.schedule_start}
         />
       )}
 
@@ -1547,8 +1567,8 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         onLeaveStadium={handleLeaveStadium}
       />
 
-      {/* Voice Chat Panel */}
-      {showVoiceChat && (
+      {/* Voice Chat Panel - caché en mode plein écran */}
+      {showVoiceChat && !showMovieFullscreen && (
         <VoiceChatPanel
           isVoiceConnected={isVoiceConnected}
           isMicMuted={isMicMuted}
