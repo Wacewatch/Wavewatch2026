@@ -160,7 +160,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
   const [myLevel, setMyLevel] = useState<number>(1)
 
-  const [currentRoom, setCurrentRoom] = useState<string | null>("main_world")
+  const [currentRoom, setCurrentRoom] = useState<string | null>(null)
   const [nearbyBuilding, setNearbyBuilding] = useState<{ name: string; type: string; emoji: string } | null>(null)
   const [nearbyInfoPanel, setNearbyInfoPanel] = useState(false) // Panneau info près du spawn
 

@@ -74,11 +74,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
       return false
     }
 
-    if (!currentRoom) {
-      console.log("[v0] [VoiceChat] No currentRoom provided")
-      setMicErrorMessage("Erreur: Aucune salle sélectionnée")
-      return false
-    }
+    // currentRoom can be null (main world) - that's OK
 
     try {
       console.log("[v0] [VoiceChat] Requesting microphone access...")
@@ -208,7 +204,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
   }, [isMicMuted])
 
   useEffect(() => {
-    if (!isVoiceConnected || !currentRoom || !userId) {
+    if (!isVoiceConnected || !userId) {
       if (channelRef.current) {
         console.log("[v0] [VoiceChat] Leaving voice channel (conditions not met)")
         channelRef.current.unsubscribe()
@@ -218,8 +214,11 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
       return
     }
 
+    // Use "main_world" as channel name when currentRoom is null
+    const roomForChannel = currentRoom || "main_world"
+
     console.log("[v0] [VoiceChat] ===== SETTING UP VOICE SYNC =====")
-    console.log("[v0] [VoiceChat] Room:", currentRoom)
+    console.log("[v0] [VoiceChat] Room:", roomForChannel)
     console.log("[v0] [VoiceChat] User ID:", userId)
     console.log("[v0] [VoiceChat] Username:", usernameRef.current)
 
@@ -228,7 +227,7 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     )
 
-    const voiceChannelName = `voice_room:${currentRoom}`
+    const voiceChannelName = `voice_room:${roomForChannel}`
     console.log("[v0] [VoiceChat] Creating channel:", voiceChannelName)
 
     const channel = supabase.channel(voiceChannelName, {
@@ -328,11 +327,8 @@ export function useVoiceChat({ userId = null, currentRoom = null, voiceChatEnabl
     }
   }, [disconnect])
 
-  useEffect(() => {
-    if (!currentRoom && isVoiceConnected) {
-      disconnect()
-    }
-  }, [currentRoom, isVoiceConnected, disconnect])
+  // Note: We no longer auto-disconnect when currentRoom is null
+  // because users can now use voice chat on the main world too
 
   const resetMicPermission = useCallback(() => {
     console.log("[v0] [VoiceChat] Resetting microphone permission state")
