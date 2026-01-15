@@ -8,7 +8,6 @@ interface ChatInputProps {
   sendMessage: () => void
   onClose: () => void
   isMobileMode: boolean
-  onMessageSent?: () => void
 }
 
 export function ChatInput({
@@ -17,13 +16,9 @@ export function ChatInput({
   sendMessage,
   onClose,
   isMobileMode,
-  onMessageSent,
 }: ChatInputProps) {
   const handleSend = () => {
-    if (chatInput.trim()) {
-      sendMessage()
-      onMessageSent?.()
-    }
+    sendMessage()
     onClose()
   }
 
