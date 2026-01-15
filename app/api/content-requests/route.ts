@@ -1,30 +1,44 @@
-import { NextResponse, type NextRequest } from "next/server"
-import { createClient as createServerClient } from "@/lib/supabase/server"
+import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
-    const { data: requests, error } = await supabase
-      .from("content_requests")
-      .select(`
-        *,
-        vote_count:content_request_votes(count)
-      `)
-      .order("created_at", { ascending: false })
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    if (error) throw error
+    if (!user) {
+      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+    }
 
-    const transformedRequests = requests?.map((request: any) => ({
-      ...request,
-      vote_count: request.vote_count?.[0]?.count || 0,
-    }))
+    // Check if user is admin
+    const { data: profile } = await supabase.from("user_profiles").select("is_admin").eq("id", user.id).single()
 
-    return NextResponse.json({ requests: transformedRequests || [] })
+    if (profile?.is_admin) {
+      // Admin: get all requests
+      const { data: requests, error } = await supabase
+        .from("content_requests")
+        .select("*")
+        .order("created_at", { ascending: false })
+
+      if (error) throw error
+      return NextResponse.json({ requests: requests || [] })
+    } else {
+      // Regular user: get only their requests
+      const { data: requests, error } = await supabase
+        .from("content_requests")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+
+      if (error) throw error
+      return NextResponse.json({ requests: requests || [] })
+    }
   } catch (error: any) {
-    console.error("Error fetching requests:", error)
-    return NextResponse.json({ error: error.message || "Erreur lors de la récupération des demandes" }, { status: 500 })
+    console.error("Error fetching content requests:", error)
+    return NextResponse.json({ error: error.message || "Erreur inconnue" }, { status: 500 })
   }
 }
 

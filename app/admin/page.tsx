@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Separator } from "@/components/ui/separator"
 import {
   Plus,
   Edit,
@@ -55,6 +56,7 @@ import {
   BookOpen,
   Send,
   SettingsIcon,
+  Save,
   ChevronLeft,
   ChevronRight,
   Globe,
@@ -94,20 +96,6 @@ interface AvatarOption {
   created_at: string
 }
 
-interface ContentRequest {
-  id: string
-  user_id: string
-  username?: string // Added for convenience
-  content_type?: string
-  tmdb_id?: number
-  title: string
-  description?: string
-  status: "pending" | "completed" | "rejected"
-  created_at: string
-  vote_count?: number // Added vote_count
-  user_profiles?: { username: string; email: string }
-}
-
 export default function AdminPage() {
   const { user, loading: userLoading } = useAuth() // Added userLoading to the destructuring
   const { toast } = useToast()
@@ -118,7 +106,7 @@ export default function AdminPage() {
   const [radioStations, setRadioStations] = useState([])
   const [retrogamingSources, setRetrogamingSources] = useState([])
   const [users, setUsers] = useState<any[]>([]) // Corrected type from any[]
-  const [requests, setRequests] = useState<ContentRequest[]>([]) // Corrected type
+  const [requests, setRequests] = useState([])
   const [musicContent, setMusicContent] = useState([])
   const [software, setSoftware] = useState([])
   const [games, setGames] = useState([])
@@ -372,15 +360,11 @@ export default function AdminPage() {
     use_proxy: false,
   })
 
-  const [messageDialogOpen, setMessageDialogOpen] = useState(false)
-  const [selectedRequest, setSelectedRequest] = useState<ContentRequest | null>(null)
-  const [adminMessage, setAdminMessage] = useState("")
-
-  // Define isFullAdmin and isUploader
+  // CHANGE: Define isFullAdmin and isUploader
   const isFullAdmin = user?.isAdmin || false
   const isUploader = user?.isUploader && !user?.isAdmin // Only uploader if NOT admin
 
-  // Define tabs accessible to uploaders
+  // CHANGE: Define tabs accessible to uploaders
   const uploaderAllowedTabs = ["music", "games", "software", "ebooks", "requests"]
   const canAccessTab = (tab: string) => {
     if (isFullAdmin) return true
@@ -388,20 +372,20 @@ export default function AdminPage() {
     return false
   }
 
-  // Only full admins can delete content, uploaders cannot
+  // CHANGE: Only full admins can delete content, uploaders cannot
   const canDelete = isFullAdmin
 
-  // Uploaders start on "music" tab, full admins on "dashboard"
+  // CHANGE: Uploaders start on "music" tab, full admins on "dashboard"
   const [activeTab, setActiveTab] = useState(isFullAdmin ? "dashboard" : "music")
 
-  // Combined user and uploader check for access
+  // CHANGE: Combined user and uploader check for access
   useEffect(() => {
     if (!user || (!user.isAdmin && !user.isUploader)) {
       router.push("/") // Redirect to homepage if not admin or uploader
     }
   }, [user, router])
 
-  // Fetches all data on mount or when user role changes
+  // CHANGE: Fetches all data on mount or when user role changes
   useEffect(() => {
     // Only fetch data if user is logged in and has appropriate role
     if (user && (user.isAdmin || user.isUploader)) {
@@ -410,7 +394,7 @@ export default function AdminPage() {
     }
   }, [user]) // Dependency on 'user' ensures it runs when authentication state changes
 
-  // Fetch interactive world data only when that tab is active
+  // CHANGE: Fetch interactive world data only when that tab is active
   useEffect(() => {
     if (user && (user.isAdmin || user.isUploader) && activeTab === "interactive-world" && !loading) {
       loadWorldSettings()
@@ -422,7 +406,7 @@ export default function AdminPage() {
     }
   }, [user, activeTab, loading]) // Added loading dependency to ensure it runs after initial data load
 
-  // Refactored the online user interval logic to be dependent on activeTab and loading state
+  // CHANGE: Refactored the online user interval logic to be dependent on activeTab and loading state
   useEffect(() => {
     // Only set interval if the user is logged in and the interactive world tab is active
     if (user && (user.isAdmin || user.isUploader) && activeTab === "interactive-world" && !loading) {
@@ -612,54 +596,7 @@ export default function AdminPage() {
     }
   }
 
-  const handleSendAdminMessage = async () => {
-    if (!adminMessage.trim()) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez écrire un message",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    )
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) throw new Error("User not authenticated")
-
-      const { error } = await supabase.from("user_messages").insert({
-        sender_id: user.id,
-        recipient_id: selectedRequest?.user_id,
-        subject: `Re: ${selectedRequest?.title}`,
-        content: adminMessage,
-        is_read: false,
-      })
-
-      if (error) throw error
-
-      toast({
-        title: "Message envoyé",
-        description: `Message envoyé à ${selectedRequest?.username}`,
-      })
-
-      setMessageDialogOpen(false)
-      setAdminMessage("")
-      setSelectedRequest(null)
-    } catch (error: any) {
-      console.error("Error sending admin message:", error)
-      toast({
-        title: "Erreur",
-        description: `Erreur lors de l'envoi: ${error.message}`,
-        variant: "destructive",
-      })
-    }
-  }
+  // REMOVED: loadAllData function, replaced by fetchAllData
 
   const loadRealTVChannels = async (supabase) => {
     try {
@@ -3367,7 +3304,7 @@ const loadRealUsers = async (supabase) => {
     }
   }, [user, activeTab, loading]) // Dependencies ensure reactivity
 
-  // Combined user and uploader check for access
+  // CHANGE: Combined user and uploader check for access
   if (!user || (!user.isAdmin && !user.isUploader)) {
     return (
       <div className="min-h-screen bg-gray-900 text-white">
@@ -3423,7 +3360,7 @@ const loadRealUsers = async (supabase) => {
           </div>
         </div>
 
-        {/* Use isFullAdmin for default tab, otherwise use isUploader's default */}
+        {/* CHANGE: Use isFullAdmin for default tab, otherwise use isUploader's default */}
         <Tabs defaultValue={isFullAdmin ? "dashboard" : "music"} className="space-y-6" onValueChange={(value) => setActiveTab(value)}>
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="inline-flex w-auto min-w-full bg-gray-800 border-gray-700 flex-nowrap">
@@ -5058,7 +4995,6 @@ const loadRealUsers = async (supabase) => {
                     <TableRow>
                       <TableHead>Utilisateur</TableHead>
                       <TableHead>Type</TableHead>
-                      <TableHead>TMDB ID</TableHead>
                       <TableHead>Titre demandé</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Statut</TableHead>
@@ -5070,21 +5006,7 @@ const loadRealUsers = async (supabase) => {
                       <TableRow key={request.id}>
                         <TableCell className="font-medium">{request.username}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="capitalize">
-                            {request.content_type || "---"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {request.tmdb_id ? (
-                            <a
-                              href={`https://www.themoviedb.org/${request.content_type}/${request.tmdb_id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-400 hover:text-blue-300 underline"
-                            >
-                              {request.tmdb_id}
-                            </a>
-                          ) : "---"}
+                          <Badge variant="secondary">{request.type}</Badge>
                         </TableCell>
                         <TableCell>{request.title}</TableCell>
                         <TableCell className="text-muted-foreground">
@@ -5109,17 +5031,6 @@ const loadRealUsers = async (supabase) => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedRequest(request)
-                                setMessageDialogOpen(true)
-                              }}
-                              title="Envoyer un message"
-                            >
-                              <MessageSquare className="w-4 h-4 text-blue-500" />
-                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -5152,72 +5063,6 @@ const loadRealUsers = async (supabase) => {
                 )}
               </CardContent>
             </Card>
-
-            <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
-              <DialogContent className="bg-gray-900 text-white border-gray-700 max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Envoyer un message</DialogTitle>
-                  <DialogDescription className="text-gray-400">
-                    Envoyer un message à {selectedRequest?.username} concernant leur demande "{selectedRequest?.title}"
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Message</label>
-                    <textarea
-                      value={adminMessage}
-                      onChange={(e) => setAdminMessage(e.target.value)}
-                      placeholder="Écrivez votre message ici..."
-                      className="w-full min-h-[150px] p-3 bg-gray-800 border border-gray-700 rounded-md text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  {selectedRequest && (
-                    <div className="bg-gray-800 p-4 rounded-md space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Type:</span>
-                        <Badge variant="secondary">{selectedRequest.content_type}</Badge>
-                      </div>
-                      {selectedRequest.tmdb_id && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">TMDB ID:</span>
-                          <a
-                            href={`https://www.themoviedb.org/${selectedRequest.content_type}/${selectedRequest.tmdb_id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-400 hover:text-blue-300 underline"
-                          >
-                            {selectedRequest.tmdb_id}
-                          </a>
-                        </div>
-                      )}
-                      <div className="flex justify-between">
-                        <span className="text-gray-400">Date:</span>
-                        <span>{new Date(selectedRequest.created_at).toLocaleDateString("fr-FR")}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setMessageDialogOpen(false)
-                      setAdminMessage("")
-                      setSelectedRequest(null)
-                    }}
-                  >
-                    Annuler
-                  </Button>
-                  <Button
-                    onClick={handleSendAdminMessage}
-                    disabled={!adminMessage.trim()}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    Envoyer le message
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </TabsContent>
 
           <TabsContent value="music" className="space-y-6">
@@ -6843,11 +6688,11 @@ const loadRealUsers = async (supabase) => {
                           }
                         />
                       </div>
-                      
+
                       <div className="flex items-center justify-between p-4 border rounded-lg">
                         <div>
                           <Label htmlFor="subscription_offer" className="text-base font-medium">
-                           Offre d'Abonnement
+                            Offre d'Abonnement
                           </Label>
                           <p className="text-xs text-muted-foreground">Bandeau publicitaire VIP</p>
                         </div>
