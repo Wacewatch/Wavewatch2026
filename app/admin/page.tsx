@@ -94,6 +94,20 @@ interface AvatarOption {
   created_at: string
 }
 
+interface ContentRequest {
+  id: string
+  user_id: string
+  username?: string // Added for convenience
+  content_type?: string
+  tmdb_id?: number
+  title: string
+  description?: string
+  status: "pending" | "completed" | "rejected"
+  created_at: string
+  vote_count?: number // Added vote_count
+  user_profiles?: { username: string; email: string }
+}
+
 export default function AdminPage() {
   const { user, loading: userLoading } = useAuth() // Added userLoading to the destructuring
   const { toast } = useToast()
@@ -104,7 +118,7 @@ export default function AdminPage() {
   const [radioStations, setRadioStations] = useState([])
   const [retrogamingSources, setRetrogamingSources] = useState([])
   const [users, setUsers] = useState<any[]>([]) // Corrected type from any[]
-  const [requests, setRequests] = useState([])
+  const [requests, setRequests] = useState<ContentRequest[]>([]) // Corrected type
   const [musicContent, setMusicContent] = useState([])
   const [software, setSoftware] = useState([])
   const [games, setGames] = useState([])
@@ -359,7 +373,7 @@ export default function AdminPage() {
   })
 
   const [messageDialogOpen, setMessageDialogOpen] = useState(false)
-  const [selectedRequest, setSelectedRequest] = useState<any>(null)
+  const [selectedRequest, setSelectedRequest] = useState<ContentRequest | null>(null)
   const [adminMessage, setAdminMessage] = useState("")
 
   // Define isFullAdmin and isUploader
@@ -6829,15 +6843,11 @@ const loadRealUsers = async (supabase) => {
                           }
                         />
                       </div>
-
+                      
                       <div className="flex items-center justify-between p-4 border rounded-lg">
                         <div>
                           <Label htmlFor="subscription_offer" className="text-base font-medium">
-                            Offre d'Abonnement
+                            Offre d'abonnement
                           </Label>
-                          <p className="text-xs text-muted-foreground">Bandeau publicitaire VIP</p>
-                        </div>
-                        <Checkbox
-                          id="subscription_offer"
-                          checked={siteSettings.subscription_offer}
-                          on\
+                          <p className="text-xs text-muted-foreground">Bannière d'abonnement promotionnelle</p>
+\
