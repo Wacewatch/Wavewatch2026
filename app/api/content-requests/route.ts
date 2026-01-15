@@ -1,10 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server"
-import { createClient as createServerClient } from "@/lib/supabase/server"
 import { createClient } from "@/lib/supabase/server"
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const { data: requests, error } = await supabase
       .from("content_requests")
