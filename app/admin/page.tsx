@@ -16,7 +16,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Separator } from "@/components/ui/separator"
 import {
   Plus,
   Edit,
@@ -56,7 +55,6 @@ import {
   BookOpen,
   Send,
   SettingsIcon,
-  Save,
   ChevronLeft,
   ChevronRight,
   Globe,
@@ -360,11 +358,15 @@ export default function AdminPage() {
     use_proxy: false,
   })
 
-  // CHANGE: Define isFullAdmin and isUploader
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false)
+  const [selectedRequest, setSelectedRequest] = useState<any>(null)
+  const [adminMessage, setAdminMessage] = useState("")
+
+  // Define isFullAdmin and isUploader
   const isFullAdmin = user?.isAdmin || false
   const isUploader = user?.isUploader && !user?.isAdmin // Only uploader if NOT admin
 
-  // CHANGE: Define tabs accessible to uploaders
+  // Define tabs accessible to uploaders
   const uploaderAllowedTabs = ["music", "games", "software", "ebooks", "requests"]
   const canAccessTab = (tab: string) => {
     if (isFullAdmin) return true
@@ -372,20 +374,20 @@ export default function AdminPage() {
     return false
   }
 
-  // CHANGE: Only full admins can delete content, uploaders cannot
+  // Only full admins can delete content, uploaders cannot
   const canDelete = isFullAdmin
 
-  // CHANGE: Uploaders start on "music" tab, full admins on "dashboard"
+  // Uploaders start on "music" tab, full admins on "dashboard"
   const [activeTab, setActiveTab] = useState(isFullAdmin ? "dashboard" : "music")
 
-  // CHANGE: Combined user and uploader check for access
+  // Combined user and uploader check for access
   useEffect(() => {
     if (!user || (!user.isAdmin && !user.isUploader)) {
       router.push("/") // Redirect to homepage if not admin or uploader
     }
   }, [user, router])
 
-  // CHANGE: Fetches all data on mount or when user role changes
+  // Fetches all data on mount or when user role changes
   useEffect(() => {
     // Only fetch data if user is logged in and has appropriate role
     if (user && (user.isAdmin || user.isUploader)) {
@@ -394,7 +396,7 @@ export default function AdminPage() {
     }
   }, [user]) // Dependency on 'user' ensures it runs when authentication state changes
 
-  // CHANGE: Fetch interactive world data only when that tab is active
+  // Fetch interactive world data only when that tab is active
   useEffect(() => {
     if (user && (user.isAdmin || user.isUploader) && activeTab === "interactive-world" && !loading) {
       loadWorldSettings()
@@ -406,7 +408,7 @@ export default function AdminPage() {
     }
   }, [user, activeTab, loading]) // Added loading dependency to ensure it runs after initial data load
 
-  // CHANGE: Refactored the online user interval logic to be dependent on activeTab and loading state
+  // Refactored the online user interval logic to be dependent on activeTab and loading state
   useEffect(() => {
     // Only set interval if the user is logged in and the interactive world tab is active
     if (user && (user.isAdmin || user.isUploader) && activeTab === "interactive-world" && !loading) {
@@ -596,7 +598,54 @@ export default function AdminPage() {
     }
   }
 
-  // REMOVED: loadAllData function, replaced by fetchAllData
+  const handleSendAdminMessage = async () => {
+    if (!adminMessage.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez écrire un message",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error("User not authenticated")
+
+      const { error } = await supabase.from("user_messages").insert({
+        sender_id: user.id,
+        recipient_id: selectedRequest?.user_id,
+        subject: `Re: ${selectedRequest?.title}`,
+        content: adminMessage,
+        is_read: false,
+      })
+
+      if (error) throw error
+
+      toast({
+        title: "Message envoyé",
+        description: `Message envoyé à ${selectedRequest?.username}`,
+      })
+
+      setMessageDialogOpen(false)
+      setAdminMessage("")
+      setSelectedRequest(null)
+    } catch (error: any) {
+      console.error("Error sending admin message:", error)
+      toast({
+        title: "Erreur",
+        description: `Erreur lors de l'envoi: ${error.message}`,
+        variant: "destructive",
+      })
+    }
+  }
 
   const loadRealTVChannels = async (supabase) => {
     try {
@@ -3304,7 +3353,7 @@ const loadRealUsers = async (supabase) => {
     }
   }, [user, activeTab, loading]) // Dependencies ensure reactivity
 
-  // CHANGE: Combined user and uploader check for access
+  // Combined user and uploader check for access
   if (!user || (!user.isAdmin && !user.isUploader)) {
     return (
       <div className="min-h-screen bg-gray-900 text-white">
@@ -3360,7 +3409,7 @@ const loadRealUsers = async (supabase) => {
           </div>
         </div>
 
-        {/* CHANGE: Use isFullAdmin for default tab, otherwise use isUploader's default */}
+        {/* Use isFullAdmin for default tab, otherwise use isUploader's default */}
         <Tabs defaultValue={isFullAdmin ? "dashboard" : "music"} className="space-y-6" onValueChange={(value) => setActiveTab(value)}>
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="inline-flex w-auto min-w-full bg-gray-800 border-gray-700 flex-nowrap">
@@ -4995,6 +5044,7 @@ const loadRealUsers = async (supabase) => {
                     <TableRow>
                       <TableHead>Utilisateur</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>TMDB ID</TableHead>
                       <TableHead>Titre demandé</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Statut</TableHead>
@@ -5006,7 +5056,21 @@ const loadRealUsers = async (supabase) => {
                       <TableRow key={request.id}>
                         <TableCell className="font-medium">{request.username}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary">{request.type}</Badge>
+                          <Badge variant="secondary" className="capitalize">
+                            {request.content_type || "---"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {request.tmdb_id ? (
+                            <a
+                              href={`https://www.themoviedb.org/${request.content_type}/${request.tmdb_id}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 underline"
+                            >
+                              {request.tmdb_id}
+                            </a>
+                          ) : "---"}
                         </TableCell>
                         <TableCell>{request.title}</TableCell>
                         <TableCell className="text-muted-foreground">
@@ -5031,6 +5095,17 @@ const loadRealUsers = async (supabase) => {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedRequest(request)
+                                setMessageDialogOpen(true)
+                              }}
+                              title="Envoyer un message"
+                            >
+                              <MessageSquare className="w-4 h-4 text-blue-500" />
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -5063,6 +5138,72 @@ const loadRealUsers = async (supabase) => {
                 )}
               </CardContent>
             </Card>
+
+            <Dialog open={messageDialogOpen} onOpenChange={setMessageDialogOpen}>
+              <DialogContent className="bg-gray-900 text-white border-gray-700 max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Envoyer un message</DialogTitle>
+                  <DialogDescription className="text-gray-400">
+                    Envoyer un message à {selectedRequest?.username} concernant leur demande "{selectedRequest?.title}"
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Message</label>
+                    <textarea
+                      value={adminMessage}
+                      onChange={(e) => setAdminMessage(e.target.value)}
+                      placeholder="Écrivez votre message ici..."
+                      className="w-full min-h-[150px] p-3 bg-gray-800 border border-gray-700 rounded-md text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  {selectedRequest && (
+                    <div className="bg-gray-800 p-4 rounded-md space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Type:</span>
+                        <Badge variant="secondary">{selectedRequest.content_type}</Badge>
+                      </div>
+                      {selectedRequest.tmdb_id && (
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">TMDB ID:</span>
+                          <a
+                            href={`https://www.themoviedb.org/${selectedRequest.content_type}/${selectedRequest.tmdb_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 underline"
+                          >
+                            {selectedRequest.tmdb_id}
+                          </a>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-gray-400">Date:</span>
+                        <span>{new Date(selectedRequest.created_at).toLocaleDateString("fr-FR")}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setMessageDialogOpen(false)
+                      setAdminMessage("")
+                      setSelectedRequest(null)
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={handleSendAdminMessage}
+                    disabled={!adminMessage.trim()}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    Envoyer le message
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="music" className="space-y-6">
@@ -6699,523 +6840,4 @@ const loadRealUsers = async (supabase) => {
                         <Checkbox
                           id="subscription_offer"
                           checked={siteSettings.subscription_offer}
-                          onCheckedChange={(checked) =>
-                            setSiteSettings({ ...siteSettings, subscription_offer: !!checked })
-                          }
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <Label htmlFor="random_content" className="text-base font-medium">
-                            Contenu Aléatoire
-                          </Label>
-                          <p className="text-xs text-muted-foreground">Suggestion de contenu random</p>
-                        </div>
-                        <Checkbox
-                          id="random_content"
-                          checked={siteSettings.random_content}
-                          onCheckedChange={(checked) => setSiteSettings({ ...siteSettings, random_content: !!checked })}
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <Label htmlFor="football_calendar" className="text-base font-medium">
-                            Calendrier Football
-                          </Label>
-                          <p className="text-xs text-muted-foreground">Widget calendrier sportif</p>
-                        </div>
-                        <Checkbox
-                          id="football_calendar"
-                          checked={siteSettings.football_calendar}
-                          onCheckedChange={(checked) =>
-                            setSiteSettings({ ...siteSettings, football_calendar: !!checked })
-                          }
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <Label htmlFor="calendar_widget" className="text-base font-medium">
-                            Calendrier Général
-                          </Label>
-                          <p className="text-xs text-muted-foreground">Widget calendrier événements</p>
-                        </div>
-                        <Checkbox
-                          id="calendar_widget"
-                          checked={siteSettings.calendar_widget}
-                          onCheckedChange={(checked) =>
-                            setSiteSettings({ ...siteSettings, calendar_widget: !!checked })
-                          }
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mt-6 flex justify-end">
-                      <Button onClick={handleSaveSiteSettings}>
-                        <Save className="w-4 h-4 mr-2" />
-                        Sauvegarder les paramètres
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="interactive-world">
-            <Card className="bg-gray-800 border-gray-700">
-              <CardHeader>
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Globe className="w-5 h-5" />
-                  Monde Interactif - Configuration Complète
-                </CardTitle>
-                <CardDescription className="text-gray-400">
-                  Gérez tous les paramètres du monde interactif, salles de cinéma et options de personnalisation
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Paramètres Généraux du Monde</h3>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-300">Capacité Maximale</label>
-                      <Input
-                        type="number"
-                        value={worldSettings.maxCapacity}
-                        onChange={(e) =>
-                          setWorldSettings({ ...worldSettings, maxCapacity: Number.parseInt(e.target.value, 10) })
-                        }
-                        className="bg-gray-700 border-gray-600 text-white"
-                        placeholder="Nombre max d'utilisateurs"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-300">Mode du Monde</label>
-                      <select
-                        value={worldSettings.worldMode}
-                        onChange={(e) => setWorldSettings({ ...worldSettings, worldMode: e.target.value })}
-                        className="w-full px-3 py-2 bg-gray-700 border-gray-600 rounded-md text-white"
-                      >
-                        <option value="day">Jour</option>
-                        <option value="night">Nuit</option>
-                        <option value="sunset">Coucher de soleil</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input
-                        type="checkbox"
-                        className="rounded"
-                        checked={worldSettings.playerInteractionsEnabled}
-                        onChange={(e) =>
-                          setWorldSettings({ ...worldSettings, playerInteractionsEnabled: e.target.checked })
-                        }
-                      />
-                      Interactions Joueurs
-                    </label>
-
-                    <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input
-                        type="checkbox"
-                        className="rounded"
-                        checked={worldSettings.showStatusBadges}
-                        onChange={(e) =>
-                          setWorldSettings({ ...worldSettings, showStatusBadges: e.target.checked })
-                        }
-                      />
-                      Afficher Badges Statut
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input
-                        type="checkbox"
-                        className="rounded"
-                        checked={worldSettings.enableChat}
-                        onChange={(e) => setWorldSettings({ ...worldSettings, enableChat: e.target.checked })}
-                      />
-                      Activer le chat texte
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input
-                        type="checkbox"
-                        className="rounded"
-                        checked={worldSettings.enableEmojis}
-                        onChange={(e) => setWorldSettings({ ...worldSettings, enableEmojis: e.target.checked })}
-                      />
-                      Activer les émojis
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-gray-300">
-                      <input
-                        type="checkbox"
-                        className="rounded"
-                        checked={worldSettings.enableJumping}
-                        onChange={(e) => setWorldSettings({ ...worldSettings, enableJumping: e.target.checked })}
-                      />
-                      Activer le saut
-                    </label>
-                  </div>
-
-                  <div className="flex justify-end pt-4">
-                    {/* CHANGE: Renamed handleWorldSettings to handleSaveWorldSettings */}
-                    <Button onClick={handleSaveWorldSettings} className="bg-blue-600 hover:bg-blue-700">
-                      <Save className="w-4 h-4 mr-2" />
-                      Sauvegarder les Paramètres
-                    </Button>
-                  </div>
-                </div>
-
-                <Separator className="bg-gray-700" />
-
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                      <Film className="w-5 h-5" />
-                      Gestion des Salles de Cinéma
-                    </h3>
-                    <Button onClick={handleCreateCinemaRoom} size="sm" className="bg-green-600 hover:bg-green-700">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Créer une Salle
-                    </Button>
-                  </div>
-
-                  <div className="space-y-4">
-                    {cinemaRooms.map((room) => (
-                      <div key={room.id} className="p-4 bg-gray-700 rounded-lg border border-gray-600">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Numéro de Salle</label>
-                            <Input
-                              type="number"
-                              value={room.room_number}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, room_number: Number.parseInt(e.target.value) } : r,
-                                  ),
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Nom de la Salle</label>
-                            <Input
-                              value={room.name}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) => (r.id === room.id ? { ...r, name: e.target.value } : r)),
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Capacité</label>
-                            <Input
-                              type="number"
-                              value={room.capacity}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, capacity: Number.parseInt(e.target.value) } : r,
-                                  ),
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Thème</label>
-                            <select
-                              value={room.theme}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) => (r.id === room.id ? { ...r, theme: e.target.value } : r)),
-                                )
-                              }}
-                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-                            >
-                              <option value="default">Par défaut</option>
-                              <option value="luxury">Luxe</option>
-                              <option value="retro">Rétro</option>
-                              <option value="modern">Moderne</option>
-                            </select>
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Titre du Film</label>
-                            <Input
-                              value={room.movie_title}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, movie_title: e.target.value } : r,
-                                  ),
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">ID TMDB du Film</label>
-                            <Input
-                              type="number"
-                              value={room.movie_tmdb_id || ""}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id
-                                      ? { ...r, movie_tmdb_id: Number.parseInt(e.target.value) || null }
-                                      : r,
-                                  ),
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">URL Affiche</label>
-                            <Input
-                              value={room.movie_poster || ""}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, movie_poster: e.target.value } : r,
-                                  ),
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-<div className="space-y-2">
-  <label className="text-sm text-gray-300">URL Embed (Iframe)</label>
-  <Input
-    value={room.embed_url || ""}
-    onChange={(e) => {
-      setCinemaRooms(
-        cinemaRooms.map((r) => (r.id === room.id ? { ...r, embed_url: e.target.value } : r))
-      )
-    }}
-    className="bg-gray-600 border-gray-500 text-white"
-  />
-</div>
-<div className="space-y-2">
-                            <label className="text-sm text-gray-300">Début de séance</label>
-                            <Input
-                              type="datetime-local"
-                              value={room.schedule_start || ""}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, schedule_start: e.target.value } : r
-                                  )
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Fin de séance</label>
-                            <Input
-                              type="datetime-local"
-                              value={room.schedule_end || ""}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, schedule_end: e.target.value } : r
-                                  )
-                                )
-                              }}
-                              className="bg-gray-600 border-gray-500 text-white"
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <label className="text-sm text-gray-300">Niveau d'accès</label>
-                            <select
-                              value={room.access_level}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, access_level: e.target.value } : r
-                                  )
-                                )
-                              }}
-                              className="w-full px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-                            >
-                              <option value="public">Public</option>
-                              <option value="vip">VIP</option>
-                              <option value="vip_plus">VIP+</option>
-                            </select>
-                          </div>
-
-                          <div className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              checked={room.is_open}
-                              onChange={(e) => {
-                                setCinemaRooms(
-                                  cinemaRooms.map((r) =>
-                                    r.id === room.id ? { ...r, is_open: e.target.checked } : r
-                                  )
-                                )
-                              }}
-                              className="rounded"
-                            />
-                            <label className="text-sm text-gray-300">Salle ouverte</label>
-                          </div>
-                        </div>
-
-                        <div className="flex justify-end gap-2 mt-4">
-                          <Button
-                            onClick={() => handleUpdateCinemaRoom(room)}
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            <Save className="w-4 h-4 mr-2" />
-                            Sauvegarder
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-
-                    {cinemaRooms.length === 0 && (
-                      <div className="text-center py-8 text-gray-400">
-                        <Film className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>Aucune salle de cinéma créée</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Section des options d'avatar */}
-                <Separator className="bg-gray-700" />
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Options de Personnalisation d'Avatar</h3>
-                  
-                  {/* Formulaire d'ajout */}
-                  <div className="p-4 bg-gray-700 rounded-lg border border-gray-600">
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <select
-                        value={newOption.category}
-                        onChange={(e) => setNewOption({ ...newOption, category: e.target.value })}
-                        className="px-3 py-2 bg-gray-600 border-gray-500 rounded-md text-white"
-                      >
-                        <option value="hair_style">Coiffure</option>
-                        <option value="hair_color">Couleur cheveux</option>
-                        <option value="skin_tone">Teinte peau</option>
-                        <option value="outfit">Tenue</option>
-                      </select>
-
-                      <Input
-                        placeholder="Label (ex: Blonde)"
-                        value={newOption.label}
-                        onChange={(e) => setNewOption({ ...newOption, label: e.target.value })}
-                        className="bg-gray-600 border-gray-500 text-white"
-                      />
-
-                      <Input
-                        placeholder="Valeur (ex: #FFD700)"
-                        value={newOption.value}
-                        onChange={(e) => setNewOption({ ...newOption, value: e.target.value })}
-                        className="bg-gray-600 border-gray-500 text-white"
-                      />
-
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-2 text-sm text-gray-300">
-                          <input
-                            type="checkbox"
-                            checked={newOption.is_premium}
-                            onChange={(e) => setNewOption({ ...newOption, is_premium: e.target.checked })}
-                            className="rounded"
-                          />
-                          Premium
-                        </label>
-                        <Button onClick={handleAddAvatarOption} size="sm" className="bg-green-600 hover:bg-green-700">
-                          <Plus className="w-4 h-4 mr-2" />
-                          Ajouter
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Liste des options */}
-                  <div className="space-y-2">
-                    {avatarOptions.map((option) => (
-                      <div key={option.id} className="flex items-center justify-between p-3 bg-gray-700 rounded border border-gray-600">
-                        <div className="flex items-center gap-4">
-                          <Badge variant="outline">{option.category}</Badge>
-                          <span className="text-white">{option.label}</span>
-                          <span className="text-gray-400 text-sm">{option.value}</span>
-                          {option.is_premium && <Badge className="bg-yellow-600">Premium</Badge>}
-                        </div>
-                        <Button
-                          onClick={() => handleDeleteAvatarOption(option.id)}
-                          size="sm"
-                          variant="destructive"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Section des statistiques en temps réel */}
-                <Separator className="bg-gray-700" />
-
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-white">Statistiques en Temps Réel</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="bg-gray-700 border-gray-600">
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <Users className="w-8 h-8 mx-auto mb-2 text-blue-400" />
-                          <div className="text-3xl font-bold text-white">{onlineUsersCount}</div>
-                          <p className="text-sm text-gray-400">Utilisateurs en ligne</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-gray-700 border-gray-600">
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <Film className="w-8 h-8 mx-auto mb-2 text-purple-400" />
-                          <div className="text-3xl font-bold text-white">{cinemaRooms.length}</div>
-                          <p className="text-sm text-gray-400">Salles de cinéma</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-gray-700 border-gray-600">
-                      <CardContent className="pt-6">
-                        <div className="text-center">
-                          <Sparkles className="w-8 h-8 mx-auto mb-2 text-green-400" />
-                          <div className="text-3xl font-bold text-white">{avatarOptions.length}</div>
-                          <p className="text-sm text-gray-400">Options d'avatar</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  )
-}
+                          on\
