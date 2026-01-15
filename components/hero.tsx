@@ -147,14 +147,11 @@ export function Hero() {
               </div>
 
               <p
-                className="text-sm md:text-xl text-white/95 leading-relaxed max-w-3xl line-clamp-2 md:line-clamp-3 text-center mx-auto font-normal"
+                className="text-sm md:text-lg text-gray-100 leading-relaxed max-w-3xl line-clamp-2 md:line-clamp-3 text-center mx-auto font-light tracking-wide"
                 style={{
-                  textShadow: "0 2px 12px rgba(0,0,0,0.9), 0 4px 24px rgba(0,0,0,0.5)",
-                  fontFamily: "'Quicksand', 'Poppins', 'SF Pro Display', system-ui, sans-serif",
-                  lineHeight: "1.8",
-                  letterSpacing: "0.02em",
-                  fontWeight: 400,
-                  textRendering: "optimizeLegibility",
+                  textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+                  fontFamily: "'Inter', 'SF Pro Display', system-ui, -apple-system, sans-serif",
+                  lineHeight: "1.7",
                 }}
               >
                 {featuredMovie.overview}
