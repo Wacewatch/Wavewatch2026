@@ -7,7 +7,9 @@ import { Film, Radius as Stadium, Users, Calendar, Clock, Sparkles, ChevronLeft,
 import Image from "next/image"
 import Link from "next/link"
 import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
+
+const supabase = createClient()
 
 type CinemaSession = {
   id: string

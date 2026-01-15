@@ -6,7 +6,9 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Crown, Trophy, Medal, Award, Star, Zap, Users, Percent } from "lucide-react"
 import { VIPSystem, type VIPUser } from "@/lib/vip-system"
-import { supabase } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/client"
+
+const supabase = createClient()
 
 export function VIPLeaderboard() {
   const [mounted, setMounted] = useState(false)
