@@ -89,6 +89,7 @@ export {
   useWorldPreloader,
   LOADING_STEPS,
   useVoiceChat,
+  useQuestTracker,
 } from "./hooks"
 export type { LoadingStep } from "./hooks"
 

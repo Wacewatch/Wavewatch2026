@@ -380,6 +380,13 @@ export default function AdminPage() {
   // Uploaders start on "music" tab, full admins on "dashboard"
   const [activeTab, setActiveTab] = useState(isFullAdmin ? "dashboard" : "music")
 
+  // Combined user and uploader check for access
+  useEffect(() => {
+    if (!user || (!user.isAdmin && !user.isUploader)) {
+      router.push("/") // Redirect to homepage if not admin or uploader
+    }
+  }, [user, router])
+
   // Fetches all data on mount or when user role changes
   useEffect(() => {
     // Only fetch data if user is logged in and has appropriate role
@@ -1975,7 +1982,7 @@ const loadRealUsers = async (supabase) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.JSONstringify({
+        body: JSON.stringify({
           type
         }),
       })
