@@ -75,7 +75,6 @@ import {
   useWorldChat,
   useWorldPreloader,
   useVoiceChat,
-  useQuestTracker,
   // Debug components
   CollisionDebugVisualization,
   CinemaInterior,
@@ -247,49 +246,49 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     setQuestNotifications((prev) => prev.filter((n) => n.id !== id))
   }, [])
 
-  // Quest tracking hook
-  const {
-    trackFirstLogin,
-    trackDance,
-    trackRoomVisit,
-    trackDiscoVisit,
-    trackCinemaSession,
-    trackStadiumVisit,
-    trackArcadePlay,
-    trackChatMessage,
-    trackVoiceChat,
-    trackAvatarCustomization,
-  } = useQuestTracker({
-    userId,
-    username: myProfile?.username || userProfile?.username,
-    onQuestCompleted: (questTitle, xpEarned) => {
-      // Show completion notification toast
-      addQuestCompletedNotification(questTitle, xpEarned)
-    },
-    onQuestProgress: (questTitle, progress, requirement) => {
-      // Show progress notification toast
-      addQuestProgressNotification(questTitle, progress, requirement)
-    },
-  })
+  // Quest tracking hook - REMOVED AS PER UPDATES
+  // const {
+  //   trackFirstLogin,
+  //   trackDance,
+  //   trackRoomVisit,
+  //   trackDiscoVisit,
+  //   trackCinemaSession,
+  //   trackStadiumVisit,
+  //   trackArcadePlay,
+  //   trackChatMessage,
+  //   trackVoiceChat,
+  //   trackAvatarCustomization,
+  // } = useQuestTracker({
+  //   userId,
+  //   username: myProfile?.username || userProfile?.username,
+  //   onQuestCompleted: (questTitle, xpEarned) => {
+  //     // Show completion notification toast
+  //     addQuestCompletedNotification(questTitle, xpEarned)
+  //   },
+  //   onQuestProgress: (questTitle, progress, requirement) => {
+  //     // Show progress notification toast
+  //     addQuestProgressNotification(questTitle, progress, requirement)
+  //   },
+  // })
 
   // Track first login when entering the world
-  useEffect(() => {
-    if (userId && !isWorldLoading) {
-      trackFirstLogin()
-    }
-  }, [userId, isWorldLoading, trackFirstLogin])
+  // useEffect(() => {
+  //   if (userId && !isWorldLoading) {
+  //     trackFirstLogin()
+  //   }
+  // }, [userId, isWorldLoading, trackFirstLogin])
 
   // Track voice chat quest when user joins voice
-  const voiceTrackedRef = useRef(false)
-  useEffect(() => {
-    if (isVoiceConnected && !voiceTrackedRef.current) {
-      voiceTrackedRef.current = true
-      trackVoiceChat()
-    }
-    if (!isVoiceConnected) {
-      voiceTrackedRef.current = false
-    }
-  }, [isVoiceConnected, trackVoiceChat])
+  // const voiceTrackedRef = useRef(false)
+  // useEffect(() => {
+  //   if (isVoiceConnected && !voiceTrackedRef.current) {
+  //     voiceTrackedRef.current = true
+  //     trackVoiceChat()
+  //   }
+  //   if (!isVoiceConnected) {
+  //     voiceTrackedRef.current = false
+  //   }
+  // }, [isVoiceConnected, trackVoiceChat])
 
   // Room visit tracking
   const currentRoomVisitIdRef = useRef<string | null>(null)
@@ -317,23 +316,23 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         }
 
         // Track quest progress for room visits
-        trackRoomVisit(roomName)
+        // trackRoomVisit(roomName)
 
         // Track specific room visits for quests
-        if (roomName === "disco") {
-          trackDiscoVisit()
-        } else if (roomName === "stadium") {
-          trackStadiumVisit()
-        } else if (roomName.startsWith("cinema")) {
-          trackCinemaSession()
-        } else if (roomName === "arcade") {
-          trackArcadePlay()
-        }
+        // if (roomName === "disco") {
+        //   trackDiscoVisit()
+        // } else if (roomName === "stadium") {
+        //   trackStadiumVisit()
+        // } else if (roomName.startsWith("cinema")) {
+        //   trackCinemaSession()
+        // } else if (roomName === "arcade") {
+        //   trackArcadePlay()
+        // }
       } catch (err) {
         console.error("Error tracking room entry:", err)
       }
     },
-    [visitId, userId, trackRoomVisit, trackDiscoVisit, trackStadiumVisit, trackCinemaSession, trackArcadePlay],
+    [visitId, userId /* trackRoomVisit, trackDiscoVisit, trackStadiumVisit, trackCinemaSession, trackArcadePlay */],
   )
 
   // Track room exit
@@ -584,11 +583,15 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       .sort((a, b) => new Date(a.schedule_start).getTime() - new Date(b.schedule_start).getTime())
 
     // Trouver la session en cours ou la prochaine
-    return roomSessions.find((s) => {
-      const start = new Date(s.schedule_start)
-      const end = new Date(s.schedule_end)
-      return start <= now && end > now
-    }) || roomSessions.find((s) => new Date(s.schedule_start) > now) || null
+    return (
+      roomSessions.find((s) => {
+        const start = new Date(s.schedule_start)
+        const end = new Date(s.schedule_end)
+        return start <= now && end > now
+      }) ||
+      roomSessions.find((s) => new Date(s.schedule_start) > now) ||
+      null
+    )
   }, [currentCinemaRoom, cinemaSessions])
 
   // checkCollision is now provided by usePlayerMovement hook
@@ -790,7 +793,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     setMyAvatarStyle(newStyle)
     await supabase.from("interactive_profiles").update({ avatar_style: newStyle }).eq("user_id", userId)
     // Track avatar customization quest
-    trackAvatarCustomization()
+    // trackAvatarCustomization()
   }
 
   useEffect(() => {
@@ -898,10 +901,10 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     await supabase.from("interactive_profiles").update({ is_dancing: newDancingState }).eq("user_id", userId)
 
     // Track dance quest when starting to dance
-    if (newDancingState) {
-      trackDance()
-    }
-  }, [isDancing, userProfile, userId, trackDance])
+    // if (newDancingState) {
+    //   trackDance()
+    // }
+  }, [isDancing, userProfile, userId /* trackDance */])
 
   // sendMessage is now provided by useWorldChat hook
   // handleJoystickMove and handleCameraRotate are now provided by usePlayerMovement hook
@@ -1554,7 +1557,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           sendMessage={sendMessage}
           onClose={() => setShowChatInput(false)}
           isMobileMode={isMobileMode}
-          onMessageSent={trackChatMessage}
+          // onMessageSent={trackChatMessage}
         />
       )}
 
@@ -1596,7 +1599,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           setChatInput={setChatInput}
           sendMessage={sendMessage}
           onClose={() => setShowChat(false)}
-          onMessageSent={trackChatMessage}
+          // onMessageSent={trackChatMessage}
         />
       )}
 
@@ -1613,10 +1616,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       {showQuests && <QuestsModal onClose={() => setShowQuests(false)} userId={userId} />}
 
       {/* Quest completion notifications */}
-      <QuestNotificationContainer
-        notifications={questNotifications}
-        onRemove={removeQuestNotification}
-      />
+      <QuestNotificationContainer notifications={questNotifications} onRemove={removeQuestNotification} />
 
       {/* Boutons d'actions - positionnés différemment selon le mode mobile */}
       <ActionButtons
