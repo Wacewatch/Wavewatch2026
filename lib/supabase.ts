@@ -3,8 +3,6 @@ import { createClient } from "@/lib/supabase/client"
 // Re-export for backwards compatibility - single instance
 export const supabase = createClient()
 
-// export { createClient as createServerClient } from "@/lib/supabase/server"
-
 export const recoverSession = async () => {
   try {
     const {
