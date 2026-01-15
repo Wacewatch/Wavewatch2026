@@ -115,7 +115,7 @@ export function Hero() {
 
   return (
     <Link href={`/movies/${featuredMovie?.id}`} className="block">
-      <div className="relative h-[35vh] md:h-[63vh] overflow-hidden cursor-pointer group">
+      <div className="relative h-[50vh] md:min-h-[90vh] overflow-hidden cursor-pointer group">
         {/* Background Image */}
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 group-hover:scale-105"
@@ -130,33 +130,21 @@ export function Hero() {
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4 h-full flex items-center">
           <div className="w-full">
-            <div className="space-y-4 md:space-y-6 max-w-4xl mx-auto">
+            <div className="space-y-3 md:space-y-6 max-w-4xl mx-auto">
               {getStylizedTitle(featuredMovie.title)}
 
-              <div className="flex items-center justify-center gap-3 md:gap-4">
-                <div className="flex items-center gap-1.5 bg-gradient-to-r from-yellow-500/20 to-yellow-600/20 backdrop-blur-sm rounded-full px-3 py-1.5 md:px-4 md:py-2 border border-yellow-500/30">
-                  <Star className="w-3.5 h-3.5 md:w-4 md:h-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm md:text-base font-semibold text-yellow-100 tracking-tight">
-                    {featuredMovie.vote_average.toFixed(1)}
-                  </span>
+              <div className="flex items-center justify-center space-x-3 text-gray-300">
+                <div className="flex items-center space-x-1 bg-black/40 rounded-full px-2 py-1 md:px-3 md:py-1">
+                  <Star className="w-3 h-3 md:w-5 md:h-5 fill-yellow-400 text-yellow-400" />
+                  <span className="text-xs md:text-lg font-medium">{featuredMovie.vote_average.toFixed(1)}</span>
                 </div>
-                <div className="w-1 h-1 rounded-full bg-gray-400/60" />
-                <span className="text-sm md:text-base font-medium text-gray-200 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 md:px-4 md:py-2 border border-white/20">
+                <span className="text-sm md:text-2xl">•</span>
+                <span className="text-xs md:text-lg bg-black/40 rounded-full px-2 py-1 md:px-3 md:py-1">
                   {new Date(featuredMovie.release_date).getFullYear()}
                 </span>
               </div>
 
-              <p
-                className="text-sm md:text-xl text-white/95 leading-relaxed max-w-3xl line-clamp-2 md:line-clamp-3 text-center mx-auto font-normal"
-                style={{
-                  textShadow: "0 2px 12px rgba(0,0,0,0.9), 0 4px 24px rgba(0,0,0,0.5)",
-                  fontFamily: "'Quicksand', 'Poppins', 'SF Pro Display', system-ui, sans-serif",
-                  lineHeight: "1.8",
-                  letterSpacing: "0.02em",
-                  fontWeight: 400,
-                  textRendering: "optimizeLegibility",
-                }}
-              >
+              <p className="text-xs md:text-xl text-gray-200 leading-relaxed max-w-2xl line-clamp-2 md:line-clamp-3 text-center mx-auto">
                 {featuredMovie.overview}
               </p>
             </div>
