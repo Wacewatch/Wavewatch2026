@@ -100,22 +100,16 @@ export function QuestsModal({ onClose, userId }: QuestsModalProps) {
     }
   }
 
-  // Calculer l'XP requis pour atteindre un niveau
-  // La formule donne le seuil XP total pour passer au niveau suivant
+  // Calculer l'XP requis pour le prochain niveau
   const calculateXPForLevel = (level: number): number => {
     return Math.floor(100 * Math.pow(level, 1.5))
   }
 
-  // Le niveau 1 commence à 0 XP, le niveau 2 à 282 XP, etc.
-  // xpForCurrentLevel = seuil minimum pour être au niveau actuel
-  const xpForCurrentLevel = userXP && userXP.level > 1 ? calculateXPForLevel(userXP.level) : 0
-  // xpForNextLevel = seuil pour passer au niveau suivant
+  const xpForCurrentLevel = userXP ? calculateXPForLevel(userXP.level) : 0
   const xpForNextLevel = userXP ? calculateXPForLevel(userXP.level + 1) : 0
-  // xpProgress = XP accumulé dans le niveau actuel
-  const xpProgress = userXP ? Math.max(0, userXP.xp - xpForCurrentLevel) : 0
-  // xpNeeded = XP total requis pour ce niveau
+  const xpProgress = userXP ? userXP.xp - xpForCurrentLevel : 0
   const xpNeeded = xpForNextLevel - xpForCurrentLevel
-  const progressPercentage = xpNeeded > 0 ? (xpProgress / xpNeeded) * 100 : 0
+  const progressPercentage = (xpProgress / xpNeeded) * 100
 
   // Filtrer les quêtes par catégorie
   const filteredQuests = quests.filter((quest) => selectedCategory === "all" || quest.category === selectedCategory)
