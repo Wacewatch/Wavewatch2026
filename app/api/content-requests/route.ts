@@ -53,6 +53,7 @@ export async function POST(request: Request) {
         title,
         description: description || null,
         content_type,
+        tmdb_id: tmdb_id || null,
         status: "pending",
       })
       .select()

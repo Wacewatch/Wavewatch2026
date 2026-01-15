@@ -83,34 +83,36 @@ export class DatabaseSync {
         return
       }
 
-      console.log("[v0] Syncing", watchedItems.length, "watched items to database")
+      console.log("[v0] Syncing", watchedItems.length, "watched items to database in batch")
 
-      for (const item of watchedItems) {
-        console.log("[v0] Syncing watched item:", item.title)
-        await this.supabase.from("user_watch_history").upsert(
-          {
-            user_id: user.id,
-            content_id: item.tmdbId,
-            content_type: item.type,
-            content_title: item.title,
-            last_watched_at: new Date(item.watchedAt).toISOString(),
-            metadata: {
-              duration: item.duration,
-              posterPath: item.posterPath,
-              genre: item.genre,
-              rating: item.rating,
-              season: item.season,
-              episode: item.episode,
-              showId: item.showId,
-            },
-          },
-          {
-            onConflict: "user_id,content_id,content_type",
-          },
-        )
+      const itemsToSync = watchedItems.map((item) => ({
+        user_id: user.id,
+        content_id: item.tmdbId,
+        content_type: item.type,
+        content_title: item.title,
+        last_watched_at: new Date(item.watchedAt).toISOString(),
+        metadata: {
+          duration: item.duration,
+          posterPath: item.posterPath,
+          genre: item.genre,
+          rating: item.rating,
+          season: item.season,
+          episode: item.episode,
+          showId: item.showId,
+        },
+      }))
+
+      if (itemsToSync.length > 0) {
+        const { error } = await this.supabase.from("user_watch_history").upsert(itemsToSync, {
+          onConflict: "user_id,content_id,content_type",
+        })
+
+        if (error) {
+          console.error("[v0] Error syncing watch history:", error)
+        } else {
+          console.log("[v0] Watch history synced successfully in single batch")
+        }
       }
-
-      console.log("[v0] Watch history synced successfully")
     } catch (error: any) {
       console.error("[v0] Error syncing watch history:", error)
     } finally {
