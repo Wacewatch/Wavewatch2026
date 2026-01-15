@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase"
+import { createClient } from "@/lib/supabase/server"
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: requestId } = await params
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const {
       data: { user },
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id: requestId } = await params
-    const supabase = await createServerClient()
+    const supabase = await createClient()
 
     const {
       data: { user },

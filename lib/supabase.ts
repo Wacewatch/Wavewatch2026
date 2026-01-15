@@ -3,11 +3,14 @@ import { createClient } from "@/lib/supabase/client"
 // Re-export for backwards compatibility - single instance
 export const supabase = createClient()
 
-export { createClient as createServerClient } from "@/lib/supabase/server"
+// export { createClient as createServerClient } from "@/lib/supabase/server"
 
 export const recoverSession = async () => {
   try {
-    const { session, error } = await supabase.auth.getSession()
+    const {
+      data: { session },
+      error,
+    } = await supabase.auth.getSession()
     if (error) {
       console.warn("[v0] Session recovery error:", error.message)
       try {
