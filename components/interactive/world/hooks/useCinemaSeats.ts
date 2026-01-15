@@ -43,11 +43,11 @@ interface UseCinemaSeatsProps {
 }
 
 function generateSeatPosition(rowNumber: number, seatNumber: number, totalSeatsPerRow = 10): Position {
+  // IMPORTANT: Ces valeurs doivent correspondre à CinemaInterior.tsx
   const rowSpacing = 2.5
   const seatSpacing = 1.5
   const startX = -((totalSeatsPerRow - 1) * seatSpacing) / 2
-  const screenZ = -19
-  const firstRowZ = screenZ + 8
+  const firstRowZ = 2  // Même valeur que dans CinemaInterior.tsx
 
   return {
     x: startX + (seatNumber - 1) * seatSpacing,
@@ -57,11 +57,11 @@ function generateSeatPosition(rowNumber: number, seatNumber: number, totalSeatsP
 }
 
 // Helper to calculate seat positions
-function calculateSeatPositions(seats: any[], capacity?: number): CinemaSeat[] {
+function calculateSeatPositions(seats: any[]): CinemaSeat[] {
   if (!seats || seats.length === 0) return []
 
-  // Calculer le nombre de sièges par rangée basé sur la capacité ou les sièges existants
-  const perRow = capacity ? Math.min(10, Math.ceil(Math.sqrt(capacity))) : 10
+  // IMPORTANT: Toujours 10 sièges par rangée pour correspondre à CinemaInterior.tsx
+  const perRow = 10
 
   return seats.map((seat) => {
     const pos = generateSeatPosition(seat.row_number, seat.seat_number, perRow)
@@ -157,7 +157,7 @@ export function useCinemaSeats({
         .order("seat_number", { ascending: true })
 
       if (newData && newData.length > 0) {
-        setCinemaSeats(calculateSeatPositions(newData, currentCinemaRoom.capacity))
+        setCinemaSeats(calculateSeatPositions(newData))
         return
       }
     }
@@ -167,7 +167,7 @@ export function useCinemaSeats({
       return
     }
 
-    setCinemaSeats(calculateSeatPositions(data, currentCinemaRoom.capacity))
+    setCinemaSeats(calculateSeatPositions(data))
   }, [currentCinemaRoom, setCinemaSeats, createSeatsIfMissing])
 
   // Subscribe to seat changes
@@ -287,9 +287,8 @@ export function useCinemaSeats({
       return
     }
 
-    const capacity = room.capacity || 30
-    const perRow = Math.min(10, Math.ceil(Math.sqrt(capacity)))
-    const seatPosition = generateSeatPosition(availableSeat.row_number, availableSeat.seat_number, perRow)
+    // IMPORTANT: Toujours 10 sièges par rangée pour correspondre à CinemaInterior.tsx
+    const seatPosition = generateSeatPosition(availableSeat.row_number, availableSeat.seat_number, 10)
 
     console.log("[v0] Sitting at position:", seatPosition)
 

@@ -60,7 +60,8 @@ export {
   MovieFullscreenModal,
   WorldLoadingScreen,
   VoiceChatPanel,
-  QuestsModal, // Added QuestsModal export
+  QuestsModal,
+  QuestNotificationContainer,
 } from "./ui"
 
 // Building components
@@ -88,6 +89,7 @@ export {
   useWorldPreloader,
   LOADING_STEPS,
   useVoiceChat,
+  useQuestTracker,
 } from "./hooks"
 export type { LoadingStep } from "./hooks"
 

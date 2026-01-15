@@ -17,6 +17,7 @@ interface ChatModalProps {
   setChatInput: (value: string) => void
   sendMessage: () => void
   onClose: () => void
+  onMessageSent?: () => void
 }
 
 export function ChatModal({
@@ -27,6 +28,7 @@ export function ChatModal({
   setChatInput,
   sendMessage,
   onClose,
+  onMessageSent,
 }: ChatModalProps) {
   const displayMessages = currentCinemaRoom ? roomMessages : messages
 
@@ -60,6 +62,7 @@ export function ChatModal({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && chatInput.trim()) {
                   sendMessage()
+                  onMessageSent?.()
                 }
               }}
               placeholder="Votre message..."
@@ -67,7 +70,12 @@ export function ChatModal({
               autoFocus
             />
             <button
-              onClick={sendMessage}
+              onClick={() => {
+                if (chatInput.trim()) {
+                  sendMessage()
+                  onMessageSent?.()
+                }
+              }}
               disabled={!chatInput.trim()}
               className="bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >

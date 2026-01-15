@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
-import { Search, Plus, ArrowLeft, ThumbsUp } from "lucide-react"
+import { Search, Plus, ArrowLeft } from 'lucide-react'
 import { searchMulti } from "@/lib/tmdb"
 import Image from "next/image"
 import Link from "next/link"
@@ -33,36 +33,19 @@ export default function RequestsPage() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [votedRequests, setVotedRequests] = useState<Set<string>>(new Set())
-  const [votingLoading, setVotingLoading] = useState<string | null>(null)
 
   useEffect(() => {
     if (user) {
       loadRequests()
-      loadUserVotes()
     }
   }, [user])
-
-  const loadUserVotes = async () => {
-    if (!user) return
-
-    try {
-      const response = await fetch("/api/content-requests/votes")
-      const data = await response.json()
-      if (data.votes) {
-        setVotedRequests(new Set(data.votes.map((v: any) => v.request_id)))
-      }
-    } catch (error) {
-      console.error("Error loading votes:", error)
-    }
-  }
 
   const loadRequests = async () => {
     try {
       const response = await fetch("/api/content-requests")
       const data = await response.json()
       setRequests(data.requests || [])
-
+      
       if (user) {
         const userRequests = (data.requests || []).filter((req: any) => req.user_id === user.id)
         setMyRequests(userRequests)
@@ -155,58 +138,6 @@ export default function RequestsPage() {
     }
   }
 
-  const handleVote = async (requestId: string) => {
-    if (!user) {
-      toast({
-        title: "Connexion requise",
-        description: "Vous devez être connecté pour voter.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setVotingLoading(requestId)
-
-    try {
-      const hasVoted = votedRequests.has(requestId)
-      const method = hasVoted ? "DELETE" : "POST"
-
-      const response = await fetch(`/api/content-requests/${requestId}/vote`, {
-        method,
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error)
-      }
-
-      // Update local state
-      const newVotedRequests = new Set(votedRequests)
-      if (hasVoted) {
-        newVotedRequests.delete(requestId)
-      } else {
-        newVotedRequests.add(requestId)
-      }
-      setVotedRequests(newVotedRequests)
-
-      // Reload requests to get updated vote counts
-      loadRequests()
-
-      toast({
-        title: hasVoted ? "Vote retiré" : "Vote ajouté",
-        description: hasVoted ? "Votre vote a été retiré." : "Votre vote a été pris en compte.",
-      })
-    } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message || "Une erreur est survenue.",
-        variant: "destructive",
-      })
-    } finally {
-      setVotingLoading(null)
-    }
-  }
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -220,51 +151,6 @@ export default function RequestsPage() {
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
-  }
-
-  const RequestCard = ({ request, showVotes = true }: { request: any; showVotes?: boolean }) => {
-    const hasVoted = votedRequests.has(request.id)
-    const isVoting = votingLoading === request.id
-
-    return (
-      <div key={request.id} className="border border-gray-700 rounded-lg p-4 space-y-2 bg-gray-700/50">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-white">{request.title}</h3>
-            <p className="text-sm text-gray-400">
-              {request.content_type === "movie" ? "Film" : request.content_type === "tv" ? "Série TV" : "Animé"}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {showVotes && (
-              <Button
-                onClick={() => handleVote(request.id)}
-                disabled={isVoting || !user}
-                size="sm"
-                variant={hasVoted ? "default" : "outline"}
-                className={
-                  hasVoted
-                    ? "bg-blue-600 hover:bg-blue-700 border-blue-600"
-                    : "border-gray-600 text-gray-300 hover:bg-gray-700"
-                }
-              >
-                <ThumbsUp className={`w-4 h-4 ${request.vote_count ? "mr-1" : ""}`} />
-                {request.vote_count || 0}
-              </Button>
-            )}
-            {getStatusBadge(request.status)}
-          </div>
-        </div>
-        {request.description && <p className="text-sm text-gray-300">{request.description}</p>}
-        <p className="text-xs text-gray-500">Demandé le {new Date(request.created_at).toLocaleDateString("fr-FR")}</p>
-        {request.admin_notes && (
-          <div className="mt-2 p-2 bg-gray-800 rounded border border-gray-600">
-            <p className="text-xs text-gray-400 font-semibold mb-1">Note de l'admin :</p>
-            <p className="text-xs text-gray-300">{request.admin_notes}</p>
-          </div>
-        )}
-      </div>
-    )
   }
 
   return (
@@ -417,20 +303,34 @@ export default function RequestsPage() {
             <Card className="bg-gray-800 border-gray-700">
               <CardHeader>
                 <CardTitle className="text-white">Toutes les demandes</CardTitle>
-                <CardDescription className="text-gray-400">
-                  Parcourez et votez pour les demandes de la communauté
-                </CardDescription>
+                <CardDescription className="text-gray-400">Parcourez les demandes de la communauté</CardDescription>
               </CardHeader>
               <CardContent>
                 {requests.length === 0 ? (
                   <p className="text-center text-gray-400 py-8">Aucune demande pour le moment.</p>
                 ) : (
                   <div className="space-y-4">
-                    {[...requests]
-                      .sort((a: any, b: any) => (b.vote_count || 0) - (a.vote_count || 0))
-                      .map((request: any) => (
-                        <RequestCard key={request.id} request={request} showVotes={true} />
-                      ))}
+                    {requests.map((request: any) => (
+                      <div key={request.id} className="border border-gray-700 rounded-lg p-4 space-y-2 bg-gray-700/50">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h3 className="font-semibold text-white">{request.title}</h3>
+                            <p className="text-sm text-gray-400">
+                              {request.content_type === "movie"
+                                ? "Film"
+                                : request.content_type === "tv"
+                                  ? "Série TV"
+                                  : "Animé"}
+                            </p>
+                          </div>
+                          {getStatusBadge(request.status)}
+                        </div>
+                        {request.description && <p className="text-sm text-gray-300">{request.description}</p>}
+                        <p className="text-xs text-gray-500">
+                          Demandé le {new Date(request.created_at).toLocaleDateString("fr-FR")}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>
@@ -450,7 +350,34 @@ export default function RequestsPage() {
                   ) : (
                     <div className="space-y-4">
                       {myRequests.map((request: any) => (
-                        <RequestCard key={request.id} request={request} showVotes={true} />
+                        <div
+                          key={request.id}
+                          className="border border-gray-700 rounded-lg p-4 space-y-2 bg-gray-700/50"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h3 className="font-semibold text-white">{request.title}</h3>
+                              <p className="text-sm text-gray-400">
+                                {request.content_type === "movie"
+                                  ? "Film"
+                                  : request.content_type === "tv"
+                                    ? "Série TV"
+                                    : "Animé"}
+                              </p>
+                            </div>
+                            {getStatusBadge(request.status)}
+                          </div>
+                          {request.description && <p className="text-sm text-gray-300">{request.description}</p>}
+                          <p className="text-xs text-gray-500">
+                            Demandé le {new Date(request.created_at).toLocaleDateString("fr-FR")}
+                          </p>
+                          {request.admin_notes && (
+                            <div className="mt-2 p-2 bg-gray-800 rounded border border-gray-600">
+                              <p className="text-xs text-gray-400 font-semibold mb-1">Note de l'admin :</p>
+                              <p className="text-xs text-gray-300">{request.admin_notes}</p>
+                            </div>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}

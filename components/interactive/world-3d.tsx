@@ -52,7 +52,8 @@ import {
   MovieFullscreenModal,
   WorldLoadingScreen,
   VoiceChatPanel,
-  QuestsModal, // Added QuestsModal import
+  QuestsModal,
+  QuestNotificationContainer,
   // Building Components
   DiscoBuilding,
   CinemaBuilding,
@@ -74,6 +75,7 @@ import {
   useWorldChat,
   useWorldPreloader,
   useVoiceChat,
+  useQuestTracker,
   // Debug components
   CollisionDebugVisualization,
   CinemaInterior,
@@ -158,7 +160,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
   const [myLevel, setMyLevel] = useState<number>(1)
 
-  const [currentRoom, setCurrentRoom] = useState<string | null>("main_world")
+  const [currentRoom, setCurrentRoom] = useState<string | null>(null)
   const [nearbyBuilding, setNearbyBuilding] = useState<{ name: string; type: string; emoji: string } | null>(null)
   const [nearbyInfoPanel, setNearbyInfoPanel] = useState(false) // Panneau info près du spawn
 
@@ -224,6 +226,71 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     voiceChatEnabled: worldSettings.voiceChatEnabled,
   })
 
+  // Quest notifications state - supports both completion and progress notifications
+  type QuestNotification =
+    | { id: string; type: "completed"; questTitle: string; xpEarned: number }
+    | { id: string; type: "progress"; questTitle: string; progress: number; requirement: number }
+
+  const [questNotifications, setQuestNotifications] = useState<QuestNotification[]>([])
+
+  const addQuestCompletedNotification = useCallback((questTitle: string, xpEarned: number) => {
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    setQuestNotifications((prev) => [...prev, { id, type: "completed", questTitle, xpEarned }])
+  }, [])
+
+  const addQuestProgressNotification = useCallback((questTitle: string, progress: number, requirement: number) => {
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    setQuestNotifications((prev) => [...prev, { id, type: "progress", questTitle, progress, requirement }])
+  }, [])
+
+  const removeQuestNotification = useCallback((id: string) => {
+    setQuestNotifications((prev) => prev.filter((n) => n.id !== id))
+  }, [])
+
+  // Quest tracking hook
+  const {
+    trackFirstLogin,
+    trackDance,
+    trackRoomVisit,
+    trackDiscoVisit,
+    trackCinemaSession,
+    trackStadiumVisit,
+    trackArcadePlay,
+    trackChatMessage,
+    trackVoiceChat,
+    trackAvatarCustomization,
+  } = useQuestTracker({
+    userId,
+    username: myProfile?.username || userProfile?.username,
+    onQuestCompleted: (questTitle, xpEarned) => {
+      // Show completion notification toast
+      addQuestCompletedNotification(questTitle, xpEarned)
+    },
+    onQuestProgress: (questTitle, progress, requirement) => {
+      // Show progress notification toast
+      addQuestProgressNotification(questTitle, progress, requirement)
+    },
+  })
+
+  // Track first login when entering the world
+  useEffect(() => {
+    if (userId && !isWorldLoading) {
+      trackFirstLogin()
+    }
+  }, [userId, isWorldLoading, trackFirstLogin])
+
+  // Track voice chat quest when user joins voice
+  const voiceTrackedRef = useRef(false)
+  useEffect(() => {
+    if (isVoiceConnected && !voiceTrackedRef.current) {
+      voiceTrackedRef.current = true
+      trackVoiceChat()
+    }
+    if (!isVoiceConnected) {
+      voiceTrackedRef.current = false
+    }
+  }, [isVoiceConnected, trackVoiceChat])
+
   // Room visit tracking
   const currentRoomVisitIdRef = useRef<string | null>(null)
   const currentRoomStartTimeRef = useRef<Date | null>(null)
@@ -248,11 +315,25 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           currentRoomVisitIdRef.current = data.id
           currentRoomStartTimeRef.current = new Date()
         }
+
+        // Track quest progress for room visits
+        trackRoomVisit(roomName)
+
+        // Track specific room visits for quests
+        if (roomName === "disco") {
+          trackDiscoVisit()
+        } else if (roomName === "stadium") {
+          trackStadiumVisit()
+        } else if (roomName.startsWith("cinema")) {
+          trackCinemaSession()
+        } else if (roomName === "arcade") {
+          trackArcadePlay()
+        }
       } catch (err) {
         console.error("Error tracking room entry:", err)
       }
     },
-    [visitId, userId],
+    [visitId, userId, trackRoomVisit, trackDiscoVisit, trackStadiumVisit, trackCinemaSession, trackArcadePlay],
   )
 
   // Track room exit
@@ -493,6 +574,23 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
     [graphicsQuality],
   )
 
+  // Calculer la session active de la salle de cinéma courante
+  const currentCinemaSession = useMemo(() => {
+    if (!currentCinemaRoom || !cinemaSessions || cinemaSessions.length === 0) return null
+
+    const now = new Date()
+    const roomSessions = cinemaSessions
+      .filter((s) => s.room_id === currentCinemaRoom.id && s.is_active)
+      .sort((a, b) => new Date(a.schedule_start).getTime() - new Date(b.schedule_start).getTime())
+
+    // Trouver la session en cours ou la prochaine
+    return roomSessions.find((s) => {
+      const start = new Date(s.schedule_start)
+      const end = new Date(s.schedule_end)
+      return start <= now && end > now
+    }) || roomSessions.find((s) => new Date(s.schedule_start) > now) || null
+  }, [currentCinemaRoom, cinemaSessions])
+
   // checkCollision is now provided by usePlayerMovement hook
 
   useEffect(() => {
@@ -620,13 +718,18 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       hasScheduleStart: !!room?.schedule_start,
     })
 
-    if (!room || !room.schedule_start) {
+    if (!room) {
       setIsCinemaInteriorActive(false)
       return
     }
 
-    // Set active state only when we are sure we want to render CinemaInterior
+    // Set active state - CinemaInterior can handle rooms without scheduled sessions
     setIsCinemaInteriorActive(true)
+
+    // Only start countdown timer if there's a schedule_start
+    if (!room.schedule_start) {
+      return
+    }
 
     const interval = setInterval(() => {
       const now = new Date().getTime()
@@ -645,8 +748,6 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
     return () => {
       clearInterval(interval)
-      // Optionally reset countdown or other state when leaving the effect
-      // setCountdown("")
     }
   }, [currentCinemaRoom, cinemaRooms, currentRoom]) // Added currentCinemaRoom and currentRoom to dependencies
 
@@ -688,6 +789,8 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
   const saveAvatarStyle = async (newStyle: any) => {
     setMyAvatarStyle(newStyle)
     await supabase.from("interactive_profiles").update({ avatar_style: newStyle }).eq("user_id", userId)
+    // Track avatar customization quest
+    trackAvatarCustomization()
   }
 
   useEffect(() => {
@@ -793,7 +896,12 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
 
     // Update dance state in database (synced via realtime subscription)
     await supabase.from("interactive_profiles").update({ is_dancing: newDancingState }).eq("user_id", userId)
-  }, [isDancing, userProfile, userId])
+
+    // Track dance quest when starting to dance
+    if (newDancingState) {
+      trackDance()
+    }
+  }, [isDancing, userProfile, userId, trackDance])
 
   // sendMessage is now provided by useWorldChat hook
   // handleJoystickMove and handleCameraRotate are now provided by usePlayerMovement hook
@@ -1446,6 +1554,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           sendMessage={sendMessage}
           onClose={() => setShowChatInput(false)}
           isMobileMode={isMobileMode}
+          onMessageSent={trackChatMessage}
         />
       )}
 
@@ -1459,7 +1568,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         </button>
       )}
 
-      {mySeat !== null && currentCinemaRoom?.embed_url && !showMovieFullscreen && (
+      {mySeat !== null && currentCinemaSession?.embed_url && !showMovieFullscreen && (
         <button
           onClick={() => setShowMovieFullscreen(true)}
           className="absolute bottom-24 right-36 z-10 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 shadow-lg flex items-center gap-2"
@@ -1469,12 +1578,12 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         </button>
       )}
 
-      {showMovieFullscreen && currentCinemaRoom?.embed_url && (
+      {showMovieFullscreen && currentCinemaSession?.embed_url && (
         <MovieFullscreenModal
-          movieTitle={currentCinemaRoom.movie_title}
-          embedUrl={currentCinemaRoom.embed_url}
+          movieTitle={currentCinemaSession.movie_title}
+          embedUrl={currentCinemaSession.embed_url}
           onClose={() => setShowMovieFullscreen(false)}
-          scheduleStart={currentCinemaRoom.schedule_start}
+          scheduleStart={currentCinemaSession.schedule_start}
         />
       )}
 
@@ -1487,6 +1596,7 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
           setChatInput={setChatInput}
           sendMessage={sendMessage}
           onClose={() => setShowChat(false)}
+          onMessageSent={trackChatMessage}
         />
       )}
 
@@ -1501,6 +1611,12 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
       )}
 
       {showQuests && <QuestsModal onClose={() => setShowQuests(false)} userId={userId} />}
+
+      {/* Quest completion notifications */}
+      <QuestNotificationContainer
+        notifications={questNotifications}
+        onRemove={removeQuestNotification}
+      />
 
       {/* Boutons d'actions - positionnés différemment selon le mode mobile */}
       <ActionButtons
@@ -1547,8 +1663,8 @@ export default function InteractiveWorld({ userId, userProfile, visitId, onExit 
         onLeaveStadium={handleLeaveStadium}
       />
 
-      {/* Voice Chat Panel */}
-      {showVoiceChat && (
+      {/* Voice Chat Panel - caché en mode plein écran */}
+      {showVoiceChat && !showMovieFullscreen && (
         <VoiceChatPanel
           isVoiceConnected={isVoiceConnected}
           isMicMuted={isMicMuted}

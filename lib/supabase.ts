@@ -5,10 +5,7 @@ export const supabase = createClient()
 
 export const recoverSession = async () => {
   try {
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession()
+    const { session, error } = await supabase.auth.getSession()
     if (error) {
       console.warn("[v0] Session recovery error:", error.message)
       try {

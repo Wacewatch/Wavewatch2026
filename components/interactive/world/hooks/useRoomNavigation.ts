@@ -202,7 +202,7 @@ export function useRoomNavigation({
     const defaultRotation = 0 // Face buildings (like initial spawn)
     setMyPosition(savedMapPosition)
     setMyRotation(defaultRotation)
-    setCurrentRoom("main_world")
+    setCurrentRoom(null)
 
     // Reset camera behind player, facing buildings
     if (orbitControlsRef.current) {
@@ -335,7 +335,7 @@ export function useRoomNavigation({
     setCinemaSeats([])
 
     setCurrentCinemaRoom(null)
-    setCurrentRoom("main_world")
+    setCurrentRoom(null)
     setIsSeatsLocked(false)
     setCountdown("")
 
@@ -446,7 +446,7 @@ export function useRoomNavigation({
     setStadiumSeat(null)
     setMyPosition(savedMapPosition)
     setMyRotation(defaultRotation)
-    setCurrentRoom("main_world")
+    setCurrentRoom(null)
 
     // Reset camera behind player, facing buildings
     if (orbitControlsRef.current) {
@@ -555,7 +555,7 @@ export function useRoomNavigation({
     const defaultRotation = 0 // Face buildings (like initial spawn)
     setMyPosition(savedMapPosition)
     setMyRotation(defaultRotation)
-    setCurrentRoom("main_world")
+    setCurrentRoom(null)
 
     // Reset camera behind player, facing buildings
     if (orbitControlsRef.current) {
