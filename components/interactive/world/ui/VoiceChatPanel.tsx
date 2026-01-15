@@ -74,7 +74,7 @@ export function VoiceChatPanel({
 
   return (
     <div
-      className="fixed bottom-20 left-4 bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 z-50 pointer-events-auto"
+      className="fixed bottom-4 left-4 bg-gray-900/90 backdrop-blur-sm rounded-lg p-3 border border-gray-700 z-50 pointer-events-auto"
       style={{ minWidth: "200px", maxWidth: "280px" }}
     >
       <div className="flex items-center gap-2 mb-2">
@@ -111,34 +111,34 @@ export function VoiceChatPanel({
           Rejoindre le vocal
         </button>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {/* My status */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${isSpeaking ? "bg-green-400 animate-pulse" : "bg-gray-500"}`} />
               <span className="text-xs text-gray-300">Vous</span>
             </div>
-            <button
-              onClick={onToggleMic}
-              className={`p-1.5 rounded-lg transition-colors ${
-                isMicMuted
-                  ? "bg-red-600/20 text-red-400 hover:bg-red-600/30"
-                  : "bg-green-600/20 text-green-400 hover:bg-green-600/30"
-              }`}
-              title={isMicMuted ? "Activer le micro" : "Couper le micro"}
-            >
-              {isMicMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={onToggleMic}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isMicMuted
+                    ? "bg-red-600/20 text-red-400 hover:bg-red-600/30"
+                    : "bg-green-600/20 text-green-400 hover:bg-green-600/30"
+                }`}
+                title={isMicMuted ? "Activer le micro" : "Couper le micro"}
+              >
+                {isMicMuted ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={onDisconnect}
+                className="p-1.5 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 transition-colors"
+                title="Quitter le vocal"
+              >
+                <PhoneOff className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-
-          {/* Disconnect button - more prominent */}
-          <button
-            onClick={onDisconnect}
-            className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm py-2 px-3 rounded-lg transition-colors"
-          >
-            <PhoneOff className="w-4 h-4" />
-            Quitter le vocal
-          </button>
 
           {voicePeers.length > 0 && (
             <div className="border-t border-gray-700 pt-2 space-y-2">

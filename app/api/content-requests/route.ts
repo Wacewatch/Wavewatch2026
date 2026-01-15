@@ -1,44 +1,32 @@
-import { NextResponse } from "next/server"
+import { NextResponse, type NextRequest } from "next/server"
+import { createClient as createServerClient } from "@/lib/supabase/server"
 import { createClient } from "@/lib/supabase/server"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = await createServerClient()
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    const { data: requests, error } = await supabase
+      .from("content_requests")
+      .select(`
+        *,
+        username:user_profiles!content_requests_user_id_fkey(username),
+        vote_count:content_request_votes(count)
+      `)
+      .order("created_at", { ascending: false })
 
-    if (!user) {
-      return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
-    }
+    if (error) throw error
 
-    // Check if user is admin
-    const { data: profile } = await supabase.from("user_profiles").select("is_admin").eq("id", user.id).single()
+    const transformedRequests = requests?.map((request: any) => ({
+      ...request,
+      username: request.username?.username || "Utilisateur inconnu",
+      vote_count: request.vote_count?.[0]?.count || 0,
+    }))
 
-    if (profile?.is_admin) {
-      // Admin: get all requests
-      const { data: requests, error } = await supabase
-        .from("content_requests")
-        .select("*")
-        .order("created_at", { ascending: false })
-
-      if (error) throw error
-      return NextResponse.json({ requests: requests || [] })
-    } else {
-      // Regular user: get only their requests
-      const { data: requests, error } = await supabase
-        .from("content_requests")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-
-      if (error) throw error
-      return NextResponse.json({ requests: requests || [] })
-    }
+    return NextResponse.json({ requests: transformedRequests || [] })
   } catch (error: any) {
-    console.error("Error fetching content requests:", error)
-    return NextResponse.json({ error: error.message || "Erreur inconnue" }, { status: 500 })
+    console.error("Error fetching requests:", error)
+    return NextResponse.json({ error: error.message || "Erreur lors de la récupération des demandes" }, { status: 500 })
   }
 }
 
@@ -60,6 +48,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Titre et type de contenu requis" }, { status: 400 })
     }
 
+    const { data: existingRequests } = await supabase
+      .from("content_requests")
+      .select("id")
+      .eq("title", title)
+      .eq("content_type", content_type)
+      .eq("status", "pending")
+
+    if (existingRequests && existingRequests.length > 0) {
+      const existingRequestId = existingRequests[0].id
+
+      const { data: existingVote } = await supabase
+        .from("content_request_votes")
+        .select("id")
+        .eq("request_id", existingRequestId)
+        .eq("user_id", user.id)
+        .single()
+
+      if (!existingVote) {
+        const { error: voteError } = await supabase.from("content_request_votes").insert({
+          request_id: existingRequestId,
+          user_id: user.id,
+        })
+
+        if (voteError) throw voteError
+
+        return NextResponse.json({
+          message: "Cette demande existe déjà. Votre vote a été ajouté !",
+          request_id: existingRequestId,
+          voted: true,
+        })
+      } else {
+        return NextResponse.json({
+          message: "Vous avez déjà voté pour cette demande.",
+          request_id: existingRequestId,
+          voted: false,
+        })
+      }
+    }
+
     const { data, error } = await supabase
       .from("content_requests")
       .insert({
@@ -67,12 +94,18 @@ export async function POST(request: Request) {
         title,
         description: description || null,
         content_type,
+        tmdb_id: tmdb_id || null,
         status: "pending",
       })
       .select()
       .single()
 
     if (error) throw error
+
+    await supabase.from("content_request_votes").insert({
+      request_id: data.id,
+      user_id: user.id,
+    })
 
     return NextResponse.json({ request: data })
   } catch (error: any) {
@@ -93,7 +126,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
     }
 
-    // Check if user is admin
     const { data: profile } = await supabase.from("user_profiles").select("is_admin").eq("id", user.id).single()
 
     if (!profile?.is_admin) {
