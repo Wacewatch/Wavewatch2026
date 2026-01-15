@@ -16,7 +16,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Separator } from "@/components/ui/separator"
 import {
   Plus,
   Edit,
@@ -56,11 +55,11 @@ import {
   BookOpen,
   Send,
   SettingsIcon,
-  Save,
   ChevronLeft,
   ChevronRight,
   Globe,
   Pencil,
+  Save,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 // REMOVED: import { supabase } from "@/lib/supabase" // Removed incorrect Supabase import
@@ -360,11 +359,15 @@ export default function AdminPage() {
     use_proxy: false,
   })
 
-  // CHANGE: Define isFullAdmin and isUploader
+  const [messageDialogOpen, setMessageDialogOpen] = useState(false)
+  const [selectedRequest, setSelectedRequest] = useState<any>(null)
+  const [adminMessage, setAdminMessage] = useState("")
+
+  // Define isFullAdmin and isUploader
   const isFullAdmin = user?.isAdmin || false
   const isUploader = user?.isUploader && !user?.isAdmin // Only uploader if NOT admin
 
-  // CHANGE: Define tabs accessible to uploaders
+  // Define tabs accessible to uploaders
   const uploaderAllowedTabs = ["music", "games", "software", "ebooks", "requests"]
   const canAccessTab = (tab: string) => {
     if (isFullAdmin) return true
@@ -372,20 +375,20 @@ export default function AdminPage() {
     return false
   }
 
-  // CHANGE: Only full admins can delete content, uploaders cannot
+  // Only full admins can delete content, uploaders cannot
   const canDelete = isFullAdmin
 
-  // CHANGE: Uploaders start on "music" tab, full admins on "dashboard"
+  // Uploaders start on "music" tab, full admins on "dashboard"
   const [activeTab, setActiveTab] = useState(isFullAdmin ? "dashboard" : "music")
 
-  // CHANGE: Combined user and uploader check for access
+  // Combined user and uploader check for access
   useEffect(() => {
     if (!user || (!user.isAdmin && !user.isUploader)) {
       router.push("/") // Redirect to homepage if not admin or uploader
     }
-  }, [user, router])
+  }, [user, router]) // Dependency on 'user' ensures it runs when authentication state changes
 
-  // CHANGE: Fetches all data on mount or when user role changes
+  // Fetches all data on mount or when user role changes
   useEffect(() => {
     // Only fetch data if user is logged in and has appropriate role
     if (user && (user.isAdmin || user.isUploader)) {
@@ -394,7 +397,7 @@ export default function AdminPage() {
     }
   }, [user]) // Dependency on 'user' ensures it runs when authentication state changes
 
-  // CHANGE: Fetch interactive world data only when that tab is active
+  // Fetch interactive world data only when that tab is active
   useEffect(() => {
     if (user && (user.isAdmin || user.isUploader) && activeTab === "interactive-world" && !loading) {
       loadWorldSettings()
@@ -406,7 +409,7 @@ export default function AdminPage() {
     }
   }, [user, activeTab, loading]) // Added loading dependency to ensure it runs after initial data load
 
-  // CHANGE: Refactored the online user interval logic to be dependent on activeTab and loading state
+  // Refactored the online user interval logic to be dependent on activeTab and loading state
   useEffect(() => {
     // Only set interval if the user is logged in and the interactive world tab is active
     if (user && (user.isAdmin || user.isUploader) && activeTab === "interactive-world" && !loading) {
@@ -596,7 +599,55 @@ export default function AdminPage() {
     }
   }
 
-  // REMOVED: loadAllData function, replaced by fetchAllData
+  const handleSendAdminMessage = async () => {
+    if (!adminMessage.trim()) {
+      toast({
+        title: "Erreur",
+        description: "Veuillez écrire un message",
+        variant: "destructive",
+      })
+      return
+    }
+
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    )
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error("User not authenticated")
+
+      // </CHANGE>Changed subject to match requested format
+      const { error } = await supabase.from("user_messages").insert({
+        sender_id: user.id,
+        recipient_id: selectedRequest?.user_id,
+        subject: `Réponse du Staff à votre demande ${selectedRequest?.title}`,
+        content: adminMessage,
+        is_read: false,
+      })
+
+      if (error) throw error
+
+      toast({
+        title: "Message envoyé",
+        description: `Message envoyé à ${selectedRequest?.username}`,
+      })
+
+      setMessageDialogOpen(false)
+      setAdminMessage("")
+      setSelectedRequest(null)
+    } catch (error: any) {
+      console.error("Error sending admin message:", error)
+      toast({
+        title: "Erreur",
+        description: `Erreur lors de l'envoi: ${error.message}`,
+        variant: "destructive",
+      })
+    }
+  }
 
   const loadRealTVChannels = async (supabase) => {
     try {
@@ -3304,7 +3355,7 @@ const loadRealUsers = async (supabase) => {
     }
   }, [user, activeTab, loading]) // Dependencies ensure reactivity
 
-  // CHANGE: Combined user and uploader check for access
+  // Combined user and uploader check for access
   if (!user || (!user.isAdmin && !user.isUploader)) {
     return (
       <div className="min-h-screen bg-gray-900 text-white">
@@ -3360,7 +3411,7 @@ const loadRealUsers = async (supabase) => {
           </div>
         </div>
 
-        {/* CHANGE: Use isFullAdmin for default tab, otherwise use isUploader's default */}
+        {/* Use isFullAdmin for default tab, otherwise use isUploader's default */}
         <Tabs defaultValue={isFullAdmin ? "dashboard" : "music"} className="space-y-6" onValueChange={(value) => setActiveTab(value)}>
           <div className="overflow-x-auto -mx-4 px-4 pb-2">
             <TabsList className="inline-flex w-auto min-w-full bg-gray-800 border-gray-700 flex-nowrap">
@@ -4995,6 +5046,7 @@ const loadRealUsers = async (supabase) => {
                     <TableRow>
                       <TableHead>Utilisateur</TableHead>
                       <TableHead>Type</TableHead>
+                      <TableHead>TMDB ID</TableHead>
                       <TableHead>Titre demandé</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Statut</TableHead>
@@ -5007,6 +5059,9 @@ const loadRealUsers = async (supabase) => {
                         <TableCell className="font-medium">{request.username}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">{request.type}</Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {request.tmdb_id || "---"}
                         </TableCell>
                         <TableCell>{request.title}</TableCell>
                         <TableCell className="text-muted-foreground">
