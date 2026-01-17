@@ -220,6 +220,20 @@ export function Navigation() {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link
+                    href="https://livewatch.sbs/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                    className="flex items-center justify-between"
+                  >
+                    LiveWatch
+                    <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
+                      🔥​HOT
+                    </Badge>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link
                     href="https://sports-stream.sbs/"
                     target="_blank"
                     rel="noopener noreferrer"
