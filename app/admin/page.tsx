@@ -3526,10 +3526,10 @@ const loadRealUsers = async (supabase) => {
               {isFullAdmin && (
                 <a
                   href="/admin/staff-messages"
-                  className="flex items-center justify-center gap-1 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-md whitespace-nowrap transition-all"
+                  className="flex items-center justify-center gap-1 bg-gradient-to-r from-purple-600 to-blue-700 hover:from-purple-500 hover:to-blue-700 text-white text-xs sm:text-sm px-2 sm:px-3 py-2 rounded-md whitespace-nowrap transition-all"
                 >
                   <Globe className="w-4 h-4" />
-                  <span className="hidden sm:inline">Meessage au Staff</span>
+                  <span className="hidden sm:inline">Message au Staff</span>
                 </a>
               )}              
               {isFullAdmin && (

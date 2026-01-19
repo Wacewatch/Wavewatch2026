@@ -226,7 +226,7 @@ export function Navigation() {
                     style={{ color: "hsl(var(--nav-text))" }}
                     className="flex items-center justify-between"
                   >
-                    LiveWatch
+                    Live Watch
                     <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
                       🔥​HOT
                     </Badge>
@@ -240,7 +240,7 @@ export function Navigation() {
                     style={{ color: "hsl(var(--nav-text))" }}
                     className="flex items-center justify-between"
                   >
-                    Live Sports
+                    Sports Stream
                     <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
                       🔥​HOT
                     </Badge>
@@ -824,13 +824,32 @@ export function Navigation() {
                     style={{ color: "hsl(var(--nav-text))" }}
                   >
                     <Link
+                      href="https://livewatch.sbs/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center justify-between"
+                    >
+                      Live Watch
+                      <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
+                        🔥​HOT
+                      </Badge>
+                    </Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="w-full justify-start"
+                    style={{ color: "hsl(var(--nav-text))" }}
+                  >
+                    <Link
                       href="https://sports-stream.sbs/"
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => setIsMenuOpen(false)}
                       className="flex items-center justify-between"
                     >
-                      Live Sports
+                      Sports Stream
                       <Badge className="ml-2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs">
                         🔥​HOT
                       </Badge>
@@ -863,7 +882,7 @@ export function Navigation() {
                     style={{ color: "hsl(var(--nav-text))" }}
                   >
                     <Link href="/discover/playlists" onClick={() => setIsMenuOpen(false)}>
-                      Découvrir des Playlists
+                      Playlists Public
                     </Link>
                   </Button>
                   <Button
