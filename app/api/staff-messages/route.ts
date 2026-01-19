@@ -18,7 +18,6 @@ export async function GET() {
 
     console.log("[v0] Staff Messages: Fetching messages for user:", user.id)
 
-    // ✅ CORRECTION: Utiliser 'id' au lieu de 'user_id'
     const { data: profile, error: profileError } = await supabase
       .from("user_profiles")
       .select("is_admin")
@@ -50,7 +49,7 @@ export async function GET() {
       const { data: messages, error } = await supabase
         .from("staff_messages")
         .select("*")
-        .eq("sender_id", user.id)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
 
       if (error) {
@@ -107,13 +106,15 @@ export async function POST(request: Request) {
 
     console.log("[v0] Staff Messages: Creating message for user:", user.id, "username:", username)
 
+    // ✅ CORRECTION: Utiliser les bons noms de colonnes (user_id, username, title, message, status)
     const { data, error } = await supabase
       .from("staff_messages")
       .insert({
-        sender_id: user.id,
-        subject: title,
-        message: message,
-        is_read: false,
+        user_id: user.id,        // ✅ user_id au lieu de sender_id
+        username: username,       // ✅ Ajouter le username
+        title: title,            // ✅ title au lieu de subject
+        message: message,        // ✅ message
+        status: "pending",       // ✅ status par défaut
       })
       .select()
       .single()
