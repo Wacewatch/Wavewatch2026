@@ -6,6 +6,7 @@ import { PopularAnime } from "@/components/popular-anime"
 import { TrendingActors } from "@/components/trending-actors"
 import { TrendingTVChannels } from "@/components/trending-tv-channels"
 import { SportsStreamPromo } from "@/components/sports-stream-promo"
+import { LiveWatchPromo } from "@/components/livewatch-promo"
 import { CalendarWidget } from "@/components/calendar-widget"
 import { FootballCalendarWidget } from "@/components/football-calendar-widget"
 import { RandomContent } from "@/components/random-content"
@@ -53,7 +54,7 @@ async function getHomeModulesSettings() {
         trending_tv_channels: true,
         subscription_offer: true,
         random_content: true,
-        football_calendar: true,
+        football_calendar: false,
         calendar_widget: true,
       }
     }
@@ -74,7 +75,7 @@ async function getHomeModulesSettings() {
       trending_tv_channels: true,
       subscription_offer: true,
       random_content: true,
-      football_calendar: true,
+      football_calendar: false,
       calendar_widget: true,
     }
   }
