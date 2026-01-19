@@ -126,6 +126,7 @@ export default async function HomePage() {
         <Suspense fallback={<LoadingSection />}>
           <InteractiveWorldPromoWrapper />
         </Suspense>
+        <LiveWatchPromo />
         <SportsStreamPromo />
         {modules.subscription_offer && <SubscriptionOffer />}
         {modules.random_content && (
