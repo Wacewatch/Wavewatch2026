@@ -95,11 +95,12 @@ export function usePublicPlaylists() {
         // user_profiles.user_id is the FK that links to auth.users.id
         const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
 
-        // ── 3. Fetch user profiles (correct column: user_id) ──────────────────
+        // ── 3. Fetch user profiles ────────────────────────────────────────────
+        // user_profiles.id IS the auth user UUID (user_profiles.user_id is NULL)
         const { data: userProfilesData } = await supabase
           .from("user_profiles")
-          .select("user_id, username, email, profile_image, is_admin, is_uploader, is_vip, is_vip_plus")
-          .in("user_id", userIds)
+          .select("id, username, email, profile_image, is_admin, is_uploader, is_vip, is_vip_plus")
+          .in("id", userIds)
 
         const userProfilesMap = new Map(
           (userProfilesData || []).map((profile) => {
@@ -111,7 +112,7 @@ export function usePublicPlaylists() {
             else if (profile.is_vip_plus) role = "vip_plus"
             else if (profile.is_vip) role = "vip"
             return [
-              profile.user_id,
+              profile.id,
               {
                 displayName,
                 avatar_url: profile.profile_image ?? undefined,

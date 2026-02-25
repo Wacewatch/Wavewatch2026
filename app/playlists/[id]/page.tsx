@@ -76,10 +76,11 @@ export default function PlaylistContentPage() {
       let userProfile = null
 
       if (playlistData.user_id) {
+        // user_profiles.id IS the auth user UUID (user_profiles.user_id is NULL)
         const { data: profileData } = await supabase
           .from("user_profiles")
-          .select("username, profile_image, email")
-          .eq("user_id", playlistData.user_id)
+          .select("username, profile_image, email, is_admin, is_uploader, is_vip, is_vip_plus")
+          .eq("id", playlistData.user_id)
           .single()
 
         if (profileData) {
