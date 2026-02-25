@@ -74,10 +74,11 @@ export function usePublicPlaylists() {
 
         const offset = (page - 1) * itemsPerPage
 
-        // ── 2. Fetch playlists ────────────────────────────────────────────────
+        // ── 2. Fetch playlists with embedded item count ───────────────────────
+        // Using Supabase embedded count to bypass the 1000-row default limit
         const { data: playlistsData, error: playlistsError } = await supabase
           .from("playlists")
-          .select("id, user_id, title, description, theme_color, created_at, updated_at")
+          .select("id, user_id, title, description, theme_color, created_at, updated_at, playlist_items(count)")
           .eq("is_public", true)
           .order("updated_at", { ascending: false })
 
@@ -120,9 +121,9 @@ export function usePublicPlaylists() {
           }),
         )
 
-        // ── 4. Parallel: item counts, likes, user interactions ────────────────
-        const [itemsCountsResult, likesDataResult, userLikesResult, userFavoritesResult] = await Promise.all([
-          supabase.from("playlist_items").select("playlist_id").in("playlist_id", playlistIds),
+        // ── 4. Parallel: likes, user interactions ────────────────────────────
+        // Items count is already embedded in playlistsData via playlist_items(count)
+        const [likesDataResult, userLikesResult, userFavoritesResult] = await Promise.all([
           supabase.from("playlist_likes").select("playlist_id, is_like").in("playlist_id", playlistIds),
           user?.id
             ? supabase
@@ -140,14 +141,14 @@ export function usePublicPlaylists() {
             : Promise.resolve({ data: [] }),
         ])
 
-        const itemsCounts = itemsCountsResult.data || []
         const likesData = likesDataResult.data || []
         const userLikes = userLikesResult.data || []
         const userFavorites = userFavoritesResult.data || []
 
         // ── 5. Build full playlist objects ────────────────────────────────────
         let processedPlaylists: PublicPlaylist[] = playlistsData.map((playlist) => {
-          const itemsCount = itemsCounts.filter((item) => item.playlist_id === playlist.id).length
+          // playlist_items is [{count: N}] when using embedded count syntax
+          const itemsCount = (playlist.playlist_items as unknown as { count: number }[])?.[0]?.count ?? 0
           const playlistLikeRows = likesData.filter((like) => like.playlist_id === playlist.id)
           const likesCount = playlistLikeRows.filter((like) => like.is_like).length
           const dislikesCount = playlistLikeRows.filter((like) => !like.is_like).length
