@@ -65,8 +65,6 @@ export function usePlaylists() {
     if (!user?.id) return
 
     try {
-      console.log("[v0] Loading playlists for user:", user.id)
-
       const { data, error } = await supabase
         .from("playlists")
         .select(`
@@ -77,11 +75,8 @@ export function usePlaylists() {
         .order("updated_at", { ascending: false })
 
       if (error) {
-        console.error("[v0] Error loading playlists:", error)
         return
       }
-
-      console.log("[v0] Playlists loaded successfully:", data?.length || 0)
 
       const playlistsWithCounts =
         data?.map((playlist) => ({
@@ -91,7 +86,7 @@ export function usePlaylists() {
 
       setPlaylists(playlistsWithCounts)
     } catch (error) {
-      console.error("[v0] Error loading playlists:", error)
+      // silently fail
     } finally {
       setLoading(false)
     }
@@ -99,7 +94,6 @@ export function usePlaylists() {
 
   const createPlaylist = async (title: string, description?: string, isPublic = false, themeColor = "#3B82F6") => {
     if (!user?.id) {
-      console.error("[v0] Cannot create playlist: user not authenticated")
       toast({
         title: "Erreur",
         description: "Vous devez être connecté pour créer une playlist",
@@ -109,8 +103,6 @@ export function usePlaylists() {
     }
 
     try {
-      console.log("[v0] Creating playlist:", { title, description, isPublic, themeColor, userId: user.id })
-
       const { data, error } = await supabase
         .from("playlists")
         .insert({
@@ -124,7 +116,6 @@ export function usePlaylists() {
         .single()
 
       if (error) {
-        console.error("[v0] Error creating playlist:", error)
         toast({
           title: "Erreur",
           description: "Impossible de créer la playlist",
@@ -132,8 +123,6 @@ export function usePlaylists() {
         })
         return null
       }
-
-      console.log("[v0] Playlist created successfully:", data)
 
       const newPlaylist = {
         ...data,
@@ -247,13 +236,6 @@ export function usePlaylists() {
     try {
       const contentId = tmdbId
 
-      console.log("[v0] Adding to playlist:", {
-        playlistId,
-        contentId,
-        mediaType,
-        title,
-      })
-
       const { data: existing } = await supabase
         .from("playlist_items")
         .select("id")
@@ -293,7 +275,6 @@ export function usePlaylists() {
       })
 
       if (error) {
-        console.error("[v0] Error adding to playlist:", error)
         toast({
           title: "Erreur",
           description: `Impossible d'ajouter à la playlist: ${error.message}`,
@@ -301,8 +282,6 @@ export function usePlaylists() {
         })
         return false
       }
-
-      console.log("[v0] Successfully added item to playlist")
 
       await supabase.from("playlists").update({ updated_at: new Date().toISOString() }).eq("id", playlistId)
 
@@ -372,8 +351,6 @@ export function usePlaylists() {
     if (!user?.id) return []
 
     try {
-      console.log("[v0] Loading playlist items for playlist:", playlistId)
-
       const { data, error } = await supabase
         .from("playlist_items")
         .select("*")
@@ -381,11 +358,8 @@ export function usePlaylists() {
         .order("position", { ascending: true })
 
       if (error) {
-        console.error("[v0] Error loading playlist items:", error)
         return []
       }
-
-      console.log("[v0] Playlist items loaded successfully:", data?.length || 0)
 
       return (
         data?.map((item) => ({
@@ -395,7 +369,6 @@ export function usePlaylists() {
         })) || []
       )
     } catch (error) {
-      console.error("[v0] Error loading playlist items:", error)
       return []
     }
   }

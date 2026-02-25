@@ -1,14 +1,50 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Search, ThumbsUp, ThumbsDown, Heart, Calendar, Film, Globe, TrendingUp, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
-import { usePublicPlaylists } from "@/hooks/use-public-playlists"
+import { Badge } from "@/components/ui/badge"
+import { Search, ThumbsUp, ThumbsDown, Heart, Calendar, Film, Globe, Clock, ChevronLeft, ChevronRight, Shield, Upload, Star, Crown } from "lucide-react"
+import { usePublicPlaylists, type PublicPlaylist } from "@/hooks/use-public-playlists"
 import { useAuth } from "@/components/auth-provider"
 import Link from "next/link"
+
+function RoleBadge({ role }: { role: PublicPlaylist["user_role"] }) {
+  if (role === "admin") {
+    return (
+      <Badge className="text-[10px] px-1.5 py-0 h-4 bg-red-600 text-white border-0 flex items-center gap-0.5">
+        <Shield className="w-2.5 h-2.5" />
+        Admin
+      </Badge>
+    )
+  }
+  if (role === "uploader") {
+    return (
+      <Badge className="text-[10px] px-1.5 py-0 h-4 bg-blue-600 text-white border-0 flex items-center gap-0.5">
+        <Upload className="w-2.5 h-2.5" />
+        Uploader
+      </Badge>
+    )
+  }
+  if (role === "vip_plus") {
+    return (
+      <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-500 text-white border-0 flex items-center gap-0.5">
+        <Crown className="w-2.5 h-2.5" />
+        VIP+
+      </Badge>
+    )
+  }
+  if (role === "vip") {
+    return (
+      <Badge className="text-[10px] px-1.5 py-0 h-4 bg-purple-600 text-white border-0 flex items-center gap-0.5">
+        <Star className="w-2.5 h-2.5" />
+        VIP
+      </Badge>
+    )
+  }
+  return null
+}
 
 export function PublicPlaylistsDiscovery() {
   const { user } = useAuth()
@@ -46,6 +82,15 @@ export function PublicPlaylistsDiscovery() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant={sortBy === "role" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setSortBy("role")}
+            className={sortBy === "role" ? "bg-amber-600 hover:bg-amber-700" : "border-gray-600 text-gray-300"}
+          >
+            <Shield className="w-4 h-4 mr-1" />
+            Par rôle
+          </Button>
           <Button
             variant={sortBy === "recent" ? "default" : "outline"}
             size="sm"
@@ -141,7 +186,7 @@ export function PublicPlaylistsDiscovery() {
                     </div>
 
                     {/* Creator info */}
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <Avatar className="w-6 h-6">
                         <AvatarFallback
                           className="text-xs font-semibold"
@@ -166,6 +211,7 @@ export function PublicPlaylistsDiscovery() {
                       >
                         par {playlist.username}
                       </span>
+                      <RoleBadge role={playlist.user_role} />
                     </div>
                   </CardHeader>
 
