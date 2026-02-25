@@ -352,13 +352,14 @@ export function usePublicPlaylists() {
   }
 
   // ── Filtered list (search) ─────────────────────────────────────────────────
-  const filteredPlaylists = playlists.filter(
-    (playlist) =>
-      playlist.items_count > 0 &&
-      (playlist.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        playlist.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        playlist.username.toLowerCase().includes(searchQuery.toLowerCase())),
-  )
+  const filteredPlaylists = searchQuery.trim()
+    ? playlists.filter(
+        (playlist) =>
+          playlist.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          playlist.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          playlist.username.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : playlists
 
   return {
     playlists: filteredPlaylists,

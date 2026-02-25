@@ -102,6 +102,7 @@ export function Navigation() {
     <nav
       className="sticky top-0 z-50 border-b"
       style={{ backgroundColor: "hsl(var(--nav-bg))", borderColor: "hsl(var(--nav-border))" }}
+      suppressHydrationWarning
     >
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20 lg:h-24">

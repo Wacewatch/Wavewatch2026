@@ -78,17 +78,13 @@ export default function PlaylistContentPage() {
       if (playlistData.user_id) {
         const { data: profileData } = await supabase
           .from("user_profiles")
-          .select("username, avatar_url")
-          .eq("id", playlistData.user_id)
+          .select("username, profile_image, email")
+          .eq("user_id", playlistData.user_id)
           .single()
 
         if (profileData) {
-          // Use username if available, otherwise use email prefix
-          username = profileData.username || "Utilisateur"
-          userProfile = profileData
-          console.log("[v0] Loaded creator profile:", username, profileData)
-        } else {
-          console.log("[v0] No profile found for user_id:", playlistData.user_id)
+          username = profileData.username || (profileData.email ? profileData.email.split("@")[0] : "Utilisateur")
+          userProfile = { ...profileData, avatar_url: profileData.profile_image }
         }
       }
 
@@ -122,7 +118,6 @@ export default function PlaylistContentPage() {
         items_count: itemsCount,
       }
 
-      console.log("[v0] Enhanced playlist with username:", enhancedPlaylist.username)
       setPlaylist(enhancedPlaylist)
       setIsOwner(user?.id === playlistData.user_id)
 
