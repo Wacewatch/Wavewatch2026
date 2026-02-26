@@ -54,7 +54,6 @@ export function Footer() {
       const response = await fetch("/api/feedback/stats")
 
       if (!response.ok) {
-        console.error("[v0] Error loading feedback stats:", response.status)
         setIsLoading(false)
         return
       }
@@ -65,10 +64,9 @@ export function Footer() {
       }
       if (data.guestbookMessages && data.guestbookMessages.length > 0) {
         setMessages(data.guestbookMessages)
-        console.log("[v0] Loaded guestbook messages:", data.guestbookMessages.length)
       }
     } catch (error) {
-      console.error("[v0] Error fetching feedback stats:", error)
+      // silently fail
     } finally {
       setIsLoading(false)
     }
@@ -96,6 +94,7 @@ export function Footer() {
     <footer
       className="border-t mt-20"
       style={{ backgroundColor: "hsl(var(--nav-bg))", borderColor: "hsl(var(--nav-border))" }}
+      suppressHydrationWarning
     >
       <div className="container mx-auto px-4 py-8">
         {stats.totalFeedback > 0 && (
@@ -225,10 +224,10 @@ export function Footer() {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <h3 className="font-bold text-lg" style={{ color: "hsl(var(--nav-text))" }}>
+            <h3 className="font-bold text-lg" style={{ color: "hsl(var(--nav-text))" }} suppressHydrationWarning>
               WaveWatch
             </h3>
-            <p className="text-sm" style={{ color: "hsl(var(--nav-text-secondary))" }}>
+            <p className="text-sm" style={{ color: "hsl(var(--nav-text-secondary))" }} suppressHydrationWarning>
               Votre plateforme de streaming premium
             </p>
           </div>
@@ -238,6 +237,7 @@ export function Footer() {
               href="/contact-staff"
               className="transition-colors text-sm flex items-center gap-2 hover:text-blue-400"
               style={{ color: "hsl(var(--nav-text-secondary))" }}
+              suppressHydrationWarning
             >
               <Mail className="w-4 h-4" />
               Écrire au staff
@@ -246,6 +246,7 @@ export function Footer() {
               href="/dns-vpn"
               className="transition-colors text-sm hover:text-blue-400"
               style={{ color: "hsl(var(--nav-text-secondary))" }}
+              suppressHydrationWarning
             >
               DNS & VPN
             </Link>
@@ -253,6 +254,7 @@ export function Footer() {
               href="/faq"
               className="transition-colors text-sm hover:text-blue-400"
               style={{ color: "hsl(var(--nav-text-secondary))" }}
+              suppressHydrationWarning
             >
               FAQ
             </Link>
@@ -260,15 +262,16 @@ export function Footer() {
               href="/changelogs"
               className="transition-colors text-sm hover:text-blue-400"
               style={{ color: "hsl(var(--nav-text-secondary))" }}
+              suppressHydrationWarning
             >
               Mise à jour
             </Link>
           </div>
         </div>
 
-        <div className="border-t mt-6 pt-6 text-center" style={{ borderColor: "hsl(var(--nav-border))" }}>
-          <p className="text-sm" style={{ color: "hsl(var(--nav-text-secondary))" }}>
-            © {new Date().getFullYear()} WaveWatch. Tous droits réservés.
+        <div className="border-t mt-6 pt-6 text-center" style={{ borderColor: "hsl(var(--nav-border))" }} suppressHydrationWarning>
+          <p className="text-sm" style={{ color: "hsl(var(--nav-text-secondary))" }} suppressHydrationWarning>
+            © 2026 WaveWatch. Tous droits réservés.
           </p>
         </div>
       </div>

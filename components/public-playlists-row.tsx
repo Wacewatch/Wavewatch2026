@@ -4,9 +4,25 @@ import { useEffect, useState, useRef } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Globe, Film, ThumbsUp, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
+import { Globe, Film, ThumbsUp, ArrowRight, ChevronLeft, ChevronRight, Shield, Upload, Star, Crown } from "lucide-react"
 import Link from "next/link"
-import { usePublicPlaylists } from "@/hooks/use-public-playlists"
+import { usePublicPlaylists, type PublicPlaylist } from "@/hooks/use-public-playlists"
+
+function RoleIndicator({ role }: { role: PublicPlaylist["user_role"] }) {
+  if (role === "admin") {
+    return <Shield className="w-3 h-3 text-red-400" title="Admin" />
+  }
+  if (role === "uploader") {
+    return <Upload className="w-3 h-3 text-blue-400" title="Uploader" />
+  }
+  if (role === "vip_plus") {
+    return <Crown className="w-3 h-3 text-amber-400" title="VIP+" />
+  }
+  if (role === "vip") {
+    return <Star className="w-3 h-3 text-purple-400" title="VIP" />
+  }
+  return null
+}
 
 export function PublicPlaylistsRow() {
   const { playlists, loading } = usePublicPlaylists()
@@ -165,9 +181,12 @@ export function PublicPlaylistsRow() {
                           {playlist.likes_count}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-300 mt-1" style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.9)" }}>
-                        Par {playlist.username}
-                      </p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <RoleIndicator role={playlist.user_role} />
+                        <p className="text-xs text-gray-300" style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.9)" }}>
+                          Par {playlist.username}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </CardContent>

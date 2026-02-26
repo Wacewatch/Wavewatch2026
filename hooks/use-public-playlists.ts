@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/components/auth-provider"
 import { useToast } from "@/hooks/use-toast"
 
-interface PublicPlaylist {
+export type PlaylistSortBy = "recent" | "liked" | "role"
+
+export interface PublicPlaylist {
   id: string
   user_id: string
   title: string
@@ -14,6 +16,8 @@ interface PublicPlaylist {
   created_at: string
   updated_at: string
   username: string
+  avatar_url?: string
+  user_role: "admin" | "uploader" | "vip_plus" | "vip" | "member"
   items_count: number
   likes_count: number
   dislikes_count: number
@@ -22,13 +26,29 @@ interface PublicPlaylist {
   is_favorited?: boolean
 }
 
+/** Priority value used for role-based sorting (lower = higher priority) */
+function rolePriority(role: PublicPlaylist["user_role"]): number {
+  switch (role) {
+    case "admin":
+      return 0
+    case "uploader":
+      return 1
+    case "vip_plus":
+      return 2
+    case "vip":
+      return 3
+    default:
+      return 4
+  }
+}
+
 export function usePublicPlaylists() {
   const { user } = useAuth()
   const { toast } = useToast()
   const [playlists, setPlaylists] = useState<PublicPlaylist[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
-  const [sortBy, setSortBy] = useState<"recent" | "popular" | "liked">("recent")
+  const [sortBy, setSortBy] = useState<PlaylistSortBy>("role")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const [itemsPerPage] = useState(30)
@@ -36,306 +56,153 @@ export function usePublicPlaylists() {
   const isMountedRef = useRef(true)
 
   const loadPublicPlaylists = useCallback(
-    async (page = 1, sort: "recent" | "liked" = "recent") => {
+    async (page = 1, sort: PlaylistSortBy = "role") => {
       if (!isMountedRef.current) return
 
       try {
-        console.log("[v0] Loading public playlists... page:", page, "sort:", sort)
+        setLoading(true)
 
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Request timeout")), 30000))
-
+        // ── 1. Count total public playlists ──────────────────────────────────
         const { count } = await supabase
           .from("playlists")
           .select("*", { count: "exact", head: true })
           .eq("is_public", true)
 
-        if (count !== null) {
+        if (count !== null && isMountedRef.current) {
           setTotalCount(count)
         }
 
         const offset = (page - 1) * itemsPerPage
 
-        let query = supabase
+        // ── 2. Fetch playlists with embedded item count ───────────────────────
+        // Using Supabase embedded count to bypass the 1000-row default limit
+        const { data: playlistsData, error: playlistsError } = await supabase
           .from("playlists")
-          .select("id, user_id, title, description, theme_color, created_at, updated_at")
+          .select("id, user_id, title, description, theme_color, created_at, updated_at, playlist_items(count)")
           .eq("is_public", true)
+          .order("updated_at", { ascending: false })
 
-        if (sort === "liked") {
-          const likedSortingPromise = (async () => {
-            // On utilise une sous-requête pour compter les likes et trier
-            const { data: playlistsWithLikes } = await supabase
-              .from("playlists")
-              .select(`
-              id,
-              user_id,
-              title,
-              description,
-              theme_color,
-              created_at,
-              updated_at,
-              playlist_likes!inner(is_like)
-            `)
-              .eq("is_public", true)
-
-            // Grouper et compter les likes par playlist
-            const playlistLikeCounts = new Map<string, number>()
-            playlistsWithLikes?.forEach((playlist: any) => {
-              const likes = Array.isArray(playlist.playlist_likes)
-                ? playlist.playlist_likes.filter((like: any) => like.is_like === true).length
-                : 0
-              playlistLikeCounts.set(playlist.id, likes)
-            })
-
-            // Obtenir toutes les playlists publiques
-            const { data: allPlaylists } = await supabase
-              .from("playlists")
-              .select("id, user_id, title, description, theme_color, created_at, updated_at")
-              .eq("is_public", true)
-
-            // Trier par nombre de likes (en incluant les playlists sans likes)
-            const sortedPlaylists = (allPlaylists || []).sort((a, b) => {
-              const likesA = playlistLikeCounts.get(a.id) || 0
-              const likesB = playlistLikeCounts.get(b.id) || 0
-              return likesB - likesA
-            })
-
-            // Paginer après le tri
-            const paginatedPlaylists = sortedPlaylists.slice(offset, offset + itemsPerPage)
-
-            return paginatedPlaylists
-          })()
-
-          const playlistsData = (await Promise.race([likedSortingPromise, timeoutPromise])) as any
-
-          if (!isMountedRef.current) return
-
-          if (!playlistsData || playlistsData.length === 0) {
-            console.log("[v0] No public playlists found")
+        if (playlistsError) throw playlistsError
+        if (!playlistsData || playlistsData.length === 0) {
+          if (isMountedRef.current) {
             setPlaylists([])
             setLoading(false)
-            return
           }
+          return
+        }
 
-          console.log("[v0] Loaded", playlistsData.length, "public playlists")
+        const playlistIds = playlistsData.map((p) => p.id)
+        // user_profiles.user_id is the FK that links to auth.users.id
+        const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
 
-          const playlistIds = playlistsData.map((p) => p.id)
-          const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
+        // ── 3. Fetch user profiles ────────────────────────────────────────────
+        // user_profiles.id IS the auth user UUID (user_profiles.user_id is NULL)
+        const { data: userProfilesData, error: profilesError } = await supabase
+          .from("user_profiles")
+          .select("id, username, email, profile_image, is_admin, is_uploader, is_vip, is_vip_plus")
+          .in("id", userIds)
 
-          console.log("[v0] Loading profiles for", userIds.length, "users")
+        console.log("[v0] userIds to fetch:", userIds)
+        console.log("[v0] userProfilesData:", userProfilesData)
+        console.log("[v0] profilesError:", profilesError)
 
-          const { data: userProfilesData, error: profilesError } = await supabase
-            .from("user_profiles")
-            .select("id, username, email")
-            .in("id", userIds)
+        const userProfilesMap = new Map(
+          (userProfilesData || []).map((profile) => {
+            const displayName =
+              profile.username || (profile.email ? profile.email.split("@")[0] : "Utilisateur")
+            let role: PublicPlaylist["user_role"] = "member"
+            if (profile.is_admin) role = "admin"
+            else if (profile.is_uploader) role = "uploader"
+            else if (profile.is_vip_plus) role = "vip_plus"
+            else if (profile.is_vip) role = "vip"
+            return [
+              profile.id,
+              {
+                displayName,
+                avatar_url: profile.profile_image ?? undefined,
+                role,
+              },
+            ]
+          }),
+        )
 
-          if (profilesError) {
-            console.error("[v0] Error loading user profiles:", profilesError.message)
+        // ── 4. Parallel: likes, user interactions ────────────────────────────
+        // Items count is already embedded in playlistsData via playlist_items(count)
+        const [likesDataResult, userLikesResult, userFavoritesResult] = await Promise.all([
+          supabase.from("playlist_likes").select("playlist_id, is_like").in("playlist_id", playlistIds),
+          user?.id
+            ? supabase
+                .from("playlist_likes")
+                .select("playlist_id, is_like")
+                .eq("user_id", user.id)
+                .in("playlist_id", playlistIds)
+            : Promise.resolve({ data: [] }),
+          user?.id
+            ? supabase
+                .from("playlist_favorites")
+                .select("playlist_id")
+                .eq("user_id", user.id)
+                .in("playlist_id", playlistIds)
+            : Promise.resolve({ data: [] }),
+        ])
+
+        const likesData = likesDataResult.data || []
+        const userLikes = userLikesResult.data || []
+        const userFavorites = userFavoritesResult.data || []
+
+        // ── 5. Build full playlist objects ────────────────────────────────────
+        let processedPlaylists: PublicPlaylist[] = playlistsData.map((playlist) => {
+          // playlist_items is [{count: N}] when using embedded count syntax
+          const itemsCount = (playlist.playlist_items as unknown as { count: number }[])?.[0]?.count ?? 0
+          const playlistLikeRows = likesData.filter((like) => like.playlist_id === playlist.id)
+          const likesCount = playlistLikeRows.filter((like) => like.is_like).length
+          const dislikesCount = playlistLikeRows.filter((like) => !like.is_like).length
+          const userLike = userLikes.find((like) => like.playlist_id === playlist.id)
+          const isFavorited = userFavorites.some((fav) => fav.playlist_id === playlist.id)
+
+          const profile = userProfilesMap.get(playlist.user_id)
+          const username = profile?.displayName ?? "Utilisateur"
+          const user_role = profile?.role ?? "member"
+          const avatar_url = profile?.avatar_url
+
+          return {
+            ...playlist,
+            username,
+            avatar_url,
+            user_role,
+            items_count: itemsCount,
+            likes_count: likesCount,
+            dislikes_count: dislikesCount,
+            is_liked: userLike?.is_like === true,
+            is_disliked: userLike?.is_like === false,
+            is_favorited: isFavorited,
           }
+        })
 
-          console.log("[v0] Loaded", userProfilesData?.length || 0, "user profiles")
-
-          const userProfilesMap = new Map(
-            (userProfilesData || []).map((profile) => {
-              const displayName = profile.username || (profile.email ? profile.email.split("@")[0] : "Utilisateur")
-              console.log("[v0] Mapping user", profile.id, "to", displayName)
-              return [profile.id, { ...profile, displayName }]
-            }),
-          )
-
-          console.log("[v0] Created username map with", userProfilesMap.size, "entries")
-
-          const [itemsCountsResult, likesDataResult, userLikesResult, userFavoritesResult] = await Promise.all([
-            supabase.from("playlist_items").select("playlist_id").in("playlist_id", playlistIds),
-            supabase.from("playlist_likes").select("playlist_id, is_like").in("playlist_id", playlistIds),
-            user?.id
-              ? supabase
-                  .from("playlist_likes")
-                  .select("playlist_id, is_like")
-                  .eq("user_id", user.id)
-                  .in("playlist_id", playlistIds)
-              : Promise.resolve({ data: [] }),
-            user?.id
-              ? supabase
-                  .from("playlist_favorites")
-                  .select("playlist_id")
-                  .eq("user_id", user.id)
-                  .in("playlist_id", playlistIds)
-              : Promise.resolve({ data: [] }),
-          ])
-
-          const itemsCounts = itemsCountsResult.data || []
-          const likesData = likesDataResult.data || []
-          const userLikes = userLikesResult.data || []
-          const userFavorites = userFavoritesResult.data || []
-
-          const processedPlaylists = playlistsData.map((playlist) => {
-            const itemsCount = itemsCounts.filter((item) => item.playlist_id === playlist.id).length
-            const playlistLikes = likesData.filter((like) => like.playlist_id === playlist.id)
-            const likesCount = playlistLikes.filter((like) => like.is_like).length
-            const dislikesCount = playlistLikes.filter((like) => !like.is_like).length
-
-            const userLike = userLikes.find((like) => like.playlist_id === playlist.id)
-            const isFavorited = userFavorites.some((fav) => fav.playlist_id === playlist.id)
-
-            const userProfile = userProfilesMap.get(playlist.user_id)
-            const username = userProfile?.displayName || "Utilisateur inconnu"
-
-            console.log("[v0] Playlist", playlist.title, "- user_id:", playlist.user_id, "- username:", username)
-
-            return {
-              ...playlist,
-              username,
-              items_count: itemsCount,
-              likes_count: likesCount,
-              dislikes_count: dislikesCount,
-              is_liked: userLike?.is_like === true,
-              is_disliked: userLike?.is_like === false,
-              is_favorited: isFavorited,
-            }
+        // ── 6. Apply sort ─────────────────────────────────────────────────────
+        if (sort === "role") {
+          processedPlaylists.sort((a, b) => {
+            const roleDiff = rolePriority(a.user_role) - rolePriority(b.user_role)
+            if (roleDiff !== 0) return roleDiff
+            // secondary sort: most recent
+            return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
           })
+        } else if (sort === "liked") {
+          processedPlaylists.sort((a, b) => b.likes_count - a.likes_count)
+        }
+        // "recent" is already ordered by updated_at from the query
 
-          console.log("[v0] Public playlists loaded successfully:", processedPlaylists.length)
-          console.log(
-            "[v0] Sample usernames:",
-            processedPlaylists.slice(0, 3).map((p) => ({ title: p.title, username: p.username })),
-          )
+        // ── 7. Paginate ───────────────────────────────────────────────────────
+        const paginated = processedPlaylists.slice(offset, offset + itemsPerPage)
 
-          setPlaylists(processedPlaylists)
-          setCurrentPage(page)
-        } else {
-          query = query.order("updated_at", { ascending: false })
-          query = query.range(offset, offset + itemsPerPage - 1)
-
-          const queryPromise = query
-          const { data: playlistsData, error: playlistsError } = (await Promise.race([
-            queryPromise,
-            timeoutPromise,
-          ])) as any
-
-          if (!isMountedRef.current) return
-
-          if (playlistsError) {
-            console.error("[v0] Error loading public playlists:", playlistsError.message)
-            throw playlistsError
-          }
-
-          if (!playlistsData || playlistsData.length === 0) {
-            console.log("[v0] No public playlists found")
-            setPlaylists([])
-            setLoading(false)
-            return
-          }
-
-          console.log("[v0] Loaded", playlistsData.length, "public playlists")
-
-          const playlistIds = playlistsData.map((p) => p.id)
-          const userIds = [...new Set(playlistsData.map((p) => p.user_id))]
-
-          console.log("[v0] Loading profiles for", userIds.length, "users")
-
-          const { data: userProfilesData, error: profilesError } = await supabase
-            .from("user_profiles")
-            .select("id, username, email")
-            .in("id", userIds)
-
-          if (profilesError) {
-            console.error("[v0] Error loading user profiles:", profilesError.message)
-          }
-
-          console.log("[v0] Loaded", userProfilesData?.length || 0, "user profiles")
-
-          const userProfilesMap = new Map(
-            (userProfilesData || []).map((profile) => {
-              const displayName = profile.username || (profile.email ? profile.email.split("@")[0] : "Utilisateur")
-              console.log("[v0] Mapping user", profile.id, "to", displayName)
-              return [profile.id, { ...profile, displayName }]
-            }),
-          )
-
-          console.log("[v0] Created username map with", userProfilesMap.size, "entries")
-
-          const [itemsCountsResult, likesDataResult, userLikesResult, userFavoritesResult] = await Promise.all([
-            supabase.from("playlist_items").select("playlist_id").in("playlist_id", playlistIds),
-            supabase.from("playlist_likes").select("playlist_id, is_like").in("playlist_id", playlistIds),
-            user?.id
-              ? supabase
-                  .from("playlist_likes")
-                  .select("playlist_id, is_like")
-                  .eq("user_id", user.id)
-                  .in("playlist_id", playlistIds)
-              : Promise.resolve({ data: [] }),
-            user?.id
-              ? supabase
-                  .from("playlist_favorites")
-                  .select("playlist_id")
-                  .eq("user_id", user.id)
-                  .in("playlist_id", playlistIds)
-              : Promise.resolve({ data: [] }),
-          ])
-
-          const itemsCounts = itemsCountsResult.data || []
-          const likesData = likesDataResult.data || []
-          const userLikes = userLikesResult.data || []
-          const userFavorites = userFavoritesResult.data || []
-
-          const processedPlaylists = playlistsData.map((playlist) => {
-            const itemsCount = itemsCounts.filter((item) => item.playlist_id === playlist.id).length
-            const playlistLikes = likesData.filter((like) => like.playlist_id === playlist.id)
-            const likesCount = playlistLikes.filter((like) => like.is_like).length
-            const dislikesCount = playlistLikes.filter((like) => !like.is_like).length
-
-            const userLike = userLikes.find((like) => like.playlist_id === playlist.id)
-            const isFavorited = userFavorites.some((fav) => fav.playlist_id === playlist.id)
-
-            const userProfile = userProfilesMap.get(playlist.user_id)
-            const username = userProfile?.displayName || "Utilisateur inconnu"
-
-            console.log("[v0] Playlist", playlist.title, "- user_id:", playlist.user_id, "- username:", username)
-
-            return {
-              ...playlist,
-              username,
-              items_count: itemsCount,
-              likes_count: likesCount,
-              dislikes_count: dislikesCount,
-              is_liked: userLike?.is_like === true,
-              is_disliked: userLike?.is_like === false,
-              is_favorited: isFavorited,
-            }
-          })
-
-          console.log("[v0] Public playlists loaded successfully:", processedPlaylists.length)
-          console.log(
-            "[v0] Sample usernames:",
-            processedPlaylists.slice(0, 3).map((p) => ({ title: p.title, username: p.username })),
-          )
-
-          setPlaylists(processedPlaylists)
+        if (isMountedRef.current) {
+          setPlaylists(paginated)
           setCurrentPage(page)
         }
       } catch (error) {
-        if (!isMountedRef.current) return
-
-        console.error("[v0] Exception loading public playlists:", error)
-
-        if (error instanceof SyntaxError && error.message.includes("JSON")) {
-          console.error("[v0] ❌ JSON PARSING ERROR")
-          console.error("[v0] Supabase is returning text 'Invalid request' instead of JSON")
-          console.error("[v0] This happens when:")
-          console.error("[v0]   1. Supabase project is PAUSED - https://supabase.com/dashboard")
-          console.error("[v0]   2. Database tables don't exist - run migrations")
-          console.error("[v0]   3. Wrong environment variables")
-          console.error("[v0] Current env check:")
-          console.error("[v0]   - NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "SET" : "MISSING")
-          console.error(
-            "[v0]   - NEXT_PUBLIC_SUPABASE_ANON_KEY:",
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-              ? `SET (${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length} chars)`
-              : "MISSING",
-          )
+        if (isMountedRef.current) {
+          setPlaylists([])
         }
-
-        setPlaylists([])
       } finally {
         if (isMountedRef.current) {
           setLoading(false)
@@ -355,6 +222,7 @@ export function usePublicPlaylists() {
     loadPublicPlaylists(1, sortBy)
   }, [sortBy, loadPublicPlaylists])
 
+  // ── Like / dislike ─────────────────────────────────────────────────────────
   const toggleLike = async (playlistId: string, isLike: boolean) => {
     if (!user?.id) {
       toast({
@@ -379,36 +247,30 @@ export function usePublicPlaylists() {
       if (existingLike) {
         if (existingLike.is_like === isLike) {
           await supabase.from("playlist_likes").delete().eq("id", existingLike.id)
-
           setPlaylists((prev) =>
             prev.map((playlist) => {
-              if (playlist.id === playlistId) {
-                return {
-                  ...playlist,
-                  likes_count: isLike ? playlist.likes_count - 1 : playlist.likes_count,
-                  dislikes_count: !isLike ? playlist.dislikes_count - 1 : playlist.dislikes_count,
-                  is_liked: false,
-                  is_disliked: false,
-                }
+              if (playlist.id !== playlistId) return playlist
+              return {
+                ...playlist,
+                likes_count: isLike ? playlist.likes_count - 1 : playlist.likes_count,
+                dislikes_count: !isLike ? playlist.dislikes_count - 1 : playlist.dislikes_count,
+                is_liked: false,
+                is_disliked: false,
               }
-              return playlist
             }),
           )
         } else {
           await supabase.from("playlist_likes").update({ is_like: isLike }).eq("id", existingLike.id)
-
           setPlaylists((prev) =>
             prev.map((playlist) => {
-              if (playlist.id === playlistId) {
-                return {
-                  ...playlist,
-                  likes_count: isLike ? playlist.likes_count + 1 : playlist.likes_count - 1,
-                  dislikes_count: !isLike ? playlist.dislikes_count + 1 : playlist.dislikes_count - 1,
-                  is_liked: isLike,
-                  is_disliked: !isLike,
-                }
+              if (playlist.id !== playlistId) return playlist
+              return {
+                ...playlist,
+                likes_count: isLike ? playlist.likes_count + 1 : playlist.likes_count - 1,
+                dislikes_count: !isLike ? playlist.dislikes_count + 1 : playlist.dislikes_count - 1,
+                is_liked: isLike,
+                is_disliked: !isLike,
               }
-              return playlist
             }),
           )
         }
@@ -418,19 +280,16 @@ export function usePublicPlaylists() {
           user_id: user.id,
           is_like: isLike,
         })
-
         setPlaylists((prev) =>
           prev.map((playlist) => {
-            if (playlist.id === playlistId) {
-              return {
-                ...playlist,
-                likes_count: isLike ? playlist.likes_count + 1 : playlist.likes_count,
-                dislikes_count: !isLike ? playlist.dislikes_count + 1 : playlist.dislikes_count,
-                is_liked: isLike,
-                is_disliked: !isLike,
-              }
+            if (playlist.id !== playlistId) return playlist
+            return {
+              ...playlist,
+              likes_count: isLike ? playlist.likes_count + 1 : playlist.likes_count,
+              dislikes_count: !isLike ? playlist.dislikes_count + 1 : playlist.dislikes_count,
+              is_liked: isLike,
+              is_disliked: !isLike,
             }
-            return playlist
           }),
         )
       }
@@ -440,7 +299,6 @@ export function usePublicPlaylists() {
         description: isLike ? "Ajoutée à vos likes" : "Ajoutée à vos dislikes",
       })
     } catch (error) {
-      console.error("Error toggling like:", error)
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour votre réaction",
@@ -449,6 +307,7 @@ export function usePublicPlaylists() {
     }
   }
 
+  // ── Favorites ──────────────────────────────────────────────────────────────
   const toggleFavorite = async (playlistId: string) => {
     if (!user?.id) {
       toast({
@@ -476,36 +335,20 @@ export function usePublicPlaylists() {
 
       if (currentPlaylist.is_favorited) {
         await supabase.from("playlist_favorites").delete().eq("playlist_id", playlistId).eq("user_id", user.id)
-
         WatchTracker.removeFromFavorites(playlistId, "playlist")
-
         setPlaylists((prev) =>
-          prev.map((playlist) => (playlist.id === playlistId ? { ...playlist, is_favorited: false } : playlist)),
+          prev.map((pl) => (pl.id === playlistId ? { ...pl, is_favorited: false } : pl)),
         )
-
-        toast({
-          title: "Retiré des favoris",
-          description: "La playlist a été retirée de vos favoris",
-        })
+        toast({ title: "Retiré des favoris", description: "La playlist a été retirée de vos favoris" })
       } else {
-        await supabase.from("playlist_favorites").insert({
-          playlist_id: playlistId,
-          user_id: user.id,
-        })
-
+        await supabase.from("playlist_favorites").insert({ playlist_id: playlistId, user_id: user.id })
         WatchTracker.addToFavorites(playlistData)
-
         setPlaylists((prev) =>
-          prev.map((playlist) => (playlist.id === playlistId ? { ...playlist, is_favorited: true } : playlist)),
+          prev.map((pl) => (pl.id === playlistId ? { ...pl, is_favorited: true } : pl)),
         )
-
-        toast({
-          title: "Ajouté aux favoris",
-          description: "La playlist a été ajoutée à vos favoris",
-        })
+        toast({ title: "Ajouté aux favoris", description: "La playlist a été ajoutée à vos favoris" })
       }
     } catch (error) {
-      console.error("Error toggling favorite:", error)
       toast({
         title: "Erreur",
         description: "Impossible de mettre à jour vos favoris",
@@ -514,13 +357,15 @@ export function usePublicPlaylists() {
     }
   }
 
-  const filteredPlaylists = playlists.filter(
-    (playlist) =>
-      playlist.items_count > 0 &&
-      (playlist.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        playlist.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        playlist.username.toLowerCase().includes(searchQuery.toLowerCase())),
-  )
+  // ── Filtered list (search) ─────────────────────────────────────────────────
+  const filteredPlaylists = searchQuery.trim()
+    ? playlists.filter(
+        (playlist) =>
+          playlist.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          playlist.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          playlist.username.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : playlists
 
   return {
     playlists: filteredPlaylists,
