@@ -97,10 +97,14 @@ export function usePublicPlaylists() {
 
         // ── 3. Fetch user profiles ────────────────────────────────────────────
         // user_profiles.id IS the auth user UUID (user_profiles.user_id is NULL)
-        const { data: userProfilesData } = await supabase
+        const { data: userProfilesData, error: profilesError } = await supabase
           .from("user_profiles")
           .select("id, username, email, profile_image, is_admin, is_uploader, is_vip, is_vip_plus")
           .in("id", userIds)
+
+        console.log("[v0] userIds to fetch:", userIds)
+        console.log("[v0] userProfilesData:", userProfilesData)
+        console.log("[v0] profilesError:", profilesError)
 
         const userProfilesMap = new Map(
           (userProfilesData || []).map((profile) => {
